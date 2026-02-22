@@ -1,13 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  ArrowLeft, Eye, Heart, Share2, Bookmark, BookmarkCheck,
-  Shield, MessageSquare, Clock, Calendar, User, Tag, 
-  Film, DollarSign, Briefcase, TrendingUp, Users,
-  FileText, Download, Calculator, PieChart, Target,
-  AlertCircle, CheckCircle, XCircle, Star, ChevronRight
+import {
+  ArrowLeft, Bookmark, BookmarkCheck,
+  MessageSquare, Clock, Calendar,
+  DollarSign, TrendingUp, Users,
+  FileText, Download, Target,
+  AlertCircle, CheckCircle, XCircle, ChevronRight,
+  X, Loader2
 } from 'lucide-react';
 import { pitchAPI } from '../../lib/api';
+import { apiClient } from '../../lib/api-client';
+import { InvestorService } from '../../services/investor.service';
 import FormatDisplay from '../../components/FormatDisplay';
 
 interface Pitch {
@@ -60,6 +63,19 @@ interface ROICalculation {
   paybackPeriod: string;
 }
 
+interface PitchInvestmentDetail {
+  totalRaised: number;
+  investorCount: number;
+  avgInvestment: number;
+  targetAmount: number | null;
+  percentageRaised: number;
+  expectedROI: number | null;
+  riskLevel: 'low' | 'medium' | 'high';
+  isWatchlisted: boolean;
+  hasExpressedInterest: boolean;
+  interestLevel: string | null;
+}
+
 const InvestorPitchView: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -68,11 +84,13 @@ const InvestorPitchView: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'financials' | 'diligence' | 'notes'>('overview');
   const [isWatchlisted, setIsWatchlisted] = useState(false);
+  const [watchlistLoading, setWatchlistLoading] = useState(false);
   const [notes, setNotes] = useState<InvestmentNote[]>([]);
   const [newNote, setNewNote] = useState('');
   const [noteCategory, setNoteCategory] = useState<InvestmentNote['category']>('general');
   const [roiCalculation, setRoiCalculation] = useState<ROICalculation | null>(null);
   const [investmentAmount, setInvestmentAmount] = useState('');
+  const [pitchDetail, setPitchDetail] = useState<PitchInvestmentDetail | null>(null);
   const [diligenceChecklist, setDiligenceChecklist] = useState({
     scriptReview: false,
     budgetAnalysis: false,
@@ -84,86 +102,175 @@ const InvestorPitchView: React.FC = () => {
     audienceTesting: false
   });
 
-  useEffect(() => {
-    if (id) {
-      fetchPitchData();
-      loadInvestorData();
-    }
-  }, [id]);
+  // Modal states
+  const [showInterestModal, setShowInterestModal] = useState(false);
+  const [showMeetingModal, setShowMeetingModal] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
 
-  const fetchPitchData = async () => {
+  // Action form states
+  const [interestForm, setInterestForm] = useState({ amount: '', level: 'medium', message: '' });
+  const [meetingForm, setMeetingForm] = useState({ dateTime: '', meetingType: 'video', message: '' });
+  const [infoForm, setInfoForm] = useState({ message: '', categories: [] as string[] });
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const fetchPitchData = useCallback(async () => {
+    if (!id) return;
     try {
       setLoading(true);
-      
-      // For investors, try public endpoint first then authenticated if they have NDA
+
       let response;
       const userType = localStorage.getItem('userType');
       const token = localStorage.getItem('authToken');
-      
+
       try {
-        // Start with public endpoint for reliability
-        response = await pitchAPI.getPublicById(parseInt(id!));
-        
-        // If user is authenticated investor and has NDA, try to get enhanced data
+        response = await pitchAPI.getPublicById(parseInt(id));
+
         if (token && userType === 'investor' && response.hasSignedNDA) {
           try {
-            const authResponse = await pitchAPI.getById(parseInt(id!));
-            response = authResponse; // Use authenticated data with NDA content
-          } catch (authError) {
+            const authResponse = await pitchAPI.getById(parseInt(id));
+            response = authResponse;
+          } catch {
+            // Fall back to public data
           }
         }
-      } catch (publicError) {
-        // If public fails, try authenticated as fallback
-        response = await pitchAPI.getById(parseInt(id!));
+      } catch {
+        response = await pitchAPI.getById(parseInt(id));
       }
-      
+
       setPitch(response);
-      
-    } catch (error) {
-      console.error('Failed to fetch pitch:', error);
+    } catch {
       setError('Failed to load pitch details');
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
-  const loadInvestorData = async () => {
+  const fetchInvestmentDetail = useCallback(async () => {
+    if (!id) return;
     try {
-      // Load saved notes
+      const response = await apiClient.get<PitchInvestmentDetail>(
+        `/api/investor/pitch/${id}/investment-detail`
+      );
+      if (response.success && response.data) {
+        setPitchDetail(response.data);
+        setIsWatchlisted(response.data.isWatchlisted);
+      }
+    } catch {
+      // Non-critical — sidebar will show defaults
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      fetchPitchData();
+      fetchInvestmentDetail();
+      loadLocalData();
+    }
+  }, [id, fetchPitchData, fetchInvestmentDetail]);
+
+  const loadLocalData = () => {
+    try {
       const savedNotes = localStorage.getItem(`investor_notes_${id}`);
-      if (savedNotes) {
-        setNotes(JSON.parse(savedNotes));
-      }
+      if (savedNotes) setNotes(JSON.parse(savedNotes));
 
-      // Load watchlist status
-      const watchlist = JSON.parse(localStorage.getItem('investor_watchlist') || '[]');
-      setIsWatchlisted(watchlist.includes(id));
-
-      // Load diligence checklist
       const savedChecklist = localStorage.getItem(`diligence_${id}`);
-      if (savedChecklist) {
-        setDiligenceChecklist(JSON.parse(savedChecklist));
-      }
-    } catch (error) {
-      console.error('Failed to load investor data:', error);
+      if (savedChecklist) setDiligenceChecklist(JSON.parse(savedChecklist));
+    } catch {
+      // Ignore localStorage errors
     }
   };
 
-  const handleWatchlistToggle = () => {
-    const watchlist = JSON.parse(localStorage.getItem('investor_watchlist') || '[]');
-    if (isWatchlisted) {
-      const updated = watchlist.filter((item: string) => item !== id);
-      localStorage.setItem('investor_watchlist', JSON.stringify(updated));
-      setIsWatchlisted(false);
-    } else {
-      watchlist.push(id);
-      localStorage.setItem('investor_watchlist', JSON.stringify(watchlist));
-      setIsWatchlisted(true);
+  const handleWatchlistToggle = async () => {
+    if (!id || watchlistLoading) return;
+    setWatchlistLoading(true);
+    try {
+      if (isWatchlisted) {
+        await InvestorService.removeFromWatchlist(parseInt(id));
+        setIsWatchlisted(false);
+      } else {
+        await InvestorService.addToWatchlist(parseInt(id));
+        setIsWatchlisted(true);
+      }
+    } catch {
+      // Silently fail — button stays in current state
+    } finally {
+      setWatchlistLoading(false);
     }
   };
 
   const handleContactCreator = () => {
     navigate(`/investor/messages/new?recipient=${pitch?.userId}&pitch=${id}`);
+  };
+
+  const handleExpressInterest = async () => {
+    if (!id || !interestForm.amount) return;
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      await InvestorService.invest({
+        pitchId: parseInt(id),
+        amount: parseFloat(interestForm.amount),
+        message: interestForm.message || undefined,
+      });
+      setActionSuccess('Interest expressed successfully!');
+      setShowInterestModal(false);
+      setInterestForm({ amount: '', level: 'medium', message: '' });
+      // Refresh detail to update hasExpressedInterest
+      fetchInvestmentDetail();
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      setActionError(e.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleScheduleMeeting = async () => {
+    if (!id || !pitch || !meetingForm.dateTime) return;
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      await apiClient.post('/api/meetings/schedule', {
+        pitchId: parseInt(id),
+        creatorId: pitch.userId,
+        dateTime: meetingForm.dateTime,
+        meetingType: meetingForm.meetingType,
+        message: meetingForm.message,
+        duration: 60,
+      });
+      setActionSuccess('Meeting scheduled successfully!');
+      setShowMeetingModal(false);
+      setMeetingForm({ dateTime: '', meetingType: 'video', message: '' });
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      setActionError(e.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRequestInfo = async () => {
+    if (!id || !pitch || !infoForm.message) return;
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      await apiClient.post('/api/info-requests', {
+        targetUserId: pitch.userId,
+        pitchId: parseInt(id),
+        message: infoForm.message,
+        categories: infoForm.categories,
+      });
+      setActionSuccess('Info request sent successfully!');
+      setShowInfoModal(false);
+      setInfoForm({ message: '', categories: [] });
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      setActionError(e.message);
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleAddNote = () => {
@@ -194,12 +301,13 @@ const InvestorPitchView: React.FC = () => {
 
     const investment = parseFloat(investmentAmount);
     const budget = parseFloat(pitch.estimatedBudget.replace(/[^0-9.]/g, ''));
-    
-    // Simplified ROI calculation (would be more complex in reality)
-    const projectedRevenue = budget * 2.5; // Assuming 2.5x return
+
+    // Use market-data ROI when available, fallback to 2.5x
+    const roiMultiplier = (pitchDetail?.expectedROI ?? 150) / 100 + 1;
+    const projectedRevenue = budget * roiMultiplier;
     const roi = ((projectedRevenue - investment) / investment) * 100;
-    const breakEven = investment / (projectedRevenue / 36); // Assuming 36 month period
-    
+    const breakEven = investment / (projectedRevenue / 36);
+
     setRoiCalculation({
       investmentAmount: investment,
       projectedRevenue,
@@ -230,6 +338,47 @@ const InvestorPitchView: React.FC = () => {
     }
   };
 
+  const getRiskColor = (level: string) => {
+    switch (level) {
+      case 'low': return 'text-green-600';
+      case 'high': return 'text-red-600';
+      default: return 'text-yellow-600';
+    }
+  };
+
+  const getRiskBarColor = (level: string) => {
+    switch (level) {
+      case 'low': return 'bg-green-500';
+      case 'high': return 'bg-red-500';
+      default: return 'bg-yellow-500';
+    }
+  };
+
+  const getRiskPercent = (level: string) => {
+    switch (level) {
+      case 'low': return 25;
+      case 'high': return 75;
+      default: return 50;
+    }
+  };
+
+  const toggleInfoCategory = (cat: string) => {
+    setInfoForm(prev => ({
+      ...prev,
+      categories: prev.categories.includes(cat)
+        ? prev.categories.filter(c => c !== cat)
+        : [...prev.categories, cat]
+    }));
+  };
+
+  // Clear action success toast after 3s
+  useEffect(() => {
+    if (actionSuccess) {
+      const t = setTimeout(() => setActionSuccess(null), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [actionSuccess]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
@@ -259,6 +408,14 @@ const InvestorPitchView: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+      {/* Success Toast */}
+      {actionSuccess && (
+        <div className="fixed top-4 right-4 z-50 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center">
+          <CheckCircle className="h-5 w-5 mr-2" />
+          {actionSuccess}
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -270,20 +427,27 @@ const InvestorPitchView: React.FC = () => {
               <ArrowLeft className="h-5 w-5 mr-2" />
               Back to Browse
             </button>
-            
+
             <div className="flex items-center space-x-4">
               <button
                 onClick={handleWatchlistToggle}
+                disabled={watchlistLoading}
                 className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
-                  isWatchlisted 
+                  isWatchlisted
                     ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                } ${watchlistLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                {isWatchlisted ? <BookmarkCheck className="h-4 w-4 mr-2" /> : <Bookmark className="h-4 w-4 mr-2" />}
+                {watchlistLoading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : isWatchlisted ? (
+                  <BookmarkCheck className="h-4 w-4 mr-2" />
+                ) : (
+                  <Bookmark className="h-4 w-4 mr-2" />
+                )}
                 {isWatchlisted ? 'Watchlisted' : 'Add to Watchlist'}
               </button>
-              
+
               <button
                 onClick={handleContactCreator}
                 className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -307,7 +471,7 @@ const InvestorPitchView: React.FC = () => {
                 {['overview', 'financials', 'diligence', 'notes'].map((tab) => (
                   <button
                     key={tab}
-                    onClick={() => setActiveTab(tab as any)}
+                    onClick={() => setActiveTab(tab as typeof activeTab)}
                     className={`flex-1 py-3 px-4 text-sm font-medium capitalize ${
                       activeTab === tab
                         ? 'text-blue-600 border-b-2 border-blue-600'
@@ -324,22 +488,22 @@ const InvestorPitchView: React.FC = () => {
             {activeTab === 'overview' && (
               <div className="bg-white rounded-xl shadow-lg p-8">
                 {pitch.thumbnail && (
-                  <img 
-                    src={pitch.thumbnail} 
+                  <img
+                    src={pitch.thumbnail}
                     alt={pitch.title}
                     className="w-full h-64 object-cover rounded-lg mb-6"
                   />
                 )}
-                
+
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">{pitch.title}</h1>
-                
+
                 {pitch.creatorName && (
                   <p className="text-gray-600 mb-4">
-                    by {pitch.creatorName} 
+                    by {pitch.creatorName}
                     {pitch.creatorCompany && ` • ${pitch.creatorCompany}`}
                   </p>
                 )}
-                
+
                 <div className="flex flex-wrap gap-2 mb-6">
                   <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
                     {pitch.genre}
@@ -357,28 +521,28 @@ const InvestorPitchView: React.FC = () => {
                   </span>
                 </div>
 
-                <p className="text-xl text-gray-700 mb-6 italic">"{pitch.logline}"</p>
-                
+                <p className="text-xl text-gray-700 mb-6 italic">&ldquo;{pitch.logline}&rdquo;</p>
+
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">Investment Opportunity</h3>
                     <p className="text-gray-700 whitespace-pre-wrap">{pitch.shortSynopsis}</p>
                   </div>
-                  
+
                   {pitch.marketPotential && (
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">Market Potential</h3>
                       <p className="text-gray-700">{pitch.marketPotential}</p>
                     </div>
                   )}
-                  
+
                   {pitch.comparableFilms && (
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">Comparable Success Stories</h3>
                       <p className="text-gray-700">{pitch.comparableFilms}</p>
                     </div>
                   )}
-                  
+
                   {pitch.targetAudience && (
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">Target Market</h3>
@@ -392,7 +556,7 @@ const InvestorPitchView: React.FC = () => {
             {activeTab === 'financials' && (
               <div className="bg-white rounded-xl shadow-lg p-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Financial Analysis</h2>
-                
+
                 {/* Budget Breakdown */}
                 <div className="mb-8 p-6 bg-gray-50 rounded-lg">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Budget Overview</h3>
@@ -410,7 +574,14 @@ const InvestorPitchView: React.FC = () => {
 
                 {/* ROI Calculator */}
                 <div className="mb-8 p-6 bg-blue-50 rounded-lg">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">ROI Calculator</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    ROI Calculator
+                    {pitchDetail?.expectedROI != null && (
+                      <span className="ml-2 text-sm font-normal text-gray-500">
+                        (using {pitchDetail.expectedROI}% genre avg ROI)
+                      </span>
+                    )}
+                  </h3>
                   <div className="space-y-4">
                     <div>
                       <label htmlFor="investment-amount" className="block text-sm font-medium text-gray-700 mb-1">
@@ -434,7 +605,7 @@ const InvestorPitchView: React.FC = () => {
                         </button>
                       </div>
                     </div>
-                    
+
                     {roiCalculation && (
                       <div className="mt-4 p-4 bg-white rounded-lg">
                         <div className="grid grid-cols-2 gap-4">
@@ -485,7 +656,7 @@ const InvestorPitchView: React.FC = () => {
                   <div className="flex items-center">
                     <span className="text-sm text-gray-600 mr-2">Progress:</span>
                     <div className="w-32 bg-gray-200 rounded-full h-2">
-                      <div 
+                      <div
                         className="bg-blue-600 h-2 rounded-full transition-all"
                         style={{ width: `${getDiligenceProgress()}%` }}
                       />
@@ -518,7 +689,7 @@ const InvestorPitchView: React.FC = () => {
             {activeTab === 'notes' && (
               <div className="bg-white rounded-xl shadow-lg p-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Private Notes</h2>
-                
+
                 {/* Add Note Form */}
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                   <div className="flex space-x-2 mb-3">
@@ -589,15 +760,33 @@ const InvestorPitchView: React.FC = () => {
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
               <div className="space-y-2">
-                <button className="w-full flex items-center justify-between px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                  <span>Express Interest</span>
-                  <ChevronRight className="h-4 w-4" />
+                <button
+                  onClick={() => setShowInterestModal(true)}
+                  disabled={pitchDetail?.hasExpressedInterest}
+                  className={`w-full flex items-center justify-between px-4 py-2 rounded-lg ${
+                    pitchDetail?.hasExpressedInterest
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-green-600 text-white hover:bg-green-700'
+                  }`}
+                >
+                  <span>{pitchDetail?.hasExpressedInterest ? 'Interest Expressed' : 'Express Interest'}</span>
+                  {pitchDetail?.hasExpressedInterest ? (
+                    <CheckCircle className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
                 </button>
-                <button className="w-full flex items-center justify-between px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                <button
+                  onClick={() => setShowMeetingModal(true)}
+                  className="w-full flex items-center justify-between px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
                   <span>Schedule Meeting</span>
                   <ChevronRight className="h-4 w-4" />
                 </button>
-                <button className="w-full flex items-center justify-between px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                <button
+                  onClick={() => setShowInfoModal(true)}
+                  className="w-full flex items-center justify-between px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
                   <span>Request More Info</span>
                   <ChevronRight className="h-4 w-4" />
                 </button>
@@ -610,32 +799,57 @@ const InvestorPitchView: React.FC = () => {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="flex items-center text-gray-600">
-                    <Target className="h-4 w-4 mr-2" />
-                    Min. Investment
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Invested
                   </span>
-                  <span className="font-semibold">$50K</span>
+                  <span className="font-semibold">
+                    {pitchDetail && pitchDetail.totalRaised > 0
+                      ? `$${pitchDetail.totalRaised.toLocaleString()}`
+                      : 'No investments yet'}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="flex items-center text-gray-600">
                     <TrendingUp className="h-4 w-4 mr-2" />
-                    Expected Return
+                    Expected ROI
                   </span>
-                  <span className="font-semibold text-green-600">2-3x</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center text-gray-600">
-                    <Clock className="h-4 w-4 mr-2" />
-                    Timeline
+                  <span className="font-semibold text-green-600">
+                    {pitchDetail?.expectedROI != null ? `${pitchDetail.expectedROI}%` : 'N/A'}
                   </span>
-                  <span className="font-semibold">24-36 mo</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="flex items-center text-gray-600">
                     <Users className="h-4 w-4 mr-2" />
-                    Other Investors
+                    Investors
                   </span>
-                  <span className="font-semibold">3</span>
+                  <span className="font-semibold">{pitchDetail?.investorCount ?? 0}</span>
                 </div>
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center text-gray-600">
+                    <Target className="h-4 w-4 mr-2" />
+                    Avg Investment
+                  </span>
+                  <span className="font-semibold">
+                    {pitchDetail && pitchDetail.avgInvestment > 0
+                      ? `$${pitchDetail.avgInvestment.toLocaleString()}`
+                      : 'N/A'}
+                  </span>
+                </div>
+                {/* Funding progress bar */}
+                {pitchDetail && pitchDetail.targetAmount && pitchDetail.targetAmount > 0 && (
+                  <div className="pt-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm text-gray-600">Funding Progress</span>
+                      <span className="text-sm font-medium">{pitchDetail.percentageRaised}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full transition-all"
+                        style={{ width: `${Math.min(100, pitchDetail.percentageRaised)}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -646,29 +860,38 @@ const InvestorPitchView: React.FC = () => {
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm text-gray-600">Market Risk</span>
-                    <span className="text-sm font-medium">Medium</span>
+                    <span className={`text-sm font-medium capitalize ${getRiskColor(pitchDetail?.riskLevel ?? 'medium')}`}>
+                      {pitchDetail?.riskLevel ?? 'Medium'}
+                    </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '50%' }} />
+                    <div
+                      className={`h-2 rounded-full ${getRiskBarColor(pitchDetail?.riskLevel ?? 'medium')}`}
+                      style={{ width: `${getRiskPercent(pitchDetail?.riskLevel ?? 'medium')}%` }}
+                    />
                   </div>
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm text-gray-600">Execution Risk</span>
-                    <span className="text-sm font-medium">Low</span>
+                    <span className="text-sm text-gray-600">Funding Progress</span>
+                    <span className="text-sm font-medium">{pitchDetail?.percentageRaised ?? 0}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-green-500 h-2 rounded-full" style={{ width: '30%' }} />
+                    <div
+                      className="bg-blue-500 h-2 rounded-full"
+                      style={{ width: `${Math.min(100, pitchDetail?.percentageRaised ?? 0)}%` }}
+                    />
                   </div>
                 </div>
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm text-gray-600">Competition</span>
-                    <span className="text-sm font-medium">High</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-red-500 h-2 rounded-full" style={{ width: '70%' }} />
-                  </div>
+                <div className="pt-2 flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Overall Risk</span>
+                  <span className={`text-sm font-semibold capitalize px-2 py-0.5 rounded ${
+                    pitchDetail?.riskLevel === 'low' ? 'bg-green-100 text-green-700' :
+                    pitchDetail?.riskLevel === 'high' ? 'bg-red-100 text-red-700' :
+                    'bg-yellow-100 text-yellow-700'
+                  }`}>
+                    {pitchDetail?.riskLevel ?? 'Medium'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -712,6 +935,218 @@ const InvestorPitchView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Express Interest Modal */}
+      {showInterestModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Express Interest</h3>
+              <button onClick={() => setShowInterestModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="interest-amount" className="block text-sm font-medium text-gray-700 mb-1">
+                  Investment Amount ($) *
+                </label>
+                <input
+                  type="number"
+                  id="interest-amount"
+                  value={interestForm.amount}
+                  onChange={(e) => setInterestForm(prev => ({ ...prev, amount: e.target.value }))}
+                  placeholder="e.g. 50000"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              <div>
+                <label htmlFor="interest-level" className="block text-sm font-medium text-gray-700 mb-1">
+                  Interest Level
+                </label>
+                <select
+                  id="interest-level"
+                  value={interestForm.level}
+                  onChange={(e) => setInterestForm(prev => ({ ...prev, level: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="very_high">Very High</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="interest-message" className="block text-sm font-medium text-gray-700 mb-1">
+                  Message (optional)
+                </label>
+                <textarea
+                  id="interest-message"
+                  value={interestForm.message}
+                  onChange={(e) => setInterestForm(prev => ({ ...prev, message: e.target.value }))}
+                  placeholder="Tell the creator why you're interested..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  rows={3}
+                />
+              </div>
+              {actionError && <p className="text-sm text-red-600">{actionError}</p>}
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowInterestModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleExpressInterest}
+                  disabled={actionLoading || !interestForm.amount}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Submit'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Schedule Meeting Modal */}
+      {showMeetingModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Schedule Meeting</h3>
+              <button onClick={() => setShowMeetingModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="meeting-datetime" className="block text-sm font-medium text-gray-700 mb-1">
+                  Date & Time *
+                </label>
+                <input
+                  type="datetime-local"
+                  id="meeting-datetime"
+                  value={meetingForm.dateTime}
+                  onChange={(e) => setMeetingForm(prev => ({ ...prev, dateTime: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label htmlFor="meeting-type" className="block text-sm font-medium text-gray-700 mb-1">
+                  Meeting Type
+                </label>
+                <select
+                  id="meeting-type"
+                  value={meetingForm.meetingType}
+                  onChange={(e) => setMeetingForm(prev => ({ ...prev, meetingType: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="video">Video Call</option>
+                  <option value="phone">Phone Call</option>
+                  <option value="in_person">In Person</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="meeting-message" className="block text-sm font-medium text-gray-700 mb-1">
+                  Message (optional)
+                </label>
+                <textarea
+                  id="meeting-message"
+                  value={meetingForm.message}
+                  onChange={(e) => setMeetingForm(prev => ({ ...prev, message: e.target.value }))}
+                  placeholder="Any topics you'd like to discuss..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                />
+              </div>
+              {actionError && <p className="text-sm text-red-600">{actionError}</p>}
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowMeetingModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleScheduleMeeting}
+                  disabled={actionLoading || !meetingForm.dateTime}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Schedule'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Request Info Modal */}
+      {showInfoModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Request More Info</h3>
+              <button onClick={() => setShowInfoModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Information Categories
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {['Financial Details', 'Team Background', 'Market Analysis', 'Distribution Plan', 'Legal Documents', 'Timeline'].map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => toggleInfoCategory(cat)}
+                      className={`px-3 py-1 rounded-full text-sm ${
+                        infoForm.categories.includes(cat)
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label htmlFor="info-message" className="block text-sm font-medium text-gray-700 mb-1">
+                  Message *
+                </label>
+                <textarea
+                  id="info-message"
+                  value={infoForm.message}
+                  onChange={(e) => setInfoForm(prev => ({ ...prev, message: e.target.value }))}
+                  placeholder="Describe what information you need..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={4}
+                />
+              </div>
+              {actionError && <p className="text-sm text-red-600">{actionError}</p>}
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowInfoModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRequestInfo}
+                  disabled={actionLoading || !infoForm.message}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send Request'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

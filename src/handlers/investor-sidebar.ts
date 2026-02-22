@@ -1278,3 +1278,114 @@ export async function investorSettingsSaveHandler(request: Request, env: Env): P
     });
   }
 }
+
+// ---------------------------------------------------------------------------
+// investorPitchInvestmentDetailHandler
+//    GET /api/investor/pitch/:pitchId/investment-detail
+// ---------------------------------------------------------------------------
+export async function investorPitchInvestmentDetailHandler(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin');
+  const userId = await getUserId(request, env);
+  if (!userId) return authError(origin);
+
+  const url = new URL(request.url);
+  // Extract pitchId from /api/investor/pitch/:pitchId/investment-detail
+  const segments = url.pathname.split('/');
+  const pitchIdx = segments.indexOf('pitch');
+  const pitchId = pitchIdx >= 0 ? segments[pitchIdx + 1] : null;
+  if (!pitchId) {
+    return new Response(JSON.stringify({ success: false, error: 'Pitch ID required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) },
+    });
+  }
+
+  const emptyData = {
+    totalRaised: 0,
+    investorCount: 0,
+    avgInvestment: 0,
+    targetAmount: null as number | null,
+    percentageRaised: 0,
+    expectedROI: null as number | null,
+    riskLevel: 'medium' as 'low' | 'medium' | 'high',
+    isWatchlisted: false,
+    hasExpressedInterest: false,
+    interestLevel: null as string | null,
+  };
+
+  const sql = getDb(env);
+  if (!sql) return jsonResponse(emptyData, origin);
+
+  try {
+    // Run all queries in parallel
+    const [investmentStats, pitchRow, watchlistRow, interestRow] = await Promise.all([
+      // Investment stats for this pitch
+      sql`
+        SELECT
+          COALESCE(SUM(amount), 0)::numeric AS total_raised,
+          COUNT(*)::int AS investor_count,
+          CASE WHEN COUNT(*) > 0 THEN (SUM(amount) / COUNT(*))::numeric ELSE 0 END AS avg_investment
+        FROM investments
+        WHERE pitch_id::text = ${pitchId}
+      `,
+      // Pitch budget + genre for risk/ROI calculation
+      sql`
+        SELECT p.budget, p.genre,
+          md.avg_roi
+        FROM pitches p
+        LEFT JOIN LATERAL (
+          SELECT avg_roi FROM market_data
+          WHERE genre ILIKE p.genre
+          ORDER BY data_date DESC LIMIT 1
+        ) md ON true
+        WHERE p.id::text = ${pitchId}
+        LIMIT 1
+      `,
+      // Watchlist check for current user
+      sql`
+        SELECT id FROM investor_watchlist
+        WHERE investor_id::text = ${userId} AND pitch_id::text = ${pitchId}
+        LIMIT 1
+      `,
+      // Interest check for current user
+      sql`
+        SELECT id, interest_level FROM investment_interests
+        WHERE investor_id::text = ${userId} AND pitch_id::text = ${pitchId}
+        LIMIT 1
+      `,
+    ]);
+
+    const stats = investmentStats[0] || {};
+    const totalRaised = Number(stats.total_raised) || 0;
+    const investorCount = Number(stats.investor_count) || 0;
+    const avgInvestment = Number(stats.avg_investment) || 0;
+
+    const pitch = pitchRow[0];
+    const budget = pitch ? Number(pitch.budget) || 0 : 0;
+    const expectedROI = pitch?.avg_roi != null ? Number(pitch.avg_roi) : null;
+
+    // Risk level from budget bracket (same logic as discover page)
+    let riskLevel: 'low' | 'medium' | 'high' = 'medium';
+    if (budget > 0 && budget < 100000) riskLevel = 'low';
+    else if (budget >= 1000000) riskLevel = 'high';
+
+    const percentageRaised = budget > 0 ? Math.min(100, (totalRaised / budget) * 100) : 0;
+
+    return jsonResponse({
+      totalRaised,
+      investorCount,
+      avgInvestment,
+      targetAmount: budget > 0 ? budget : null,
+      percentageRaised: Number(percentageRaised.toFixed(1)),
+      expectedROI,
+      riskLevel,
+      isWatchlisted: watchlistRow.length > 0,
+      hasExpressedInterest: interestRow.length > 0,
+      interestLevel: interestRow[0]?.interest_level ?? null,
+    }, origin);
+  } catch (error) {
+    const e = error instanceof Error ? error : new Error(String(error));
+    console.error('[investorPitchInvestmentDetailHandler] Error:', e.message);
+    return jsonResponse(emptyData, origin);
+  }
+}

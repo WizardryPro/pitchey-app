@@ -2252,6 +2252,7 @@ class RouteRegistry {
     this.register('POST', '/api/investor/investments', this.createInvestorInvestment.bind(this));
     this.register('PUT', '/api/investor/investments/:id', this.updateInvestorInvestment.bind(this));
     this.register('DELETE', '/api/investor/investments/:id', this.deleteInvestorInvestment.bind(this));
+    this.register('POST', '/api/investor/invest', this.createInvestorInvestment.bind(this));
     this.register('GET', '/api/investor/watchlist', this.getInvestorWatchlist.bind(this));
     this.register('POST', '/api/investor/watchlist', this.addToInvestorWatchlist.bind(this));
     this.register('DELETE', '/api/investor/watchlist/:id', this.removeFromInvestorWatchlist.bind(this));
@@ -2826,6 +2827,10 @@ class RouteRegistry {
     this.register('PUT', '/api/investor/settings', async (req) => {
       const { investorSettingsSaveHandler } = await import('./handlers/investor-sidebar');
       return investorSettingsSaveHandler(req, this.env);
+    });
+    this.register('GET', '/api/investor/pitch/:pitchId/investment-detail', async (req) => {
+      const { investorPitchInvestmentDetailHandler } = await import('./handlers/investor-sidebar');
+      return investorPitchInvestmentDetailHandler(req, this.env);
     });
 
     // Creator Portal Sidebar Routes (real DB queries)
