@@ -450,10 +450,16 @@ const InvestorPitchView: React.FC = () => {
 
               <button
                 onClick={handleContactCreator}
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                disabled={!pitch?.hasSignedNDA}
+                title={!pitch?.hasSignedNDA ? 'Sign NDA to contact the creator' : 'Send a message to the creator'}
+                className={`flex items-center px-4 py-2 rounded-lg ${
+                  pitch?.hasSignedNDA
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
               >
                 <MessageSquare className="h-4 w-4 mr-2" />
-                Contact Creator
+                {pitch?.hasSignedNDA ? 'Contact Creator' : 'NDA Required'}
               </button>
             </div>
           </div>
