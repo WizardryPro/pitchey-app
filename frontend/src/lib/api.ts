@@ -52,20 +52,33 @@ function transformPitchData(pitch: any): any {
   if (!pitch) return pitch;
   return {
     ...pitch,
-    // Map snake_case to camelCase for engagement metrics
+    // Map snake_case to camelCase
+    userId: pitch.user_id ?? pitch.userId ?? pitch.creator?.id,
     viewCount: pitch.view_count ?? pitch.viewCount ?? 0,
     likeCount: pitch.like_count ?? pitch.likeCount ?? 0,
+    views: pitch.view_count ?? pitch.viewCount ?? pitch.views ?? 0,
+    likes: pitch.like_count ?? pitch.likeCount ?? pitch.likes ?? 0,
     ndaCount: pitch.nda_count ?? pitch.ndaCount ?? 0,
     createdAt: pitch.created_at ?? pitch.createdAt,
     updatedAt: pitch.updated_at ?? pitch.updatedAt,
     creatorId: pitch.creator_id ?? pitch.creatorId ?? pitch.user_id,
-    creatorName: pitch.creator_name ?? pitch.creatorName,
+    creatorName: pitch.creator_name ?? pitch.creatorName ?? pitch.creator?.name,
+    creatorCompany: pitch.company_name ?? pitch.creatorCompany,
     shortSynopsis: pitch.short_synopsis ?? pitch.shortSynopsis,
     longSynopsis: pitch.long_synopsis ?? pitch.longSynopsis,
+    budget: pitch.budget_range ?? pitch.estimated_budget ?? pitch.budget,
+    estimatedBudget: pitch.estimated_budget ?? pitch.estimatedBudget,
+    productionTimeline: pitch.production_timeline ?? pitch.productionTimeline,
+    targetAudience: pitch.target_audience ?? pitch.targetAudience,
+    comparableFilms: pitch.comparable_films ?? pitch.comparableFilms,
     budgetBreakdown: pitch.budget_breakdown ?? pitch.budgetBreakdown,
     attachedTalent: pitch.attached_talent ?? pitch.attachedTalent,
     financialProjections: pitch.financial_projections ?? pitch.financialProjections,
     titleImage: pitch.title_image ?? pitch.titleImage,
+    thumbnail: pitch.thumbnail_url ?? pitch.title_image ?? pitch.titleImage ?? pitch.thumbnail,
+    pitchDeck: pitch.pitch_deck_url ?? pitch.pitchDeck,
+    script: pitch.script_url ?? pitch.script,
+    trailer: pitch.trailer_url ?? pitch.trailer,
   };
 }
 

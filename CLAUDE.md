@@ -61,11 +61,16 @@ Detailed context split by domain to keep LLM context focused:
 
 ## Current Status (February 2026)
 - 120+ API endpoints operational
-- 53 test files, 1130 tests, zero failures
+- 59 test files, 1261 tests, zero failures
 - TypeScript type-check blocking in CI (zero errors)
 - All 3 dashboards hardened (per-section errors, connectivity awareness, skeleton loading)
 - Connectivity awareness on all key pages (Messages, PitchEdit, SearchPage)
 - Portfolio analytics use real SQL aggregation (no mock data)
+- Saved pitches APIs enriched with views, likes, verified, budget, thumbnail
+- Investments API enriched with stake (equity_percentage), stage, risk level
+- Feasibility scores use deterministic heuristics (not random)
+- Public pitch endpoint returns full field set for PitchView pages
+- `transformPitchData` maps all snake_case API fields to camelCase
 - Creator analytics: topPitches + audienceBreakdown from real DB queries
 - Calendar: full CRUD (GET synthesized + custom events, POST new events)
 - Team invite emails wired via Resend API
