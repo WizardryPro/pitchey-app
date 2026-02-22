@@ -8,10 +8,10 @@ export class SimpleMessagingHandler {
   async getMessages(userId: number, limit: number = 50, offset: number = 0) {
     try {
       const messages = await this.db.query(
-        `SELECT 
+        `SELECT
           m.*,
           c.title as conversation_title,
-          u.name as sender_name,
+          COALESCE(u.name, u.first_name || ' ' || u.last_name, u.email) as sender_name,
           u.avatar_url as sender_avatar
          FROM messages m
          JOIN conversations c ON c.id = m.conversation_id
@@ -35,7 +35,7 @@ export class SimpleMessagingHandler {
   async getMessageById(userId: number, messageId: number) {
     try {
       const message = await this.db.query(
-        `SELECT m.*, u.name as sender_name
+        `SELECT m.*, COALESCE(u.name, u.first_name || ' ' || u.last_name, u.email) as sender_name
          FROM messages m
          JOIN users u ON u.id = m.sender_id
          JOIN conversation_participants cp ON cp.conversation_id = m.conversation_id
@@ -58,29 +58,29 @@ export class SimpleMessagingHandler {
   async sendMessage(userId: number, data: any) {
     try {
       const { conversation_id, recipient_id, content, message_type = 'text' } = data;
-      
+
       let convId = conversation_id;
-      
+
       // If no conversation_id, create or find direct conversation
       if (!convId && recipient_id) {
         const existing = await this.db.query(
           `SELECT c.id FROM conversations c
            JOIN conversation_participants cp1 ON cp1.conversation_id = c.id AND cp1.user_id = $1
            JOIN conversation_participants cp2 ON cp2.conversation_id = c.id AND cp2.user_id = $2
-           WHERE c.type = 'direct' LIMIT 1`,
+           WHERE c.is_group = FALSE LIMIT 1`,
           [userId, recipient_id]
         );
-        
+
         if (existing.length > 0) {
           convId = existing[0].id;
         } else {
           // Create new conversation
           const newConv = await this.db.query(
-            `INSERT INTO conversations (type, created_by) VALUES ('direct', $1) RETURNING id`,
+            `INSERT INTO conversations (is_group, created_by_id) VALUES (FALSE, $1) RETURNING id`,
             [userId]
           );
           convId = newConv[0].id;
-          
+
           // Add participants
           await this.db.query(
             `INSERT INTO conversation_participants (conversation_id, user_id)
@@ -89,14 +89,14 @@ export class SimpleMessagingHandler {
           );
         }
       }
-      
+
       // Insert message
       const message = await this.db.query(
         `INSERT INTO messages (conversation_id, sender_id, content, message_type)
          VALUES ($1, $2, $3, $4) RETURNING *`,
         [convId, userId, content, message_type]
       );
-      
+
       return { success: true, data: { message: message[0] } };
     } catch (error) {
       console.error('Send message error:', error);
@@ -112,7 +112,7 @@ export class SimpleMessagingHandler {
          VALUES ($1, $2) ON CONFLICT DO NOTHING`,
         [messageId, userId]
       );
-      
+
       return { success: true };
     } catch (error) {
       console.error('Mark as read error:', error);
@@ -128,7 +128,7 @@ export class SimpleMessagingHandler {
          WHERE id = $1 AND sender_id = $2`,
         [messageId, userId]
       );
-      
+
       return { success: true };
     } catch (error) {
       console.error('Delete message error:', error);
@@ -143,12 +143,12 @@ export class SimpleMessagingHandler {
         return { success: false, error: 'Invalid recipient' };
       }
 
-      // Check for existing direct conversation
+      // Check for existing direct conversation between these two users
       const existing = await this.db.query(
         `SELECT c.id FROM conversations c
          JOIN conversation_participants cp1 ON cp1.conversation_id = c.id AND cp1.user_id = $1
          JOIN conversation_participants cp2 ON cp2.conversation_id = c.id AND cp2.user_id = $2
-         WHERE c.type = 'direct' LIMIT 1`,
+         WHERE c.is_group = FALSE LIMIT 1`,
         [userId, recipientId]
       );
 
@@ -159,8 +159,8 @@ export class SimpleMessagingHandler {
       } else {
         // Create new conversation
         const newConv = await this.db.query(
-          `INSERT INTO conversations (type, created_by) VALUES ('direct', $1) RETURNING id`,
-          [userId]
+          `INSERT INTO conversations (is_group, created_by_id, pitch_id) VALUES (FALSE, $1, $2) RETURNING id`,
+          [userId, pitchId || null]
         );
         conversationId = newConv[0].id;
 
@@ -179,21 +179,34 @@ export class SimpleMessagingHandler {
     }
   }
 
-  // Get conversations
+  // Get conversations for a user
   async getConversations(userId: number) {
     try {
       const conversations = await this.db.query(
-        `SELECT c.*, 
-          (SELECT content FROM messages WHERE conversation_id = c.id 
+        `SELECT c.*,
+          (SELECT content FROM messages WHERE conversation_id = c.id
            ORDER BY created_at DESC LIMIT 1) as last_message,
-          (SELECT COUNT(*) FROM conversation_participants WHERE conversation_id = c.id) as participant_count
+          (SELECT created_at FROM messages WHERE conversation_id = c.id
+           ORDER BY created_at DESC LIMIT 1) as last_message_time,
+          (SELECT COUNT(*) FROM conversation_participants WHERE conversation_id = c.id) as participant_count,
+          -- Get the other participant's name for direct conversations
+          (SELECT COALESCE(u2.name, u2.first_name || ' ' || u2.last_name, u2.email)
+           FROM conversation_participants cp2
+           JOIN users u2 ON u2.id = cp2.user_id
+           WHERE cp2.conversation_id = c.id AND cp2.user_id != $1
+           LIMIT 1) as participant_name,
+          (SELECT u2.user_type
+           FROM conversation_participants cp2
+           JOIN users u2 ON u2.id = cp2.user_id
+           WHERE cp2.conversation_id = c.id AND cp2.user_id != $1
+           LIMIT 1) as participant_type
          FROM conversations c
          JOIN conversation_participants cp ON cp.conversation_id = c.id
-         WHERE cp.user_id = $1 AND c.is_archived = FALSE
-         ORDER BY c.updated_at DESC`,
+         WHERE cp.user_id = $1
+         ORDER BY COALESCE(c.last_message_at, c.updated_at, c.created_at) DESC`,
         [userId]
       );
-      
+
       return { success: true, data: { conversations } };
     } catch (error) {
       console.error('Get conversations error:', error);
@@ -211,21 +224,23 @@ export class SimpleMessagingHandler {
          WHERE c.id = $1 AND cp.user_id = $2`,
         [conversationId, userId]
       );
-      
+
       if (conversation.length === 0) {
         return { success: false, error: 'Conversation not found' };
       }
-      
+
       // Get messages
       const messages = await this.db.query(
-        `SELECT m.*, u.name as sender_name, u.avatar_url as sender_avatar
+        `SELECT m.*,
+           COALESCE(u.name, u.first_name || ' ' || u.last_name, u.email) as sender_name,
+           u.avatar_url as sender_avatar
          FROM messages m
          JOIN users u ON u.id = m.sender_id
          WHERE m.conversation_id = $1 AND m.is_deleted = FALSE
          ORDER BY m.created_at ASC LIMIT 50`,
         [conversationId]
       );
-      
+
       return {
         success: true,
         data: {
