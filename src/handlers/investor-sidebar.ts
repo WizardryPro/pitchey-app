@@ -188,7 +188,12 @@ export async function investorSavedPitchesHandler(request: Request, env: Env): P
         p.logline,
         p.status,
         p.thumbnail_url,
-        u.name AS creator_name
+        p.budget_range,
+        p.view_count,
+        p.like_count,
+        p.title_image,
+        u.name AS creator_name,
+        COALESCE(u.verified, false) AS creator_verified
       FROM saved_pitches sp
       JOIN pitches p ON p.id::text = sp.pitch_id::text
       LEFT JOIN users u ON u.id::text = p.user_id::text

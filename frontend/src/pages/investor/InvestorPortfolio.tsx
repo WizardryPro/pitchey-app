@@ -78,20 +78,35 @@ export default function InvestorPortfolio() {
       // Fetch investment history
       const historyResponse = await InvestmentService.getInvestmentHistory({ limit: 50 });
       if (historyResponse.success && historyResponse.data) {
-        const transformedInvestments: Investment[] = (historyResponse.data?.investments ?? []).map((inv: any) => ({
-          id: String(inv.id),
-          pitchTitle: inv.pitchTitle || 'Unknown Project',
-          creator: inv.creatorName || 'Unknown Creator',
-          investmentDate: inv.createdAt,
-          amount: inv.amount,
-          stake: 0, // Not available from API
-          status: inv.status === 'active' ? 'active' : inv.status === 'completed' ? 'completed' : 'pending',
-          currentValue: inv.currentValue,
-          roi: inv.returnPercentage || 0,
-          genre: inv.pitchGenre || 'Unknown',
-          stage: 'production' as const, // Default since not in API
-          riskLevel: 'medium' as const // Default since not in API
-        }));
+        const transformedInvestments: Investment[] = (historyResponse.data?.investments ?? []).map((inv: any) => {
+          // Derive stage from pitch_status if backend provides it
+          const pitchStatus = inv.pitch_status || inv.pitchStatus || '';
+          const derivedStage = inv.derived_stage || inv.derivedStage || (
+            pitchStatus === 'produced' ? 'released' :
+            pitchStatus === 'optioned' ? 'post-production' :
+            pitchStatus === 'in_review' ? 'production' :
+            'development'
+          );
+          // Derive risk from ROI if backend provides it
+          const roi = inv.returnPercentage || inv.roi_percentage || 0;
+          const derivedRisk = inv.derived_risk_level || inv.derivedRiskLevel || (
+            roi < 0 ? 'high' : roi <= 15 ? 'medium' : 'low'
+          );
+          return {
+            id: String(inv.id),
+            pitchTitle: inv.pitchTitle || inv.pitch_title || 'Unknown Project',
+            creator: inv.creatorName || inv.creator_name || 'Unknown Creator',
+            investmentDate: inv.createdAt || inv.invested_at || inv.created_at,
+            amount: inv.amount,
+            stake: Number(inv.stake ?? inv.equity_percentage ?? 0),
+            status: inv.status === 'active' ? 'active' : inv.status === 'completed' ? 'completed' : 'pending',
+            currentValue: inv.currentValue ?? inv.current_value ?? inv.amount,
+            roi,
+            genre: inv.pitchGenre || inv.genre || 'Unknown',
+            stage: derivedStage as Investment['stage'],
+            riskLevel: derivedRisk as Investment['riskLevel']
+          };
+        });
         setInvestments(transformedInvestments);
       } else {
         // No investments found - that's okay, show empty state

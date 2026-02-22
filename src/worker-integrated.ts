@@ -2286,6 +2286,7 @@ class RouteRegistry {
     this.register('POST', '/api/messages', this.sendMessage.bind(this));
     this.register('PUT', '/api/messages/:id/read', this.markMessageAsRead.bind(this));
     this.register('DELETE', '/api/messages/:id', this.deleteMessage.bind(this));
+    this.register('POST', '/api/conversations', this.createConversation.bind(this));
     this.register('GET', '/api/conversations', this.getConversations.bind(this));
     this.register('GET', '/api/conversations/:id', this.getConversationById.bind(this));
     this.register('POST', '/api/conversations/:id/messages', this.sendMessageToConversation.bind(this));
@@ -2948,6 +2949,9 @@ class RouteRegistry {
     // Saved pitches endpoints
     this.register('GET', '/api/saved-pitches', this.getSavedPitches.bind(this));
     this.register('POST', '/api/saved-pitches', this.savePitch.bind(this));
+    this.register('GET', '/api/saved-pitches/stats', this.getSavedPitchStats.bind(this));
+    this.register('GET', '/api/saved-pitches/check/:pitchId', this.checkPitchSaved.bind(this));
+    this.register('PUT', '/api/saved-pitches/:id', this.updateSavedPitchNotes.bind(this));
     this.register('DELETE', '/api/saved-pitches/:id', this.unsavePitch.bind(this));
 
     // WebSocket upgrade - paid plan with Durable Objects
@@ -14603,32 +14607,19 @@ Signatures: [To be completed upon signing]
         });
       }
 
-      // Try with Better Auth "user" table first, fall back to legacy "users" table
       let savedPitches: any[] = [];
-      try {
-        savedPitches = await this.db.query(`
-          SELECT sp.id, sp.pitch_id, sp.notes, sp.created_at as saved_at,
-                 p.title, p.logline, p.genre, p.status, p.thumbnail_url, p.budget_range,
-                 COALESCE(u.name, u.email) as creator_name
-          FROM saved_pitches sp
-          JOIN pitches p ON p.id = sp.pitch_id
-          LEFT JOIN "user" u ON p.user_id::text = u.id::text
-          WHERE sp.user_id::text = $1::text
-          ORDER BY sp.created_at DESC
-        `, [authCheck.user.id]);
-      } catch (betterAuthError) {
-        // Fallback to legacy users table
-        savedPitches = await this.db.query(`
-          SELECT sp.id, sp.pitch_id, sp.notes, sp.created_at as saved_at,
-                 p.title, p.logline, p.genre, p.status, p.thumbnail_url, p.budget_range,
-                 COALESCE(u.first_name || ' ' || u.last_name, u.company_name, u.email) as creator_name
-          FROM saved_pitches sp
-          JOIN pitches p ON p.id = sp.pitch_id
-          LEFT JOIN users u ON p.user_id = u.id
-          WHERE sp.user_id::text = $1::text
-          ORDER BY sp.created_at DESC
-        `, [authCheck.user.id]);
-      }
+      savedPitches = await this.db.query(`
+        SELECT sp.id, sp.pitch_id, sp.notes, sp.created_at as saved_at,
+               p.title, p.logline, p.genre, p.status, p.thumbnail_url, p.budget_range,
+               p.view_count, p.like_count, p.title_image,
+               COALESCE(u.first_name || ' ' || u.last_name, u.company_name, u.email) as creator_name,
+               COALESCE(u.verified, false) as creator_verified
+        FROM saved_pitches sp
+        JOIN pitches p ON p.id = sp.pitch_id
+        LEFT JOIN users u ON p.user_id = u.id
+        WHERE sp.user_id::text = $1::text
+        ORDER BY sp.created_at DESC
+      `, [authCheck.user.id]);
 
       const { getCorsHeaders } = await import('./utils/response');
       return new Response(JSON.stringify({
@@ -14743,6 +14734,168 @@ Signatures: [To be completed upon signing]
       return new Response(JSON.stringify({
         success: true,
         data: { message: 'Pitch unsaved successfully' }
+      }), { headers: getCorsHeaders(origin) });
+
+    } catch (error) {
+      return errorHandler(error, request);
+    }
+  }
+
+  /**
+   * Check if a pitch is saved by the current user
+   */
+  private async checkPitchSaved(request: Request): Promise<Response> {
+    try {
+      const authCheck = await this.requireAuth(request);
+      if (!authCheck.authorized) return authCheck.response;
+
+      const origin = request.headers.get('Origin');
+      const url = new URL(request.url);
+      const pathParts = url.pathname.split('/');
+      const pitchId = pathParts[pathParts.length - 1];
+
+      if (!pitchId || pitchId === '') {
+        return new Response(JSON.stringify({
+          success: false,
+          error: { message: 'Pitch ID is required' }
+        }), {
+          status: 400,
+          headers: getCorsHeaders(origin)
+        });
+      }
+
+      const rows = await this.db.query(
+        'SELECT id, created_at FROM saved_pitches WHERE user_id::text = $1::text AND pitch_id = $2',
+        [authCheck.user.id, pitchId]
+      );
+
+      if (rows && rows.length > 0) {
+        return new Response(JSON.stringify({
+          success: true,
+          data: { isSaved: true, savedPitchId: rows[0].id, savedAt: rows[0].created_at }
+        }), { headers: getCorsHeaders(origin) });
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        data: { isSaved: false }
+      }), { headers: getCorsHeaders(origin) });
+
+    } catch (error) {
+      return errorHandler(error, request);
+    }
+  }
+
+  /**
+   * Update notes on a saved pitch
+   */
+  private async updateSavedPitchNotes(request: Request): Promise<Response> {
+    try {
+      const authCheck = await this.requireAuth(request);
+      if (!authCheck.authorized) return authCheck.response;
+
+      const origin = request.headers.get('Origin');
+      const url = new URL(request.url);
+      const pathParts = url.pathname.split('/');
+      const savedPitchId = pathParts[pathParts.length - 1];
+
+      if (!savedPitchId || savedPitchId === '') {
+        return new Response(JSON.stringify({
+          success: false,
+          error: { message: 'Saved pitch ID is required' }
+        }), {
+          status: 400,
+          headers: getCorsHeaders(origin)
+        });
+      }
+
+      const body = await request.json() as { notes?: string };
+
+      const rows = await this.db.query(
+        `UPDATE saved_pitches SET notes = $1 WHERE id = $2 AND user_id::text = $3::text
+         RETURNING id, pitch_id, notes, created_at as saved_at`,
+        [body.notes ?? null, savedPitchId, authCheck.user.id]
+      );
+
+      if (!rows || rows.length === 0) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: { message: 'Saved pitch not found' }
+        }), {
+          status: 404,
+          headers: getCorsHeaders(origin)
+        });
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        data: rows[0]
+      }), { headers: getCorsHeaders(origin) });
+
+    } catch (error) {
+      return errorHandler(error, request);
+    }
+  }
+
+  /**
+   * Get saved pitch statistics for the current user
+   */
+  private async getSavedPitchStats(request: Request): Promise<Response> {
+    try {
+      const authCheck = await this.requireAuth(request);
+      if (!authCheck.authorized) return authCheck.response;
+
+      const origin = request.headers.get('Origin');
+      const userId = authCheck.user.id;
+
+      // Total saved count
+      const totalRows = await this.db.query(
+        'SELECT COUNT(*)::int as count FROM saved_pitches WHERE user_id::text = $1::text',
+        [userId]
+      );
+      const totalSaved = totalRows?.[0]?.count || 0;
+
+      // Count by genre
+      const genreRows = await this.db.query(
+        `SELECT p.genre, COUNT(*)::int as count
+         FROM saved_pitches sp JOIN pitches p ON p.id = sp.pitch_id
+         WHERE sp.user_id::text = $1::text AND p.genre IS NOT NULL
+         GROUP BY p.genre`,
+        [userId]
+      );
+      const byGenre: Record<string, number> = {};
+      if (genreRows) {
+        for (const row of genreRows) {
+          byGenre[row.genre] = row.count;
+        }
+      }
+
+      // Count by format
+      const formatRows = await this.db.query(
+        `SELECT p.format, COUNT(*)::int as count
+         FROM saved_pitches sp JOIN pitches p ON p.id = sp.pitch_id
+         WHERE sp.user_id::text = $1::text AND p.format IS NOT NULL
+         GROUP BY p.format`,
+        [userId]
+      );
+      const byFormat: Record<string, number> = {};
+      if (formatRows) {
+        for (const row of formatRows) {
+          byFormat[row.format] = row.count;
+        }
+      }
+
+      // Recently added (last 7 days)
+      const recentRows = await this.db.query(
+        `SELECT COUNT(*)::int as count FROM saved_pitches
+         WHERE user_id::text = $1::text AND created_at >= NOW() - INTERVAL '7 days'`,
+        [userId]
+      );
+      const recentlyAdded = recentRows?.[0]?.count || 0;
+
+      return new Response(JSON.stringify({
+        success: true,
+        data: { totalSaved, byGenre, byFormat, recentlyAdded }
       }), { headers: getCorsHeaders(origin) });
 
     } catch (error) {
@@ -15953,6 +16106,36 @@ Signatures: [To be completed upon signing]
 
       const handler = new (await import('./handlers/messaging-simple')).SimpleMessagingHandler(this.db);
       const result = await handler.deleteMessage(authCheck.user.id, messageId);
+
+      const origin = request.headers.get('Origin');
+      return new Response(JSON.stringify(result), {
+        headers: getCorsHeaders(origin),
+        status: result.success ? 200 : 400
+      });
+    } catch (error) {
+      return errorHandler(error, request);
+    }
+  }
+
+  private async createConversation(request: Request): Promise<Response> {
+    try {
+      const authCheck = await this.requireAuth(request);
+      if (!authCheck.authorized) return authCheck.response;
+
+      const data = await request.json() as Record<string, unknown>;
+      const recipientId = typeof data.recipientId === 'number' ? data.recipientId : parseInt(String(data.recipientId || '0'));
+      const pitchId = data.pitchId ? (typeof data.pitchId === 'number' ? data.pitchId : parseInt(String(data.pitchId))) : undefined;
+
+      if (!recipientId) {
+        const origin = request.headers.get('Origin');
+        return new Response(JSON.stringify({ success: false, error: 'recipientId is required' }), {
+          headers: getCorsHeaders(origin),
+          status: 400
+        });
+      }
+
+      const handler = new (await import('./handlers/messaging-simple')).SimpleMessagingHandler(this.db);
+      const result = await handler.findOrCreateConversation(authCheck.user.id, recipientId, pitchId);
 
       const origin = request.headers.get('Origin');
       return new Response(JSON.stringify(result), {

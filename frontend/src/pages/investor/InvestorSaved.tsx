@@ -85,21 +85,21 @@ export default function InvestorSaved() {
           };
         };
         const transformed: TransformedPitch[] = (response.savedPitches as unknown as SavedPitchRaw[]).map((sp) => ({
-          id: String(sp.pitchId ?? sp.id),
-          title: (sp.pitch?.title as string) || 'Untitled Pitch',
-          logline: (sp.pitch?.logline as string) || '',
-          genre: sp.pitch?.genre != null ? [sp.pitch.genre as string] : [],
-          budget: 0, // Budget not available from saved pitches API
+          id: String(sp.pitchId ?? sp.pitch_id ?? sp.id),
+          title: (sp.title as string) || (sp.pitch?.title as string) || 'Untitled Pitch',
+          logline: (sp.logline as string) || (sp.pitch?.logline as string) || '',
+          genre: (sp.genre ?? sp.pitch?.genre) != null ? [String(sp.genre ?? sp.pitch?.genre)] : [],
+          budget: Number(sp.budget_range ?? 0),
           creator: {
             id: String(sp.pitch?.creator?.id ?? ''),
-            name: (sp.pitch?.creator?.username as string) || (sp.pitch?.creator?.name as string) || 'Unknown',
-            verified: false
+            name: (sp.creator_name as string) || (sp.pitch?.creator?.username as string) || (sp.pitch?.creator?.name as string) || 'Unknown',
+            verified: Boolean(sp.creator_verified ?? sp.pitch?.creator?.verified ?? false)
           },
-          savedDate: (sp.savedAt as string) || new Date().toISOString(),
+          savedDate: (sp.saved_at as string) || (sp.savedAt as string) || new Date().toISOString(),
           tags: [],
           notes: sp.notes as string | undefined,
           priority: 'medium',
-          status: (sp.pitch?.status as string) || 'saved'
+          status: (sp.status as string) || (sp.pitch?.status as string) || 'saved'
         }));
         setSavedPitches(transformed);
       } else {
@@ -185,15 +185,33 @@ export default function InvestorSaved() {
     }
   };
 
-  const handleBulkAction = (_action: 'remove' | 'folder' | 'status') => {
-    if (selectedPitches.length > 0) {
-      // Simulate API call
+  const handleBulkAction = async (action: 'remove' | 'folder' | 'status') => {
+    if (selectedPitches.length === 0) return;
+    if (action === 'remove') {
+      try {
+        await Promise.all(
+          selectedPitches.map(pitchId => savedPitchesService.unsavePitch(Number(pitchId)))
+        );
+        setSavedPitches(prev => prev.filter(p => !selectedPitches.includes(p.id)));
+        setSelectedPitches([]);
+      } catch (err) {
+        const e = err instanceof Error ? err : new Error(String(err));
+        console.error('Bulk unsave failed:', e.message);
+      }
+    } else {
+      // Folder/status actions not yet supported by API
       setSelectedPitches([]);
     }
   };
 
-  const handleRemovePitch = (pitchId: string) => {
-    setSavedPitches(prev => prev.filter(pitch => pitch.id !== pitchId));
+  const handleRemovePitch = async (pitchId: string) => {
+    try {
+      await savedPitchesService.unsavePitch(Number(pitchId));
+      setSavedPitches(prev => prev.filter(pitch => pitch.id !== pitchId));
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      console.error('Failed to unsave pitch:', e.message);
+    }
   };
 
   const getPriorityColor = (priority: string) => {
@@ -395,19 +413,7 @@ export default function InvestorSaved() {
               </span>
               <div className="flex gap-2">
                 <button
-                  onClick={() => handleBulkAction('folder')}
-                  className="text-sm px-3 py-1 text-green-600 hover:text-green-700"
-                >
-                  Move to Folder
-                </button>
-                <button
-                  onClick={() => handleBulkAction('status')}
-                  className="text-sm px-3 py-1 text-green-600 hover:text-green-700"
-                >
-                  Change Status
-                </button>
-                <button
-                  onClick={() => handleBulkAction('remove')}
+                  onClick={() => { void handleBulkAction('remove'); }}
                   className="text-sm px-3 py-1 text-red-600 hover:text-red-700"
                 >
                   Remove
@@ -573,8 +579,8 @@ export default function InvestorSaved() {
                     <button className="px-3 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                       <Share2 className="w-4 h-4" />
                     </button>
-                    <button 
-                      onClick={() => handleRemovePitch(pitch.id)}
+                    <button
+                      onClick={() => { void handleRemovePitch(pitch.id); }}
                       className="px-3 py-2 text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -647,8 +653,8 @@ export default function InvestorSaved() {
                       <button className="text-gray-400 hover:text-gray-600">
                         <Share2 className="w-4 h-4" />
                       </button>
-                      <button 
-                        onClick={() => handleRemovePitch(pitch.id)}
+                      <button
+                        onClick={() => { void handleRemovePitch(pitch.id); }}
                         className="text-red-400 hover:text-red-600"
                       >
                         <Trash2 className="w-4 h-4" />

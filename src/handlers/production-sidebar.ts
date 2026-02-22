@@ -502,6 +502,7 @@ export async function productionSavedPitchesHandler(
           p.status,
           p.view_count,
           p.like_count,
+          p.title_image,
           p.created_at AS pitch_created_at,
           u.username AS creator_username,
           u.email AS creator_email

@@ -107,9 +107,15 @@ const ProductionPitchView: React.FC = () => {
     if (id) {
       fetchPitchData();
       loadProductionData();
-      calculateFeasibility();
     }
   }, [id]);
+
+  // Recalculate feasibility when pitch data is loaded
+  useEffect(() => {
+    if (pitch) {
+      calculateFeasibility();
+    }
+  }, [pitch]);
 
   const fetchPitchData = async () => {
     try {
@@ -179,18 +185,40 @@ const ProductionPitchView: React.FC = () => {
   };
 
   const calculateFeasibility = () => {
-    // Simplified feasibility calculation
-    const budgetScore = Math.random() * 100;
-    const scheduleScore = Math.random() * 100;
-    const locationScore = Math.random() * 100;
-    const castingScore = Math.random() * 100;
-    
+    if (!pitch) return;
+
+    // Deterministic heuristics based on available pitch data
+    // Budget: lower budgets are more viable for independent productions
+    const budgetMap: Record<string, number> = {
+      'micro': 90, 'low': 80, 'medium': 65, 'high': 50, 'blockbuster': 35
+    };
+    const budgetKey = (pitch.budget || '').toLowerCase();
+    const budgetScore = budgetMap[budgetKey] ?? 60;
+
+    // Schedule: shorter formats are easier to schedule
+    const formatLower = (pitch.format || '').toLowerCase();
+    const scheduleScore = formatLower.includes('short') ? 85 :
+      formatLower.includes('series') ? 55 :
+      formatLower.includes('feature') ? 65 : 60;
+
+    // Location: fewer locations = higher viability
+    const locationCount = pitch.locations?.length ?? 0;
+    const locationScore = locationCount === 0 ? 50 :
+      locationCount <= 3 ? 80 :
+      locationCount <= 6 ? 65 : 45;
+
+    // Casting: based on character count
+    const characterCount = pitch.characters?.length ?? 0;
+    const castingScore = characterCount === 0 ? 50 :
+      characterCount <= 4 ? 80 :
+      characterCount <= 8 ? 65 : 50;
+
     setFeasibility({
       budgetViability: budgetScore,
       scheduleViability: scheduleScore,
       locationViability: locationScore,
       castingViability: castingScore,
-      overallScore: (budgetScore + scheduleScore + locationScore + castingScore) / 4
+      overallScore: Math.round((budgetScore + scheduleScore + locationScore + castingScore) / 4)
     });
   };
 
@@ -208,7 +236,7 @@ const ProductionPitchView: React.FC = () => {
   };
 
   const handleContactCreator = () => {
-    navigate(`/production/messages/new?recipient=${pitch?.userId}&pitch=${id}`);
+    navigate(`/production/messages?recipient=${pitch?.userId}&pitch=${id}`);
   };
 
   const handleOptionRights = () => {

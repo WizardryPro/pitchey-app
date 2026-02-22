@@ -81,21 +81,36 @@ export default function ProductionSaved() {
       });
 
       // Transform API response to component's SavedPitch interface
-      const transformedPitches: SavedPitch[] = (response.savedPitches ?? []).map((sp: ApiSavedPitch) => ({
-        id: sp.pitchId,
-        title: sp.pitch?.title || 'Untitled Pitch',
-        creator: sp.pitch?.creator?.username || sp.pitch?.creator?.name || 'Unknown Creator',
-        genre: sp.pitch?.genre || 'Unknown',
-        format: sp.pitch?.budgetBracket || 'Feature Film',
-        savedDate: sp.savedAt,
-        pitchDate: sp.savedAt, // Use savedAt as fallback
-        status: sp.pitch?.status || 'Under Review',
-        thumbnail: sp.pitch?.titleImage || `https://picsum.photos/400/300?random=${sp.pitchId}`,
-        views: 0, // Not available from saved pitches API
-        rating: 0, // Not available from saved pitches API
-        hasNDA: false, // Default
-        notes: sp.notes
-      }));
+      const transformedPitches: SavedPitch[] = (response.savedPitches ?? []).map((sp: ApiSavedPitch) => {
+        // Support both nested (sp.pitch.*) and flat (sp.*) response shapes
+        const raw = sp as unknown as Record<string, unknown>;
+        const title = (raw.title as string) || sp.pitch?.title || 'Untitled Pitch';
+        const genre = (raw.genre as string) || sp.pitch?.genre || 'Unknown';
+        const format = (raw.format as string) || sp.pitch?.budgetBracket || 'Feature Film';
+        const status = (raw.status as string) || sp.pitch?.status || 'Under Review';
+        const titleImage = (raw.title_image as string) || sp.pitch?.titleImage || '';
+        const viewCount = Number(raw.view_count ?? 0);
+        const likeCount = Number(raw.like_count ?? 0);
+        const creator = (raw.creator_username as string) || (raw.creator_email as string) || sp.pitch?.creator?.username || sp.pitch?.creator?.name || 'Unknown Creator';
+        const savedAt = (raw.saved_at as string) || sp.savedAt;
+        const pitchId = Number(raw.pitch_id ?? sp.pitchId);
+
+        return {
+          id: pitchId,
+          title,
+          creator,
+          genre,
+          format,
+          savedDate: savedAt,
+          pitchDate: savedAt,
+          status,
+          thumbnail: titleImage || '',
+          views: viewCount,
+          rating: likeCount > 0 ? Math.min(5, Math.round((likeCount / Math.max(viewCount, 1)) * 50) / 10) : 0,
+          hasNDA: false,
+          notes: sp.notes
+        };
+      });
 
       // Apply sorting
       if (sortBy === 'recent') {
@@ -246,9 +261,9 @@ export default function ProductionSaved() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredPitches.map((pitch) => (
               <Card key={pitch.id} className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
-                <div 
-                  className="relative h-48 bg-cover bg-center"
-                  style={{ backgroundImage: `url(${pitch.thumbnail})` }}
+                <div
+                  className="relative h-48 bg-cover bg-center bg-gradient-to-br from-purple-600 to-blue-500"
+                  style={pitch.thumbnail ? { backgroundImage: `url(${pitch.thumbnail})` } : undefined}
                   onClick={() => navigate(`/production/pitch/${pitch.id}`)}
                 >
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />

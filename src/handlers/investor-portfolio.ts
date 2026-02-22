@@ -180,7 +180,21 @@ export class InvestorPortfolioHandler {
           p.title as pitch_title,
           p.genre,
           p.status as pitch_status,
-          u.first_name || ' ' || u.last_name as creator_name
+          u.first_name || ' ' || u.last_name as creator_name,
+          COALESCE(i.equity_percentage, 0) as stake,
+          CASE p.status
+            WHEN 'draft' THEN 'development'
+            WHEN 'published' THEN 'development'
+            WHEN 'in_review' THEN 'production'
+            WHEN 'optioned' THEN 'post-production'
+            WHEN 'produced' THEN 'released'
+            ELSE 'development'
+          END as derived_stage,
+          CASE
+            WHEN COALESCE(i.roi_percentage, 0) < 0 THEN 'high'
+            WHEN COALESCE(i.roi_percentage, 0) <= 15 THEN 'medium'
+            ELSE 'low'
+          END as derived_risk_level
          FROM investments i
          JOIN pitches p ON i.pitch_id = p.id
          LEFT JOIN users u ON p.user_id = u.id

@@ -72,5 +72,6 @@ Detailed context split by domain to keep LLM context focused:
 - Frontend RBAC: 50 permissions, 5 roles
 
 ### Known Gaps
-- SearchPage still uses simulated results (not wired to real backend search API)
+- Stripe payment endpoints are stubs (5 endpoints: payment-methods CRUD, subscribe, cancel-subscription)
 - Playwright E2E tests exist but are not run in CI
+- Test coverage: 22% pages (30/135), 14% services (4/28); Production portal and Admin portal at 0%
