@@ -403,7 +403,7 @@ function App() {
             <Route path="pitch/new" element={<CreatePitch />} />
             <Route path="pitches" element={<ManagePitches />} />
             <Route path="analytics" element={<CreatorAnalyticsPage />} />
-            <Route path="messages" element={<Messages />} />
+            <Route path="messages/*" element={<Messages />} />
             <Route path="calendar" element={<Calendar />} />
             <Route path="pitch/:id" element={<CreatorPitchView />} />
             <Route path="pitches/:id" element={<PitchDetail />} />
@@ -433,7 +433,7 @@ function App() {
             <Route path="browse" element={<InvestorBrowse />} />
             <Route path="pitch/:id" element={<InvestorPitchView />} />
             <Route path="profile" element={<Profile />} />
-            <Route path="messages" element={<Messages />} />
+            <Route path="messages/*" element={<Messages />} />
             <Route path="calendar" element={<Calendar />} />
 
             {/* Enhanced Investor Routes */}
@@ -450,7 +450,7 @@ function App() {
             <Route path="following" element={<Following />} />
             <Route path="pitch/:id" element={<ProductionPitchView />} />
             <Route path="profile" element={<Profile />} />
-            <Route path="messages" element={<Messages />} />
+            <Route path="messages/*" element={<Messages />} />
             <Route path="calendar" element={<Calendar />} />
 
             {/* Enhanced Production Routes */}

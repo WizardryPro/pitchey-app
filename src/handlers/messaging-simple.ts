@@ -136,6 +136,49 @@ export class SimpleMessagingHandler {
     }
   }
 
+  // Find or create a direct conversation (without requiring a message)
+  async findOrCreateConversation(userId: number, recipientId: number, pitchId?: number) {
+    try {
+      if (!recipientId || recipientId === userId) {
+        return { success: false, error: 'Invalid recipient' };
+      }
+
+      // Check for existing direct conversation
+      const existing = await this.db.query(
+        `SELECT c.id FROM conversations c
+         JOIN conversation_participants cp1 ON cp1.conversation_id = c.id AND cp1.user_id = $1
+         JOIN conversation_participants cp2 ON cp2.conversation_id = c.id AND cp2.user_id = $2
+         WHERE c.type = 'direct' LIMIT 1`,
+        [userId, recipientId]
+      );
+
+      let conversationId: number;
+
+      if (existing.length > 0) {
+        conversationId = existing[0].id;
+      } else {
+        // Create new conversation
+        const newConv = await this.db.query(
+          `INSERT INTO conversations (type, created_by) VALUES ('direct', $1) RETURNING id`,
+          [userId]
+        );
+        conversationId = newConv[0].id;
+
+        // Add participants
+        await this.db.query(
+          `INSERT INTO conversation_participants (conversation_id, user_id)
+           VALUES ($1, $2), ($1, $3)`,
+          [conversationId, userId, recipientId]
+        );
+      }
+
+      return { success: true, data: { conversation: { id: conversationId } } };
+    } catch (error) {
+      console.error('Find or create conversation error:', error);
+      return { success: false, error: 'Failed to find or create conversation' };
+    }
+  }
+
   // Get conversations
   async getConversations(userId: number) {
     try {

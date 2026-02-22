@@ -8,18 +8,26 @@ import type { Env as DbEnv } from '../db/connection';
 import { getUserId } from '../utils/auth-extract';
 
 // Schema for follow/unfollow actions
+// userId can be an integer string ("1025") or UUID — accept both
 const FollowActionSchema = z.object({
-  userId: z.string().uuid(),
+  userId: z.string().min(1),
   action: z.enum(['follow', 'unfollow'])
 });
 
 // Schema for follow list queries
 const FollowListSchema = z.object({
-  userId: z.string().uuid().optional(),
+  userId: z.string().min(1).optional(),
   type: z.enum(['followers', 'following']).optional(),
   limit: z.number().min(1).max(100).default(50),
   offset: z.number().min(0).default(0)
 });
+
+/** Convert a user ID (string or number) to integer for SQL. Returns 0 for null/undefined (won't match any row). */
+function toIntId(id: string | number | null | undefined): number {
+  if (id == null) return 0;
+  const n = typeof id === 'number' ? id : parseInt(String(id), 10);
+  return Number.isFinite(n) ? n : 0;
+}
 
 /**
  * Follow or unfollow a user
@@ -36,23 +44,26 @@ export async function followActionHandler(request: Request, env: Env): Promise<R
     
     const body = await request.json() as Record<string, unknown>;
     const { userId, action } = FollowActionSchema.parse(body);
-    
+
+    const followerId = toIntId(user.id);
+    const followingId = toIntId(userId);
+
     // Can't follow yourself
-    if (userId === String(user.id)) {
+    if (followerId === followingId) {
       return new Response(JSON.stringify({ error: 'Cannot follow yourself' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
-    
+
     const sql = postgres(env.DATABASE_URL);
-    
+
     if (action === 'follow') {
       // Check if already following
       const existing = await sql`
-        SELECT id FROM follows 
-        WHERE follower_id = ${user.id} 
-        AND following_id = ${userId}
+        SELECT id FROM follows
+        WHERE follower_id = ${followerId}
+        AND following_id = ${followingId}
       `;
       
       if (existing.length > 0) {
@@ -67,18 +78,15 @@ export async function followActionHandler(request: Request, env: Env): Promise<R
       // Create follow relationship
       await sql`
         INSERT INTO follows (follower_id, following_id)
-        VALUES (${user.id}, ${userId})
+        VALUES (${followerId}, ${followingId})
         ON CONFLICT (follower_id, following_id) DO NOTHING
       `;
-      
-      // TODO: Send notification to the followed user
-      // (sendNotification function has been removed from scope)
 
       // Get updated counts
       const [counts] = await sql`
-        SELECT 
-          (SELECT COUNT(*) FROM follows WHERE following_id = ${userId}) as followers,
-          (SELECT COUNT(*) FROM follows WHERE follower_id = ${user.id}) as following
+        SELECT
+          (SELECT COUNT(*) FROM follows WHERE following_id = ${followingId}) as followers,
+          (SELECT COUNT(*) FROM follows WHERE follower_id = ${followerId}) as following
       `;
       
       return new Response(JSON.stringify({
@@ -95,16 +103,16 @@ export async function followActionHandler(request: Request, env: Env): Promise<R
       
     } else { // unfollow
       await sql`
-        DELETE FROM follows 
-        WHERE follower_id = ${user.id} 
-        AND following_id = ${userId}
+        DELETE FROM follows
+        WHERE follower_id = ${followerId}
+        AND following_id = ${followingId}
       `;
-      
+
       // Get updated counts
       const [counts] = await sql`
-        SELECT 
-          (SELECT COUNT(*) FROM follows WHERE following_id = ${userId}) as followers,
-          (SELECT COUNT(*) FROM follows WHERE follower_id = ${user.id}) as following
+        SELECT
+          (SELECT COUNT(*) FROM follows WHERE following_id = ${followingId}) as followers,
+          (SELECT COUNT(*) FROM follows WHERE follower_id = ${followerId}) as following
       `;
       
       return new Response(JSON.stringify({
@@ -140,22 +148,25 @@ export async function getFollowListHandler(request: Request, env: Env): Promise<
     const query = FollowListSchema.parse(params);
     
     const currentUser = await getAuthUser(request, env);
-    const targetUserId = query.userId || currentUser?.id;
-    
-    if (!targetUserId) {
+    const rawTargetId = query.userId || (currentUser?.id != null ? String(currentUser.id) : null);
+
+    if (!rawTargetId) {
       return new Response(JSON.stringify({ error: 'User ID required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
-    
+
+    const targetId = toIntId(rawTargetId);
+    const currentId = toIntId(currentUser?.id);
+
     const sql = postgres(env.DATABASE_URL);
-    
+
     // Determine which list to fetch
     const isFollowers = query.type === 'followers';
-    
+
     const users = await sql`
-      SELECT 
+      SELECT
         u.id,
         u.username,
         u.email,
@@ -164,52 +175,52 @@ export async function getFollowListHandler(request: Request, env: Env): Promise<
         u.bio,
         u.created_at,
         f.followed_at,
-        CASE 
-          WHEN ${currentUser?.id || null} IS NOT NULL 
+        CASE
+          WHEN ${currentId} != 0
           AND EXISTS (
-            SELECT 1 FROM follows 
-            WHERE follower_id = ${currentUser?.id || null} 
+            SELECT 1 FROM follows
+            WHERE follower_id = ${currentId}
             AND following_id = u.id
-          ) THEN true 
-          ELSE false 
+          ) THEN true
+          ELSE false
         END as is_following,
         (SELECT COUNT(*) FROM follows WHERE following_id = u.id) as follower_count,
         (SELECT COUNT(*) FROM follows WHERE follower_id = u.id) as following_count,
         (SELECT COUNT(*) FROM pitches WHERE user_id = u.id AND status = 'published') as pitch_count
       FROM follows f
-      JOIN users u ON ${isFollowers 
-        ? sql`u.id = f.follower_id` 
+      JOIN users u ON ${isFollowers
+        ? sql`u.id = f.follower_id`
         : sql`u.id = f.following_id`}
-      WHERE ${isFollowers 
-        ? sql`f.following_id = ${targetUserId}` 
-        : sql`f.follower_id = ${targetUserId}`}
+      WHERE ${isFollowers
+        ? sql`f.following_id = ${targetId}`
+        : sql`f.follower_id = ${targetId}`}
       ORDER BY f.followed_at DESC
       LIMIT ${query.limit}
       OFFSET ${query.offset}
     `;
-    
+
     // Get total count
     const [countResult] = await sql`
       SELECT COUNT(*) as total
       FROM follows
-      WHERE ${isFollowers 
-        ? sql`following_id = ${targetUserId}` 
-        : sql`follower_id = ${targetUserId}`}
+      WHERE ${isFollowers
+        ? sql`following_id = ${targetId}`
+        : sql`follower_id = ${targetId}`}
     `;
-    
+
     // Get mutual follows if viewing own list
     let mutualFollows: postgres.Row[] = [];
-    if (currentUser?.id && String(currentUser.id) === String(targetUserId)) {
+    if (currentId !== 0 && currentId === targetId) {
       mutualFollows = await sql`
-        SELECT 
+        SELECT
           u.id,
           u.username,
           u.avatar_url
         FROM follows f1
-        JOIN follows f2 ON f1.following_id = f2.follower_id 
+        JOIN follows f2 ON f1.following_id = f2.follower_id
           AND f1.follower_id = f2.following_id
         JOIN users u ON u.id = f1.following_id
-        WHERE f1.follower_id = ${currentUser.id}
+        WHERE f1.follower_id = ${currentId}
         LIMIT 10
       `;
     }
@@ -243,50 +254,53 @@ export async function getFollowStatsHandler(request: Request, env: Env): Promise
   try {
     const url = new URL(request.url);
     const userId = url.searchParams.get('userId');
-    
+
     const currentUser = await getAuthUser(request, env);
-    const targetUserId = userId || currentUser?.id;
-    
-    if (!targetUserId) {
+    const rawTargetId = userId || (currentUser?.id != null ? String(currentUser.id) : null);
+
+    if (!rawTargetId) {
       return new Response(JSON.stringify({ error: 'User ID required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
-    
+
+    const targetId = toIntId(rawTargetId);
+    const currentId = toIntId(currentUser?.id);
+
     const sql = postgres(env.DATABASE_URL);
-    
+
     const [stats] = await sql`
-      SELECT 
-        (SELECT COUNT(*) FROM follows WHERE following_id = ${targetUserId}) as followers,
-        (SELECT COUNT(*) FROM follows WHERE follower_id = ${targetUserId}) as following,
-        (SELECT COUNT(*) FROM follows f1 
-         JOIN follows f2 ON f1.following_id = f2.follower_id 
+      SELECT
+        (SELECT COUNT(*) FROM follows WHERE following_id = ${targetId}) as followers,
+        (SELECT COUNT(*) FROM follows WHERE follower_id = ${targetId}) as following,
+        (SELECT COUNT(*) FROM follows f1
+         JOIN follows f2 ON f1.following_id = f2.follower_id
            AND f1.follower_id = f2.following_id
-         WHERE f1.follower_id = ${targetUserId}) as mutual,
-        CASE 
-          WHEN ${currentUser?.id || null} IS NOT NULL 
+         WHERE f1.follower_id = ${targetId}) as mutual,
+        CASE
+          WHEN ${currentId} != 0
           AND EXISTS (
-            SELECT 1 FROM follows 
-            WHERE follower_id = ${currentUser?.id || null} 
-            AND following_id = ${targetUserId}
-          ) THEN true 
-          ELSE false 
+            SELECT 1 FROM follows
+            WHERE follower_id = ${currentId}
+            AND following_id = ${targetId}
+          ) THEN true
+          ELSE false
         END as is_following,
-        CASE 
-          WHEN ${currentUser?.id || null} IS NOT NULL 
+        CASE
+          WHEN ${currentId} != 0
           AND EXISTS (
-            SELECT 1 FROM follows 
-            WHERE follower_id = ${targetUserId} 
-            AND following_id = ${currentUser?.id || null}
-          ) THEN true 
-          ELSE false 
+            SELECT 1 FROM follows
+            WHERE follower_id = ${targetId}
+            AND following_id = ${currentId}
+          ) THEN true
+          ELSE false
         END as follows_you
     `;
-    
+
     // Get recent followers
     const recentFollowers = await sql`
-      SELECT 
+      SELECT
         u.id,
         u.username,
         u.avatar_url,
@@ -294,19 +308,19 @@ export async function getFollowStatsHandler(request: Request, env: Env): Promise
         f.followed_at
       FROM follows f
       JOIN users u ON u.id = f.follower_id
-      WHERE f.following_id = ${targetUserId}
+      WHERE f.following_id = ${targetId}
       ORDER BY f.followed_at DESC
       LIMIT 5
     `;
-    
+
     // Get follower growth over time (last 30 days)
     const growth = await sql`
-      SELECT 
+      SELECT
         DATE(followed_at) as date,
         COUNT(*) as new_followers,
         SUM(COUNT(*)) OVER (ORDER BY DATE(followed_at)) as cumulative
       FROM follows
-      WHERE following_id = ${targetUserId}
+      WHERE following_id = ${targetId}
       AND followed_at >= CURRENT_DATE - INTERVAL '30 days'
       GROUP BY DATE(followed_at)
       ORDER BY date

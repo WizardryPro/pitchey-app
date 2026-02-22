@@ -201,7 +201,7 @@ const InvestorPitchView: React.FC = () => {
   };
 
   const handleContactCreator = () => {
-    navigate(`/investor/messages/new?recipient=${pitch?.userId}&pitch=${id}`);
+    navigate(`/investor/messages?recipient=${pitch?.userId}&pitch=${id}`);
   };
 
   const handleExpressInterest = async () => {
