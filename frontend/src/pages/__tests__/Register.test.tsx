@@ -108,7 +108,7 @@ describe('Register', () => {
 
   it('renders terms and privacy policy links', () => {
     renderRegister()
-    expect(screen.getByRole('link', { name: 'Terms and Conditions' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Terms of Service' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Privacy Policy' })).toBeInTheDocument()
   })
 

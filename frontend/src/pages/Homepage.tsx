@@ -522,7 +522,7 @@ export default function Homepage() {
             </div>
           </div>
           <div className="mt-8 pt-8 border-t border-gray-200 text-center">
-            <p className="text-metadata">© 2024 Pitchey. All rights reserved.</p>
+            <p className="text-metadata">© 2025 Pitchey Ltd. All rights reserved.</p>
           </div>
         </div>
       </footer>

@@ -199,7 +199,7 @@ describe('Homepage', () => {
 
   it('renders footer content', () => {
     renderHomepage()
-    expect(screen.getByText(/© 2024 Pitchey/)).toBeInTheDocument()
+    expect(screen.getByText(/© 2025 Pitchey Ltd/)).toBeInTheDocument()
   })
 
   it('renders footer columns', () => {

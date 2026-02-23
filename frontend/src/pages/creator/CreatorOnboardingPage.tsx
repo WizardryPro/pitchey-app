@@ -67,8 +67,9 @@ export default function OnboardingPage() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
-  const canSubmit = firstName.trim().length > 0 && lastName.trim().length > 0 && bio.trim().length > 0 && !submitting;
+  const canSubmit = firstName.trim().length > 0 && lastName.trim().length > 0 && bio.trim().length > 0 && termsAccepted && !submitting;
 
   const handleSignOut = async () => {
     await logout();
@@ -195,6 +196,28 @@ export default function OnboardingPage() {
             <p className="mt-1 text-sm text-gray-400 text-right">
               {bio.length}/{MAX_BIO_LENGTH}
             </p>
+          </div>
+
+          {/* Terms & Conditions */}
+          <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <input
+              id="terms-accept"
+              type="checkbox"
+              checked={termsAccepted}
+              onChange={(e) => setTermsAccepted(e.target.checked)}
+              className={`mt-0.5 h-5 w-5 rounded border-gray-300 text-${cfg.accent}-600 focus:ring-${cfg.accent}-500 cursor-pointer`}
+            />
+            <label htmlFor="terms-accept" className="text-sm text-gray-700 cursor-pointer select-none">
+              I have read and agree to the{' '}
+              <a href="/terms" target="_blank" rel="noopener noreferrer" className={`${colors.title} hover:underline font-medium`}>
+                Terms of Service
+              </a>{' '}
+              and{' '}
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" className={`${colors.title} hover:underline font-medium`}>
+                Privacy Policy
+              </a>
+              , including the handling of confidential materials and NDA obligations.
+            </label>
           </div>
 
           {/* Error */}

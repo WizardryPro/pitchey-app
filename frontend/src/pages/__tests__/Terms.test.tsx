@@ -40,10 +40,10 @@ describe('Terms', () => {
     expect(screen.getByText('Terms of Service')).toBeInTheDocument()
   })
 
-  it('renders effective date', () => {
+  it('renders last updated date', () => {
     renderComponent()
-    expect(screen.getByText(/Effective Date/)).toBeInTheDocument()
-    expect(screen.getByText(/January 1, 2025/)).toBeInTheDocument()
+    expect(screen.getByText(/Last updated/)).toBeInTheDocument()
+    expect(screen.getByText(/February 23, 2026/)).toBeInTheDocument()
   })
 
   it('renders Back to Home button', () => {
@@ -62,9 +62,9 @@ describe('Terms', () => {
     expect(screen.getByText('1. Acceptance of Terms')).toBeInTheDocument()
   })
 
-  it('renders Service Description section', () => {
+  it('renders Platform Description section', () => {
     renderComponent()
-    expect(screen.getByText('2. Service Description')).toBeInTheDocument()
+    expect(screen.getByText('2. Platform Description')).toBeInTheDocument()
   })
 
   it('renders User Accounts section', () => {
@@ -72,34 +72,39 @@ describe('Terms', () => {
     expect(screen.getByText('3. User Accounts')).toBeInTheDocument()
   })
 
-  it('renders Content Guidelines section', () => {
+  it('renders Confidential Materials section', () => {
     renderComponent()
-    expect(screen.getByText('4. Content Guidelines')).toBeInTheDocument()
-  })
-
-  it('renders Investment Terms section', () => {
-    renderComponent()
-    expect(screen.getByText('5. Investment Terms')).toBeInTheDocument()
+    expect(screen.getByText('4. Confidential Materials and Document Handling')).toBeInTheDocument()
   })
 
   it('renders Intellectual Property section', () => {
     renderComponent()
-    expect(screen.getByText('6. Intellectual Property')).toBeInTheDocument()
+    expect(screen.getByText('5. Intellectual Property')).toBeInTheDocument()
+  })
+
+  it('renders Credits and Payments section', () => {
+    renderComponent()
+    expect(screen.getByText('6. Credits and Payments')).toBeInTheDocument()
+  })
+
+  it('renders Investment Disclaimer section', () => {
+    renderComponent()
+    expect(screen.getByText('7. Investment Disclaimer')).toBeInTheDocument()
   })
 
   it('renders Limitation of Liability section', () => {
     renderComponent()
-    expect(screen.getByText('8. Limitation of Liability')).toBeInTheDocument()
+    expect(screen.getByText('11. Limitation of Liability')).toBeInTheDocument()
   })
 
   it('renders Dispute Resolution section', () => {
     renderComponent()
-    expect(screen.getByText('9. Dispute Resolution')).toBeInTheDocument()
+    expect(screen.getByText('13. Dispute Resolution')).toBeInTheDocument()
   })
 
-  it('renders Contact Information section', () => {
+  it('renders Contact section', () => {
     renderComponent()
-    expect(screen.getByText('11. Contact Information')).toBeInTheDocument()
+    expect(screen.getByText('16. Contact')).toBeInTheDocument()
   })
 
   it('renders account types list', () => {

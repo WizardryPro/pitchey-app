@@ -40,10 +40,9 @@ describe('Privacy', () => {
     expect(screen.getByText('Privacy Policy')).toBeInTheDocument()
   })
 
-  it('renders effective date', () => {
+  it('renders last updated date', () => {
     renderComponent()
-    expect(screen.getByText(/Effective Date/)).toBeInTheDocument()
-    expect(screen.getByText(/January 1, 2025/)).toBeInTheDocument()
+    expect(screen.getByText(/Last updated: February 23, 2026/)).toBeInTheDocument()
   })
 
   it('renders Back to Home button', () => {
@@ -67,24 +66,24 @@ describe('Privacy', () => {
     expect(screen.getByText('2. Information We Collect')).toBeInTheDocument()
   })
 
-  it('renders Data Security section', () => {
+  it('renders How We Store and Protect Your Data section', () => {
     renderComponent()
-    expect(screen.getByText('5. Data Security')).toBeInTheDocument()
+    expect(screen.getByText('4. How We Store and Protect Your Data')).toBeInTheDocument()
   })
 
-  it('renders Your Rights and Choices section', () => {
+  it('renders Your Rights section', () => {
     renderComponent()
-    expect(screen.getByText('6. Your Rights and Choices')).toBeInTheDocument()
+    expect(screen.getByText('6. Your Rights')).toBeInTheDocument()
   })
 
-  it('renders Contact section', () => {
+  it('renders Contact Us section', () => {
     renderComponent()
-    expect(screen.getByText('11. Contact Us')).toBeInTheDocument()
+    expect(screen.getByText('14. Contact Us')).toBeInTheDocument()
   })
 
   it('renders California Privacy Rights section', () => {
     renderComponent()
-    expect(screen.getByText('12. California Privacy Rights')).toBeInTheDocument()
+    expect(screen.getByText('12. California Privacy Rights (CCPA)')).toBeInTheDocument()
   })
 
   it('renders Pitchey brand mention', () => {
@@ -92,22 +91,22 @@ describe('Privacy', () => {
     expect(screen.getAllByText(/Pitchey/).length).toBeGreaterThan(0)
   })
 
-  it('renders personal information subsections', () => {
+  it('renders information collection subsections', () => {
     renderComponent()
-    expect(screen.getByText('2.1 Personal Information')).toBeInTheDocument()
-    expect(screen.getByText('2.2 Project Information')).toBeInTheDocument()
-    expect(screen.getByText('2.3 Technical Information')).toBeInTheDocument()
+    expect(screen.getByText('2.1 Account Information')).toBeInTheDocument()
+    expect(screen.getByText('2.2 Uploaded Content')).toBeInTheDocument()
+    expect(screen.getByText('2.5 Technical Information')).toBeInTheDocument()
   })
 
   it('renders information sharing section', () => {
     renderComponent()
-    expect(screen.getByText('4. Information Sharing')).toBeInTheDocument()
-    expect(screen.getByText('4.1 With Other Users')).toBeInTheDocument()
+    expect(screen.getByText('5. Information Sharing')).toBeInTheDocument()
+    expect(screen.getByText('5.1 With Other Users')).toBeInTheDocument()
   })
 
   it('renders cookies section', () => {
     renderComponent()
-    expect(screen.getByText('7. Cookies and Tracking')).toBeInTheDocument()
+    expect(screen.getByText('8. Cookies and Session Management')).toBeInTheDocument()
   })
 
   it('renders the full page without crashing', () => {

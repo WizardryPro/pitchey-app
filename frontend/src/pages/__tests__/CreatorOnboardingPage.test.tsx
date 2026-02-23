@@ -119,11 +119,21 @@ describe('CreatorOnboardingPage (OnboardingPage)', () => {
       expect(submitButton).toBeDisabled()
     })
 
-    it('submit button becomes enabled when all required fields are filled', async () => {
+    it('submit button stays disabled without terms acceptance', async () => {
       renderComponent()
       fireEvent.change(screen.getByLabelText('First name'), { target: { value: 'John' } })
       fireEvent.change(screen.getByLabelText('Last name'), { target: { value: 'Doe' } })
       fireEvent.change(screen.getByLabelText('Bio'), { target: { value: 'I am a filmmaker.' } })
+
+      expect(screen.getByRole('button', { name: 'Complete Profile' })).toBeDisabled()
+    })
+
+    it('submit button becomes enabled when all fields filled and terms accepted', async () => {
+      renderComponent()
+      fireEvent.change(screen.getByLabelText('First name'), { target: { value: 'John' } })
+      fireEvent.change(screen.getByLabelText('Last name'), { target: { value: 'Doe' } })
+      fireEvent.change(screen.getByLabelText('Bio'), { target: { value: 'I am a filmmaker.' } })
+      fireEvent.click(screen.getByRole('checkbox'))
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: 'Complete Profile' })).not.toBeDisabled()
@@ -154,6 +164,7 @@ describe('CreatorOnboardingPage (OnboardingPage)', () => {
       fireEvent.change(screen.getByLabelText('First name'), { target: { value: 'Jane' } })
       fireEvent.change(screen.getByLabelText('Last name'), { target: { value: 'Smith' } })
       fireEvent.change(screen.getByLabelText('Bio'), { target: { value: 'Experienced director.' } })
+      fireEvent.click(screen.getByRole('checkbox'))
 
       const submitButton = screen.getByRole('button', { name: 'Complete Profile' })
       fireEvent.click(submitButton)
@@ -171,6 +182,7 @@ describe('CreatorOnboardingPage (OnboardingPage)', () => {
       fireEvent.change(screen.getByLabelText('First name'), { target: { value: 'Jane' } })
       fireEvent.change(screen.getByLabelText('Last name'), { target: { value: 'Smith' } })
       fireEvent.change(screen.getByLabelText('Bio'), { target: { value: 'Experienced director.' } })
+      fireEvent.click(screen.getByRole('checkbox'))
 
       fireEvent.click(screen.getByRole('button', { name: 'Complete Profile' }))
 
@@ -184,6 +196,7 @@ describe('CreatorOnboardingPage (OnboardingPage)', () => {
       fireEvent.change(screen.getByLabelText('First name'), { target: { value: 'Jane' } })
       fireEvent.change(screen.getByLabelText('Last name'), { target: { value: 'Smith' } })
       fireEvent.change(screen.getByLabelText('Bio'), { target: { value: 'Experienced director.' } })
+      fireEvent.click(screen.getByRole('checkbox'))
 
       fireEvent.click(screen.getByRole('button', { name: 'Complete Profile' }))
 
@@ -199,6 +212,7 @@ describe('CreatorOnboardingPage (OnboardingPage)', () => {
       fireEvent.change(screen.getByLabelText('First name'), { target: { value: 'Jane' } })
       fireEvent.change(screen.getByLabelText('Last name'), { target: { value: 'Smith' } })
       fireEvent.change(screen.getByLabelText('Bio'), { target: { value: 'Experienced director.' } })
+      fireEvent.click(screen.getByRole('checkbox'))
 
       fireEvent.click(screen.getByRole('button', { name: 'Complete Profile' }))
 
@@ -215,6 +229,7 @@ describe('CreatorOnboardingPage (OnboardingPage)', () => {
       fireEvent.change(screen.getByLabelText('First name'), { target: { value: 'Jane' } })
       fireEvent.change(screen.getByLabelText('Last name'), { target: { value: 'Smith' } })
       fireEvent.change(screen.getByLabelText('Bio'), { target: { value: 'Experienced director.' } })
+      fireEvent.click(screen.getByRole('checkbox'))
 
       fireEvent.click(screen.getByRole('button', { name: 'Complete Profile' }))
 
@@ -229,6 +244,7 @@ describe('CreatorOnboardingPage (OnboardingPage)', () => {
       fireEvent.change(screen.getByLabelText('First name'), { target: { value: 'Jane' } })
       fireEvent.change(screen.getByLabelText('Last name'), { target: { value: 'Smith' } })
       fireEvent.change(screen.getByLabelText('Bio'), { target: { value: 'Experienced director.' } })
+      fireEvent.click(screen.getByRole('checkbox'))
 
       fireEvent.click(screen.getByRole('button', { name: 'Complete Profile' }))
 
