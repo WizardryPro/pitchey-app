@@ -14,7 +14,7 @@ interface NavigationItem {
   path: string;
   icon: React.ElementType;
   badge?: number | string;
-  isNew?: boolean;
+
 }
 
 interface NavigationSection {
@@ -27,54 +27,54 @@ export const productionNavigationSections: NavigationSection[] = [
     title: 'Dashboard',
     items: [
       { label: 'Overview', path: PRODUCTION_ROUTES.dashboard, icon: Home },
-      { label: 'Analytics', path: PRODUCTION_ROUTES.analytics, icon: BarChart3, isNew: true },
-      { label: 'Activity', path: PRODUCTION_ROUTES.activity, icon: Activity, isNew: true },
-      { label: 'Statistics', path: PRODUCTION_ROUTES.stats, icon: TrendingUp, isNew: true },
+      { label: 'Analytics', path: PRODUCTION_ROUTES.analytics, icon: BarChart3},
+      { label: 'Activity', path: PRODUCTION_ROUTES.activity, icon: Activity},
+      { label: 'Statistics', path: PRODUCTION_ROUTES.stats, icon: TrendingUp},
     ],
   },
   {
     title: 'Projects',
     items: [
-      { label: 'All Projects', path: PRODUCTION_ROUTES.projects, icon: Film, isNew: true },
-      { label: 'Active', path: PRODUCTION_ROUTES.projectsActive, icon: PlayCircle, isNew: true },
-      { label: 'In Development', path: PRODUCTION_ROUTES.projectsDevelopment, icon: Edit, isNew: true },
-      { label: 'Post-Production', path: PRODUCTION_ROUTES.projectsPost, icon: Layers, isNew: true },
-      { label: 'Completed', path: PRODUCTION_ROUTES.projectsCompleted, icon: CheckCircle, isNew: true },
-      { label: 'Pipeline', path: PRODUCTION_ROUTES.pipeline, icon: GitBranch, isNew: true },
+      { label: 'All Projects', path: PRODUCTION_ROUTES.projects, icon: Film},
+      { label: 'Active', path: PRODUCTION_ROUTES.projectsActive, icon: PlayCircle},
+      { label: 'In Development', path: PRODUCTION_ROUTES.projectsDevelopment, icon: Edit},
+      { label: 'Post-Production', path: PRODUCTION_ROUTES.projectsPost, icon: Layers},
+      { label: 'Completed', path: PRODUCTION_ROUTES.projectsCompleted, icon: CheckCircle},
+      { label: 'Pipeline', path: PRODUCTION_ROUTES.pipeline, icon: GitBranch},
     ],
   },
   {
     title: 'Submissions',
     items: [
-      { label: 'All Submissions', path: PRODUCTION_ROUTES.submissions, icon: FolderOpen, isNew: true },
-      { label: 'New', path: PRODUCTION_ROUTES.submissionsNew, icon: Plus, badge: '12', isNew: true },
-      { label: 'Under Review', path: PRODUCTION_ROUTES.submissionsReview, icon: Eye, badge: '8', isNew: true },
-      { label: 'Shortlisted', path: PRODUCTION_ROUTES.submissionsShortlisted, icon: FileCheck, badge: '5', isNew: true },
-      { label: 'Accepted', path: PRODUCTION_ROUTES.submissionsAccepted, icon: ThumbsUp, isNew: true },
-      { label: 'Rejected', path: PRODUCTION_ROUTES.submissionsRejected, icon: ThumbsDown, isNew: true },
-      { label: 'Archive', path: PRODUCTION_ROUTES.submissionsArchive, icon: Archive, isNew: true },
+      { label: 'All Submissions', path: PRODUCTION_ROUTES.submissions, icon: FolderOpen},
+      { label: 'New', path: PRODUCTION_ROUTES.submissionsNew, icon: Plus, badge: '12'},
+      { label: 'Under Review', path: PRODUCTION_ROUTES.submissionsReview, icon: Eye, badge: '8'},
+      { label: 'Shortlisted', path: PRODUCTION_ROUTES.submissionsShortlisted, icon: FileCheck, badge: '5'},
+      { label: 'Accepted', path: PRODUCTION_ROUTES.submissionsAccepted, icon: ThumbsUp},
+      { label: 'Rejected', path: PRODUCTION_ROUTES.submissionsRejected, icon: ThumbsDown},
+      { label: 'Archive', path: PRODUCTION_ROUTES.submissionsArchive, icon: Archive},
     ],
   },
   {
     title: 'Operations',
     items: [
-      { label: 'Revenue', path: PRODUCTION_ROUTES.revenue, icon: DollarSign, isNew: true },
-      { label: 'Saved Pitches', path: PRODUCTION_ROUTES.saved, icon: Bookmark, isNew: true },
-      { label: 'Collaborations', path: PRODUCTION_ROUTES.collaborations, icon: GitBranch, isNew: true },
+      { label: 'Revenue', path: PRODUCTION_ROUTES.revenue, icon: DollarSign},
+      { label: 'Saved Pitches', path: PRODUCTION_ROUTES.saved, icon: Bookmark},
+      { label: 'Collaborations', path: PRODUCTION_ROUTES.collaborations, icon: GitBranch},
     ],
   },
   {
     title: 'Team',
     items: [
-      { label: 'Invite Members', path: PRODUCTION_ROUTES.teamInvite, icon: UserPlus, isNew: true },
-      { label: 'Manage Roles', path: PRODUCTION_ROUTES.teamRoles, icon: Shield, isNew: true },
+      { label: 'Invite Members', path: PRODUCTION_ROUTES.teamInvite, icon: UserPlus},
+      { label: 'Manage Roles', path: PRODUCTION_ROUTES.teamRoles, icon: Shield},
     ],
   },
   {
     title: 'Legal',
     items: [
       { label: 'Documents', path: PRODUCTION_ROUTES.legalLibrary, icon: Library },
-      { label: 'Create Document', path: PRODUCTION_ROUTES.legalWizard, icon: FilePlus, isNew: true },
+      { label: 'Create Document', path: PRODUCTION_ROUTES.legalWizard, icon: FilePlus},
       { label: 'Templates', path: PRODUCTION_ROUTES.legalTemplates, icon: FileSignature },
       { label: 'Compare', path: PRODUCTION_ROUTES.legalCompare, icon: GitCompare },
     ],
@@ -147,11 +147,6 @@ export function EnhancedProductionNav() {
                   >
                     <Icon className="w-4 h-4" />
                     <span className="flex-1 text-left">{item.label}</span>
-                    {item.isNew && (
-                      <span className="px-1.5 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded">
-                        NEW
-                      </span>
-                    )}
                     {item.badge && (
                       <span className="px-1.5 py-0.5 text-xs font-medium bg-red-100 text-red-700 rounded">
                         {item.badge}

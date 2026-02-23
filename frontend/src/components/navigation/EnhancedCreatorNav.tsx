@@ -13,7 +13,7 @@ interface NavigationItem {
   path: string;
   icon: React.ElementType;
   badge?: number | string;
-  isNew?: boolean;
+
 }
 
 interface NavigationSection {
@@ -26,9 +26,9 @@ export const creatorNavigationSections: NavigationSection[] = [
     title: 'Dashboard',
     items: [
       { label: 'Overview', path: CREATOR_ROUTES.dashboard, icon: Home },
-      { label: 'Analytics', path: CREATOR_ROUTES.analytics, icon: BarChart3, isNew: true },
-      { label: 'Activity', path: CREATOR_ROUTES.activity, icon: Activity, isNew: true },
-      { label: 'Stats', path: CREATOR_ROUTES.stats, icon: TrendingUp, isNew: true },
+      { label: 'Analytics', path: CREATOR_ROUTES.analytics, icon: BarChart3 },
+      { label: 'Activity', path: CREATOR_ROUTES.activity, icon: Activity },
+      { label: 'Stats', path: CREATOR_ROUTES.stats, icon: TrendingUp },
     ],
   },
   {
@@ -36,19 +36,19 @@ export const creatorNavigationSections: NavigationSection[] = [
     items: [
       { label: 'My Pitches', path: CREATOR_ROUTES.pitches, icon: Film },
       { label: 'Create New', path: CREATOR_ROUTES.pitchNew, icon: Plus },
-      { label: 'Published', path: CREATOR_ROUTES.pitchesPublished, icon: Upload, isNew: true },
-      { label: 'Drafts', path: CREATOR_ROUTES.pitchesDrafts, icon: FolderOpen, isNew: true },
-      { label: 'Under Review', path: CREATOR_ROUTES.pitchesReview, icon: Eye, isNew: true },
-      { label: 'Pitch Analytics', path: CREATOR_ROUTES.pitchesAnalytics, icon: BarChart3, isNew: true },
+      { label: 'Published', path: CREATOR_ROUTES.pitchesPublished, icon: Upload },
+      { label: 'Drafts', path: CREATOR_ROUTES.pitchesDrafts, icon: FolderOpen },
+      { label: 'Under Review', path: CREATOR_ROUTES.pitchesReview, icon: Eye },
+      { label: 'Pitch Analytics', path: CREATOR_ROUTES.pitchesAnalytics, icon: BarChart3 },
     ],
   },
   {
     title: 'Team',
     items: [
-      { label: 'Members', path: CREATOR_ROUTES.teamMembers, icon: Users, isNew: true },
-      { label: 'Invite', path: CREATOR_ROUTES.teamInvite, icon: UserPlus, isNew: true },
-      { label: 'Roles', path: CREATOR_ROUTES.teamRoles, icon: Shield, isNew: true },
-      { label: 'Collaborations', path: CREATOR_ROUTES.collaborations, icon: GitBranch, isNew: true },
+      { label: 'Members', path: CREATOR_ROUTES.teamMembers, icon: Users },
+      { label: 'Invite', path: CREATOR_ROUTES.teamInvite, icon: UserPlus },
+      { label: 'Roles', path: CREATOR_ROUTES.teamRoles, icon: Shield },
+      { label: 'Collaborations', path: CREATOR_ROUTES.collaborations, icon: GitBranch },
     ],
   },
   {
@@ -63,7 +63,7 @@ export const creatorNavigationSections: NavigationSection[] = [
     title: 'Legal',
     items: [
       { label: 'Documents', path: CREATOR_ROUTES.legalLibrary, icon: Library },
-      { label: 'Create Document', path: CREATOR_ROUTES.legalWizard, icon: FilePlus, isNew: true },
+      { label: 'Create Document', path: CREATOR_ROUTES.legalWizard, icon: FilePlus },
       { label: 'Templates', path: CREATOR_ROUTES.legalTemplates, icon: FileSignature },
       { label: 'Compare', path: CREATOR_ROUTES.legalCompare, icon: GitCompare },
     ],
@@ -71,7 +71,7 @@ export const creatorNavigationSections: NavigationSection[] = [
   {
     title: 'Profile',
     items: [
-      { label: 'Portfolio', path: CREATOR_ROUTES.portfolio, icon: Star, isNew: true },
+      { label: 'Portfolio', path: CREATOR_ROUTES.portfolio, icon: Star },
       { label: 'Following', path: CREATOR_ROUTES.following, icon: Target },
       { label: 'Profile', path: CREATOR_ROUTES.profile, icon: User },
       { label: 'Settings', path: CREATOR_ROUTES.settings, icon: Settings },
@@ -138,11 +138,6 @@ export function EnhancedCreatorNav() {
                   >
                     <Icon className="w-4 h-4" />
                     <span className="flex-1 text-left">{item.label}</span>
-                    {item.isNew && (
-                      <span className="px-1.5 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded">
-                        NEW
-                      </span>
-                    )}
                     {item.badge && (
                       <span className="px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded">
                         {item.badge}
