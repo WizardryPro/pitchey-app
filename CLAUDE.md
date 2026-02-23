@@ -60,7 +60,7 @@ Detailed context split by domain to keep LLM context focused:
 - **[Backend](docs/context-backend.md)** — Worker API, auth endpoints, database, caching, RBAC
 - **[Deployment](docs/context-deployment.md)** — CI/CD, environment setup, service URLs, deploy commands
 
-## Launch Roadmap — Stage 3 of 4
+## Launch Roadmap — Stage 4 of 4
 
 ### Stage 1: Foundation — COMPLETE
 - Edge-first architecture live (Cloudflare Workers + Pages + Neon + R2 + Upstash Redis)
@@ -84,7 +84,8 @@ Detailed context split by domain to keep LLM context focused:
 - Simple DMs + conversation CRUD: send, thread view, unread count, mark-read
 - WebSocket delivers real-time `new_message`, typing indicators, online status
 - Frontend Messages page built (1124 lines) with emoji picker, file attachment UI
-- **Remaining P2**: message edit/delete (frontend shows "not implemented"), file attachment upload
+- Message edit (15-min window) and soft delete implemented
+- File attachments upload to R2 with JSONB metadata
 
 **Credit system (internal ledger):**
 - `user_credits` and `credit_transactions` tables live in production (migration 038)
@@ -119,89 +120,64 @@ Detailed context split by domain to keep LLM context focused:
 - All 3 login paths verify against hash; plaintext passwords auto-upgrade on successful login
 - Demo accounts still use hardcoded `Demo123` check
 
-### Stage 4: Launch Readiness — IN PROGRESS
+### Stage 4: Launch Readiness — COMPLETE (pending Stripe secrets)
 
 #### Portal Readiness for Real Users
 
 **Creator Portal: READY**
-- Registration → verification email → onboarding → dashboard: full flow works
-- Pitch CRUD, characters, calendar, messages, analytics, settings: all functional
-- Known gaps: message edit/delete (toasts "not implemented"), file attachments in messages (no upload endpoint)
+- Registration → verification email → onboarding (with terms acceptance) → dashboard: full flow works
+- Pitch CRUD, characters, calendar, messages (edit/delete/attachments), analytics, settings: all functional
 
-**Investor Portal: READY (with known gaps)**
+**Investor Portal: READY**
 - Registration → onboarding → dashboard → browse → save → NDA → invest: works
-- NDA request button now on InvestorPitchView (was missing — fixed Feb 2026)
-- Known gaps: `GET /api/investment/recommendations` 404s (path mismatch, should be `/api/investor/recommendations`), `withdrawInvestment()` calls unregistered endpoint
+- NDA request button on InvestorPitchView, recommendation endpoint alias registered
+- Minor gap: `withdrawInvestment()` calls unregistered endpoint (low priority)
 
 **Production Portal: READY**
 - Registration → onboarding → dashboard → browse → save → messages: works
-- Settings profile saves to real API (fixed Feb 2026)
-- Project CRUD: POST/PUT registered (fixed Feb 2026)
-- Submissions: accept/reject/shortlist/archive all functional via `saved_pitches.review_status` (migration 039)
-- Analytics: queries `production_projects` and `saved_pitches` (rewritten Feb 2026)
-- Known gaps: PitchView action buttons ("Request Script", "Schedule Meeting") are UI stubs
+- Settings profile saves to real API, project CRUD registered
+- Submissions: accept/reject/shortlist/archive all functional via `saved_pitches.review_status`
+- Analytics: queries `production_projects` and `saved_pitches`
+- Minor gap: PitchView action buttons ("Request Script", "Schedule Meeting") are UI stubs
 
-#### Remaining Items
+#### Completed in Stage 4
+- Legal pages: Terms of Service (16 sections) and Privacy Policy (14 sections) — full production-ready content
+- Terms acceptance checkbox added to onboarding for all 3 portals
+- Message edit (15-min window), soft delete, and file attachments (R2 upload)
+- Production submissions accept/reject/shortlist/archive workflow
+- Investor recommendation endpoint alias, production project CRUD
+- Production analytics rewritten to query saved_pitches
+- Playwright E2E in CI (runs after deploy, continue-on-error)
+- NEW badges removed from all portal sidebar navigations
+
+#### Remaining Items (Stripe only)
 
 | Priority | Item | Status |
 |----------|------|--------|
 | **P0** | `wrangler secret put STRIPE_SECRET_KEY` | Needs your Stripe key |
 | **P0** | `wrangler secret put STRIPE_WEBHOOK_SECRET` | Needs Stripe webhook endpoint |
 | **P0** | Set `stripePriceId` in `src/config/subscription-plans.ts` | Needs Stripe Products created |
-| ~~P1~~ | ~~Fix investor recommendation endpoint path mismatch~~ | **DONE** — alias registered |
-| ~~P1~~ | ~~Register POST/PUT /api/production/projects~~ | **DONE** — CRUD registered |
-| ~~P1~~ | ~~Fix production analytics data model~~ | **DONE** — queries saved_pitches |
-| ~~P2~~ | ~~Message file attachments~~ | **DONE** — upload to R2, attachments JSONB |
-| ~~P2~~ | ~~Message edit/delete~~ | **DONE** — 15min edit window, soft delete |
-| ~~P2~~ | ~~Production submissions accept/reject~~ | **DONE** — review_status workflow |
-| ~~P2~~ | ~~Playwright E2E in CI~~ | **DONE** — runs after deploy, continue-on-error |
 
 ### Current Numbers
-- 120+ API endpoints, 165 test files, 3133 tests
+- 120+ API endpoints, 165 test files, 3140 tests
 - TypeScript: zero errors (CI-enforced)
 - 3 portals (Creator, Investor, Production) + Admin shell
 - WebSocket + polling fallback live in production
 - Email: `noreply@pitchey.com` via Resend (live)
+- Legal: Terms of Service + Privacy Policy (production-ready)
+- Onboarding: terms acceptance required for all portals
 
-## Test Coverage Campaign
+## Test Coverage Campaign — COMPLETE
 
-Use the `test-writer` subagent to systematically expand test coverage. Run `/test write <batch>` to execute a batch.
+All 6 batches completed. Use `test-writer` subagent for new test files as needed.
 
-| Batch | Scope | Pages | Current | Target |
-|-------|-------|-------|---------|--------|
-| 1 | Production Portal | 25 | 0% | 80%+ |
-| 2 | Creator Portal | 11 | 8% | 80%+ |
-| 3 | Admin Portal | 5 | 0% | 100% |
-| 4 | Shared Pages | ~35 | 34% | 70%+ |
-| 5 | Investor Portal | 18 | 40% | 80%+ |
-| 6 | Services | 24 | 14% | 70%+ |
+| Batch | Scope | Status |
+|-------|-------|--------|
+| 1 | Production Portal (25 pages) | DONE |
+| 2 | Creator Portal (11 pages) | DONE |
+| 3 | Admin Portal (5 pages) | DONE |
+| 4 | Shared Pages (~35 pages) | DONE |
+| 5 | Investor Portal (18 pages) | DONE |
+| 6 | Services (24 services) | DONE |
 
-### Sub-batches (for parallel agent execution)
-
-**Batch 1 — Production Portal:**
-- 1a: Core (Dashboard, PitchView, Saved, Analytics, Stats, Activity, Revenue, Pipeline) — 8 pages
-- 1b: Submissions (Submissions, New, Review, Shortlisted, Accepted, Rejected, Archive) — 7 pages
-- 1c: Projects + Settings (Projects, Active, Development, Post, Completed, Collaborations, TeamRoles, TeamInvite, Settings×4) — 12 pages
-
-**Batch 2 — Creator Portal:**
-- 2a: Core (Dashboard, PitchView, AnalyticsPage, ManagePitches, BudgetAllocation) — 5 pages
-- 2b: Features (Calendar, Characters, TeamInvite, Messages, Onboarding, Settings) — 6 pages
-
-**Batch 3 — Admin Portal:**
-- 3a: All (AdminDashboard, UserManagement, ContentModeration, Transactions, SystemSettings) — 5 pages
-
-**Batch 4 — Shared Pages:**
-- 4a: Browse (BrowseGenres, BrowseTopRated, MarketplaceEnhanced, SearchPage) — 4 pages
-- 4b: Auth + Landing (Login×3, Register, Landing, About, Pricing, NotFound) — ~8 pages
-- 4c: Features (Messages, NDA, PitchDetail, Profile, Settings) — ~5 pages
-
-**Batch 5 — Investor Portal:**
-- 5a: Analytics (Analytics, Performance, MarketTrends, RiskAssessment) — 4 pages
-- 5b: Network + Views (Network, CoInvestors, Creators, ProductionCompanies, PitchView) — 5 pages
-
-**Batch 6 — Services:**
-- 6a: Core (auth, api, pitch, investment, nda, messaging) — 6 services
-- 6b: Features (search, analytics, portfolio, calendar, team, credit) — 6 services
-- 6c: Infrastructure (websocket, notification, cache, error-tracking) — 4 services
-
-Cross-batch parallelism: different conversations can run different batches simultaneously (no file conflicts).
+Final: 165 test files, 3140 tests, zero failures.
