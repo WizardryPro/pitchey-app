@@ -105,13 +105,33 @@ export default function ProductionSubmissionsArchive() {
   const genres = ['all', ...new Set(submissions.map(s => s.genre))];
   const years = ['all', ...new Set(submissions.map(s => new Date(s.archivedDate).getFullYear().toString()))].sort().reverse();
 
+  const updateStatus = async (pitchId: string, status: string) => {
+    try {
+      const response = await fetch(`${API_URL}/api/production/submissions/${pitchId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status })
+      });
+      const result = await response.json();
+      if (result.success) {
+        setSubmissions(prev => prev.filter(s => String(s.id) !== pitchId));
+      }
+    } catch (error) {
+      console.error('Failed to update submission status:', error);
+    }
+  };
+
   const handleRestore = (submissionId: string) => {
+    updateStatus(submissionId, 'reviewing');
   };
 
   const handlePermanentDelete = (submissionId: string) => {
+    updateStatus(submissionId, 'archived');
   };
 
-  const handleExport = (submissionId: string) => {
+  const handleExport = (_submissionId: string) => {
+    // Export functionality - future feature
   };
 
   const getFinalStatusColor = (status: string) => {

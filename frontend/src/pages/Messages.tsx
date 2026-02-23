@@ -281,15 +281,45 @@ export default function Messages() {
   }, []);
 
   // Enhanced message handling
-  const sendMessage = useCallback(() => {
+  const sendMessage = useCallback(async () => {
     if (!newMessage.trim() && selectedFiles.length === 0) return;
     if (!selectedConversation || sendingMessage) return;
 
     setSendingMessage(true);
 
     try {
-      // Use simplified sendChatMessage from hook
-      sendChatMessage(selectedConversation, newMessage.trim() || '[File attachment]');
+      // Upload attachments first if any
+      let attachments: Array<{ url: string; originalName: string; fileSize: number; mimeType: string }> = [];
+      if (selectedFiles.length > 0) {
+        for (const file of selectedFiles) {
+          const formData = new FormData();
+          formData.append('file', file);
+          const uploadRes = await fetch('/api/messages/attachments', {
+            method: 'POST',
+            credentials: 'include',
+            body: formData
+          });
+          const uploadResult = await uploadRes.json();
+          if (uploadResult.success) {
+            attachments.push(uploadResult.data);
+          }
+        }
+      }
+
+      // Send message with attachments if any
+      if (attachments.length > 0) {
+        await fetch(`/api/conversations/${selectedConversation}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            content: newMessage.trim() || '[File attachment]',
+            attachments
+          })
+        });
+      } else {
+        sendChatMessage(selectedConversation, newMessage.trim());
+      }
 
       // Clear input and reset state
       setNewMessage('');
@@ -336,16 +366,42 @@ export default function Messages() {
     messageInputRef.current?.focus();
   }, []);
 
-  const handleEditMessage = useCallback((_messageId: number, _newContent: string) => {
-    // Simplified - not implemented in hook yet
+  const handleEditMessage = useCallback(async (messageId: number, newContent: string) => {
+    try {
+      const response = await fetch(`/api/messages/${messageId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ content: newContent })
+      });
+      const result = await response.json();
+      if (result.success) {
+        addNotification('Message edited', 'success');
+      } else {
+        addNotification(result.error || 'Failed to edit message', 'error');
+      }
+    } catch {
+      addNotification('Failed to edit message', 'error');
+    }
     setEditingMessage(null);
-    addNotification('Message editing not implemented yet', 'error');
   }, [addNotification]);
 
-  const handleDeleteMessage = useCallback((_messageId: number) => {
+  const handleDeleteMessage = useCallback(async (messageId: number) => {
     if (!confirm('Are you sure you want to delete this message?')) return;
-    // Simplified - not implemented in hook yet
-    addNotification('Message deletion not implemented yet', 'error');
+    try {
+      const response = await fetch(`/api/messages/${messageId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      const result = await response.json();
+      if (result.success) {
+        addNotification('Message deleted', 'success');
+      } else {
+        addNotification(result.error || 'Failed to delete message', 'error');
+      }
+    } catch {
+      addNotification('Failed to delete message', 'error');
+    }
   }, [addNotification]);
 
   const handleReaction = useCallback((_messageId: number, _reaction: string) => {
@@ -746,7 +802,7 @@ export default function Messages() {
                         
                         const msgExtra = message as unknown as Record<string, unknown>;
                         const parentMessage = msgExtra.parentMessage as { senderName?: string; content?: string } | undefined;
-                        const msgAttachments = msgExtra.attachments as Array<{ mimeType: string; originalName: string; fileSize: number }> | undefined;
+                        const msgAttachments = msgExtra.attachments as Array<{ mimeType: string; originalName: string; fileSize: number; url?: string }> | undefined;
                         return (
                           <div key={message.id} className="group">
                             {/* Reply context */}
@@ -877,7 +933,9 @@ export default function Messages() {
                                           <span>{formatFileSize(attachment.fileSize)}</span>
                                           <button
                                             onClick={() => {
-                                              // TODO: implement attachment download
+                                              if (attachment.url) {
+                                                window.open(attachment.url, '_blank');
+                                              }
                                             }}
                                             className="hover:bg-black hover:bg-opacity-20 p-1 rounded"
                                             title="Download"

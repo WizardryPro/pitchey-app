@@ -60,6 +60,11 @@ export const CREDIT_COSTS: CreditCost[] = [
     action: 'send_message',
     credits: 2,
     description: 'Send message (free for investors, paid for creators)'
+  },
+  {
+    action: 'nda_request',
+    credits: 10,
+    description: 'NDA request to access pitch details'
   }
 ];
 

@@ -41,26 +41,21 @@ export default function ProductionSettingsProfile() {
   const { user, logout } = useBetterAuthStore();
   const [loading, setLoading] = useState(false);
   const [profileData, setProfileData] = useState<CompanyProfileData>({
-    companyName: 'Stellar Productions',
+    companyName: user?.companyName || '',
     companyType: 'Production Company',
-    founded: '2015',
-    employees: '50-100',
-    headquarters: 'Los Angeles, CA',
-    website: 'https://stellarproductions.com',
-    description: 'Award-winning production company specializing in feature films and premium television content. We focus on character-driven narratives that resonate with global audiences.',
-    specialties: ['Feature Films', 'TV Series', 'Documentaries', 'Commercials'],
-    contactEmail: 'contact@stellarproductions.com',
-    contactPhone: '+1 (555) 123-4567',
-    businessLicense: 'BL-2015-LA-5678',
-    taxId: '12-3456789',
-    socialLinks: {
-      twitter: '@stellarproductions',
-      linkedin: 'linkedin.com/company/stellar-productions',
-      instagram: '@stellarproductions',
-      youtube: 'youtube.com/@stellarproductions'
-    },
-    certifications: ['MPAA Member', 'DGA Signatory', 'SAG-AFTRA'],
-    awards: ['Emmy Award 2023', 'Critics Choice Award 2022', 'Sundance Film Festival Winner 2021']
+    founded: '',
+    employees: '',
+    headquarters: '',
+    website: '',
+    description: user?.bio || '',
+    specialties: [],
+    contactEmail: user?.email || '',
+    contactPhone: '',
+    businessLicense: '',
+    taxId: '',
+    socialLinks: {},
+    certifications: [],
+    awards: []
   });
 
   const handleInputChange = (field: keyof CompanyProfileData | string, value: string | string[]) => {
@@ -111,8 +106,20 @@ export default function ProductionSettingsProfile() {
   const handleSave = async () => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const response = await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: profileData.companyName,
+          bio: profileData.description,
+          companyName: profileData.companyName,
+          website: profileData.website,
+          location: profileData.headquarters,
+          phone: profileData.contactPhone
+        })
+      });
+      if (!response.ok) throw new Error('Save failed');
       toast.success('Company profile updated successfully!');
     } catch (error) {
       toast.error('Failed to update company profile');

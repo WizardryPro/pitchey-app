@@ -38,18 +38,28 @@ export async function hashPassword(password: string): Promise<string> {
   combined.set(salt);
   combined.set(hashArray, salt.length);
   
-  // Convert to base64 for storage
-  return btoa(String.fromCharCode(...combined));
+  // Convert to base64 for storage, prefixed for detection
+  return 'pbkdf2:' + btoa(String.fromCharCode(...combined));
 }
 
 /**
  * Verify a password against a hash
  */
+/**
+ * Check if a stored password is a PBKDF2 hash (vs plaintext)
+ */
+export function isHashedPassword(stored: string): boolean {
+  return stored.startsWith('pbkdf2:');
+}
+
 export async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
   try {
+    // Strip prefix if present
+    const rawHash = storedHash.startsWith('pbkdf2:') ? storedHash.slice(7) : storedHash;
+
     // Decode the stored hash
     const combined = new Uint8Array(
-      atob(storedHash).split('').map(char => char.charCodeAt(0))
+      atob(rawHash).split('').map(char => char.charCodeAt(0))
     );
     
     // Extract salt and hash

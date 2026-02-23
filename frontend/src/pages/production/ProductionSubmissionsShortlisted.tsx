@@ -97,13 +97,33 @@ export default function ProductionSubmissionsShortlisted() {
 
   const genres = ['all', ...new Set(submissions.map(s => s.genre))];
 
+  const updateStatus = async (pitchId: string, status: string) => {
+    try {
+      const response = await fetch(`${API_URL}/api/production/submissions/${pitchId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status })
+      });
+      const result = await response.json();
+      if (result.success) {
+        setSubmissions(prev => prev.filter(s => String(s.id) !== pitchId));
+      }
+    } catch (error) {
+      console.error('Failed to update submission status:', error);
+    }
+  };
+
   const handleApprove = (submissionId: string) => {
+    updateStatus(submissionId, 'accepted');
   };
 
   const handleReject = (submissionId: string) => {
+    updateStatus(submissionId, 'rejected');
   };
 
   const handleStartProduction = (submissionId: string) => {
+    updateStatus(submissionId, 'accepted');
   };
 
   const getMarketPotentialColor = (potential: string) => {

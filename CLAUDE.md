@@ -91,17 +91,27 @@ Detailed context split by domain to keep LLM context focused:
 - Demo accounts seeded with 100 credits each
 - Full CRUD: balance check, purchase, use, history, invoices
 - 9 credit actions with costs (basic_upload, word_doc, picture_doc, extra_image, video_link, promoted_pitch, view_pitch, nda_request, send_message)
-- NDA requests deduct 10 credits with transaction logging
+- Server-side credit enforcement on uploads (10/3/5/1), messaging (2, free for investors), NDA requests (10)
+- `deductCreditsInternal()` helper checks unlimited subscription tiers, validates balance, records transactions
+- Free credits loophole closed: dev fallback gated behind `ENVIRONMENT !== 'production'`
+- New users seeded with 10 starter credits on registration
 
 **Stripe integration (payment gateway):**
 - `StripeService` at `src/services/stripe.service.ts` — Workers-native (fetch + Web Crypto, no SDK dependency)
 - `POST /api/payments/subscribe` → Stripe Checkout Session (subscription mode)
-- `POST /api/payments/credits/purchase` → Stripe Checkout Session (payment mode) with dev fallback
+- `POST /api/payments/credits/purchase` → Stripe Checkout Session (payment mode); production requires Stripe
 - `POST /api/payments/cancel-subscription` → `cancel_at_period_end` via Stripe API
 - `POST /api/payments/payment-methods` → Stripe SetupIntent for adding cards
 - `DELETE /api/payments/payment-methods/:id` → detach from Stripe + mark inactive in DB
 - `POST /api/webhooks/stripe` → handles `checkout.session.completed`, `subscription.deleted/updated`, `invoice.paid`
 - Webhook signature verification via Web Crypto HMAC-SHA256 with replay protection
+
+**Email (Resend):**
+- `RESEND_API_KEY` secret is SET and live
+- Sender: `noreply@pitchey.com` (domain verified in Resend)
+- Welcome/verification emails send on registration
+- Team invite emails pass `env.RESEND_API_KEY` through to email service (Workers-compatible)
+- Email templates in `src/services/worker-email.ts` (NDA, team invite, message, investment) and `src/services/email-service.ts` (welcome, password reset)
 
 **Password security:**
 - PBKDF2 hashing (100K iterations, SHA-256) via `src/utils/worker-password.ts`
@@ -110,23 +120,48 @@ Detailed context split by domain to keep LLM context focused:
 - Demo accounts still use hardcoded `Demo123` check
 
 ### Stage 4: Launch Readiness — IN PROGRESS
-To take flight, set these Stripe secrets and remaining items:
+
+#### Portal Readiness for Real Users
+
+**Creator Portal: READY**
+- Registration → verification email → onboarding → dashboard: full flow works
+- Pitch CRUD, characters, calendar, messages, analytics, settings: all functional
+- Known gaps: message edit/delete (toasts "not implemented"), file attachments in messages (no upload endpoint)
+
+**Investor Portal: READY (with known gaps)**
+- Registration → onboarding → dashboard → browse → save → NDA → invest: works
+- NDA request button now on InvestorPitchView (was missing — fixed Feb 2026)
+- Known gaps: `GET /api/investment/recommendations` 404s (path mismatch, should be `/api/investor/recommendations`), `withdrawInvestment()` calls unregistered endpoint
+
+**Production Portal: READY**
+- Registration → onboarding → dashboard → browse → save → messages: works
+- Settings profile saves to real API (fixed Feb 2026)
+- Project CRUD: POST/PUT registered (fixed Feb 2026)
+- Submissions: accept/reject/shortlist/archive all functional via `saved_pitches.review_status` (migration 039)
+- Analytics: queries `production_projects` and `saved_pitches` (rewritten Feb 2026)
+- Known gaps: PitchView action buttons ("Request Script", "Schedule Meeting") are UI stubs
+
+#### Remaining Items
 
 | Priority | Item | Status |
 |----------|------|--------|
 | **P0** | `wrangler secret put STRIPE_SECRET_KEY` | Needs your Stripe key |
-| **P0** | `wrangler secret put STRIPE_WEBHOOK_SECRET` | Needs Stripe webhook endpoint configured |
-| **P0** | Set `stripePriceId` in `src/config/subscription-plans.ts` | Needs Stripe Products/Prices created in dashboard |
-| **P1** | Message file attachments | UI exists, no upload endpoint |
-| **P2** | Message edit/delete | Frontend shows "not implemented" toasts |
-| **P2** | Playwright E2E in CI | Exist but not wired |
-| **P2** | Test coverage expansion | 22% pages, 14% services; Production + Admin at 0% |
+| **P0** | `wrangler secret put STRIPE_WEBHOOK_SECRET` | Needs Stripe webhook endpoint |
+| **P0** | Set `stripePriceId` in `src/config/subscription-plans.ts` | Needs Stripe Products created |
+| ~~P1~~ | ~~Fix investor recommendation endpoint path mismatch~~ | **DONE** — alias registered |
+| ~~P1~~ | ~~Register POST/PUT /api/production/projects~~ | **DONE** — CRUD registered |
+| ~~P1~~ | ~~Fix production analytics data model~~ | **DONE** — queries saved_pitches |
+| ~~P2~~ | ~~Message file attachments~~ | **DONE** — upload to R2, attachments JSONB |
+| ~~P2~~ | ~~Message edit/delete~~ | **DONE** — 15min edit window, soft delete |
+| ~~P2~~ | ~~Production submissions accept/reject~~ | **DONE** — review_status workflow |
+| ~~P2~~ | ~~Playwright E2E in CI~~ | **DONE** — runs after deploy, continue-on-error |
 
 ### Current Numbers
-- 120+ API endpoints, 59 test files, 1261 tests
+- 120+ API endpoints, 165 test files, 3133 tests
 - TypeScript: zero errors (CI-enforced)
 - 3 portals (Creator, Investor, Production) + Admin shell
 - WebSocket + polling fallback live in production
+- Email: `noreply@pitchey.com` via Resend (live)
 
 ## Test Coverage Campaign
 

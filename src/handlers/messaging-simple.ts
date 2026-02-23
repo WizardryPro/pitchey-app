@@ -1,5 +1,6 @@
 // Phase 2: Simple Messaging System Handler for Worker Integration
-// Direct database queries without external dependencies
+// Direct database queries — aligned with migration 019_messaging_system_tables.sql
+// Schema: conversations (type, created_by), conversation_participants, messages (conversation_id)
 
 export class SimpleMessagingHandler {
   constructor(private db: any) {}
@@ -26,7 +27,6 @@ export class SimpleMessagingHandler {
       return { success: true, data: { messages } };
     } catch (error) {
       console.error('Get messages error:', error);
-      // Return empty array as fallback
       return { success: true, data: { messages: [] } };
     }
   }
@@ -57,7 +57,7 @@ export class SimpleMessagingHandler {
   // Send a message
   async sendMessage(userId: number, data: any) {
     try {
-      const { conversation_id, recipient_id, content, message_type = 'text' } = data;
+      const { conversation_id, recipient_id, content, message_type = 'text', attachments } = data;
 
       let convId = conversation_id;
 
@@ -67,16 +67,16 @@ export class SimpleMessagingHandler {
           `SELECT c.id FROM conversations c
            JOIN conversation_participants cp1 ON cp1.conversation_id = c.id AND cp1.user_id = $1
            JOIN conversation_participants cp2 ON cp2.conversation_id = c.id AND cp2.user_id = $2
-           WHERE c.is_group = FALSE LIMIT 1`,
+           WHERE c.type = 'direct' LIMIT 1`,
           [userId, recipient_id]
         );
 
         if (existing.length > 0) {
           convId = existing[0].id;
         } else {
-          // Create new conversation
+          // Create new direct conversation
           const newConv = await this.db.query(
-            `INSERT INTO conversations (is_group, created_by_id) VALUES (FALSE, $1) RETURNING id`,
+            `INSERT INTO conversations (type, created_by) VALUES ('direct', $1) RETURNING id`,
             [userId]
           );
           convId = newConv[0].id;
@@ -91,11 +91,20 @@ export class SimpleMessagingHandler {
       }
 
       // Insert message
+      const hasAttachments = Array.isArray(attachments) && attachments.length > 0;
       const message = await this.db.query(
-        `INSERT INTO messages (conversation_id, sender_id, content, message_type)
-         VALUES ($1, $2, $3, $4) RETURNING *`,
-        [convId, userId, content, message_type]
+        `INSERT INTO messages (conversation_id, sender_id, content, message_type, attachments)
+         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        [convId, userId, content, hasAttachments ? 'file' : message_type, hasAttachments ? JSON.stringify(attachments) : null]
       );
+
+      // Update conversation timestamp
+      if (convId) {
+        await this.db.query(
+          `UPDATE conversations SET updated_at = NOW() WHERE id = $1`,
+          [convId]
+        ).catch(() => { /* non-fatal */ });
+      }
 
       return { success: true, data: { message: message[0] } };
     } catch (error) {
@@ -117,6 +126,32 @@ export class SimpleMessagingHandler {
     } catch (error) {
       console.error('Mark as read error:', error);
       return { success: true }; // Don't fail on read receipts
+    }
+  }
+
+  // Edit message (only sender can edit, within 15 minutes)
+  async editMessage(userId: number, messageId: number, newContent: string) {
+    try {
+      if (!newContent || !newContent.trim()) {
+        return { success: false, error: 'Message content cannot be empty' };
+      }
+
+      const result = await this.db.query(
+        `UPDATE messages SET content = $3, is_edited = TRUE, edited_at = NOW()
+         WHERE id = $1 AND sender_id = $2 AND is_deleted = FALSE
+           AND created_at > NOW() - INTERVAL '15 minutes'
+         RETURNING *`,
+        [messageId, userId, newContent.trim()]
+      );
+
+      if (result.length === 0) {
+        return { success: false, error: 'Message not found, not yours, or edit window expired (15 min)' };
+      }
+
+      return { success: true, data: { message: result[0] } };
+    } catch (error) {
+      console.error('Edit message error:', error);
+      return { success: false, error: 'Failed to edit message' };
     }
   }
 
@@ -148,7 +183,7 @@ export class SimpleMessagingHandler {
         `SELECT c.id FROM conversations c
          JOIN conversation_participants cp1 ON cp1.conversation_id = c.id AND cp1.user_id = $1
          JOIN conversation_participants cp2 ON cp2.conversation_id = c.id AND cp2.user_id = $2
-         WHERE c.is_group = FALSE LIMIT 1`,
+         WHERE c.type = 'direct' LIMIT 1`,
         [userId, recipientId]
       );
 
@@ -157,9 +192,9 @@ export class SimpleMessagingHandler {
       if (existing.length > 0) {
         conversationId = existing[0].id;
       } else {
-        // Create new conversation
+        // Create new direct conversation
         const newConv = await this.db.query(
-          `INSERT INTO conversations (is_group, created_by_id, pitch_id) VALUES (FALSE, $1, $2) RETURNING id`,
+          `INSERT INTO conversations (type, created_by, pitch_id) VALUES ('direct', $1, $2) RETURNING id`,
           [userId, pitchId || null]
         );
         conversationId = newConv[0].id;
@@ -203,7 +238,7 @@ export class SimpleMessagingHandler {
          FROM conversations c
          JOIN conversation_participants cp ON cp.conversation_id = c.id
          WHERE cp.user_id = $1
-         ORDER BY COALESCE(c.last_message_at, c.updated_at, c.created_at) DESC`,
+         ORDER BY COALESCE(c.updated_at, c.created_at) DESC`,
         [userId]
       );
 

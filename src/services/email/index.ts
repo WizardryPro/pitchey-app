@@ -1,37 +1,43 @@
 /**
  * Email Service Index
- * Provides unified access to email sending functions for Cloudflare Workers
+ * Provides unified access to email sending functions for Cloudflare Workers.
+ *
+ * All functions accept an optional `apiKey` parameter. In Workers, callers should
+ * pass `env.RESEND_API_KEY` directly since Workers don't have process.env.
  */
 
 import { WorkerEmailService } from '../worker-email.ts';
 
-// Helper to get email service with environment variables
-function getEmailService() {
-  // Try Deno.env (for tests/local) or global process.env (for compatibility)
-  const getEnv = (key: string) => {
-    try {
-      return (globalThis as any).Deno?.env.get(key) || (globalThis as any).process?.env[key];
-    } catch {
-      return undefined;
-    }
-  };
+// Helper to get email service — prefers explicit apiKey, falls back to globals for local dev
+function getEmailService(apiKey?: string) {
+  let resolvedKey = apiKey;
 
-  const apiKey = getEnv("RESEND_API_KEY");
-  const fromEmail = getEnv("SENDGRID_FROM_EMAIL") || 'notifications@pitchey.com';
-  const fromName = getEnv("SENDGRID_FROM_NAME") || 'Pitchey';
-  
+  if (!resolvedKey) {
+    // Fallback for local dev/tests only — does NOT work in Cloudflare Workers
+    try {
+      resolvedKey = (globalThis as any).Deno?.env.get('RESEND_API_KEY') || (globalThis as any).process?.env?.RESEND_API_KEY;
+    } catch {
+      // Silently fail in Workers
+    }
+  }
+
+  if (!resolvedKey) {
+    console.debug('Email service: no RESEND_API_KEY available, emails will fail silently');
+  }
+
   return new WorkerEmailService({
-    apiKey: apiKey || '',
-    fromEmail,
-    fromName
+    apiKey: resolvedKey || '',
+    fromEmail: 'noreply@pitchey.com',
+    fromName: 'Pitchey'
   });
 }
 
 /**
  * Send NDA Request Email
+ * @param apiKey - Pass env.RESEND_API_KEY from Worker env
  */
-export async function sendNDARequestEmail(to: string, data: any) {
-  const service = getEmailService();
+export async function sendNDARequestEmail(to: string, data: any, apiKey?: string) {
+  const service = getEmailService(apiKey);
   return await service.sendTemplate(to, 'ndaRequest', {
     ...data,
     requesterName: data.senderName, // Map template variable
@@ -41,9 +47,10 @@ export async function sendNDARequestEmail(to: string, data: any) {
 
 /**
  * Send NDA Response Email (Approval/Rejection)
+ * @param apiKey - Pass env.RESEND_API_KEY from Worker env
  */
-export async function sendNDAResponseEmail(to: string, data: any) {
-  const service = getEmailService();
+export async function sendNDAResponseEmail(to: string, data: any, apiKey?: string) {
+  const service = getEmailService(apiKey);
   const template = data.approved ? 'ndaApproved' : 'ndaRejected';
 
   return await service.sendTemplate(to, template, {
@@ -54,6 +61,7 @@ export async function sendNDAResponseEmail(to: string, data: any) {
 
 /**
  * Send Team Invite Email
+ * @param apiKey - Pass env.RESEND_API_KEY from Worker env
  */
 export async function sendTeamInviteEmail(to: string, data: {
   inviterName: string;
@@ -61,8 +69,8 @@ export async function sendTeamInviteEmail(to: string, data: {
   role: string;
   message?: string;
   acceptUrl: string;
-}) {
-  const service = getEmailService();
+}, apiKey?: string) {
+  const service = getEmailService(apiKey);
   return await service.sendTemplate(to, 'teamInvite', {
     ...data,
     subject: `You've been invited to join "${data.teamName}" on Pitchey`

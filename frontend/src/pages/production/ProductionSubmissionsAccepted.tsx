@@ -109,9 +109,11 @@ export default function ProductionSubmissionsAccepted() {
   };
 
   const handleManageProduction = (submissionId: string) => {
+    navigate(`/production/projects/${submissionId}`);
   };
 
-  const handleViewContract = (submissionId: string) => {
+  const handleViewContract = (_submissionId: string) => {
+    // Contract management - future feature
   };
 
   const getProductionStatusColor = (status: string) => {

@@ -448,7 +448,7 @@ export async function inviteToTeamHandler(request: Request, env: Env): Promise<R
         role: (role as string) || 'viewer',
         message: message as string | undefined,
         acceptUrl
-      }).catch((err: unknown) => {
+      }, (env as any).RESEND_API_KEY).catch((err: unknown) => {
         const e = err instanceof Error ? err : new Error(String(err));
         console.error('Failed to send team invite email:', e.message);
       });

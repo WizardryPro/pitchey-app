@@ -14,7 +14,7 @@ vi.mock('react-router-dom', async () => {
   }
 })
 
-const mockUser = { id: 1, name: 'Production User', email: 'production@test.com', userType: 'production' }
+const mockUser = { id: 1, name: 'Production User', email: 'production@test.com', userType: 'production', companyName: 'Test Productions', bio: 'A test company' }
 const mockAuthState = {
   user: mockUser,
   isAuthenticated: true,
@@ -72,28 +72,21 @@ describe('ProductionSettingsProfile', () => {
     expect(screen.getByText("Manage your production company's public profile and information")).toBeInTheDocument()
   })
 
-  it('renders company information fields with default values', () => {
+  it('renders company information fields from auth store', () => {
     renderComponent()
-    const nameInput = screen.getByDisplayValue('Stellar Productions')
+    const nameInput = screen.getByDisplayValue('Test Productions')
     expect(nameInput).toBeInTheDocument()
-    expect(screen.getByDisplayValue('2015')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('Los Angeles, CA')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('https://stellarproductions.com')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('production@test.com')).toBeInTheDocument()
   })
 
-  it('renders contact information', () => {
+  it('renders contact information from auth store', () => {
     renderComponent()
-    expect(screen.getByDisplayValue('contact@stellarproductions.com')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('+1 (555) 123-4567')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('BL-2015-LA-5678')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('12-3456789')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('production@test.com')).toBeInTheDocument()
   })
 
-  it('renders social media fields', () => {
+  it('renders social media section', () => {
     renderComponent()
-    // @stellarproductions appears in both Twitter and Instagram fields
-    expect(screen.getAllByDisplayValue('@stellarproductions').length).toBe(2)
-    expect(screen.getByDisplayValue('linkedin.com/company/stellar-productions')).toBeInTheDocument()
+    expect(screen.getByText('Social Media')).toBeInTheDocument()
   })
 
   it('renders Company Branding section', () => {

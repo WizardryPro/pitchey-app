@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { pitchAPI } from '../../lib/api';
 import FormatDisplay from '../../components/FormatDisplay';
+import { getCreditCost } from '../../config/subscription-plans';
 
 interface Pitch {
   id: string;
@@ -798,6 +799,11 @@ const ProductionPitchView: React.FC = () => {
                   <span>Request Full Script</span>
                   <ChevronRight className="h-4 w-4" />
                 </button>
+                {!pitch?.hasSignedNDA && (
+                  <p className="text-xs text-gray-500 mt-1 text-center">
+                    NDA required ({getCreditCost('nda_request')} credits)
+                  </p>
+                )}
                 <button className="w-full flex items-center justify-between px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                   <span>Schedule Meeting</span>
                   <ChevronRight className="h-4 w-4" />

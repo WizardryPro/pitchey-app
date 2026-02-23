@@ -247,7 +247,7 @@ export async function productionSubmissionsHandler(
 ): Promise<Response> {
   const origin = request.headers.get('Origin');
   const url = new URL(request.url);
-  const statusFilter = url.searchParams.get('status') || 'all';
+  const statusFilter = url.searchParams.get('status') || 'new';
   const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10));
   const limit = Math.min(50, Math.max(1, parseInt(url.searchParams.get('limit') || '20', 10)));
   const offset = (page - 1) * limit;
@@ -269,55 +269,133 @@ export async function productionSubmissionsHandler(
   }
 
   try {
-    // Build status condition
-    const statusCondition = statusFilter !== 'all' ? statusFilter : 'published';
+    // "new" = published pitches not yet saved/reviewed by this production user
+    // Other statuses = saved_pitches entries with matching review_status
+    if (statusFilter === 'new') {
+      const [submissions, countResult] = await Promise.all([
+        sql`
+          SELECT
+            p.id, p.title, p.genre, p.logline, p.short_synopsis, p.format,
+            p.estimated_budget, p.budget_range, p.status, p.view_count,
+            p.like_count, p.created_at, p.updated_at,
+            COALESCE(u.name, u.first_name || ' ' || u.last_name, u.email) AS creator,
+            u.email AS creator_email,
+            'new' AS review_status
+          FROM pitches p
+          JOIN users u ON p.user_id = u.id
+          LEFT JOIN saved_pitches sp ON sp.pitch_id = p.id AND sp.user_id = ${userId}
+          WHERE p.status = 'published' AND sp.id IS NULL
+          ORDER BY p.created_at DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `.catch(() => []),
+        sql`
+          SELECT COUNT(*)::int AS total
+          FROM pitches p
+          LEFT JOIN saved_pitches sp ON sp.pitch_id = p.id AND sp.user_id = ${userId}
+          WHERE p.status = 'published' AND sp.id IS NULL
+        `.catch(() => [{ total: 0 }]),
+      ]);
 
+      const total = Number(countResult[0]?.total) || 0;
+      return jsonResponse({
+        success: true,
+        data: { submissions, filter: statusFilter, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 0 } },
+      }, origin);
+    }
+
+    // For review, shortlisted, accepted, rejected, archived — query saved_pitches
     const [submissions, countResult] = await Promise.all([
       sql`
         SELECT
-          p.id,
-          p.title,
-          p.genre,
-          p.logline,
-          p.short_synopsis,
-          p.format,
-          p.estimated_budget,
-          p.budget_range,
-          p.status,
-          p.view_count,
-          p.like_count,
-          p.created_at,
-          p.updated_at,
-          u.username AS creator_username,
-          u.email AS creator_email
-        FROM pitches p
+          p.id, p.title, p.genre, p.logline, p.short_synopsis, p.format,
+          p.estimated_budget, p.budget_range, p.status, p.view_count,
+          p.like_count, p.created_at, p.updated_at,
+          COALESCE(u.name, u.first_name || ' ' || u.last_name, u.email) AS creator,
+          u.email AS creator_email,
+          sp.review_status, sp.review_notes, sp.review_rating,
+          sp.reviewed_at, sp.saved_at AS submitted_date
+        FROM saved_pitches sp
+        JOIN pitches p ON p.id = sp.pitch_id
         JOIN users u ON p.user_id = u.id
-        WHERE p.status = ${statusCondition}
-        ORDER BY p.created_at DESC
-        LIMIT ${limit}
-        OFFSET ${offset}
+        WHERE sp.user_id = ${userId} AND sp.review_status = ${statusFilter}
+        ORDER BY COALESCE(sp.reviewed_at, sp.saved_at) DESC
+        LIMIT ${limit} OFFSET ${offset}
       `.catch(() => []),
       sql`
         SELECT COUNT(*)::int AS total
-        FROM pitches
-        WHERE status = ${statusCondition}
+        FROM saved_pitches
+        WHERE user_id = ${userId} AND review_status = ${statusFilter}
       `.catch(() => [{ total: 0 }]),
     ]);
 
     const total = Number(countResult[0]?.total) || 0;
-    const totalPages = Math.ceil(total / limit) || 0;
-
     return jsonResponse({
       success: true,
-      data: {
-        submissions,
-        filter: statusFilter,
-        pagination: { page, limit, total, totalPages },
-      },
+      data: { submissions, filter: statusFilter, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 0 } },
     }, origin);
   } catch (error) {
     console.error('productionSubmissionsHandler error:', error);
     return jsonResponse({ success: true, data: defaultData }, origin);
+  }
+}
+
+// Update the review status of a pitch for a production company
+export async function updateSubmissionStatus(
+  request: Request,
+  env: Env,
+): Promise<Response> {
+  const origin = request.headers.get('Origin');
+
+  const userId = await getUserId(request, env);
+  if (!userId) {
+    return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
+      status: 401, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) }
+    });
+  }
+
+  const sql = getDb(env);
+  if (!sql) {
+    return new Response(JSON.stringify({ success: false, error: 'Database unavailable' }), {
+      status: 503, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) }
+    });
+  }
+
+  try {
+    const url = new URL(request.url);
+    const pitchId = parseInt(url.pathname.split('/').pop() || '0');
+    const body = await request.json() as Record<string, unknown>;
+    const status = typeof body.status === 'string' ? body.status : '';
+    const notes = typeof body.notes === 'string' ? body.notes : null;
+    const rating = typeof body.rating === 'number' ? body.rating : null;
+
+    const validStatuses = ['reviewing', 'shortlisted', 'accepted', 'rejected', 'archived'];
+    if (!validStatuses.includes(status)) {
+      return new Response(JSON.stringify({ success: false, error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` }), {
+        status: 400, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) }
+      });
+    }
+
+    // Upsert: if not saved yet, save it and set status; if already saved, update status
+    const result = await sql`
+      INSERT INTO saved_pitches (user_id, pitch_id, review_status, review_notes, review_rating, reviewed_at)
+      VALUES (${userId}, ${pitchId}, ${status}, ${notes}, ${rating}, NOW())
+      ON CONFLICT (user_id, pitch_id)
+      DO UPDATE SET
+        review_status = ${status},
+        review_notes = COALESCE(${notes}, saved_pitches.review_notes),
+        review_rating = COALESCE(${rating}, saved_pitches.review_rating),
+        reviewed_at = NOW()
+      RETURNING *
+    `;
+
+    return new Response(JSON.stringify({ success: true, data: { review: result[0] } }), {
+      status: 200, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) }
+    });
+  } catch (error) {
+    console.error('updateSubmissionStatus error:', error);
+    return new Response(JSON.stringify({ success: false, error: 'Failed to update status' }), {
+      status: 500, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) }
+    });
   }
 }
 

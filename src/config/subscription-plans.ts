@@ -14,10 +14,23 @@ export interface SubscriptionTier {
     monthly: number;
     annual: number;
   };
+  stripePriceId?: {
+    monthly: string;
+    annual: string;
+  };
   credits: number; // -1 means unlimited
   analytics: 'basic' | 'enhanced' | 'customizable';
   features: string[];
   userType: 'creator' | 'production' | 'exec' | 'watcher';
+}
+
+export interface CreditPackage {
+  credits: number;
+  price: number;
+  currency: string;
+  bonus?: number;
+  description?: string;
+  stripePriceId?: string;
 }
 
 export const CREDIT_COSTS: CreditCost[] = [
@@ -55,10 +68,22 @@ export const CREDIT_COSTS: CreditCost[] = [
     action: 'view_pitch',
     credits: 10,
     description: 'View a pitch (refunded if license not agreed)'
+  },
+  {
+    action: 'send_message',
+    credits: 2,
+    description: 'Send message (free for investors, paid for creators)'
+  },
+  {
+    action: 'nda_request',
+    credits: 10,
+    description: 'NDA request to access pitch details'
   }
 ];
 
-export const CREDIT_PACKAGES = [
+// Credit packages — set stripePriceId after creating products in Stripe Dashboard
+// Or leave empty to use dynamic price_data in Checkout (current default)
+export const CREDIT_PACKAGES: CreditPackage[] = [
   { credits: 1, price: 2.99, currency: 'EUR' },
   { credits: 5, price: 8.99, currency: 'EUR' },
   { credits: 10, price: 14.99, currency: 'EUR' },

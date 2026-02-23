@@ -12,6 +12,7 @@ import { pitchAPI } from '../../lib/api';
 import { apiClient } from '../../lib/api-client';
 import { InvestorService } from '../../services/investor.service';
 import FormatDisplay from '../../components/FormatDisplay';
+import { getCreditCost } from '../../config/subscription-plans';
 
 interface Pitch {
   id: string;
@@ -202,6 +203,31 @@ const InvestorPitchView: React.FC = () => {
 
   const handleContactCreator = () => {
     navigate(`/investor/messages?recipient=${pitch?.userId}&pitch=${id}`);
+  };
+
+  const [ndaRequesting, setNdaRequesting] = useState(false);
+  const handleRequestNDA = async () => {
+    if (!id || ndaRequesting) return;
+    setNdaRequesting(true);
+    try {
+      const response = await apiClient.post('/api/ndas/request', {
+        pitchId: parseInt(id),
+        ndaType: 'basic'
+      });
+      if (response.success) {
+        // Refresh pitch to get updated NDA status
+        const updated = await pitchAPI.getPublicById(parseInt(id));
+        if (updated) setPitch(updated);
+        alert('NDA request sent! You will be notified when it is approved.');
+      } else {
+        alert(response.error?.message || response.message || 'Failed to request NDA');
+      }
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      alert(e.message || 'Failed to request NDA');
+    } finally {
+      setNdaRequesting(false);
+    }
   };
 
   const handleExpressInterest = async () => {
@@ -448,19 +474,30 @@ const InvestorPitchView: React.FC = () => {
                 {isWatchlisted ? 'Watchlisted' : 'Add to Watchlist'}
               </button>
 
-              <button
-                onClick={handleContactCreator}
-                disabled={!pitch?.hasSignedNDA}
-                title={!pitch?.hasSignedNDA ? 'Sign NDA to contact the creator' : 'Send a message to the creator'}
-                className={`flex items-center px-4 py-2 rounded-lg ${
-                  pitch?.hasSignedNDA
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-              >
-                <MessageSquare className="h-4 w-4 mr-2" />
-                {pitch?.hasSignedNDA ? 'Contact Creator' : 'NDA Required'}
-              </button>
+              {pitch?.hasSignedNDA ? (
+                <button
+                  onClick={handleContactCreator}
+                  title="Send a message to the creator"
+                  className="flex items-center px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Contact Creator
+                </button>
+              ) : (
+                <button
+                  onClick={handleRequestNDA}
+                  disabled={ndaRequesting}
+                  title={`Request NDA access (${getCreditCost('nda_request')} credits)`}
+                  className="flex items-center px-4 py-2 rounded-lg bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50"
+                >
+                  {ndaRequesting ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <FileText className="h-4 w-4 mr-2" />
+                  )}
+                  {ndaRequesting ? 'Requesting...' : `Request NDA (${getCreditCost('nda_request')} credits)`}
+                </button>
+              )}
             </div>
           </div>
         </div>

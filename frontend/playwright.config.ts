@@ -28,7 +28,7 @@ export default defineConfig({
   ],
   outputDir: 'test-results/artifacts',
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5173',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -233,26 +233,27 @@ export default defineConfig({
       timeout: 120000,
     },
   ],
-  webServer: [
-    // Start frontend dev server
-    {
-      command: 'npm run dev',
-      port: 5173,
-      reuseExistingServer: true,
-      timeout: 60000,
-      env: {
-        VITE_API_URL: 'http://localhost:8001',
-        VITE_WS_URL: 'ws://localhost:8001'
-      }
-    },
-    // Ensure backend proxy is running
-    {
-      command: 'cd .. && npx wrangler dev',
-      port: 8001,
-      reuseExistingServer: true,
-      timeout: 60000,
-    },
-  ],
+  // Skip local servers in CI (tests run against deployed production)
+  ...(process.env.CI ? {} : {
+    webServer: [
+      {
+        command: 'npm run dev',
+        port: 5173,
+        reuseExistingServer: true,
+        timeout: 60000,
+        env: {
+          VITE_API_URL: 'http://localhost:8001',
+          VITE_WS_URL: 'ws://localhost:8001'
+        }
+      },
+      {
+        command: 'cd .. && npx wrangler dev',
+        port: 8001,
+        reuseExistingServer: true,
+        timeout: 60000,
+      },
+    ],
+  }),
   // globalSetup: './e2e/global-setup.ts', // Temporarily disabled
   globalTeardown: './e2e/global-teardown.ts',
 });

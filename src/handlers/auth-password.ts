@@ -201,7 +201,7 @@ export async function requestPasswordResetHandler(
       const { WorkerEmailService } = await import('../services/worker-email');
       const emailService = new WorkerEmailService({
         apiKey: env.RESEND_API_KEY,
-        fromEmail: 'onboarding@resend.dev',
+        fromEmail: 'noreply@pitchey.com',
         fromName: 'Pitchey'
       });
       await emailService.send({

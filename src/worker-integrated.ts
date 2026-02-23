@@ -19,6 +19,9 @@ import { ApiResponseBuilder, ErrorCode, errorHandler } from './utils/api-respons
 // import { getEnvConfig } from './utils/env-config';
 import { getCorsHeaders, setRequestOrigin, errorResponse } from './utils/response';
 import { createJWT, verifyJWT, extractJWT } from './utils/worker-jwt';
+import { hashPassword, verifyPassword, isHashedPassword } from './utils/worker-password';
+import { StripeService } from './services/stripe.service';
+import { CREDIT_PACKAGES } from './config/subscription-plans';
 import { createBetterAuthInstance, createPortalAuth, AuthEnv } from './auth/better-auth-neon-raw-sql';
 import { PortalAccessController, createPortalAccessMiddleware } from './middleware/portal-access-control';
 import { CreatorInvestorWorkflow } from './workflows/creator-investor-workflow';
@@ -556,7 +559,7 @@ export interface Env {
   NOTIFICATION_CACHE?: KVNamespace;
 
   // Storage
-  R2_BUCKET: R2Bucket;
+  R2_BUCKET?: R2Bucket; // Legacy — use MEDIA_STORAGE instead
   MESSAGE_ATTACHMENTS?: R2Bucket;
   EMAIL_ATTACHMENTS?: R2Bucket;
 
@@ -663,12 +666,10 @@ class RouteRegistry {
       });
 
       // Initialize email service if configured
-      // NOTE: Using onboarding@resend.dev (Resend's built-in test sender) until
-      // a custom domain is verified with Resend for production branding.
       if (env.RESEND_API_KEY) {
         this.emailService = new WorkerEmailService({
           apiKey: env.RESEND_API_KEY,
-          fromEmail: 'onboarding@resend.dev',
+          fromEmail: 'noreply@pitchey.com',
           fromName: 'Pitchey'
         });
       }
@@ -1406,20 +1407,32 @@ class RouteRegistry {
 
       // Verify password - accept Demo123 for demo accounts
       const isDemoAccount = ['alex.creator@demo.com', 'sarah.investor@demo.com', 'stellar.production@demo.com'].includes(email);
-      if (!isDemoAccount && password !== 'Demo123') {
-        return new Response(JSON.stringify({
-          success: false,
-          error: {
-            code: 'INVALID_CREDENTIALS',
-            message: 'Invalid email or password'
+      if (isDemoAccount) {
+        if (password !== 'Demo123') {
+          return new Response(JSON.stringify({
+            success: false,
+            error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' }
+          }), { status: 401, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) } });
+        }
+      } else if (result.password) {
+        // Verify against hashed or plaintext password
+        let passwordValid = false;
+        if (isHashedPassword(result.password)) {
+          passwordValid = await verifyPassword(password, result.password);
+        } else {
+          passwordValid = result.password === password;
+          // Upgrade plaintext to hash on successful login
+          if (passwordValid) {
+            const hashed = await hashPassword(password);
+            await this.db.query(`UPDATE users SET password = $1 WHERE id = $2`, [hashed, result.id]).catch(() => {});
           }
-        }), {
-          status: 401,
-          headers: {
-            'Content-Type': 'application/json',
-            ...getCorsHeaders(origin)
-          }
-        });
+        }
+        if (!passwordValid) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' }
+          }), { status: 401, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) } });
+        }
       }
 
       // IMPORTANT: Invalidate any existing sessions for this user before creating new one
@@ -1567,13 +1580,14 @@ class RouteRegistry {
         finalUsername = `${username}_${Math.random().toString(36).slice(2, 8)}`;
       }
 
-      // Insert new user (password stored as-is, matching existing login pattern)
+      // Hash password before storage
+      const hashedPassword = await hashPassword(password);
       const portal = userType || 'creator';
       const [newUser] = await this.db.query(
         `INSERT INTO users (email, username, password, user_type, company_name, created_at, updated_at)
          VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
          RETURNING id, email, username, user_type, name, first_name, last_name, company_name`,
-        [email, finalUsername, password, portal, companyName]
+        [email, finalUsername, hashedPassword, portal, companyName]
       ) as any[];
 
       if (!newUser) {
@@ -1608,6 +1622,24 @@ class RouteRegistry {
       }
 
       console.log(`[Auth] User registered: userId=${newUser.id}, email=${newUser.email}, userType=${newUser.user_type}`);
+
+      // Seed starter credits for new users (non-blocking)
+      try {
+        const starterCredits = 10; // Free starter credits for all new accounts
+        await this.db.query(
+          `INSERT INTO user_credits (user_id, balance, total_purchased, total_used, last_updated)
+           VALUES ($1, $2, $2, 0, NOW())
+           ON CONFLICT (user_id) DO NOTHING`,
+          [newUser.id, starterCredits]
+        );
+        await this.db.query(
+          `INSERT INTO credit_transactions (user_id, type, amount, description, balance_before, balance_after, created_at)
+           VALUES ($1, 'bonus', $2, 'Welcome bonus credits', 0, $2, NOW())`,
+          [newUser.id, starterCredits]
+        );
+      } catch (creditErr) {
+        console.warn('[Auth] Failed to seed starter credits:', creditErr);
+      }
 
       // Send verification email (non-blocking — don't fail sign-up if email fails)
       try {
@@ -2264,6 +2296,7 @@ class RouteRegistry {
     this.register('GET', '/api/investor/transactions', this.getInvestorTransactions.bind(this));
     this.register('GET', '/api/investor/analytics', this.getInvestorAnalytics.bind(this));
     this.register('GET', '/api/investor/recommendations', this.getInvestorRecommendations.bind(this));
+    this.register('GET', '/api/investment/recommendations', this.getInvestorRecommendations.bind(this)); // Frontend compat alias
     this.register('GET', '/api/investor/risk-assessment', this.getInvestorRiskAssessment.bind(this));
 
     // === PHASE 2: CREATOR ANALYTICS ROUTES ===
@@ -2285,7 +2318,9 @@ class RouteRegistry {
     this.register('GET', '/api/messages/:id', this.getMessageById.bind(this));
     this.register('POST', '/api/messages', this.sendMessage.bind(this));
     this.register('PUT', '/api/messages/:id/read', this.markMessageAsRead.bind(this));
+    this.register('PUT', '/api/messages/:id', this.editMessage.bind(this));
     this.register('DELETE', '/api/messages/:id', this.deleteMessage.bind(this));
+    this.register('POST', '/api/messages/attachments', this.uploadMessageAttachment.bind(this));
     this.register('POST', '/api/conversations', this.createConversation.bind(this));
     this.register('GET', '/api/conversations', this.getConversations.bind(this));
     this.register('GET', '/api/conversations/:id', this.getConversationById.bind(this));
@@ -2541,6 +2576,7 @@ class RouteRegistry {
     this.register('POST', '/api/payments/payment-methods', this.addPaymentMethod.bind(this));
     this.register('DELETE', '/api/payments/payment-methods/:id', this.removePaymentMethod.bind(this));
     this.register('PUT', '/api/payments/payment-methods', this.setDefaultPaymentMethod.bind(this));
+    this.register('POST', '/api/webhooks/stripe', this.handleStripeWebhook.bind(this));
 
     // Pitch Validation Routes
     this.register('POST', '/api/validation/analyze', (req) => validationHandlers.analyze(req));
@@ -2658,7 +2694,7 @@ class RouteRegistry {
       productionProjectStatusHandler(req, this.env)
     );
 
-    // Production Projects - alias for pipeline (frontend expects this endpoint)
+    // Production Projects CRUD
     this.register('GET', '/api/production/projects', async (req) => {
       const { productionPipelineHandler } = await import('./handlers/production-dashboard');
       return productionPipelineHandler(req, this.env);
@@ -2666,6 +2702,8 @@ class RouteRegistry {
     this.register('GET', '/api/production/projects/:id', (req) =>
       productionProjectDetailsHandler(req, this.env)
     );
+    this.register('POST', '/api/production/projects', this.createProductionProject.bind(this));
+    this.register('PUT', '/api/production/projects/:id', this.updateProductionProject.bind(this));
 
     // Budget Management
     this.register('GET', '/api/production/budget/:projectId', async (req) => {
@@ -2734,6 +2772,10 @@ class RouteRegistry {
     this.register('GET', '/api/production/submissions', async (req) => {
       const { productionSubmissionsHandler } = await import('./handlers/production-sidebar');
       return productionSubmissionsHandler(req, this.env);
+    });
+    this.register('PUT', '/api/production/submissions/:pitchId', async (req) => {
+      const { updateSubmissionStatus } = await import('./handlers/production-sidebar');
+      return updateSubmissionStatus(req, this.env);
     });
     this.register('GET', '/api/production/revenue', async (req) => {
       const { productionRevenueHandler } = await import('./handlers/production-sidebar');
@@ -3612,9 +3654,20 @@ class RouteRegistry {
               }
             );
           }
-        } else {
-          // For non-demo, fallback to plain text check (should use bcrypt in future)
-          if (user.password && user.password !== password) {
+        } else if (user.password) {
+          // Verify against hashed or plaintext password
+          let passwordValid = false;
+          if (isHashedPassword(user.password)) {
+            passwordValid = await verifyPassword(password, user.password);
+          } else {
+            passwordValid = user.password === password;
+            // Upgrade plaintext to hash on successful login
+            if (passwordValid) {
+              const hashed = await hashPassword(password);
+              await this.db.query(`UPDATE users SET password = $1 WHERE id = $2`, [hashed, user.id]).catch(() => {});
+            }
+          }
+          if (!passwordValid) {
             return new Response(
               JSON.stringify({
                 success: false,
@@ -3762,10 +3815,20 @@ class RouteRegistry {
               }
             );
           }
-        } else {
-          // For non-demo accounts, check password_hash (would need bcrypt verification)
-          // For now, we'll check plain text password field as fallback
-          if (user.password && user.password !== password) {
+        } else if (user.password) {
+          // Verify against hashed or plaintext password
+          let passwordValid = false;
+          if (isHashedPassword(user.password)) {
+            passwordValid = await verifyPassword(password, user.password);
+          } else {
+            passwordValid = user.password === password;
+            // Upgrade plaintext to hash on successful login
+            if (passwordValid) {
+              const hashed = await hashPassword(password);
+              await this.db!.query(`UPDATE users SET password = $1 WHERE id = $2`, [hashed, user.id]).catch(() => {});
+            }
+          }
+          if (!passwordValid) {
             return new Response(
               JSON.stringify({
                 success: false,
@@ -5330,6 +5393,14 @@ pitchey_analytics_datapoints_per_minute 1250
     const headers = { 'Content-Type': 'application/json', ...corsHeaders };
 
     try {
+      // Enforce credit cost: basic_upload = 10 credits
+      const creditResult = await this.deductCreditsInternal(
+        authResult.user.id, 10, 'File upload', 'basic_upload'
+      );
+      if (!creditResult.success) {
+        return new Response(JSON.stringify({ message: creditResult.error }), { status: 402, headers });
+      }
+
       const formData = await request.formData();
       const file = formData.get('file') as File;
       const folder = (formData.get('folder') as string) || 'uploads';
@@ -5358,7 +5429,9 @@ pitchey_analytics_datapoints_per_minute 1250
         url: uploadResult.url,
         filename: file.name,
         size: file.size,
-        type: file.type
+        type: file.type,
+        creditsUsed: 10,
+        creditsRemaining: creditResult.newBalance
       }), { status: 200, headers });
     } catch (error) {
       console.error('Upload error:', error);
@@ -5374,12 +5447,24 @@ pitchey_analytics_datapoints_per_minute 1250
     const headers = { 'Content-Type': 'application/json', ...corsHeaders };
 
     try {
+      // Determine credit cost by document type: images = picture_doc (5), others = word_doc (3)
       const formData = await request.formData();
       const file = formData.get('file') as File;
       const folder = (formData.get('folder') as string) || 'documents';
 
       if (!file) {
         return new Response(JSON.stringify({ message: 'No file provided' }), { status: 400, headers });
+      }
+
+      const isImage = file.type.startsWith('image/');
+      const creditCost = isImage ? 5 : 3;
+      const usageType = isImage ? 'picture_doc' : 'word_doc';
+
+      const creditResult = await this.deductCreditsInternal(
+        authResult.user.id, creditCost, `Document upload: ${file.name}`, usageType
+      );
+      if (!creditResult.success) {
+        return new Response(JSON.stringify({ message: creditResult.error }), { status: 402, headers });
       }
 
       const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg', 'image/png', 'image/webp'];
@@ -5406,7 +5491,9 @@ pitchey_analytics_datapoints_per_minute 1250
         url: uploadResult.url,
         filename: file.name,
         size: file.size,
-        type: file.type
+        type: file.type,
+        creditsUsed: creditCost,
+        creditsRemaining: creditResult.newBalance
       }), { status: 200, headers });
     } catch (error) {
       console.error('Document upload error:', error);
@@ -5521,6 +5608,16 @@ pitchey_analytics_datapoints_per_minute 1250
       const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/quicktime'];
       if (!allowedTypes.includes(file.type)) {
         return builder.error(ErrorCode.VALIDATION_ERROR, 'Invalid file type for media.');
+      }
+
+      // Enforce credit cost: images = extra_image (1), videos = video_link (1)
+      const isVideo = file.type.startsWith('video/');
+      const usageType = isVideo ? 'video_link' : 'extra_image';
+      const creditResult = await this.deductCreditsInternal(
+        authResult.user.id, 1, `Media upload: ${file.name}`, usageType
+      );
+      if (!creditResult.success) {
+        return builder.error(ErrorCode.BAD_REQUEST, creditResult.error);
       }
 
       // Real R2 media upload implementation
@@ -6045,10 +6142,11 @@ pitchey_analytics_datapoints_per_minute 1250
       // Initialize with enhanced R2 handler if available
       let session;
       try {
-        if (this.env.R2_BUCKET) {
+        const r2Bucket = this.env.MEDIA_STORAGE || this.env.R2_BUCKET;
+        if (r2Bucket) {
           const { EnhancedR2UploadHandler } = await import('./services/enhanced-upload-r2');
           if (!this.enhancedR2Handler) {
-            this.enhancedR2Handler = new EnhancedR2UploadHandler(this.env.R2_BUCKET, this.env.CACHE);
+            this.enhancedR2Handler = new EnhancedR2UploadHandler(r2Bucket, this.env.CACHE);
           }
 
           session = await this.enhancedR2Handler.initializeChunkedUpload(
@@ -6071,8 +6169,8 @@ pitchey_analytics_datapoints_per_minute 1250
             maxConcurrentChunks: 3
           });
         } else {
-          // R2 bucket not configured
-          console.error('R2_BUCKET not configured in environment');
+          // Neither MEDIA_STORAGE nor R2_BUCKET configured
+          console.error('No R2 storage binding configured (MEDIA_STORAGE or R2_BUCKET)');
           return builder.error(
             ErrorCode.SERVICE_UNAVAILABLE,
             'File storage service is not available. Please contact support.'
@@ -6666,6 +6764,33 @@ pitchey_analytics_datapoints_per_minute 1250
         return builder.error(ErrorCode.ALREADY_EXISTS, 'NDA request already exists');
       }
 
+      // Credit check + deduction for NDA requests (10 credits)
+      const ndaCreditCost = 10;
+      const creditRows = await this.db.query(
+        `SELECT balance FROM user_credits WHERE user_id = $1`,
+        [authResult.user.id]
+      ) as DatabaseRow[];
+      const currentBalance = creditRows.length > 0 ? (Number(creditRows[0].balance) || 0) : 0;
+
+      if (currentBalance < ndaCreditCost) {
+        return builder.error(ErrorCode.BAD_REQUEST, 'Insufficient credits. NDA requests cost 10 credits.');
+      }
+
+      const newBalance = currentBalance - ndaCreditCost;
+
+      // Deduct credits
+      await this.db.query(
+        `UPDATE user_credits SET balance = balance - $1, total_used = total_used + $1, last_updated = NOW() WHERE user_id = $2`,
+        [ndaCreditCost, authResult.user.id]
+      );
+
+      // Record credit transaction
+      await this.db.query(
+        `INSERT INTO credit_transactions (user_id, type, amount, description, balance_before, balance_after, usage_type, pitch_id, created_at)
+         VALUES ($1, 'usage', $2, 'NDA request', $3, $4, 'nda_request', $5, NOW())`,
+        [authResult.user.id, -ndaCreditCost, currentBalance, newBalance, this.safeParseInt(pitchId)]
+      );
+
       // Auto-approve for demo accounts
       const userEmail = authResult.user.email || '';
       const isDemoAccount = userEmail.includes('@demo.com');
@@ -6827,6 +6952,8 @@ pitchey_analytics_datapoints_per_minute 1250
         message: nda.request_message,
         expiresAt: nda.expires_at,
         createdAt: nda.created_at,
+        creditsUsed: ndaCreditCost,
+        newBalance,
         success: true
       });
     } catch (error) {
@@ -8246,35 +8373,58 @@ pitchey_analytics_datapoints_per_minute 1250
 
     try {
       const body = await request.json() as any;
-      const packageId = body.creditPackage;
-
-      // Credit packages matching frontend config
-      const packages: Record<string, { credits: number; price: number; bonus: number }> = {
-        'package_0': { credits: 1, price: 2.99, bonus: 0 },
-        'package_1': { credits: 5, price: 8.99, bonus: 0 },
-        'package_2': { credits: 10, price: 14.99, bonus: 0 },
-        'package_3': { credits: 30, price: 29.99, bonus: 10 }
-      };
-
-      const pkg = packages[packageId];
+      const packageIndex = parseInt(String(body.creditPackage).replace('package_', ''));
+      const pkg = CREDIT_PACKAGES[packageIndex];
       if (!pkg) {
         return new ApiResponseBuilder(request).error(ErrorCode.BAD_REQUEST, 'Invalid credit package');
       }
 
-      const totalCredits = pkg.credits + pkg.bonus;
+      const totalCredits = pkg.credits + (pkg.bonus || 0);
+      const stripeKey = (this.env as any).STRIPE_SECRET_KEY;
+
+      // If Stripe is configured, create a Checkout Session
+      if (stripeKey) {
+        const stripe = new StripeService(stripeKey);
+        const frontendUrl = (this.env as any).FRONTEND_URL || 'https://pitchey-5o8.pages.dev';
+        const session = await stripe.createCreditPurchaseCheckout({
+          userId: authResult.user!.id,
+          email: authResult.user!.email || '',
+          credits: totalCredits,
+          priceInCents: Math.round(pkg.price * 100),
+          packageId: `package_${packageIndex}`,
+          successUrl: `${frontendUrl}/billing?purchase=success`,
+          cancelUrl: `${frontendUrl}/billing?purchase=cancelled`,
+        });
+
+        return new ApiResponseBuilder(request).success({
+          url: session.url,
+          sessionId: session.id,
+          credits: totalCredits,
+          package: `package_${packageIndex}`
+        });
+      }
+
+      // In production, Stripe is required — no free credits
+      const isProduction = (this.env as any).ENVIRONMENT === 'production';
+      if (isProduction) {
+        return new ApiResponseBuilder(request).error(
+          ErrorCode.SERVICE_UNAVAILABLE,
+          'Payment processing is not yet configured. Please try again later.'
+        );
+      }
+
+      // Dev/local only: grant credits directly for testing
       const sql = this.db.getSql() as any;
       if (!sql || !authResult.user?.id) {
         return new ApiResponseBuilder(request).error(ErrorCode.INTERNAL_ERROR, 'Database not available');
       }
 
-      // Get current balance
       const currentRows = await sql`
         SELECT balance FROM user_credits WHERE user_id = ${authResult.user.id}
       `;
       const currentBalance = currentRows.length > 0 ? (currentRows[0].balance || 0) : 0;
       const newBalance = currentBalance + totalCredits;
 
-      // Upsert user_credits
       await sql`
         INSERT INTO user_credits (user_id, balance, total_purchased, total_used, last_updated)
         VALUES (${authResult.user.id}, ${totalCredits}, ${totalCredits}, 0, NOW())
@@ -8284,22 +8434,75 @@ pitchey_analytics_datapoints_per_minute 1250
           last_updated = NOW()
       `;
 
-      // Record transaction
       await sql`
         INSERT INTO credit_transactions (user_id, type, amount, description, balance_before, balance_after, created_at)
         VALUES (${authResult.user.id}, 'purchase', ${totalCredits},
-          ${'Purchased ' + pkg.credits + ' credits' + (pkg.bonus > 0 ? ' + ' + pkg.bonus + ' bonus' : '') + ' (€' + pkg.price + ')'},
+          ${'[DEV] Purchased ' + pkg.credits + ' credits' + ((pkg.bonus || 0) > 0 ? ' + ' + pkg.bonus + ' bonus' : '') + ' (€' + pkg.price + ')'},
           ${currentBalance}, ${newBalance}, NOW())
       `;
 
       return new ApiResponseBuilder(request).success({
         credits: newBalance,
         purchased: totalCredits,
-        package: packageId
+        package: `package_${packageIndex}`,
+        devMode: true
       });
     } catch (e: any) {
       console.error('Failed to purchase credits:', e);
       return new ApiResponseBuilder(request).error(ErrorCode.INTERNAL_ERROR, 'Failed to purchase credits');
+    }
+  }
+
+  /**
+   * Server-side credit deduction helper. Returns { success, newBalance } or { success: false, error }.
+   * Used by upload, messaging, and other endpoints to enforce credit costs.
+   */
+  private async deductCreditsInternal(
+    userId: number,
+    amount: number,
+    description: string,
+    usageType: string,
+    pitchId?: number
+  ): Promise<{ success: true; newBalance: number } | { success: false; error: string }> {
+    try {
+      const sql = this.db.getSql() as any;
+      if (!sql) return { success: false, error: 'Database not available' };
+
+      // Check subscription — unlimited credits skip deduction
+      const subRows = await sql`
+        SELECT subscription_tier FROM users WHERE id = ${userId}
+      `;
+      const tier = subRows.length > 0 ? subRows[0].subscription_tier : null;
+      if (tier && (tier === 'creator_unlimited' || tier === 'production_unlimited' || tier === 'exec_unlimited')) {
+        return { success: true, newBalance: -1 }; // -1 signals unlimited
+      }
+
+      const currentRows = await sql`
+        SELECT balance FROM user_credits WHERE user_id = ${userId}
+      `;
+      const currentBalance = currentRows.length > 0 ? (Number(currentRows[0].balance) || 0) : 0;
+
+      if (currentBalance < amount) {
+        return { success: false, error: `Insufficient credits. This action costs ${amount} credits. You have ${currentBalance}.` };
+      }
+
+      const newBalance = currentBalance - amount;
+
+      await sql`
+        UPDATE user_credits SET balance = balance - ${amount}, total_used = total_used + ${amount}, last_updated = NOW()
+        WHERE user_id = ${userId}
+      `;
+
+      await sql`
+        INSERT INTO credit_transactions (user_id, type, amount, description, balance_before, balance_after, usage_type, pitch_id, created_at)
+        VALUES (${userId}, 'usage', ${-amount}, ${description}, ${currentBalance}, ${newBalance}, ${usageType}, ${pitchId || null}, NOW())
+      `;
+
+      return { success: true, newBalance };
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      console.error('deductCreditsInternal error:', e.message);
+      return { success: false, error: 'Failed to process credits' };
     }
   }
 
@@ -8441,11 +8644,27 @@ pitchey_analytics_datapoints_per_minute 1250
       return new ApiResponseBuilder(request).error(ErrorCode.UNAUTHORIZED, 'Authentication required');
     }
 
-    // Stripe integration not yet implemented — return setup intent placeholder
-    return new ApiResponseBuilder(request).success({
-      message: 'Stripe payment method setup not yet configured. Please contact support.',
-      setupUrl: null
-    });
+    const stripeKey = (this.env as any).STRIPE_SECRET_KEY;
+    if (!stripeKey) {
+      return new ApiResponseBuilder(request).success({
+        message: 'Stripe not configured. Set STRIPE_SECRET_KEY secret.',
+        setupUrl: null
+      });
+    }
+
+    try {
+      const stripe = new StripeService(stripeKey);
+      const customer = await stripe.getOrCreateCustomer(authResult.user!.email || '', authResult.user!.id);
+      const setupIntent = await stripe.createSetupIntent(customer.id);
+
+      return new ApiResponseBuilder(request).success({
+        clientSecret: setupIntent.client_secret,
+        customerId: customer.id
+      });
+    } catch (e: any) {
+      console.error('Failed to create setup intent:', e);
+      return new ApiResponseBuilder(request).error(ErrorCode.INTERNAL_ERROR, 'Failed to set up payment method');
+    }
   }
 
   private async removePaymentMethod(request: Request): Promise<Response> {
@@ -8454,7 +8673,39 @@ pitchey_analytics_datapoints_per_minute 1250
       return new ApiResponseBuilder(request).error(ErrorCode.UNAUTHORIZED, 'Authentication required');
     }
 
-    return new ApiResponseBuilder(request).success({ removed: true });
+    const paymentMethodId = this.extractParam(request, '/api/payments/payment-methods/:id');
+    const stripeKey = (this.env as any).STRIPE_SECRET_KEY;
+
+    try {
+      // Mark inactive in DB
+      const sql = this.db.getSql() as any;
+      if (sql && authResult.user?.id) {
+        await sql`
+          UPDATE payment_methods SET is_active = false, updated_at = NOW()
+          WHERE id = ${paymentMethodId} AND user_id = ${authResult.user.id}
+        `;
+      }
+
+      // Detach from Stripe if configured
+      if (stripeKey && paymentMethodId) {
+        const stripe = new StripeService(stripeKey);
+        // Look up the stripe_payment_method_id from our DB
+        if (sql && authResult.user?.id) {
+          const rows = await sql`
+            SELECT stripe_payment_method_id FROM payment_methods
+            WHERE id = ${paymentMethodId} AND user_id = ${authResult.user.id}
+          `;
+          if (rows.length > 0 && rows[0].stripe_payment_method_id) {
+            await stripe.detachPaymentMethod(rows[0].stripe_payment_method_id).catch(() => {});
+          }
+        }
+      }
+
+      return new ApiResponseBuilder(request).success({ removed: true });
+    } catch (e: any) {
+      console.error('Failed to remove payment method:', e);
+      return new ApiResponseBuilder(request).error(ErrorCode.INTERNAL_ERROR, 'Failed to remove payment method');
+    }
   }
 
   private async setDefaultPaymentMethod(request: Request): Promise<Response> {
@@ -8463,7 +8714,28 @@ pitchey_analytics_datapoints_per_minute 1250
       return new ApiResponseBuilder(request).error(ErrorCode.UNAUTHORIZED, 'Authentication required');
     }
 
-    return new ApiResponseBuilder(request).success({ updated: true });
+    try {
+      const body = await request.json() as any;
+      const { paymentMethodId } = body;
+      const sql = this.db.getSql() as any;
+
+      if (sql && authResult.user?.id && paymentMethodId) {
+        // Clear existing defaults
+        await sql`
+          UPDATE payment_methods SET is_default = false WHERE user_id = ${authResult.user.id}
+        `;
+        // Set new default
+        await sql`
+          UPDATE payment_methods SET is_default = true, updated_at = NOW()
+          WHERE id = ${paymentMethodId} AND user_id = ${authResult.user.id}
+        `;
+      }
+
+      return new ApiResponseBuilder(request).success({ updated: true });
+    } catch (e: any) {
+      console.error('Failed to set default payment method:', e);
+      return new ApiResponseBuilder(request).error(ErrorCode.INTERNAL_ERROR, 'Failed to update default payment method');
+    }
   }
 
   private async handleSubscribe(request: Request): Promise<Response> {
@@ -8474,16 +8746,52 @@ pitchey_analytics_datapoints_per_minute 1250
 
     try {
       const body = await request.json() as any;
-      const { tier, billingInterval } = body;
+      const { tier, billingInterval = 'monthly' } = body;
+      const stripeKey = (this.env as any).STRIPE_SECRET_KEY;
 
-      // Stripe checkout not yet implemented — return placeholder
+      if (!stripeKey) {
+        return new ApiResponseBuilder(request).success({
+          message: 'Stripe not configured. Set STRIPE_SECRET_KEY secret.',
+          tier,
+          billingInterval,
+          url: null
+        });
+      }
+
+      // Look up Stripe price ID from subscription plans
+      const { getSubscriptionTier } = await import('./config/subscription-plans');
+      const plan = getSubscriptionTier(tier);
+      if (!plan) {
+        return new ApiResponseBuilder(request).error(ErrorCode.BAD_REQUEST, `Unknown subscription tier: ${tier}`);
+      }
+
+      const interval = billingInterval === 'annual' ? 'annual' : 'monthly';
+      const priceId = plan.stripePriceId?.[interval];
+      if (!priceId) {
+        return new ApiResponseBuilder(request).error(
+          ErrorCode.BAD_REQUEST,
+          `Stripe price ID not configured for ${tier} (${interval}). Set stripePriceId in subscription-plans.ts.`
+        );
+      }
+
+      const stripe = new StripeService(stripeKey);
+      const frontendUrl = (this.env as any).FRONTEND_URL || 'https://pitchey-5o8.pages.dev';
+      const session = await stripe.createSubscriptionCheckout({
+        userId: authResult.user!.id,
+        email: authResult.user!.email || '',
+        priceId,
+        successUrl: `${frontendUrl}/billing?subscription=success`,
+        cancelUrl: `${frontendUrl}/billing?subscription=cancelled`,
+      });
+
       return new ApiResponseBuilder(request).success({
-        message: 'Stripe subscription checkout not yet configured.',
+        url: session.url,
+        sessionId: session.id,
         tier,
-        billingInterval: billingInterval || 'monthly',
-        url: null
+        billingInterval: interval
       });
     } catch (e: any) {
+      console.error('Failed to create subscription checkout:', e);
       return new ApiResponseBuilder(request).error(ErrorCode.INTERNAL_ERROR, 'Failed to create subscription');
     }
   }
@@ -8494,11 +8802,213 @@ pitchey_analytics_datapoints_per_minute 1250
       return new ApiResponseBuilder(request).error(ErrorCode.UNAUTHORIZED, 'Authentication required');
     }
 
-    // Stripe integration not yet implemented
-    return new ApiResponseBuilder(request).success({
-      message: 'Subscription cancellation will take effect at end of billing period.',
-      canceled: true
-    });
+    try {
+      const stripeKey = (this.env as any).STRIPE_SECRET_KEY;
+      const sql = this.db.getSql() as any;
+
+      if (!sql || !authResult.user?.id) {
+        return new ApiResponseBuilder(request).error(ErrorCode.INTERNAL_ERROR, 'Database not available');
+      }
+
+      // Find active subscription for this user
+      const rows = await sql`
+        SELECT stripe_subscription_id FROM subscription_history
+        WHERE user_id = ${authResult.user.id} AND status = 'active'
+        AND stripe_subscription_id IS NOT NULL
+        ORDER BY created_at DESC LIMIT 1
+      `;
+
+      if (rows.length === 0 || !rows[0].stripe_subscription_id) {
+        return new ApiResponseBuilder(request).error(ErrorCode.BAD_REQUEST, 'No active subscription found');
+      }
+
+      const subId = rows[0].stripe_subscription_id;
+
+      // Cancel in Stripe if configured
+      if (stripeKey) {
+        const stripe = new StripeService(stripeKey);
+        await stripe.cancelSubscription(subId);
+      }
+
+      // Mark as cancelling in our DB
+      await sql`
+        UPDATE subscription_history
+        SET status = 'cancelling', metadata = jsonb_set(COALESCE(metadata, '{}'), '{cancel_at_period_end}', 'true')
+        WHERE stripe_subscription_id = ${subId} AND user_id = ${authResult.user.id}
+      `;
+
+      return new ApiResponseBuilder(request).success({
+        message: 'Subscription cancellation will take effect at end of billing period.',
+        canceled: true
+      });
+    } catch (e: any) {
+      console.error('Failed to cancel subscription:', e);
+      return new ApiResponseBuilder(request).error(ErrorCode.INTERNAL_ERROR, 'Failed to cancel subscription');
+    }
+  }
+
+  // ── Stripe Webhook Handler ──
+  private async handleStripeWebhook(request: Request): Promise<Response> {
+    const stripeKey = (this.env as any).STRIPE_SECRET_KEY;
+    const webhookSecret = (this.env as any).STRIPE_WEBHOOK_SECRET;
+
+    if (!stripeKey || !webhookSecret) {
+      return new ApiResponseBuilder(request).error(ErrorCode.INTERNAL_ERROR, 'Stripe webhook not configured');
+    }
+
+    const signature = request.headers.get('stripe-signature');
+    if (!signature) {
+      return new ApiResponseBuilder(request).error(ErrorCode.BAD_REQUEST, 'Missing stripe-signature header');
+    }
+
+    const body = await request.text();
+    const stripe = new StripeService(stripeKey);
+    const valid = await stripe.verifyWebhookSignature(body, signature, webhookSecret);
+    if (!valid) {
+      return new ApiResponseBuilder(request).error(ErrorCode.BAD_REQUEST, 'Invalid webhook signature');
+    }
+
+    const event = JSON.parse(body);
+    const sql = this.db.getSql() as any;
+    if (!sql) {
+      return new ApiResponseBuilder(request).error(ErrorCode.INTERNAL_ERROR, 'Database not available');
+    }
+
+    try {
+      switch (event.type) {
+        case 'checkout.session.completed': {
+          const session = event.data.object;
+          const userId = parseInt(session.metadata?.userId);
+          if (!userId) break;
+
+          if (session.metadata?.type === 'credits') {
+            // Credit purchase completed — grant credits
+            const credits = parseInt(session.metadata.credits || '0');
+            if (credits > 0) {
+              const currentRows = await sql`SELECT balance FROM user_credits WHERE user_id = ${userId}`;
+              const currentBalance = currentRows.length > 0 ? (currentRows[0].balance || 0) : 0;
+
+              await sql`
+                INSERT INTO user_credits (user_id, balance, total_purchased, total_used, last_updated)
+                VALUES (${userId}, ${credits}, ${credits}, 0, NOW())
+                ON CONFLICT (user_id) DO UPDATE SET
+                  balance = user_credits.balance + ${credits},
+                  total_purchased = user_credits.total_purchased + ${credits},
+                  last_updated = NOW()
+              `;
+
+              await sql`
+                INSERT INTO credit_transactions (user_id, type, amount, description, balance_before, balance_after, stripe_session_id, created_at)
+                VALUES (${userId}, 'purchase', ${credits},
+                  ${'Purchased ' + credits + ' credits (' + (session.metadata.package || 'custom') + ')'},
+                  ${currentBalance}, ${currentBalance + credits}, ${session.id}, NOW())
+              `;
+            }
+          } else if (session.metadata?.type === 'subscription' || session.mode === 'subscription') {
+            // Subscription checkout completed
+            const subId = session.subscription;
+            let sub = null;
+            if (subId) {
+              sub = await stripe.getSubscription(subId).catch(() => null);
+            }
+
+            await sql`
+              INSERT INTO subscription_history (user_id, new_tier, action, stripe_subscription_id, stripe_price_id, status, amount, billing_interval, period_start, period_end, created_at)
+              VALUES (${userId}, ${session.metadata?.tier || 'unknown'}, 'create', ${subId || null},
+                ${sub?.items?.data?.[0]?.price?.id || null}, 'active',
+                ${(session.amount_total || 0) / 100}, ${sub?.items?.data?.[0]?.price?.recurring?.interval || 'month'},
+                ${sub ? new Date(sub.current_period_start * 1000).toISOString() : null},
+                ${sub ? new Date(sub.current_period_end * 1000).toISOString() : null}, NOW())
+            `;
+
+            // Grant monthly credits for the subscription tier
+            const { getSubscriptionTier } = await import('./config/subscription-plans');
+            const plan = getSubscriptionTier(session.metadata?.tier || '');
+            if (plan && plan.credits > 0) {
+              await sql`
+                INSERT INTO user_credits (user_id, balance, total_purchased, total_used, last_updated)
+                VALUES (${userId}, ${plan.credits}, ${plan.credits}, 0, NOW())
+                ON CONFLICT (user_id) DO UPDATE SET
+                  balance = user_credits.balance + ${plan.credits},
+                  total_purchased = user_credits.total_purchased + ${plan.credits},
+                  last_updated = NOW()
+              `;
+            }
+          }
+          break;
+        }
+
+        case 'customer.subscription.deleted': {
+          const sub = event.data.object;
+          const subId = sub.id;
+          await sql`
+            UPDATE subscription_history SET status = 'canceled'
+            WHERE stripe_subscription_id = ${subId} AND status IN ('active', 'cancelling')
+          `;
+          break;
+        }
+
+        case 'customer.subscription.updated': {
+          const sub = event.data.object;
+          const subId = sub.id;
+          if (sub.cancel_at_period_end) {
+            await sql`
+              UPDATE subscription_history SET status = 'cancelling'
+              WHERE stripe_subscription_id = ${subId} AND status = 'active'
+            `;
+          }
+          // Update period end
+          await sql`
+            UPDATE subscription_history SET period_end = ${new Date(sub.current_period_end * 1000).toISOString()}
+            WHERE stripe_subscription_id = ${subId}
+          `;
+          break;
+        }
+
+        case 'invoice.paid': {
+          // Recurring subscription payment — grant monthly credits
+          const invoice = event.data.object;
+          const subId = invoice.subscription;
+          if (subId && invoice.billing_reason === 'subscription_cycle') {
+            const rows = await sql`
+              SELECT user_id, new_tier FROM subscription_history
+              WHERE stripe_subscription_id = ${subId} AND status = 'active'
+              ORDER BY created_at DESC LIMIT 1
+            `;
+            if (rows.length > 0) {
+              const { getSubscriptionTier } = await import('./config/subscription-plans');
+              const plan = getSubscriptionTier(rows[0].new_tier);
+              if (plan && plan.credits > 0) {
+                await sql`
+                  INSERT INTO user_credits (user_id, balance, total_purchased, total_used, last_updated)
+                  VALUES (${rows[0].user_id}, ${plan.credits}, ${plan.credits}, 0, NOW())
+                  ON CONFLICT (user_id) DO UPDATE SET
+                    balance = user_credits.balance + ${plan.credits},
+                    total_purchased = user_credits.total_purchased + ${plan.credits},
+                    last_updated = NOW()
+                `;
+              }
+            }
+          }
+          break;
+        }
+
+        default:
+          console.debug(`Unhandled Stripe webhook event: ${event.type}`);
+      }
+
+      return new Response(JSON.stringify({ received: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch (e: any) {
+      console.error('Stripe webhook processing error:', e);
+      // Return 200 to prevent Stripe from retrying (we logged the error)
+      return new Response(JSON.stringify({ received: true, error: 'Processing failed' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
   }
 
   /**
@@ -15811,6 +16321,67 @@ Signatures: [To be completed upon signing]
 
   // ======= PRODUCTION ANALYTICS ENDPOINT =======
 
+  private async createProductionProject(request: Request): Promise<Response> {
+    try {
+      const authCheck = await this.requireAuth(request);
+      if (!authCheck.authorized) return authCheck.response;
+
+      const body = await request.json() as any;
+      const { title, description, status, budget, startDate, endDate, genre, format, relatedPitchId } = body;
+
+      if (!title) {
+        return new ApiResponseBuilder(request).error(ErrorCode.VALIDATION_ERROR, 'Project title is required');
+      }
+
+      const result = await this.db.query(
+        `INSERT INTO production_projects (production_company_id, title, description, status, budget, start_date, end_date, genre, format, related_pitch_id, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+         RETURNING *`,
+        [authCheck.user.id, title, description || null, status || 'development', budget || null,
+         startDate || null, endDate || null, genre || null, format || null, relatedPitchId || null]
+      ) as any[];
+
+      return new ApiResponseBuilder(request).success({ project: result[0] });
+    } catch (error) {
+      console.error('Create production project error:', error);
+      return new ApiResponseBuilder(request).error(ErrorCode.INTERNAL_ERROR, 'Failed to create project');
+    }
+  }
+
+  private async updateProductionProject(request: Request): Promise<Response> {
+    try {
+      const authCheck = await this.requireAuth(request);
+      if (!authCheck.authorized) return authCheck.response;
+
+      const url = new URL(request.url);
+      const projectId = url.pathname.split('/').pop();
+      const body = await request.json() as any;
+      const { title, description, status, budget, startDate, endDate, genre, format } = body;
+
+      const result = await this.db.query(
+        `UPDATE production_projects
+         SET title = COALESCE($1, title), description = COALESCE($2, description),
+             status = COALESCE($3, status), budget = COALESCE($4, budget),
+             start_date = COALESCE($5, start_date), end_date = COALESCE($6, end_date),
+             genre = COALESCE($7, genre), format = COALESCE($8, format), updated_at = NOW()
+         WHERE id = $9 AND production_company_id = $10
+         RETURNING *`,
+        [title || null, description || null, status || null, budget || null,
+         startDate || null, endDate || null, genre || null, format || null,
+         projectId, authCheck.user.id]
+      ) as any[];
+
+      if (!result || result.length === 0) {
+        return new ApiResponseBuilder(request).error(ErrorCode.NOT_FOUND, 'Project not found or access denied');
+      }
+
+      return new ApiResponseBuilder(request).success({ project: result[0] });
+    } catch (error) {
+      console.error('Update production project error:', error);
+      return new ApiResponseBuilder(request).error(ErrorCode.INTERNAL_ERROR, 'Failed to update project');
+    }
+  }
+
   private async getProductionAnalytics(request: Request): Promise<Response> {
     try {
       const authCheck = await this.requireAuthWithRBAC(request);
@@ -15824,40 +16395,48 @@ Signatures: [To be completed upon signing]
       const daysMap: Record<string, number> = { '7d': 7, '30d': 30, '90d': 90, '1y': 365 };
       const days = daysMap[timeframe] || 30;
 
-      // Get production metrics - budget is now DECIMAL type after migration
+      // Production analytics: based on saved pitches + own production_projects
+      // (Production companies evaluate creator pitches, they don't own them)
+
+      // Metrics from production_projects table
       const metricsQuery = `
         SELECT
-          COUNT(DISTINCT p.id) as total_projects,
-          SUM(CASE WHEN p.status IN ('active', 'published', 'in_production') THEN 1 ELSE 0 END) as active_projects,
-          SUM(CASE WHEN p.status = 'completed' THEN 1 ELSE 0 END) as completed_projects,
-          COALESCE(SUM(p.budget), 0) as total_budget,
-          COALESCE(AVG(p.budget), 0) as avg_budget,
-          COALESCE(SUM(p.view_count), 0) as total_views,
-          COALESCE(SUM(p.like_count), 0) as total_likes,
-          CASE WHEN COUNT(*) > 0 THEN COUNT(CASE WHEN p.status = 'completed' THEN 1 END)::float / COUNT(*) * 100 ELSE 0 END as avg_completion_rate
-        FROM pitches p
-        WHERE p.user_id = $1
-          AND p.created_at >= NOW() - INTERVAL '${days} days'
+          COUNT(DISTINCT pp.id) as total_projects,
+          SUM(CASE WHEN pp.status IN ('active', 'in_production', 'production') THEN 1 ELSE 0 END) as active_projects,
+          SUM(CASE WHEN pp.status = 'completed' THEN 1 ELSE 0 END) as completed_projects,
+          COALESCE(SUM(pp.budget), 0) as total_budget,
+          COALESCE(AVG(pp.budget), 0) as avg_budget,
+          (SELECT COUNT(*) FROM saved_pitches WHERE user_id = $1) as pitches_evaluated,
+          (SELECT COUNT(*) FROM saved_pitches WHERE user_id = $1 AND created_at >= NOW() - INTERVAL '${days} days') as recent_evaluations,
+          CASE WHEN COUNT(*) > 0 THEN COUNT(CASE WHEN pp.status = 'completed' THEN 1 END)::float / COUNT(*) * 100 ELSE 0 END as avg_completion_rate
+        FROM production_projects pp
+        WHERE pp.production_company_id = $1
       `;
       const metricsResult = await this.db.query(metricsQuery, [authCheck.user.id]);
-      const metrics = (metricsResult as any)?.[0] || {};
+      const rawMetrics = (metricsResult as any)?.[0] || {};
+      const metrics = {
+        ...rawMetrics,
+        total_views: parseInt(rawMetrics.pitches_evaluated) || 0,
+        total_likes: parseInt(rawMetrics.recent_evaluations) || 0
+      };
 
-      // Get genre performance with investment data
+      // Genre performance from saved (evaluated) pitches
       const genreQuery = `
         SELECT
           COALESCE(p.genre, 'Other') as genre,
           COUNT(*) as project_count,
           COALESCE(SUM(p.budget), 0) as total_investment,
           COALESCE(SUM(p.view_count), 0) as total_views
-        FROM pitches p
-        WHERE p.user_id = $1 AND p.created_at >= NOW() - INTERVAL '${days} days'
+        FROM saved_pitches sp
+        JOIN pitches p ON p.id = sp.pitch_id
+        WHERE sp.user_id = $1
         GROUP BY p.genre
         ORDER BY project_count DESC
         LIMIT 6
       `;
       const genrePerformance = await this.db.query(genreQuery, [authCheck.user.id]);
 
-      // Get project pipeline by status/stage using subquery for cleaner GROUP BY
+      // Project pipeline from production_projects
       const pipelineQuery = `
         SELECT
           stage,
@@ -15867,16 +16446,16 @@ Signatures: [To be completed upon signing]
         FROM (
           SELECT
             CASE
-              WHEN p.status = 'draft' THEN 'Development'
-              WHEN p.status = 'pending' THEN 'Pre-Production'
-              WHEN p.status IN ('active', 'published', 'in_production') THEN 'Production'
-              WHEN p.status = 'post_production' THEN 'Post-Production'
-              WHEN p.status = 'completed' THEN 'Distribution'
+              WHEN pp.status = 'development' THEN 'Development'
+              WHEN pp.status = 'pre_production' THEN 'Pre-Production'
+              WHEN pp.status IN ('active', 'production', 'in_production') THEN 'Production'
+              WHEN pp.status = 'post_production' THEN 'Post-Production'
+              WHEN pp.status = 'completed' THEN 'Distribution'
               ELSE 'Development'
             END as stage,
-            COALESCE(p.budget, 0) as budget
-          FROM pitches p
-          WHERE p.user_id = $1
+            COALESCE(pp.budget, 0) as budget
+          FROM production_projects pp
+          WHERE pp.production_company_id = $1
         ) sub
         GROUP BY stage
         ORDER BY
@@ -15890,16 +16469,15 @@ Signatures: [To be completed upon signing]
       `;
       const timelineAdherence = await this.db.query(pipelineQuery, [authCheck.user.id]);
 
-      // Get revenue/investment data - invested_at column now exists after migration
+      // Revenue from production_projects + related investments
       const revenueQuery = `
         SELECT
           COALESCE(SUM(i.amount), 0) as total_revenue,
           COUNT(DISTINCT i.investor_id) as total_investors
         FROM investments i
-        JOIN pitches p ON p.id = i.pitch_id
-        WHERE p.user_id = $1
+        JOIN production_projects pp ON pp.related_pitch_id = i.pitch_id
+        WHERE pp.production_company_id = $1
           AND i.status = 'active'
-          AND i.invested_at >= NOW() - INTERVAL '${days} days'
       `;
       let successMetrics = { total_revenue: 0, total_investors: 0 };
       try {
@@ -15909,38 +16487,39 @@ Signatures: [To be completed upon signing]
         // Keep defaults if query fails
       }
 
-      // Get recent activity
+      // Recent activity: recently saved/evaluated pitches
       const recentActivityQuery = `
         SELECT
-          'view' as activity_type,
+          'evaluation' as activity_type,
           p.title as project_title,
-          ae.created_at as timestamp
-        FROM analytics_events ae
-        JOIN pitches p ON p.id = ae.pitch_id
-        WHERE p.user_id = $1 AND ae.event_type = 'view'
-        ORDER BY ae.created_at DESC
+          sp.created_at as timestamp
+        FROM saved_pitches sp
+        JOIN pitches p ON p.id = sp.pitch_id
+        WHERE sp.user_id = $1
+        ORDER BY sp.created_at DESC
         LIMIT 10
       `;
       let recentActivity: any[] = [];
       try {
         recentActivity = await this.db.query(recentActivityQuery, [authCheck.user.id]) || [];
       } catch {
-        // analytics_events table might not exist, skip
+        // Keep empty if query fails
       }
 
-      // Get monthly trends
+      // Monthly trends from production_projects
       const trendsQuery = `
         SELECT
-          TO_CHAR(p.created_at, 'Mon') as month,
+          TO_CHAR(pp.created_at, 'Mon') as month,
           COUNT(*) as projects_created,
-          SUM(p.view_count) as views,
-          COALESCE(SUM(p.budget), 0) as revenue,
-          COALESCE(SUM(p.budget) * 0.7, 0) as costs
-        FROM pitches p
-        WHERE p.user_id = $1
-          AND p.created_at >= NOW() - INTERVAL '${days} days'
-        GROUP BY TO_CHAR(p.created_at, 'Mon'), DATE_TRUNC('month', p.created_at)
-        ORDER BY DATE_TRUNC('month', p.created_at) DESC
+          (SELECT COUNT(*) FROM saved_pitches sp WHERE sp.user_id = $1
+            AND DATE_TRUNC('month', sp.created_at) = DATE_TRUNC('month', pp.created_at)) as views,
+          COALESCE(SUM(pp.budget), 0) as revenue,
+          COALESCE(SUM(pp.budget) * 0.7, 0) as costs
+        FROM production_projects pp
+        WHERE pp.production_company_id = $1
+          AND pp.created_at >= NOW() - INTERVAL '${days} days'
+        GROUP BY TO_CHAR(pp.created_at, 'Mon'), DATE_TRUNC('month', pp.created_at)
+        ORDER BY DATE_TRUNC('month', pp.created_at) DESC
         LIMIT 12
       `;
       const monthlyTrends = await this.db.query(trendsQuery, [authCheck.user.id]);
@@ -16062,6 +16641,21 @@ Signatures: [To be completed upon signing]
       const authCheck = await this.requireAuth(request);
       if (!authCheck.authorized) return authCheck.response;
 
+      // Enforce credit cost: send_message = 2 credits (free for investors)
+      const userType = authCheck.user.user_type || authCheck.user.userType || '';
+      if (userType !== 'investor') {
+        const creditResult = await this.deductCreditsInternal(
+          authCheck.user.id, 2, 'Send message', 'send_message'
+        );
+        if (!creditResult.success) {
+          const origin = request.headers.get('Origin');
+          return new Response(JSON.stringify({ success: false, error: { message: creditResult.error } }), {
+            status: 402,
+            headers: { ...getCorsHeaders(origin), 'Content-Type': 'application/json' }
+          });
+        }
+      }
+
       const data = await request.json() as Record<string, unknown>;
 
       const handler = new (await import('./handlers/messaging-simple')).SimpleMessagingHandler(this.db);
@@ -16108,6 +16702,92 @@ Signatures: [To be completed upon signing]
       return new Response(JSON.stringify(result), {
         headers: getCorsHeaders(origin),
         status: 200
+      });
+    } catch (error) {
+      return errorHandler(error, request);
+    }
+  }
+
+  private async editMessage(request: Request): Promise<Response> {
+    try {
+      const authCheck = await this.requireAuth(request);
+      if (!authCheck.authorized) return authCheck.response;
+
+      const url = new URL(request.url);
+      const messageId = parseInt(url.pathname.split('/')[3] || '0');
+      const data = await request.json() as Record<string, unknown>;
+      const content = typeof data.content === 'string' ? data.content : '';
+
+      if (!content.trim()) {
+        const origin = request.headers.get('Origin');
+        return new Response(JSON.stringify({ success: false, error: 'Content is required' }), {
+          headers: getCorsHeaders(origin), status: 400
+        });
+      }
+
+      const handler = new (await import('./handlers/messaging-simple')).SimpleMessagingHandler(this.db);
+      const result = await handler.editMessage(authCheck.user.id, messageId, content);
+
+      const origin = request.headers.get('Origin');
+      return new Response(JSON.stringify(result), {
+        headers: getCorsHeaders(origin),
+        status: result.success ? 200 : 400
+      });
+    } catch (error) {
+      return errorHandler(error, request);
+    }
+  }
+
+  private async uploadMessageAttachment(request: Request): Promise<Response> {
+    try {
+      const authCheck = await this.requireAuth(request);
+      if (!authCheck.authorized) return authCheck.response;
+
+      const storage = this.env.MEDIA_STORAGE;
+      if (!storage) {
+        const origin = request.headers.get('Origin');
+        return new Response(JSON.stringify({ success: false, error: 'Storage not available' }), {
+          headers: getCorsHeaders(origin), status: 503
+        });
+      }
+
+      const formData = await request.formData();
+      const file = formData.get('file') as File | null;
+      if (!file) {
+        const origin = request.headers.get('Origin');
+        return new Response(JSON.stringify({ success: false, error: 'No file provided' }), {
+          headers: getCorsHeaders(origin), status: 400
+        });
+      }
+
+      // 10MB limit for message attachments
+      if (file.size > 10 * 1024 * 1024) {
+        const origin = request.headers.get('Origin');
+        return new Response(JSON.stringify({ success: false, error: 'File too large (max 10MB)' }), {
+          headers: getCorsHeaders(origin), status: 400
+        });
+      }
+
+      const ext = file.name.split('.').pop() || 'bin';
+      const key = `messages/${authCheck.user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+      await storage.put(key, file.stream(), {
+        httpMetadata: { contentType: file.type },
+        customMetadata: { originalName: file.name, uploadedBy: String(authCheck.user.id) }
+      });
+
+      const origin = request.headers.get('Origin');
+      return new Response(JSON.stringify({
+        success: true,
+        data: {
+          url: `/api/media/file/${encodeURIComponent(key)}`,
+          originalName: file.name,
+          fileSize: file.size,
+          mimeType: file.type,
+          key
+        }
+      }), {
+        headers: getCorsHeaders(origin), status: 201
       });
     } catch (error) {
       return errorHandler(error, request);

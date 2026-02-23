@@ -94,16 +94,33 @@ export default function ProductionSubmissionsNew() {
 
   const genres = ['all', ...new Set(submissions.map(s => s.genre))];
 
+  const updateStatus = async (pitchId: string, status: string) => {
+    try {
+      const response = await fetch(`${API_URL}/api/production/submissions/${pitchId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status })
+      });
+      const result = await response.json();
+      if (result.success) {
+        setSubmissions(prev => prev.filter(s => String(s.id) !== pitchId));
+      }
+    } catch (error) {
+      console.error('Failed to update submission status:', error);
+    }
+  };
+
   const handleStartReview = (submissionId: string) => {
-    // API call to start review process
+    updateStatus(submissionId, 'reviewing');
   };
 
   const handleQuickApprove = (submissionId: string) => {
-    // API call to quickly approve submission
+    updateStatus(submissionId, 'accepted');
   };
 
   const handleReject = (submissionId: string) => {
-    // API call to reject submission
+    updateStatus(submissionId, 'rejected');
   };
 
   const getPriorityColor = (priority: string | undefined) => {
