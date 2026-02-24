@@ -614,13 +614,13 @@ export async function productionSavedPitchesHandler(
 }
 
 // ---------------------------------------------------------------------------
-// 6. Production Collaborations (stub -- no collaborations table)
+// 6. Production Collaborations
 // ---------------------------------------------------------------------------
 
 /**
  * GET /api/production/collaborations
  *
- * Returns an empty structure. No collaborations table exists yet.
+ * Delegates to the real collaborations handler.
  */
 export async function productionCollaborationsHandler(
   request: Request,

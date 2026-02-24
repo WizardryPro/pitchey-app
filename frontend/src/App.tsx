@@ -85,7 +85,7 @@ const CreatorTeamRoles = lazy(() => import('./pages/creator/CreatorTeamRoles'));
 const CreatorCollaborations = lazy(() => import('./pages/creator/CreatorCollaborations'));
 const CreatorAnalyticsPage = lazy(() => import('./pages/CreatorAnalyticsPage'));
 const ProductionAnalyticsPage = lazy(() => import('./pages/ProductionAnalyticsPage'));
-const TeamManagementPage = lazy(() => import('./pages/TeamManagementPage'));
+// TeamManagementPage removed — consolidated into TeamManagement
 
 // Production Pages
 // ProductionPitchCreate removed - production companies cannot create pitches
@@ -356,8 +356,8 @@ function App() {
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
           
-          {/* Test Pages */}
-          <Route path="/test/navigation" element={<TestNavigation />} />
+          {/* Test Pages — dev only */}
+          {import.meta.env.DEV && <Route path="/test/navigation" element={<TestNavigation />} />}
           
           {/* Portal Selection */}
           <Route path="/portals" element={<PortalSelect />} />
@@ -428,7 +428,7 @@ function App() {
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="onboarding" element={<OnboardingPage />} />
             <Route path="dashboard" element={<InvestorDashboard />} />
-            <Route path="dashboard/debug" element={<InvestorDashboardDebug />} />
+            {import.meta.env.DEV && <Route path="dashboard/debug" element={<InvestorDashboardDebug />} />}
             <Route path="following" element={<Following />} />
             <Route path="browse" element={<InvestorBrowse />} />
             <Route path="pitch/:id" element={<InvestorPitchView />} />

@@ -205,21 +205,7 @@ import {
   AuthenticatedUser
 } from './utils/rbac-enforcer';
 
-// Import advanced search handlers - TEMPORARILY DISABLED
-// import {
-//   advancedSearchHandler,
-//   searchSuggestionsHandler,
-//   searchAnalyticsHandler,
-//   searchExportHandler,
-//   createSavedSearchHandler,
-//   getSavedSearchesHandler,
-//   executeSavedSearchHandler,
-//   updateSavedSearchHandler,
-//   deleteSavedSearchHandler,
-//   getPopularSavedSearchesHandler,
-//   getMarketTrendsHandler,
-//   getSearchPerformanceHandler
-// } from './handlers/advanced-search';
+// Advanced search handlers available in ./handlers/advanced-search.ts (not imported — using SearchFiltersHandler instead)
 
 // Import audit trail service
 import {
@@ -303,24 +289,7 @@ import { StubRoutes } from './routes/stub-routes';
 import { WorkerRealtimeService } from './services/worker-realtime.service';
 import { UpstashCacheService } from './services/upstash-cache.service';
 
-// Import intelligence handlers - TEMPORARILY DISABLED
-// import {
-//   industryEnrichmentHandler,
-//   marketIntelligenceHandler,
-//   intelligenceDashboardHandler,
-//   contentDiscoveryHandler,
-//   competitiveAnalysisHandler,
-//   trendAnalysisHandler,
-//   cacheManagementHandler,
-//   intelligenceSearchHandler,
-//   intelligenceStatusHandler,
-//   intelligenceHealthHandler,
-//   intelligenceMonitoringHandler,
-//   intelligenceAlertConfigHandler
-// } from './handlers/intelligence';
-
-// Import intelligence WebSocket service - TEMPORARILY DISABLED
-// import { getIntelligenceWebSocketService } from './services/intelligence-websocket.service';
+// Intelligence layer handlers available in ./handlers/intelligence.ts (future feature, not imported)
 
 // Import A/B testing handlers
 import { ABTestingHandler, ABTestingRequest } from './handlers/ab-testing';
@@ -682,9 +651,6 @@ class RouteRegistry {
 
       // Initialize Upstash Redis cache (no-op if credentials not set)
       this.cache = new UpstashCacheService(env);
-
-      // Initialize intelligence WebSocket service - TEMPORARILY DISABLED
-      // this.intelligenceWebSocketService = getIntelligenceWebSocketService(env);
 
       // Initialize A/B testing services
       try {
@@ -2420,24 +2386,8 @@ class RouteRegistry {
     this.register('GET', '/api/browse/top-rated', this.handleBrowseTopRated.bind(this));
     this.register('GET', '/api/browse/top-rated/stats', this.handleBrowseTopRatedStats.bind(this));
 
-    // Advanced Search routes
-    // TEMPORARILY DISABLED - advanced search
-    // this.register('GET', '/api/search/advanced', (req) => advancedSearchHandler(req, this.env));
-    // this.register('POST', '/api/search/advanced', (req) => advancedSearchHandler(req, this.env));
-    // this.register('GET', '/api/search/suggestions', (req) => searchSuggestionsHandler(req, this.env));
-    // TEMPORARILY DISABLED - advanced search continued
-    // this.register('GET', '/api/search/analytics', (req) => searchAnalyticsHandler(req, this.env));
-    // this.register('POST', '/api/search/export', (req) => searchExportHandler(req, this.env));
-    // this.register('GET', '/api/search/performance', (req) => getSearchPerformanceHandler(req, this.env));
-    // this.register('GET', '/api/search/market-trends', (req) => getMarketTrendsHandler(req, this.env));
-
-    // TEMPORARILY DISABLED - Saved Search routes
-    // this.register('POST', '/api/search/saved', (req) => createSavedSearchHandler(req, this.env));
-    // this.register('GET', '/api/search/saved', (req) => getSavedSearchesHandler(req, this.env));
-    // this.register('GET', '/api/search/saved/popular', (req) => getPopularSavedSearchesHandler(req, this.env));
-    // this.register('POST', '/api/search/saved/:id/execute', (req) => executeSavedSearchHandler(req, this.env));
-    // this.register('PUT', '/api/search/saved/:id', (req) => updateSavedSearchHandler(req, this.env));
-    // this.register('DELETE', '/api/search/saved/:id', (req) => deleteSavedSearchHandler(req, this.env));
+    // Advanced Search — primary route via this.advancedSearch()
+    // Saved search routes available in ./handlers/advanced-search.ts (future feature)
 
     // Dashboard routes - handlers do their own auth checks internally
     this.register('GET', '/api/creator/dashboard', (req) => creatorDashboardHandler(req, this.env));
@@ -2789,6 +2739,54 @@ class RouteRegistry {
     this.register('GET', '/api/production/collaborations', async (req) => {
       const { productionCollaborationsHandler } = await import('./handlers/production-sidebar');
       return productionCollaborationsHandler(req, this.env);
+    });
+
+    // Production Pitch Data (notes, checklist, team) — replaces localStorage
+    this.register('GET', '/api/production/pitches/:pitchId/notes', async (req) => {
+      const { getProductionNotes } = await import('./handlers/production-pitch-data');
+      return getProductionNotes(req, this.env);
+    });
+    this.register('POST', '/api/production/pitches/:pitchId/notes', async (req) => {
+      const { createProductionNote } = await import('./handlers/production-pitch-data');
+      return createProductionNote(req, this.env);
+    });
+    this.register('DELETE', '/api/production/pitches/:pitchId/notes/:noteId', async (req) => {
+      const { deleteProductionNote } = await import('./handlers/production-pitch-data');
+      return deleteProductionNote(req, this.env);
+    });
+    this.register('GET', '/api/production/pitches/:pitchId/checklist', async (req) => {
+      const { getProductionChecklist } = await import('./handlers/production-pitch-data');
+      return getProductionChecklist(req, this.env);
+    });
+    this.register('PUT', '/api/production/pitches/:pitchId/checklist', async (req) => {
+      const { updateProductionChecklist } = await import('./handlers/production-pitch-data');
+      return updateProductionChecklist(req, this.env);
+    });
+    this.register('GET', '/api/production/pitches/:pitchId/team', async (req) => {
+      const { getProductionTeam } = await import('./handlers/production-pitch-data');
+      return getProductionTeam(req, this.env);
+    });
+    this.register('PUT', '/api/production/pitches/:pitchId/team', async (req) => {
+      const { updateProductionTeam } = await import('./handlers/production-pitch-data');
+      return updateProductionTeam(req, this.env);
+    });
+
+    // Generic collaboration routes (aliases for portal-specific endpoints)
+    this.register('GET', '/api/collaborations', async (req) => {
+      const { getCollaborationsHandler } = await import('./handlers/collaborations-real');
+      return getCollaborationsHandler(req, this.env);
+    });
+    this.register('GET', '/api/collaborations/:id', async (req) => {
+      const { getCollaborationsHandler } = await import('./handlers/collaborations-real');
+      return getCollaborationsHandler(req, this.env);
+    });
+    this.register('POST', '/api/collaborations', async (req) => {
+      const { createCollaborationHandler } = await import('./handlers/collaborations-real');
+      return createCollaborationHandler(req, this.env);
+    });
+    this.register('PUT', '/api/collaborations/:id/status', async (req) => {
+      const { updateCollaborationHandler } = await import('./handlers/collaborations-real');
+      return updateCollaborationHandler(req, this.env);
     });
 
     // Investor Portal Sidebar Routes (real DB queries)
@@ -3164,30 +3162,7 @@ class RouteRegistry {
       return contentStatsHandler(req, this.env);
     });
 
-    // ===== INTELLIGENCE LAYER ROUTES ===== - TEMPORARILY DISABLED
-    // Industry Data Enrichment
-    // this.register('POST', '/api/enrichment/industry', (req) => industryEnrichmentHandler(req, this.env));
-
-    // Market Intelligence
-    // this.register('GET', '/api/intelligence/market', (req) => marketIntelligenceHandler(req, this.env));
-    // this.register('GET', '/api/intelligence/dashboard', (req) => intelligenceDashboardHandler(req, this.env));
-    // this.register('GET', '/api/intelligence/trends', (req) => trendAnalysisHandler(req, this.env));
-    // this.register('GET', '/api/intelligence/search', (req) => intelligenceSearchHandler(req, this.env));
-    // this.register('GET', '/api/intelligence/status', (req) => intelligenceStatusHandler(req, this.env));
-
-    // Intelligence Monitoring & Health
-    // this.register('GET', '/api/intelligence/health', (req) => intelligenceHealthHandler(req, this.env));
-    // this.register('GET', '/api/intelligence/monitoring', (req) => intelligenceMonitoringHandler(req, this.env));
-    // this.register('POST', '/api/intelligence/alerts/config', (req) => intelligenceAlertConfigHandler(req, this.env));
-
-    // Content Discovery
-    // this.register('POST', '/api/discovery/content', (req) => contentDiscoveryHandler(req, this.env));
-
-    // Competitive Analysis
-    // this.register('GET', '/api/analysis/competitive', (req) => competitiveAnalysisHandler(req, this.env));
-
-    // Cache Management - TEMPORARILY DISABLED  
-    // this.register('POST', '/api/intelligence/cache', (req) => cacheManagementHandler(req, this.env));
+    // Intelligence layer routes — future feature (handlers in ./handlers/intelligence.ts)
 
     // ===== A/B TESTING ROUTES =====
     // Helper to handle AB testing routes with proper null checking

@@ -187,6 +187,22 @@ interface DistributionResponseData {
   channels: DistributionChannel[];
 }
 
+// Types for production pitch data (notes, checklist, team)
+export interface ProductionNoteResponse {
+  id: number;
+  content: string;
+  category: 'casting' | 'location' | 'budget' | 'schedule' | 'team' | 'general';
+  author: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductionTeamMember {
+  role: string;
+  name: string;
+  status: 'confirmed' | 'pending' | 'considering';
+}
+
 // Helper function to extract error message
 function getErrorMessage(error: { message: string } | string | undefined, fallback: string): string {
   if (typeof error === 'object' && error !== null) {
@@ -505,6 +521,67 @@ export class ProductionService {
       throw new Error(getErrorMessage(response.error, 'Failed to fetch revenue data'));
     }
     return response.data ?? {};
+  }
+
+  // --- Production Pitch Data (notes, checklist, team) ---
+
+  static async getPitchNotes(pitchId: number): Promise<ProductionNoteResponse[]> {
+    const response = await apiClient.get<{ notes: ProductionNoteResponse[] }>(
+      `/api/production/pitches/${pitchId}/notes`
+    );
+    return response.data?.notes ?? [];
+  }
+
+  static async createPitchNote(pitchId: number, data: {
+    content: string;
+    category: string;
+    author?: string;
+  }): Promise<ProductionNoteResponse> {
+    const response = await apiClient.post<{ note: ProductionNoteResponse }>(
+      `/api/production/pitches/${pitchId}/notes`,
+      data
+    );
+    if (response.success !== true || !response.data?.note) {
+      throw new Error(getErrorMessage(response.error, 'Failed to create note'));
+    }
+    return response.data.note;
+  }
+
+  static async deletePitchNote(pitchId: number, noteId: number): Promise<void> {
+    const response = await apiClient.delete<Record<string, unknown>>(
+      `/api/production/pitches/${pitchId}/notes/${noteId}`
+    );
+    if (response.success !== true) {
+      throw new Error(getErrorMessage(response.error, 'Failed to delete note'));
+    }
+  }
+
+  static async getPitchChecklist(pitchId: number): Promise<Record<string, boolean>> {
+    const response = await apiClient.get<{ checklist: Record<string, boolean> }>(
+      `/api/production/pitches/${pitchId}/checklist`
+    );
+    return response.data?.checklist ?? {};
+  }
+
+  static async updatePitchChecklist(pitchId: number, checklist: Record<string, boolean>): Promise<void> {
+    await apiClient.put<Record<string, unknown>>(
+      `/api/production/pitches/${pitchId}/checklist`,
+      { checklist }
+    );
+  }
+
+  static async getPitchTeam(pitchId: number): Promise<ProductionTeamMember[]> {
+    const response = await apiClient.get<{ team: ProductionTeamMember[] }>(
+      `/api/production/pitches/${pitchId}/team`
+    );
+    return response.data?.team ?? [];
+  }
+
+  static async updatePitchTeam(pitchId: number, team: ProductionTeamMember[]): Promise<void> {
+    await apiClient.put<Record<string, unknown>>(
+      `/api/production/pitches/${pitchId}/team`,
+      { team }
+    );
   }
 }
 

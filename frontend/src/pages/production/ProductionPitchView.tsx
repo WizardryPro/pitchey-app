@@ -14,6 +14,8 @@ import FormatDisplay from '../../components/FormatDisplay';
 import { getCreditCost } from '../../config/subscription-plans';
 import { ScheduleMeetingModal } from '../../components/UIActions/ScheduleMeetingModal';
 import { toast } from 'react-hot-toast';
+import { ProductionService } from '../../services/production.service';
+import type { ProductionNoteResponse, ProductionTeamMember } from '../../services/production.service';
 
 interface Pitch {
   id: string;
@@ -161,30 +163,44 @@ const ProductionPitchView: React.FC = () => {
   };
 
   const loadProductionData = async () => {
+    const pitchId = parseInt(id!, 10);
+    if (!pitchId) return;
+
     try {
-      // Load saved notes
-      const savedNotes = localStorage.getItem(`production_notes_${id}`);
-      if (savedNotes) {
-        setNotes(JSON.parse(savedNotes));
+      // Load all production data from API in parallel
+      const [apiNotes, apiChecklist, apiTeam] = await Promise.all([
+        ProductionService.getPitchNotes(pitchId).catch(() => []),
+        ProductionService.getPitchChecklist(pitchId).catch(() => ({})),
+        ProductionService.getPitchTeam(pitchId).catch(() => []),
+      ]);
+
+      // Map API notes to component format
+      if (apiNotes.length > 0) {
+        setNotes(apiNotes.map((n: ProductionNoteResponse) => ({
+          id: String(n.id),
+          content: n.content,
+          createdAt: n.created_at,
+          category: n.category,
+          author: n.author,
+        })));
       }
 
-      // Load shortlist status
+      // Merge API checklist with defaults (API may have subset of keys)
+      if (Object.keys(apiChecklist).length > 0) {
+        setProductionChecklist(prev => ({ ...prev, ...apiChecklist }));
+      }
+
+      // Use API team if available, otherwise keep defaults
+      if (apiTeam.length > 0) {
+        setTeamMembers(apiTeam);
+      }
+
+      // Shortlist status still uses localStorage (it's a quick-toggle, not critical data)
       const shortlist = JSON.parse(localStorage.getItem('production_shortlist') || '[]');
       setIsShortlisted(shortlist.includes(id));
-
-      // Load production checklist
-      const savedChecklist = localStorage.getItem(`production_checklist_${id}`);
-      if (savedChecklist) {
-        setProductionChecklist(JSON.parse(savedChecklist));
-      }
-
-      // Load team members
-      const savedTeam = localStorage.getItem(`production_team_${id}`);
-      if (savedTeam) {
-        setTeamMembers(JSON.parse(savedTeam));
-      }
-    } catch (error) {
-      console.error('Failed to load production data:', error);
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      console.error('Failed to load production data:', e.message);
     }
   };
 
@@ -247,40 +263,84 @@ const ProductionPitchView: React.FC = () => {
     navigate(`/production/option-agreement?pitch=${id}`);
   };
 
-  const handleAddNote = () => {
+  const handleAddNote = async () => {
     if (!newNote.trim()) return;
+    const pitchId = parseInt(id!, 10);
 
-    const note: ProductionNote = {
+    // Optimistic update
+    const tempNote: ProductionNote = {
       id: Date.now().toString(),
       content: newNote,
       createdAt: new Date().toISOString(),
       category: noteCategory,
       author: 'Production Team'
     };
-
-    const updatedNotes = [...notes, note];
-    setNotes(updatedNotes);
-    localStorage.setItem(`production_notes_${id}`, JSON.stringify(updatedNotes));
+    setNotes(prev => [...prev, tempNote]);
     setNewNote('');
+
+    try {
+      const saved = await ProductionService.createPitchNote(pitchId, {
+        content: tempNote.content,
+        category: tempNote.category,
+        author: tempNote.author,
+      });
+      // Replace temp note with server-assigned ID
+      setNotes(prev => prev.map(n =>
+        n.id === tempNote.id
+          ? { ...n, id: String(saved.id), createdAt: saved.created_at }
+          : n
+      ));
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      // Roll back optimistic update
+      setNotes(prev => prev.filter(n => n.id !== tempNote.id));
+      toast.error(e.message);
+    }
   };
 
-  const handleDeleteNote = (noteId: string) => {
-    const updatedNotes = notes.filter(note => note.id !== noteId);
-    setNotes(updatedNotes);
-    localStorage.setItem(`production_notes_${id}`, JSON.stringify(updatedNotes));
+  const handleDeleteNote = async (noteId: string) => {
+    const pitchId = parseInt(id!, 10);
+    const previousNotes = notes;
+
+    // Optimistic delete
+    setNotes(prev => prev.filter(n => n.id !== noteId));
+
+    try {
+      await ProductionService.deletePitchNote(pitchId, parseInt(noteId, 10));
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      setNotes(previousNotes); // Roll back
+      toast.error(e.message);
+    }
   };
 
-  const handleChecklistUpdate = (key: keyof typeof productionChecklist) => {
+  const handleChecklistUpdate = async (key: keyof typeof productionChecklist) => {
+    const pitchId = parseInt(id!, 10);
     const updated = { ...productionChecklist, [key]: !productionChecklist[key] };
     setProductionChecklist(updated);
-    localStorage.setItem(`production_checklist_${id}`, JSON.stringify(updated));
+
+    try {
+      await ProductionService.updatePitchChecklist(pitchId, updated);
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      // Roll back
+      setProductionChecklist(prev => ({ ...prev, [key]: !prev[key] }));
+      toast.error(e.message);
+    }
   };
 
-  const handleTeamUpdate = (index: number, field: 'name' | 'status', value: string) => {
+  const handleTeamUpdate = async (index: number, field: 'name' | 'status', value: string) => {
+    const pitchId = parseInt(id!, 10);
     const updated = [...teamMembers];
     updated[index] = { ...updated[index], [field]: value };
     setTeamMembers(updated);
-    localStorage.setItem(`production_team_${id}`, JSON.stringify(updated));
+
+    try {
+      await ProductionService.updatePitchTeam(pitchId, updated);
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      console.error('Failed to save team:', e.message);
+    }
   };
 
   const getChecklistProgress = () => {
@@ -649,7 +709,18 @@ const ProductionPitchView: React.FC = () => {
                   ))}
                 </div>
                 
-                <button className="mt-4 w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">
+                <button
+                  onClick={async () => {
+                    try {
+                      await ProductionService.updatePitchTeam(parseInt(id!, 10), teamMembers);
+                      toast.success('Team configuration saved');
+                    } catch (err) {
+                      const e = err instanceof Error ? err : new Error(String(err));
+                      toast.error(e.message);
+                    }
+                  }}
+                  className="mt-4 w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+                >
                   Save Team Configuration
                 </button>
               </div>
@@ -800,8 +871,7 @@ const ProductionPitchView: React.FC = () => {
               <div className="space-y-2">
                 <button
                   onClick={() => {
-                    navigate(`/production/messages?recipient=${pitch?.userId}&pitch=${id}`);
-                    toast('Compose your script request message');
+                    navigate(`/production/messages?recipient=${pitch?.userId}&pitch=${id}&subject=${encodeURIComponent(`Script Request: ${pitch?.title}`)}&body=${encodeURIComponent(`Hi ${pitch?.creatorName || 'there'},\n\nI'm interested in your pitch "${pitch?.title}" and would like to request the full script for review.\n\nLooking forward to discussing this further.`)}`);
                   }}
                   className="w-full flex items-center justify-between px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
                 >

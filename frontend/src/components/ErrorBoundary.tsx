@@ -106,16 +106,13 @@ export class ErrorBoundary extends Component<Props, State> {
     console.table(errorReport);
     console.groupEnd();
 
-    // Note: Client error logging endpoint not implemented yet
-    // TODO: Implement /api/errors/client endpoint in backend for error tracking
-    // if (API_URL) {
-    //   fetch(`${API_URL}/api/errors/client`, {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify(errorReport),
-    //     credentials: 'include' // Send cookies for Better Auth session
-    //   }).catch(err => console.warn('Failed to send error report:', err));
-    // }
+    // Send client errors to backend for tracking (endpoint: POST /api/errors/client)
+    fetch('/api/errors/client', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(errorReport),
+      credentials: 'include'
+    }).catch(() => { /* fire-and-forget */ });
     
     // Call custom error handler if provided
     if (this.props.onError) {
