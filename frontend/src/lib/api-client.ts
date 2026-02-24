@@ -5,6 +5,8 @@
  */
 
 import { config } from '../config';
+import { sessionCache } from '../store/sessionCache';
+import { sessionManager } from './session-manager';
 import type { 
   ApiResponse, 
   Pitch, 
@@ -262,24 +264,21 @@ class ApiClient {
 
       // Handle HTTP errors
       if (!response.ok) {
-        // Handle 401 specifically
+        // Handle 401 specifically — clear all auth state so UI stops showing "logged in"
         if (response?.status === 401) {
           try {
-            // Get user type to redirect to correct login page
-            const userType = localStorage.getItem('userType');
             localStorage.removeItem('authToken');
             localStorage.removeItem('user');
             localStorage.removeItem('userType');
+            sessionCache.clear();
+            sessionManager.clearCache();
 
-            // DISABLED: This was causing redirect loops with Better Auth
-            // Better Auth handles authentication via cookies, not this interceptor
-            // if (typeof window !== 'undefined') {
-            //   // Redirect to appropriate login page based on user type
-            //   const loginPath = userType === 'creator' ? '/login/creator' :
-            //                    userType === 'investor' ? '/login/investor' :
-            //                    userType === 'production' ? '/login/production' : '/';
-            //   window.location.href = loginPath;
-            // }
+            // Lazily import the store to avoid circular deps, then clear auth state.
+            // This ensures Zustand's isAuthenticated flips to false, which triggers
+            // route guards to redirect to login on the next render cycle.
+            import('../store/betterAuthStore').then(({ useBetterAuthStore }) => {
+              useBetterAuthStore.getState().setUser(null);
+            }).catch(() => {});
           } catch (error) {
             console.warn('Failed to handle auth error:', error);
           }
