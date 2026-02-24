@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { 
+import {
   ArrowLeft, Eye, Heart, Share2, Bookmark, BookmarkCheck,
-  Shield, MessageSquare, Clock, Calendar, User, Tag, 
+  Shield, MessageSquare, Clock, Calendar, User, Tag,
   Film, DollarSign, Briefcase, TrendingUp, Users,
   FileText, Download, Calculator, MapPin, Camera,
   Clapperboard, Settings, CheckSquare, Square,
@@ -12,6 +12,8 @@ import {
 import { pitchAPI } from '../../lib/api';
 import FormatDisplay from '../../components/FormatDisplay';
 import { getCreditCost } from '../../config/subscription-plans';
+import { ScheduleMeetingModal } from '../../components/UIActions/ScheduleMeetingModal';
+import { toast } from 'react-hot-toast';
 
 interface Pitch {
   id: string;
@@ -95,6 +97,7 @@ const ProductionPitchView: React.FC = () => {
     marketingStrategy: false,
     legalClearance: false
   });
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
     { role: 'Director', name: '', status: 'pending' },
     { role: 'Producer', name: '', status: 'pending' },
@@ -795,7 +798,13 @@ const ProductionPitchView: React.FC = () => {
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Production Actions</h3>
               <div className="space-y-2">
-                <button className="w-full flex items-center justify-between px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">
+                <button
+                  onClick={() => {
+                    navigate(`/production/messages?recipient=${pitch?.userId}&pitch=${id}`);
+                    toast('Compose your script request message');
+                  }}
+                  className="w-full flex items-center justify-between px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+                >
                   <span>Request Full Script</span>
                   <ChevronRight className="h-4 w-4" />
                 </button>
@@ -804,11 +813,20 @@ const ProductionPitchView: React.FC = () => {
                     NDA required ({getCreditCost('nda_request')} credits)
                   </p>
                 )}
-                <button className="w-full flex items-center justify-between px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                <button
+                  onClick={() => setShowScheduleModal(true)}
+                  className="w-full flex items-center justify-between px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
                   <span>Schedule Meeting</span>
                   <ChevronRight className="h-4 w-4" />
                 </button>
-                <button className="w-full flex items-center justify-between px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                <button
+                  onClick={() => {
+                    navigate(`/production/messages?recipient=${pitch?.userId}&pitch=${id}`);
+                    toast('Start your negotiation discussion');
+                  }}
+                  className="w-full flex items-center justify-between px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
                   <span>Start Negotiations</span>
                   <ChevronRight className="h-4 w-4" />
                 </button>
@@ -942,6 +960,15 @@ const ProductionPitchView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <ScheduleMeetingModal
+        isOpen={showScheduleModal}
+        onClose={() => setShowScheduleModal(false)}
+        recipientId={pitch.userId || ''}
+        recipientName={pitch.creatorName || 'Creator'}
+        meetingType="production"
+        defaultSubject={`Production Discussion: ${pitch.title}`}
+      />
     </div>
   );
 };

@@ -97,11 +97,6 @@ export class RawSQLAuth {
    */
   private async verifyPassword(password: string, hash: string): Promise<boolean> {
     try {
-      // Special case for demo accounts
-      if (password === 'Demo123' && hash?.startsWith('$2')) {
-        return true;
-      }
-
       // Decode stored hash
       const decoded = atob(hash);
       const bytes = new Uint8Array(decoded.length);

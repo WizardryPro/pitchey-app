@@ -1405,9 +1405,9 @@ class RouteRegistry {
         });
       }
 
-      // Verify password - accept Demo123 for demo accounts
+      // Verify password - accept Demo123 for demo accounts (non-production only)
       const isDemoAccount = ['alex.creator@demo.com', 'sarah.investor@demo.com', 'stellar.production@demo.com'].includes(email);
-      if (isDemoAccount) {
+      if (isDemoAccount && this.env.ENVIRONMENT !== 'production') {
         if (password !== 'Demo123') {
           return new Response(JSON.stringify({
             success: false,
@@ -2284,6 +2284,7 @@ class RouteRegistry {
     this.register('POST', '/api/investor/investments', this.createInvestorInvestment.bind(this));
     this.register('PUT', '/api/investor/investments/:id', this.updateInvestorInvestment.bind(this));
     this.register('DELETE', '/api/investor/investments/:id', this.deleteInvestorInvestment.bind(this));
+    this.register('POST', '/api/investor/investments/:id/withdraw', this.withdrawInvestorInvestment.bind(this));
     this.register('POST', '/api/investor/invest', this.createInvestorInvestment.bind(this));
     this.register('GET', '/api/investor/watchlist', this.getInvestorWatchlist.bind(this));
     this.register('POST', '/api/investor/watchlist', this.addToInvestorWatchlist.bind(this));
@@ -3631,11 +3632,11 @@ class RouteRegistry {
           );
         }
 
-        // For demo accounts, accept the demo password
+        // For demo accounts, accept the demo password (non-production only)
         const isDemoAccount = ['alex.creator@demo.com', 'sarah.investor@demo.com', 'stellar.production@demo.com'].includes(email);
 
         // Password verification for demo accounts
-        if (isDemoAccount) {
+        if (isDemoAccount && this.env.ENVIRONMENT !== 'production') {
           if (password !== 'Demo123') {
             return new Response(
               JSON.stringify({
@@ -3791,11 +3792,11 @@ class RouteRegistry {
           );
         }
 
-        // For demo accounts, accept the demo password
+        // For demo accounts, accept the demo password (non-production only)
         const isDemoAccount = ['alex.creator@demo.com', 'sarah.investor@demo.com', 'stellar.production@demo.com'].includes(email);
 
         // Password verification for demo accounts
-        if (isDemoAccount) {
+        if (isDemoAccount && this.env.ENVIRONMENT !== 'production') {
           // Demo accounts use password "Demo123"
           if (password !== 'Demo123') {
             return new Response(
@@ -15568,6 +15569,37 @@ Signatures: [To be completed upon signing]
       return new Response(JSON.stringify(result), {
         headers: getCorsHeaders(origin),
         status: result.success ? 200 : 404
+      });
+    } catch (error) {
+      return errorHandler(error, request);
+    }
+  }
+
+  private async withdrawInvestorInvestment(request: Request): Promise<Response> {
+    try {
+      const authCheck = await this.requireAuthWithRBAC(request);
+      if (!authCheck.authorized) return authCheck.response;
+
+      const url = new URL(request.url);
+      const pathParts = url.pathname.split('/');
+      // URL: /api/investor/investments/:id/withdraw → id is at index 4
+      const investmentId = parseInt(pathParts[4] || '0');
+
+      let reason: string | undefined;
+      try {
+        const body = await request.json() as { reason?: string };
+        reason = body.reason;
+      } catch {
+        // No body or invalid JSON — reason is optional
+      }
+
+      const handler = new (await import('./handlers/investor-portfolio')).InvestorPortfolioHandler(this.db);
+      const result = await handler.withdrawInvestment(authCheck.user.id, investmentId, reason);
+
+      const origin = request.headers.get('Origin');
+      return new Response(JSON.stringify(result), {
+        headers: getCorsHeaders(origin),
+        status: result.success ? 200 : 400
       });
     } catch (error) {
       return errorHandler(error, request);

@@ -499,6 +499,34 @@ export class InvestorPortfolioHandler {
     }
   }
 
+  // Withdraw investment (cancel pending/committed investments)
+  async withdrawInvestment(userId: number, investmentId: number, reason?: string) {
+    try {
+      const notesSuffix = reason ? `Withdrawal reason: ${reason}` : 'Withdrawn by investor';
+      const investment = await this.db.query(
+        `UPDATE investments
+         SET status = 'cancelled',
+             notes = COALESCE(notes, '') || $3,
+             updated_at = NOW()
+         WHERE id = $1 AND investor_id = $2 AND status IN ('pending', 'committed')
+         RETURNING *`,
+        [investmentId, userId, notesSuffix]
+      );
+
+      if (investment.length === 0) {
+        return { success: false, error: 'Investment not found or cannot be withdrawn (only pending/committed investments can be withdrawn)' };
+      }
+
+      return {
+        success: true,
+        data: { investment: investment[0], message: 'Investment withdrawn successfully' }
+      };
+    } catch (error) {
+      console.error('Withdraw investment error:', error);
+      return { success: false, error: 'Failed to withdraw investment' };
+    }
+  }
+
   // Get investment activity
   async getActivity(userId: number, limit: number = 50, offset: number = 0) {
     try {

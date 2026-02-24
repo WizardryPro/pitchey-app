@@ -199,8 +199,9 @@ describe('CreatorStats', () => {
       </MemoryRouter>
     )
 
+    // Wait for actual pitch data to render (not just the static heading)
     await waitFor(() => {
-      expect(screen.getByText('Top Performing Pitches')).toBeInTheDocument()
+      expect(screen.getByText('Space Opera Epic')).toBeInTheDocument()
     })
 
     // Table headers
@@ -209,7 +210,6 @@ describe('CreatorStats', () => {
     expect(screen.getByText('Likes')).toBeInTheDocument()
 
     // Pitch titles appear
-    expect(screen.getByText('Space Opera Epic')).toBeInTheDocument()
     expect(screen.getByText('Drama Short Film')).toBeInTheDocument()
   })
 

@@ -46,7 +46,7 @@ export class AuthAdapter {
       // Check for demo users first (bypass Better Auth for demo accounts)
       const isDemoUser = ['alex.creator@demo.com', 'sarah.investor@demo.com', 'stellar.production@demo.com'].includes(email);
       
-      if (isDemoUser && (password === 'Demo123' || password === 'Demo123!')) {
+      if (isDemoUser && (password === 'Demo123' || password === 'Demo123!') && this.env?.ENVIRONMENT !== 'production') {
         // Get user details for demo user
         const user = await this.getUserFromDatabase(email, userType);
         
