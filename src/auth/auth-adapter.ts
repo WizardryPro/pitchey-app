@@ -480,7 +480,9 @@ export class AuthAdapter {
    */
   private async validateJWTToken(token: string): Promise<JWTPayload | null> {
     try {
-      const [headerB64, payloadB64, signatureB64] = token.split('.');
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+      const [headerB64, payloadB64, signatureB64] = parts;
       const payload = JSON.parse(atob(payloadB64)) as JWTPayload;
 
       // Check expiration
@@ -488,11 +490,33 @@ export class AuthAdapter {
         return null;
       }
 
-      // TODO: Verify signature properly
+      // Verify HMAC-SHA256 signature using Web Crypto API
+      const encoder = new TextEncoder();
+      const signingInput = encoder.encode(headerB64 + '.' + payloadB64);
+      const secret = this.auth.options.secret || 'fallback-secret';
+
+      const key = await crypto.subtle.importKey(
+        'raw',
+        encoder.encode(secret),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['verify']
+      );
+
+      // Decode the base64 signature to an ArrayBuffer
+      const signatureBytes = Uint8Array.from(atob(signatureB64), c => c.charCodeAt(0));
+      const valid = await crypto.subtle.verify('HMAC', key, signatureBytes, signingInput);
+
+      if (!valid) {
+        console.error('JWT signature verification failed');
+        return null;
+      }
+
       return payload;
 
-    } catch (error) {
-      console.error('JWT validation error:', error);
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      console.error('JWT validation error:', e.message);
       return null;
     }
   }

@@ -27,18 +27,24 @@ export class WorkerEmailService {
   private apiKey: string;
   private fromEmail: string;
   private fromName: string;
+  private db: any;
   private readonly resendApiUrl = 'https://api.resend.com/emails';
 
-  constructor(config: EmailConfig) {
+  constructor(config: EmailConfig & { db?: any }) {
     this.apiKey = config.apiKey;
     this.fromEmail = config.fromEmail;
     this.fromName = config.fromName || 'Pitchey';
+    this.db = config.db || null;
   }
 
+  /** Set DB connection for email logging (can be set after construction) */
+  setDb(db: any) { this.db = db; }
+
   /**
-   * Send a single email
+   * Send a single email and log to database
    */
-  async send(message: EmailMessage): Promise<{ success: boolean; id?: string; error?: string }> {
+  async send(message: EmailMessage, meta?: { userId?: number; templateType?: string }): Promise<{ success: boolean; id?: string; error?: string }> {
+    const recipient = Array.isArray(message.to) ? message.to.join(', ') : message.to;
     try {
       const response = await fetch(this.resendApiUrl, {
         method: 'POST',
@@ -62,23 +68,34 @@ export class WorkerEmailService {
       const data = await response.json();
 
       if (!response.ok) {
-        return {
-          success: false,
-          error: data.message || 'Failed to send email',
-        };
+        const error = data.message || 'Failed to send email';
+        this.logEmail(recipient, message.subject, meta?.templateType, null, 'failed', error, meta?.userId);
+        return { success: false, error };
       }
 
-      return {
-        success: true,
-        id: data.id,
-      };
-    } catch (error) {
-      console.error('Email send error:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
+      this.logEmail(recipient, message.subject, meta?.templateType, data.id, 'sent', null, meta?.userId);
+      return { success: true, id: data.id };
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      console.error('Email send error:', e.message);
+      this.logEmail(recipient, message.subject, meta?.templateType, null, 'failed', e.message, meta?.userId);
+      return { success: false, error: e.message };
     }
+  }
+
+  /** Fire-and-forget log to email_logs table */
+  private logEmail(
+    recipient: string, subject: string, templateType: string | undefined,
+    providerId: string | null, status: string, error: string | null, userId?: number
+  ) {
+    if (!this.db) return;
+    this.db.query(
+      `INSERT INTO email_logs (user_id, recipient, subject, template_type, provider, provider_message_id, status, error)
+       VALUES ($1, $2, $3, $4, 'resend', $5, $6, $7)`,
+      [userId || null, recipient, subject, templateType || null, providerId, status, error]
+    ).catch((err: unknown) => {
+      console.debug('Email log write failed (non-fatal):', err);
+    });
   }
 
   /**

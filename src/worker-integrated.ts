@@ -639,7 +639,8 @@ class RouteRegistry {
         this.emailService = new WorkerEmailService({
           apiKey: env.RESEND_API_KEY,
           fromEmail: 'noreply@pitchey.com',
-          fromName: 'Pitchey'
+          fromName: 'Pitchey',
+          db: this.db
         });
       }
 
@@ -3954,8 +3955,43 @@ class RouteRegistry {
         }
       }
 
+      // Check Redis/Upstash health (non-blocking)
+      let redisStatus = 'not configured';
+      if (this.env.UPSTASH_REDIS_REST_URL) {
+        try {
+          const redisResp = await fetch(`${this.env.UPSTASH_REDIS_REST_URL}/ping`, {
+            headers: { Authorization: `Bearer ${this.env.UPSTASH_REDIS_REST_TOKEN}` }
+          });
+          redisStatus = redisResp.ok ? 'connected' : 'error';
+        } catch { redisStatus = 'error'; }
+      }
+
+      // Check Stripe API reachability (non-blocking)
+      let stripeStatus = 'not configured';
+      if (this.env.STRIPE_SECRET_KEY) {
+        try {
+          const stripeResp = await fetch('https://api.stripe.com/v1/balance', {
+            headers: { Authorization: `Bearer ${this.env.STRIPE_SECRET_KEY}` }
+          });
+          stripeStatus = stripeResp.ok ? 'connected' : 'auth_error';
+        } catch { stripeStatus = 'unreachable'; }
+      }
+
+      // Check Resend API reachability (non-blocking)
+      let resendStatus = this.emailService ? 'configured' : 'not configured';
+      if (this.env.RESEND_API_KEY) {
+        try {
+          const resendResp = await fetch('https://api.resend.com/domains', {
+            headers: { Authorization: `Bearer ${this.env.RESEND_API_KEY}` }
+          });
+          resendStatus = resendResp.ok ? 'connected' : 'auth_error';
+        } catch { resendStatus = 'unreachable'; }
+      }
+
+      const allConnected = dbStatus === 'connected' && redisStatus !== 'error' && stripeStatus !== 'unreachable';
+
       return builder.success({
-        status: dbStatus === 'connected' ? 'ok' : 'degraded',
+        status: allConnected ? 'ok' : 'degraded',
         timestamp: new Date().toISOString(),
         version: '1.0.0',
         services: {
@@ -3964,8 +4000,14 @@ class RouteRegistry {
             time: dbTime,
             error: dbError
           },
+          redis: {
+            status: redisStatus
+          },
+          stripe: {
+            status: stripeStatus
+          },
           email: {
-            status: this.emailService ? 'configured' : 'not configured'
+            status: resendStatus
           },
           rateLimit: {
             status: 'active'

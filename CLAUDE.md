@@ -120,24 +120,28 @@ Detailed context split by domain to keep LLM context focused:
 | Dead backend comments | Cleaned up ~60 lines of disabled intelligence/search/cache commented code | DONE |
 | ComingSoon placeholder page | Kept — serves as fallback for unreleased features | KEPT |
 
-#### 5F. Security Hardening (P2)
+#### 5F. Security Hardening (P2) — DONE (except 2FA)
 
 | Item | File | Status |
 |------|------|--------|
-| Implement 2FA/MFA | `src/config/security.production.ts` | TODO |
-| File upload malware scanning | `src/services/file-validation.service.ts` | TODO |
-| Rate limiting granularity (per-endpoint) | `src/middleware/` | TODO |
-| Auth adapter signature verification | `src/auth/auth-adapter.ts` | TODO — "Verify signature properly" |
+| JWT signature verification (HMAC-SHA256) | `src/auth/auth-adapter.ts` | DONE |
+| File quota enforcement with real DB | `src/services/file-validation.service.ts` | DONE |
+| Rate limiting granularity (per-endpoint) | `src/middleware/advanced-rate-limit.middleware.ts` | ALREADY DONE (4 strategies) |
+| File upload validation (magic bytes, extensions) | `src/services/file-validation.service.ts` | ALREADY DONE |
+| 2FA/MFA | `src/config/security.production.ts` | DEFERRED — config ready, runtime not implemented |
+| File upload malware scanning | `src/services/file-validation.service.ts` | DEFERRED — needs external API (ClamAV/VirusTotal) |
 
-#### 5G. Monitoring & Observability (P2)
+#### 5G. Monitoring & Observability (P2) — DONE
 
-| Item | Status |
-|------|--------|
-| DB health check in monitoring config | TODO |
-| Redis health check in monitoring config | TODO |
-| External API health check (Stripe, Resend) | TODO |
-| Email send logging to database | TODO |
-| File quota checking against database | TODO |
+| Item | File | Status |
+|------|------|--------|
+| DB health check (`SELECT NOW()`) | `src/worker-integrated.ts` handleHealth | DONE |
+| Redis/Upstash health check (PING) | `src/worker-integrated.ts` handleHealth | DONE |
+| Stripe API health check (GET /v1/balance) | `src/worker-integrated.ts` handleHealth | DONE |
+| Resend API health check (GET /domains) | `src/worker-integrated.ts` handleHealth | DONE |
+| Email send logging to `email_logs` table | `src/services/worker-email.ts` | DONE (migration 041) |
+| File quota checking against `file_storage` table | `src/services/file-validation.service.ts` | DONE (migration 041) |
+| `user_storage_usage` view for quick lookups | `src/db/migrations/041_email_logs_and_file_storage.sql` | DONE |
 
 ### Current Numbers
 - 607 API routes, 135 pages, 186 components, 28 services, 4 stores

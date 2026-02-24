@@ -365,25 +365,53 @@ export class FileValidationService {
   }
 
   /**
-   * Check user quota (placeholder for quota management)
+   * Check user quota against database storage tracking.
+   * Falls back to permissive defaults if DB unavailable.
    */
-  static async checkUserQuota(userId: number, fileSize: number): Promise<{
+  static async checkUserQuota(userId: number, fileSize: number, db?: any): Promise<{
     allowed: boolean;
     currentUsage: number;
     maxQuota: number;
     remainingQuota: number;
   }> {
-    // TODO: Implement actual quota checking with database
-    // For now, return a mock response
-    const maxQuota = 5 * 1024 * 1024 * 1024; // 5GB default
-    const currentUsage = 0; // TODO: Get from database
+    // Quota tiers: free=1GB, pro=10GB, enterprise=50GB
+    const QUOTA_TIERS: Record<string, number> = {
+      free: 1 * 1024 * 1024 * 1024,
+      pro: 10 * 1024 * 1024 * 1024,
+      enterprise: 50 * 1024 * 1024 * 1024,
+      unlimited: Number.MAX_SAFE_INTEGER,
+    };
+
+    let currentUsage = 0;
+    let tier = 'free';
+
+    if (db) {
+      try {
+        const [usageResult, userResult] = await Promise.all([
+          db.query(
+            `SELECT COALESCE(SUM(file_size), 0)::bigint AS total_bytes FROM file_storage WHERE user_id = $1`,
+            [userId]
+          ).catch(() => [{ total_bytes: '0' }]),
+          db.query(
+            `SELECT subscription_tier FROM users WHERE id = $1`,
+            [userId]
+          ).catch(() => []),
+        ]);
+        currentUsage = Number(usageResult[0]?.total_bytes) || 0;
+        tier = userResult[0]?.subscription_tier || 'free';
+      } catch {
+        // DB unavailable — allow upload with default quota
+      }
+    }
+
+    const maxQuota = QUOTA_TIERS[tier] ?? QUOTA_TIERS.free;
     const remainingQuota = maxQuota - currentUsage;
 
     return {
       allowed: currentUsage + fileSize <= maxQuota,
       currentUsage,
       maxQuota,
-      remainingQuota
+      remainingQuota,
     };
   }
 
