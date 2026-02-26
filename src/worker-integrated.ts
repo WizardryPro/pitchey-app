@@ -16174,7 +16174,9 @@ Signatures: [To be completed upon signing]
               engagement_rate: 0
             },
             trend: [],
-            topPitches: []
+            topPitches: [],
+            audienceBreakdown: [],
+            engagementByGenre: []
           }
         }), {
           headers: { ...getCorsHeaders(origin), 'Content-Type': 'application/json' },
@@ -16201,7 +16203,9 @@ Signatures: [To be completed upon signing]
             engagement_rate: 0
           },
           trend: [],
-          topPitches: []
+          topPitches: [],
+          audienceBreakdown: [],
+          engagementByGenre: []
         }
       }), {
         headers: { ...getCorsHeaders(origin), 'Content-Type': 'application/json' },

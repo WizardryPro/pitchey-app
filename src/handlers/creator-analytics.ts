@@ -84,13 +84,34 @@ export class CreatorAnalyticsHandler {
         // pitch_engagement table may not exist or be empty
       }
 
+      // Get engagement breakdown by genre
+      let engagementByGenre: { genre: string; views: number; likes: number; ndas: number }[] = [];
+      try {
+        engagementByGenre = await this.db.query(
+          `SELECT
+            COALESCE(p.genre, 'Other') as genre,
+            COALESCE(SUM(p.view_count), 0)::int as views,
+            COALESCE(SUM(p.like_count), 0)::int as likes,
+            COALESCE(COUNT(DISTINCT nr.id), 0)::int as ndas
+           FROM pitches p
+           LEFT JOIN nda_requests nr ON nr.pitch_id = p.id
+           WHERE p.user_id = $1 AND p.status = 'published'
+           GROUP BY p.genre
+           ORDER BY views DESC`,
+          [userId]
+        );
+      } catch {
+        // Keep empty if query fails
+      }
+
       return {
         success: true,
         data: {
           current: currentAnalytics[0] || this.getEmptyAnalytics(),
           trend: historicalTrend,
           topPitches,
-          audienceBreakdown
+          audienceBreakdown,
+          engagementByGenre
         }
       };
     } catch (error) {
