@@ -8,7 +8,7 @@ import { Progress } from '../ui/progress';
 import { OnboardingAnalytics } from './OnboardingAnalytics';
 import { AchievementGallery, ProgressStats } from './AchievementSystem';
 
-export const OnboardingSettings: React.FC = () => {
+const OnboardingSettings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'preferences' | 'analytics' | 'achievements'>('overview');
   
   const {
@@ -307,3 +307,5 @@ export const OnboardingSettings: React.FC = () => {
     </div>
   );
 };
+
+export default OnboardingSettings;

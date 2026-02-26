@@ -996,15 +996,11 @@ export function useWebSocketAdvanced(options: UseWebSocketAdvancedOptions = {}) 
       };
       
       ws.onerror = (error) => {
-        // Serialize Event properly instead of logging [object Object]
-        const errorInfo = error instanceof ErrorEvent
-          ? { message: error.message, filename: error.filename }
-          : { type: error.type };
-        console.error('WebSocket error occurred:', {
-          readyState: ws.readyState,
-          url: ws.url,
-          error: errorInfo
-        });
+        // Serialize Event to a string so Sentry doesn't log [object Object]
+        const errorMsg = error instanceof ErrorEvent
+          ? `message=${error.message}, filename=${error.filename}`
+          : `type=${error.type}`;
+        console.error(`WebSocket error occurred: ${errorMsg}, readyState=${ws.readyState}, url=${ws.url}`);
         
         // Record failure in circuit breaker for connection errors
         if (ws.readyState === WebSocket.CONNECTING) {

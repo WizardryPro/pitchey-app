@@ -25,10 +25,13 @@ interface CreatorHeaderProps {
   isOwnProfile?: boolean;
 }
 
+const defaultStats: CreatorStats = { totalPitches: 0, totalViews: 0, totalFollowers: 0, avgRating: 0 };
+
 const CreatorHeader: React.FC<CreatorHeaderProps> = ({ creator, isOwnProfile = false }) => {
   const navigate = useNavigate();
+  const stats = creator.stats ?? defaultStats;
   const [isFollowing, setIsFollowing] = useState(false);
-  const [followersCount, setFollowersCount] = useState(creator.stats.totalFollowers);
+  const [followersCount, setFollowersCount] = useState(stats.totalFollowers);
 
   const handleFollowToggle = async () => {
     try {
@@ -42,7 +45,7 @@ const CreatorHeader: React.FC<CreatorHeaderProps> = ({ creator, isOwnProfile = f
       console.error('Failed to toggle follow:', error);
       // Revert on error
       setIsFollowing(isFollowing);
-      setFollowersCount(creator.stats.totalFollowers);
+      setFollowersCount(stats.totalFollowers);
     }
   };
 
@@ -131,13 +134,13 @@ const CreatorHeader: React.FC<CreatorHeaderProps> = ({ creator, isOwnProfile = f
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-8 pt-8 border-t">
         <div>
           <div className="text-3xl font-bold text-gray-900">
-            {creator.stats.totalPitches}
+            {stats.totalPitches}
           </div>
           <div className="text-gray-500">Pitches</div>
         </div>
         <div>
           <div className="text-3xl font-bold text-gray-900">
-            {(creator.stats.totalViews / 1000).toFixed(1)}K
+            {((stats.totalViews || 0) / 1000).toFixed(1)}K
           </div>
           <div className="text-gray-500">Total Views</div>
         </div>
@@ -149,7 +152,7 @@ const CreatorHeader: React.FC<CreatorHeaderProps> = ({ creator, isOwnProfile = f
         </div>
         <div>
           <div className="text-3xl font-bold text-gray-900">
-            {creator.stats.avgRating.toFixed(1)}
+            {(stats.avgRating || 0).toFixed(1)}
           </div>
           <div className="text-gray-500">Avg Rating</div>
         </div>

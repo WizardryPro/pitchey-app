@@ -732,11 +732,11 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   
   // Enhanced error handler
   function handleError(error: Event) {
-    // Serialize Event/ErrorEvent properly instead of logging [object Event]
-    const errorInfo = error instanceof ErrorEvent
-      ? { message: error.message, filename: error.filename, lineno: error.lineno }
-      : { type: error.type, eventPhase: error.eventPhase };
-    console.error('[WebSocketContext] WebSocket error:', errorInfo);
+    // Serialize Event/ErrorEvent to a string so Sentry doesn't log [object Object]
+    const errorMsg = error instanceof ErrorEvent
+      ? `message=${error.message}, filename=${error.filename}, lineno=${error.lineno}`
+      : `type=${error.type}, eventPhase=${error.eventPhase}`;
+    console.error(`[WebSocketContext] WebSocket error: ${errorMsg}`);
     
     // Create user-friendly error notification
     const errorNotification: NotificationData = {

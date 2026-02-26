@@ -190,7 +190,7 @@ function ProductionDashboard() {
         }));
         setInvestmentOpportunities(safeOpportunities);
       } else {
-        trackApiError('/api/investment-opportunities', { success: false });
+        trackApiError('/api/investor/recommendations', { success: false });
       }
 
       if (!cancelled) {

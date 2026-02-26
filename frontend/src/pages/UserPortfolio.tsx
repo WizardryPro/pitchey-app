@@ -149,10 +149,10 @@ const UserPortfolio: React.FC = () => {
               ...creatorData.creator,
               userType: 'creator',
               stats: {
-                totalWorks: creatorData.creator.stats.totalPitches,
-                totalViews: creatorData.creator.stats.totalViews,
-                totalFollowers: creatorData.creator.stats.totalFollowers,
-                avgRating: creatorData.creator.stats.avgRating
+                totalWorks: creatorData.creator?.stats?.totalPitches ?? 0,
+                totalViews: creatorData.creator?.stats?.totalViews ?? 0,
+                totalFollowers: creatorData.creator?.stats?.totalFollowers ?? 0,
+                avgRating: creatorData.creator?.stats?.avgRating ?? 0
               }
             },
             works: creatorData.pitches,

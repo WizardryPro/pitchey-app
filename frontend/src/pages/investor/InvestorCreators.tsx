@@ -168,9 +168,9 @@ export default function InvestorCreators() {
             followStatus: creator.followStatus === 'following' ? 'not-following' : 'following',
             stats: {
               ...creator.stats,
-              followerCount: creator.followStatus === 'following' 
-                ? creator.stats.followerCount - 1 
-                : creator.stats.followerCount + 1
+              followerCount: creator.followStatus === 'following'
+                ? (creator.stats?.followerCount ?? 0) - 1
+                : (creator.stats?.followerCount ?? 0) + 1
             }
           }
         : creator
@@ -421,19 +421,19 @@ export default function InvestorCreators() {
                 {/* Stats */}
                 <div className="grid grid-cols-4 gap-2 py-3 border-y border-gray-200">
                   <div className="text-center">
-                    <p className="text-lg font-semibold text-gray-900">{creator.stats.fundedProjects}</p>
+                    <p className="text-lg font-semibold text-gray-900">{creator.stats?.fundedProjects ?? 0}</p>
                     <p className="text-xs text-gray-500">Funded</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-semibold text-purple-600">{creator.stats.activePitches}</p>
+                    <p className="text-lg font-semibold text-purple-600">{creator.stats?.activePitches ?? 0}</p>
                     <p className="text-xs text-gray-500">Active</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-semibold text-green-600">{creator.stats.successRate}%</p>
+                    <p className="text-lg font-semibold text-green-600">{creator.stats?.successRate ?? 0}%</p>
                     <p className="text-xs text-gray-500">Success</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-semibold text-gray-900">{creator.stats.followerCount}</p>
+                    <p className="text-lg font-semibold text-gray-900">{creator.stats?.followerCount ?? 0}</p>
                     <p className="text-xs text-gray-500">Followers</p>
                   </div>
                 </div>

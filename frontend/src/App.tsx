@@ -44,7 +44,7 @@ const Register = lazy(() => import('./pages/Register' /* webpackPrefetch: true *
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 
 // Onboarding Components (lazy-loaded to defer onboarding CSS)
-const OnboardingSettings = lazy(() => import('./components/Onboarding/OnboardingSettings').then((m: any) => ({ default: m.default || m })));
+const OnboardingSettings = lazy(() => import('./components/Onboarding/OnboardingSettings'));
 
 // Multi-Portal Pages
 const PortalSelect = lazy(() => import('./pages/PortalSelect'));
