@@ -38,7 +38,7 @@ jobs:
   # Code coverage quality gate
   coverage-gate:
     name: Code Coverage Quality Gate
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 20
     
     outputs:
@@ -152,7 +152,7 @@ jobs:
   # Security quality gate
   security-gate:
     name: Security Quality Gate
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 25
     
     outputs:
@@ -307,7 +307,7 @@ jobs:
   # Code quality gate
   code-quality-gate:
     name: Code Quality Gate
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 20
     
     outputs:
@@ -462,7 +462,7 @@ jobs:
   # Dependencies quality gate
   dependencies-gate:
     name: Dependencies Quality Gate
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
     
     outputs:
@@ -608,7 +608,7 @@ jobs:
   # Bundle size quality gate
   bundle-size-gate:
     name: Bundle Size Quality Gate
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
     
     outputs:
@@ -688,7 +688,7 @@ jobs:
   # Overall quality gates evaluation
   quality-gates-summary:
     name: Quality Gates Summary
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: [coverage-gate, security-gate, code-quality-gate, dependencies-gate, bundle-size-gate]
     if: always()
     

@@ -19,7 +19,7 @@ jobs:
   # Database backup
   backup:
     name: Database Backup
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: |
       github.event_name == 'schedule' ||
       github.event.inputs.task == 'backup' ||
@@ -57,7 +57,7 @@ jobs:
   # SSL certificate check
   ssl-check:
     name: SSL Certificate Check
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: |
       github.event_name == 'schedule' ||
       github.event.inputs.task == 'ssl-check' ||
