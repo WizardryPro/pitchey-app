@@ -55,7 +55,7 @@ export default function Register() {
         <p className="mt-2 text-center text-sm text-gray-600">
           Already have an account?{' '}
           <Link
-            to="/login"
+            to={`/login/${formData.userType}`}
             className="font-medium text-primary-600 hover:text-primary-500"
           >
             Sign in
@@ -82,7 +82,7 @@ export default function Register() {
               </p>
               <div className="space-y-3">
                 <Link
-                  to="/login"
+                  to={`/login/${formData.userType}`}
                   className="block w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700"
                 >
                   Go to login
