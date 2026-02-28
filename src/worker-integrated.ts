@@ -16465,8 +16465,13 @@ Signatures: [To be completed upon signing]
         FROM production_projects pp
         WHERE pp.production_company_id = $1
       `;
-      const metricsResult = await this.db.query(metricsQuery, [authCheck.user.id]);
-      const rawMetrics = (metricsResult as any)?.[0] || {};
+      let rawMetrics: any = {};
+      try {
+        const metricsResult = await this.db.query(metricsQuery, [authCheck.user.id]);
+        rawMetrics = (metricsResult as any)?.[0] || {};
+      } catch {
+        // Keep defaults if query fails
+      }
       const metrics = {
         ...rawMetrics,
         total_views: parseInt(rawMetrics.pitches_evaluated) || 0,
@@ -16487,7 +16492,12 @@ Signatures: [To be completed upon signing]
         ORDER BY project_count DESC
         LIMIT 6
       `;
-      const genrePerformance = await this.db.query(genreQuery, [authCheck.user.id]);
+      let genrePerformance: any[] = [];
+      try {
+        genrePerformance = await this.db.query(genreQuery, [authCheck.user.id]) || [];
+      } catch {
+        // Keep empty if query fails
+      }
 
       // Project pipeline from production_projects
       const pipelineQuery = `
@@ -16520,7 +16530,12 @@ Signatures: [To be completed upon signing]
             WHEN 'Distribution' THEN 5
           END
       `;
-      const timelineAdherence = await this.db.query(pipelineQuery, [authCheck.user.id]);
+      let timelineAdherence: any[] = [];
+      try {
+        timelineAdherence = await this.db.query(pipelineQuery, [authCheck.user.id]) || [];
+      } catch {
+        // Keep empty if query fails
+      }
 
       // Revenue from production_projects + related investments
       const revenueQuery = `
@@ -16583,7 +16598,12 @@ Signatures: [To be completed upon signing]
         ORDER BY m.month_trunc DESC
         LIMIT 12
       `;
-      const monthlyTrends = await this.db.query(trendsQuery, [authCheck.user.id]);
+      let monthlyTrends: any[] = [];
+      try {
+        monthlyTrends = await this.db.query(trendsQuery, [authCheck.user.id]) || [];
+      } catch {
+        // Keep empty if query fails
+      }
 
       // Build response in the format frontend expects
       const origin = request.headers.get('Origin');
