@@ -16562,17 +16562,25 @@ Signatures: [To be completed upon signing]
       // Monthly trends from production_projects
       const trendsQuery = `
         SELECT
-          TO_CHAR(pp.created_at, 'Mon') as month,
-          COUNT(*) as projects_created,
-          (SELECT COUNT(*) FROM saved_pitches sp WHERE sp.user_id = $1
-            AND DATE_TRUNC('month', sp.created_at) = DATE_TRUNC('month', pp.created_at)) as views,
-          COALESCE(SUM(pp.budget), 0) as revenue,
-          COALESCE(SUM(pp.budget) * 0.7, 0) as costs
-        FROM production_projects pp
-        WHERE pp.production_company_id = $1
-          AND pp.created_at >= NOW() - INTERVAL '${days} days'
-        GROUP BY TO_CHAR(pp.created_at, 'Mon'), DATE_TRUNC('month', pp.created_at)
-        ORDER BY DATE_TRUNC('month', pp.created_at) DESC
+          m.month,
+          m.projects_created,
+          COALESCE((SELECT COUNT(*) FROM saved_pitches sp WHERE sp.user_id = $1
+            AND DATE_TRUNC('month', sp.created_at) = m.month_trunc), 0) as views,
+          m.revenue,
+          m.costs
+        FROM (
+          SELECT
+            TO_CHAR(pp.created_at, 'Mon') as month,
+            DATE_TRUNC('month', pp.created_at) as month_trunc,
+            COUNT(*) as projects_created,
+            COALESCE(SUM(pp.budget), 0) as revenue,
+            COALESCE(SUM(pp.budget) * 0.7, 0) as costs
+          FROM production_projects pp
+          WHERE pp.production_company_id = $1
+            AND pp.created_at >= NOW() - INTERVAL '${days} days'
+          GROUP BY TO_CHAR(pp.created_at, 'Mon'), DATE_TRUNC('month', pp.created_at)
+        ) m
+        ORDER BY m.month_trunc DESC
         LIMIT 12
       `;
       const monthlyTrends = await this.db.query(trendsQuery, [authCheck.user.id]);
