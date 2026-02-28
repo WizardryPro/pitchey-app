@@ -39,7 +39,7 @@ env:
 jobs:
   # Analyze commits for semantic versioning
   analyze-changes:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     outputs:
       should-release: ${{ steps.semantic-analysis.outputs.should-release }}
       release-type: ${{ steps.semantic-analysis.outputs.release-type }}
@@ -263,7 +263,7 @@ jobs:
   # Update version in files
   update-version:
     needs: analyze-changes
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: needs.analyze-changes.outputs.should-release == 'true'
     outputs:
       version-updated: ${{ steps.update-files.outputs.version-updated }}
@@ -332,7 +332,7 @@ jobs:
   # Build and test before release
   pre-release-build:
     needs: [analyze-changes, update-version]
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: needs.analyze-changes.outputs.should-release == 'true' && !inputs.skip_build
     steps:
       - uses: actions/checkout@v4
@@ -390,7 +390,7 @@ jobs:
   # Create GitHub release
   create-release:
     needs: [analyze-changes, update-version, pre-release-build]
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: always() && needs.analyze-changes.outputs.should-release == 'true'
     outputs:
       release-id: ${{ steps.create-release.outputs.release-id }}
@@ -546,7 +546,7 @@ jobs:
   # Trigger deployment pipeline
   trigger-deployment:
     needs: [analyze-changes, create-release]
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: needs.create-release.result == 'success' && !inputs.skip_build
     steps:
       - name: Trigger production deployment
@@ -575,7 +575,7 @@ jobs:
   # Post-release notifications and updates
   post-release:
     needs: [analyze-changes, create-release, trigger-deployment]
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: always() && needs.create-release.result == 'success'
     steps:
       - name: Update dependency tracking

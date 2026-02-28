@@ -19,7 +19,7 @@ jobs:
   # Secret scanning
   secret-scan:
     name: Secret Detection
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -43,7 +43,7 @@ jobs:
   # Dependency vulnerability scanning
   dependency-scan:
     name: Dependency Vulnerabilities
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -96,7 +96,7 @@ jobs:
   # Container scanning (if using Docker)
   container-scan:
     name: Container Security
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: false  # Enable when using containers
     steps:
       - name: Checkout code
@@ -121,7 +121,7 @@ jobs:
   # Static Application Security Testing (SAST)
   sast-scan:
     name: Static Code Analysis
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -157,7 +157,7 @@ jobs:
   # Infrastructure as Code scanning
   iac-scan:
     name: Infrastructure Security
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -187,7 +187,7 @@ jobs:
   # API Security Testing
   api-security:
     name: API Security Testing
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout code
@@ -218,7 +218,7 @@ jobs:
   # License compliance check
   license-check:
     name: License Compliance
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -239,7 +239,7 @@ jobs:
   # Security scorecard
   scorecard:
     name: Security Scorecard
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     permissions:
       security-events: write
@@ -265,7 +265,7 @@ jobs:
   # Security report aggregation
   security-report:
     name: Generate Security Report
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: [secret-scan, dependency-scan, sast-scan, iac-scan]
     if: always()
     steps:
@@ -353,7 +353,7 @@ jobs:
   # Notification
   notify:
     name: Send Notifications
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: [security-report]
     if: always() && (github.event_name == 'schedule' || failure())
     steps:
