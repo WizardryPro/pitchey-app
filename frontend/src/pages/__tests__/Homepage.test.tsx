@@ -42,7 +42,7 @@ vi.mock('../../services/pitch.service', () => ({
 }))
 
 // ─── pitchConstants ────────────────────────────────────────────────────
-vi.mock('../../constants/pitchConstants', () => ({
+vi.mock('@config/pitchConstants', () => ({
   getGenresSync: () => ['Drama', 'Comedy', 'Action'],
   getFormatsSync: () => ['Film', 'TV Series', 'Documentary'],
 }))

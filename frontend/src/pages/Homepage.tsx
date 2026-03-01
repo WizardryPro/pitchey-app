@@ -4,7 +4,7 @@ import { Film, TrendingUp, Search, Play, Star, Eye, Heart, Calendar, ArrowRight,
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { pitchService } from '../services/pitch.service';
 import type { Pitch } from '../services/pitch.service';
-import { getGenresSync, getFormatsSync } from '../constants/pitchConstants';
+import { getGenresSync, getFormatsSync } from '@config/pitchConstants';
 import FormatDisplay from '../components/FormatDisplay';
 
 

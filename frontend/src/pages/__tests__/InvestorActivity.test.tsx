@@ -54,7 +54,7 @@ vi.mock('../../config', () => ({
 }))
 
 // ─── Error boundary ─────────────────────────────────────────────────
-vi.mock('../../components/ErrorBoundary/PortalErrorBoundary', () => ({
+vi.mock('@/components/ErrorBoundary/PortalErrorBoundary', () => ({
   withPortalErrorBoundary: (Component: any) => Component,
 }))
 

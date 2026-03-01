@@ -6,12 +6,12 @@ import { useToast } from '@shared/components/feedback/ToastProvider';
 import LoadingSpinner from '@shared/components/feedback/LoadingSpinner';
 import { pitchService } from '../services/pitch.service';
 import { uploadService } from '../services/upload.service';
-import { getGenresSync, getFormatsSync, FALLBACK_GENRES } from '../constants/pitchConstants';
+import { getGenresSync, getFormatsSync, FALLBACK_GENRES } from '@config/pitchConstants';
 import { useFormValidation } from '../hooks/useFormValidation';
 import { usePitchUploadManager } from '../hooks/usePitchUploadManager';
 import { PitchFormSchema, type PitchFormData, getCharacterCountInfo } from '../schemas/pitch.schema';
 import { a11y } from '../utils/accessibility';
-import { MESSAGES, VALIDATION_MESSAGES, SUCCESS_MESSAGES, ERROR_MESSAGES } from '../constants/messages';
+import { MESSAGES, VALIDATION_MESSAGES, SUCCESS_MESSAGES, ERROR_MESSAGES } from '@config/messages';
 import { CharacterManagement } from '../components/CharacterManagement';
 import type { Character } from '@shared/types/character';
 import { serializeCharacters } from '../utils/characterUtils';
@@ -182,7 +182,7 @@ export default function CreatePitch() {
   useEffect(() => {
     const loadConfig = async () => {
       try {
-        const { getGenres, getFormats } = await import('../constants/pitchConstants');
+        const { getGenres, getFormats } = await import('@config/pitchConstants');
         const [genresData, formatsData] = await Promise.all([
           getGenres(),
           getFormats()

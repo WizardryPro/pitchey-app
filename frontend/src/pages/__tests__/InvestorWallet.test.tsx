@@ -76,7 +76,7 @@ vi.mock('react-hot-toast', () => ({
 }))
 
 // ─── UI Components ──────────────────────────────────────────────────
-vi.mock('@/components/ui/card', () => ({
+vi.mock('@shared/components/ui/card', () => ({
   Card: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   CardContent: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   CardDescription: ({ children, ...props }: any) => <p {...props}>{children}</p>,
@@ -84,29 +84,29 @@ vi.mock('@/components/ui/card', () => ({
   CardTitle: ({ children, ...props }: any) => <h3 {...props}>{children}</h3>,
 }))
 
-vi.mock('@/components/ui/button', () => ({
+vi.mock('@shared/components/ui/button', () => ({
   Button: ({ children, onClick, ...props }: any) => (
     <button onClick={onClick} {...props}>{children}</button>
   ),
 }))
 
-vi.mock('@/components/ui/badge', () => ({
+vi.mock('@shared/components/ui/badge', () => ({
   Badge: ({ children, ...props }: any) => <span {...props}>{children}</span>,
 }))
 
-vi.mock('@/components/ui/switch', () => ({
+vi.mock('@shared/components/ui/switch', () => ({
   Switch: ({ checked, onCheckedChange, ...props }: any) => (
     <input type="checkbox" checked={checked} onChange={(e) => onCheckedChange?.(e.target.checked)} {...props} />
   ),
 }))
 
-vi.mock('@/components/ui/alert', () => ({
+vi.mock('@shared/components/ui/alert', () => ({
   Alert: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   AlertDescription: ({ children, ...props }: any) => <p {...props}>{children}</p>,
 }))
 
 // ─── Error boundary ─────────────────────────────────────────────────
-vi.mock('../../components/ErrorBoundary/PortalErrorBoundary', () => ({
+vi.mock('@/components/ErrorBoundary/PortalErrorBoundary', () => ({
   withPortalErrorBoundary: (Component: any) => Component,
 }))
 

@@ -35,7 +35,7 @@ vi.mock('../../services/upload.service', () => ({
 }))
 
 // ─── pitchConstants ─────────────────────────────────────────────────
-vi.mock('../../constants/pitchConstants', () => ({
+vi.mock('@config/pitchConstants', () => ({
   getGenresSync: () => ['Drama', 'Comedy', 'Thriller', 'Action'],
   getFormatsSync: () => ['Film', 'Television'],
   FALLBACK_GENRES: ['Drama', 'Comedy', 'Thriller'],

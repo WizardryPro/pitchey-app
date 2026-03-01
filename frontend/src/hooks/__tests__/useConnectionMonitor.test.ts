@@ -45,7 +45,7 @@ const mockWebSocketContext = {
   requestNotificationPermission: vi.fn(async () => 'denied' as const),
 };
 
-vi.mock('../../contexts/WebSocketContext', () => ({
+vi.mock('@shared/contexts/WebSocketContext', () => ({
   useWebSocket: () => mockWebSocketContext,
 }));
 

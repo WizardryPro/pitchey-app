@@ -37,7 +37,7 @@ vi.mock('../../hooks/useSentryPortal', () => ({
   }),
 }))
 
-vi.mock('../../components/ErrorBoundary/PortalErrorBoundary', () => ({
+vi.mock('@/components/ErrorBoundary/PortalErrorBoundary', () => ({
   withPortalErrorBoundary: (Component: any) => Component,
 }))
 

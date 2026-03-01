@@ -59,7 +59,7 @@ vi.mock('recharts', () => {
   }
 })
 
-vi.mock('@/components/ui/chart', () => ({
+vi.mock('@shared/components/ui/chart', () => ({
   ChartContainer: ({ children }: any) => <div>{children}</div>,
   ChartTooltip: () => <div />,
   ChartTooltipContent: () => <div />,

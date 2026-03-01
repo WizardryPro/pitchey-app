@@ -18,7 +18,7 @@ vi.mock('../../services/upload.service', () => ({
   },
 }))
 
-vi.mock('../../components/Toast/ToastProvider', () => ({
+vi.mock('@shared/components/feedback/ToastProvider', () => ({
   useToast: () => ({
     success: vi.fn(),
     error: vi.fn(),
@@ -47,7 +47,7 @@ vi.mock('../../utils/characterUtils', () => ({
 }))
 
 // Mock constants
-vi.mock('../../constants/pitchConstants', () => ({
+vi.mock('@config/pitchConstants', () => ({
   getGenresSync: vi.fn(() => ['Drama', 'Comedy', 'Thriller']),
   getFormatsSync: vi.fn(() => ['Feature Film', 'TV Series', 'Short Film']),
   getGenres: vi.fn(async () => ['Drama', 'Comedy', 'Thriller', 'Action', 'Horror']),
@@ -1094,7 +1094,7 @@ describe('PitchForm (CreatePitch)', () => {
   describe('Error Handling', () => {
     it('should handle genre loading failure gracefully', async () => {
       // Mock failed genre loading
-      vi.doMock('../../constants/pitchConstants', () => ({
+      vi.doMock('@config/pitchConstants', () => ({
         getGenres: vi.fn().mockRejectedValue(new Error('Failed to load')),
         getFormats: vi.fn().mockResolvedValue(['Film', 'TV']),
         getGenresSync: vi.fn().mockReturnValue(['Drama', 'Comedy']),

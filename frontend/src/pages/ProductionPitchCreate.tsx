@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { usePitchStore } from '../store/pitchStore';
-import { getGenresSync, getFormatsSync, getBudgetRangesSync } from '../constants/pitchConstants';
+import { getGenresSync, getFormatsSync, getBudgetRangesSync } from '@config/pitchConstants';
 
 interface MediaFile {
   id: string;
@@ -97,7 +97,7 @@ export default function ProductionPitchCreate() {
   useEffect(() => {
     const loadConfig = async () => {
       try {
-        const { getGenres, getFormats, getBudgetRanges } = await import('../constants/pitchConstants');
+        const { getGenres, getFormats, getBudgetRanges } = await import('@config/pitchConstants');
         const [genresData, formatsData, budgetRangesData] = await Promise.all([
           getGenres(),
           getFormats(),

@@ -68,7 +68,7 @@ vi.mock('../../components/FollowButton', () => ({
   default: () => <button>Follow</button>,
 }))
 
-vi.mock('../../components/Loading/Skeleton', () => ({
+vi.mock('@shared/components/feedback/Skeleton', () => ({
   PitchCardSkeleton: () => <div data-testid="skeleton">Loading skeleton</div>,
 }))
 
@@ -81,7 +81,7 @@ vi.mock('../../components/EmptyState', () => ({
   ),
 }))
 
-vi.mock('../../components/Toast/ToastProvider', () => ({
+vi.mock('@shared/components/feedback/ToastProvider', () => ({
   useToast: () => ({
     success: vi.fn(),
     error: vi.fn(),

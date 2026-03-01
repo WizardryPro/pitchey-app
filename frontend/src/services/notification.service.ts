@@ -1,4 +1,4 @@
-import { BRAND } from '../constants/brand';
+import { BRAND } from '@config/brand';
 
 const BRAND_LOGO = BRAND.logo;
 

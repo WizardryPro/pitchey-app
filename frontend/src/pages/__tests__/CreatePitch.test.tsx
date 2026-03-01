@@ -33,7 +33,7 @@ vi.mock('../../store/betterAuthStore', () => ({
 }))
 
 // ─── Toast ───────────────────────────────────────────────────────────
-vi.mock('../../components/Toast/ToastProvider', () => ({
+vi.mock('@shared/components/feedback/ToastProvider', () => ({
   useToast: () => ({
     success: mockSuccessToast,
     error: mockErrorToast,
@@ -43,7 +43,7 @@ vi.mock('../../components/Toast/ToastProvider', () => ({
 }))
 
 // ─── LoadingSpinner ──────────────────────────────────────────────────
-vi.mock('../../components/Loading/LoadingSpinner', () => ({
+vi.mock('@shared/components/feedback/LoadingSpinner', () => ({
   default: ({ size, color }: any) => <div data-testid="loading-spinner" />,
 }))
 
@@ -63,7 +63,7 @@ vi.mock('../../services/upload.service', () => ({
 }))
 
 // ─── pitchConstants ─────────────────────────────────────────────────
-vi.mock('../../constants/pitchConstants', () => ({
+vi.mock('@config/pitchConstants', () => ({
   getGenresSync: () => ['Drama', 'Comedy', 'Thriller', 'Action', 'Horror'],
   getFormatsSync: () => ['Film', 'Television - Scripted'],
   FALLBACK_GENRES: ['Drama', 'Comedy', 'Thriller'],

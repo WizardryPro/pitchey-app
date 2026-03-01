@@ -20,7 +20,7 @@ vi.mock('react-router-dom', async () => {
 
 // ─── WebSocket context ──────────────────────────────────────────────
 const mockWsNotifications: any[] = []
-vi.mock('../../contexts/WebSocketContext', () => ({
+vi.mock('@shared/contexts/WebSocketContext', () => ({
   useWebSocket: () => ({
     isConnected: true,
     connectionQuality: { strength: 'good' },
@@ -57,7 +57,7 @@ vi.mock('../../services/notifications.service', () => ({
 }))
 
 // ─── Notification toast ─────────────────────────────────────────────
-vi.mock('../../components/Toast/NotificationToastContainer', () => ({
+vi.mock('@shared/components/feedback/NotificationToastContainer', () => ({
   useNotificationToast: () => ({
     success: vi.fn(),
     error: vi.fn(),

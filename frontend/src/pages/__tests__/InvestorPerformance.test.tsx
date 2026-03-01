@@ -37,7 +37,7 @@ vi.mock('recharts', () => {
 })
 
 // Mock shadcn chart components
-vi.mock('@/components/ui/chart', () => ({
+vi.mock('@shared/components/ui/chart', () => ({
   ChartContainer: ({ children }: any) => <div>{children}</div>,
   ChartTooltip: (props: any) => <div />,
   ChartTooltipContent: () => <div />,
@@ -46,7 +46,7 @@ vi.mock('@/components/ui/chart', () => ({
 }))
 
 // Mock shadcn card components
-vi.mock('@/components/ui/card', () => ({
+vi.mock('@shared/components/ui/card', () => ({
   Card: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   CardContent: ({ children }: any) => <div>{children}</div>,
   CardDescription: ({ children }: any) => <p>{children}</p>,

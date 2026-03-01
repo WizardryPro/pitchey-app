@@ -3,7 +3,7 @@
  * Provides WCAG-compliant helpers for forms, navigation, and user interactions
  */
 
-import { A11Y_MESSAGES } from '../constants/messages';
+import { A11Y_MESSAGES } from '@config/messages';
 
 // ARIA attribute builders
 export const aria = {

@@ -15,7 +15,7 @@ vi.mock('react-router-dom', async () => {
 })
 
 // Mock WebSocket + Notifications context to avoid real sockets in tests
-vi.mock('../contexts/WebSocketContext', () => {
+vi.mock('@shared/contexts/WebSocketContext', () => {
   const React = require('react')
   const fakeContextValue = {
     // Connection state

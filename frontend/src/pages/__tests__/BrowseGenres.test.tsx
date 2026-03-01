@@ -28,7 +28,7 @@ vi.mock('../../services/pitch.service', () => ({
 }))
 
 // Mock toast — stable reference to avoid useCallback re-creation on every render
-vi.mock('../../components/Toast/ToastProvider', () => {
+vi.mock('@shared/components/feedback/ToastProvider', () => {
   const toast = {
     success: vi.fn(),
     error: vi.fn(),
@@ -49,7 +49,7 @@ vi.mock('../../components/Pagination', () => ({
 }))
 
 // Mock Loading components
-vi.mock('../../components/Loading/Skeleton', () => ({
+vi.mock('@shared/components/feedback/Skeleton', () => ({
   PitchCardSkeleton: () => <div data-testid="skeleton" />,
 }))
 

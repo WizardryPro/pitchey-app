@@ -14,7 +14,7 @@ vi.mock('react-router-dom', async () => {
 })
 
 // ─── Error boundary ─────────────────────────────────────────────────
-vi.mock('../../components/ErrorBoundary/PortalErrorBoundary', () => ({
+vi.mock('@/components/ErrorBoundary/PortalErrorBoundary', () => ({
   withPortalErrorBoundary: (Component: any) => Component,
 }))
 

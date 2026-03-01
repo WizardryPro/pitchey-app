@@ -44,7 +44,7 @@ vi.mock('../../services/nda.service', () => ({
   },
 }))
 
-vi.mock('../../components/Toast/ToastProvider', () => ({
+vi.mock('@shared/components/feedback/ToastProvider', () => ({
   useToast: () => ({
     success: mockToastSuccess,
     error: mockToastError,
@@ -52,38 +52,38 @@ vi.mock('../../components/Toast/ToastProvider', () => ({
 }))
 
 // Mock shadcn/ui components used by NDARequests
-vi.mock('@/components/ui/button', () => ({
+vi.mock('@shared/components/ui/button', () => ({
   Button: ({ children, onClick, disabled, ...props }: any) => (
     <button onClick={onClick} disabled={disabled} {...props}>{children}</button>
   ),
 }))
-vi.mock('@/components/ui/input', () => ({
+vi.mock('@shared/components/ui/input', () => ({
   Input: (props: any) => <input {...props} />,
 }))
-vi.mock('@/components/ui/select', () => ({
+vi.mock('@shared/components/ui/select', () => ({
   Select: ({ children, onValueChange, value }: any) => <div data-testid="select">{children}</div>,
   SelectContent: ({ children }: any) => <div>{children}</div>,
   SelectItem: ({ children, value }: any) => <option value={value}>{children}</option>,
   SelectTrigger: ({ children }: any) => <div>{children}</div>,
   SelectValue: ({ placeholder }: any) => <span>{placeholder}</span>,
 }))
-vi.mock('@/components/ui/dropdown-menu', () => ({
+vi.mock('@shared/components/ui/dropdown-menu', () => ({
   DropdownMenu: ({ children }: any) => <div>{children}</div>,
   DropdownMenuContent: ({ children }: any) => <div>{children}</div>,
   DropdownMenuItem: ({ children, onClick }: any) => <div onClick={onClick}>{children}</div>,
   DropdownMenuTrigger: ({ children }: any) => <div>{children}</div>,
 }))
-vi.mock('@/components/ui/card', () => ({
+vi.mock('@shared/components/ui/card', () => ({
   Card: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   CardContent: ({ children }: any) => <div>{children}</div>,
   CardDescription: ({ children }: any) => <p>{children}</p>,
   CardHeader: ({ children }: any) => <div>{children}</div>,
   CardTitle: ({ children }: any) => <h3>{children}</h3>,
 }))
-vi.mock('@/components/ui/badge', () => ({
+vi.mock('@shared/components/ui/badge', () => ({
   Badge: ({ children, ...props }: any) => <span {...props}>{children}</span>,
 }))
-vi.mock('@/components/ui/tabs', () => ({
+vi.mock('@shared/components/ui/tabs', () => ({
   Tabs: ({ children, onValueChange, value, defaultValue }: any) => <div>{children}</div>,
   TabsContent: ({ children, value }: any) => <div data-tab={value}>{children}</div>,
   TabsList: ({ children }: any) => <div role="tablist">{children}</div>,

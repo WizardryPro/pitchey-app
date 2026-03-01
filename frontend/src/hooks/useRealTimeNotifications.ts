@@ -3,7 +3,7 @@ import { useNotificationToast } from '@shared/components/feedback/NotificationTo
 import { notificationService } from '../services/notification.service';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { useWebSocket } from '@shared/contexts/WebSocketContext';
-import { BRAND } from '../constants/brand';
+import { BRAND } from '@config/brand';
 
 interface NotificationData {
   type: 'nda_request' | 'nda_approved' | 'nda_declined' | 'investment' | 'message' |

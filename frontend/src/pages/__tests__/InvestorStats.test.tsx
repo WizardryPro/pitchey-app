@@ -47,7 +47,7 @@ vi.mock('recharts', () => ({
 }))
 
 // ─── UI Components (Shadcn) ─────────────────────────────────────────
-vi.mock('@/components/ui/card', () => ({
+vi.mock('@shared/components/ui/card', () => ({
   Card: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   CardContent: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   CardDescription: ({ children, ...props }: any) => <p {...props}>{children}</p>,
@@ -55,7 +55,7 @@ vi.mock('@/components/ui/card', () => ({
   CardTitle: ({ children, ...props }: any) => <h3 {...props}>{children}</h3>,
 }))
 
-vi.mock('@/components/ui/chart', () => ({
+vi.mock('@shared/components/ui/chart', () => ({
   ChartContainer: ({ children }: any) => <div>{children}</div>,
   ChartTooltip: () => null,
   ChartTooltipContent: () => null,
@@ -64,7 +64,7 @@ vi.mock('@/components/ui/chart', () => ({
 }))
 
 // ─── Error boundary ─────────────────────────────────────────────────
-vi.mock('../../components/ErrorBoundary/PortalErrorBoundary', () => ({
+vi.mock('@/components/ErrorBoundary/PortalErrorBoundary', () => ({
   withPortalErrorBoundary: (Component: any) => Component,
 }))
 

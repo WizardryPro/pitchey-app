@@ -3,7 +3,7 @@
  * Provides reusable validation rules, error handling, and type-safe validation utilities
  */
 
-import { VALIDATION_MESSAGES } from '../constants/messages';
+import { VALIDATION_MESSAGES } from '@config/messages';
 
 // Validation result type
 export interface ValidationResult {

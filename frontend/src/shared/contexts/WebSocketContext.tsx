@@ -5,7 +5,7 @@ import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { config } from '@/config';
 import { presenceFallbackService } from '@/services/presence-fallback.service';
 import { pollingService } from '@/services/polling.service';
-import { BRAND } from '@/constants/brand';
+import { BRAND } from '@config/brand';
 
 interface NotificationData {
   id: string;

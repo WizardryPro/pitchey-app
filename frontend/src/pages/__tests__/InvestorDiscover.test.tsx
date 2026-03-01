@@ -48,14 +48,14 @@ vi.mock('../../store/betterAuthStore', () => ({
 }))
 
 // ─── UI components ──────────────────────────────────────────────────
-vi.mock('@/components/ui/button', () => ({
+vi.mock('@shared/components/ui/button', () => ({
   Button: ({ children, onClick, ...props }: any) => (
     <button onClick={onClick} {...props}>{children}</button>
   ),
 }))
 
 // ─── Error boundary ─────────────────────────────────────────────────
-vi.mock('../../components/ErrorBoundary/PortalErrorBoundary', () => ({
+vi.mock('@/components/ErrorBoundary/PortalErrorBoundary', () => ({
   withPortalErrorBoundary: (Component: any) => Component,
 }))
 

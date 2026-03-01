@@ -19,7 +19,7 @@ vi.mock('../../../services/nda.service', () => ({
   },
 }));
 
-vi.mock('../../Toast/ToastProvider', () => ({
+vi.mock('@shared/components/feedback/ToastProvider', () => ({
   useToast: () => ({
     success: mockSuccess,
     error: mockError,

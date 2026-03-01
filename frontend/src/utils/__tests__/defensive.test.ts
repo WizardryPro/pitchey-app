@@ -21,7 +21,7 @@ import {
   validatePortfolio,
   validateCreatorStats,
   validateProductionStats,
-} from '../defensive';
+} from '@shared/utils/defensive';
 
 // ============================================================================
 // safeAccess

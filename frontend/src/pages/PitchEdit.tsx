@@ -4,7 +4,7 @@ import { ArrowLeft, Save, X, Upload, FileText, Video, Image as ImageIcon, Shield
 import { pitchService } from '../services/pitch.service';
 import { uploadService } from '../services/upload.service';
 import type { Pitch, UpdatePitchInput } from '@shared/types/api';
-import { getGenresSync } from '../constants/pitchConstants';
+import { getGenresSync } from '@config/pitchConstants';
 import { CharacterManagement } from '../components/CharacterManagement';
 import type { Character } from '@shared/types/character';
 import { normalizeCharacters, serializeCharacters } from '../utils/characterUtils';

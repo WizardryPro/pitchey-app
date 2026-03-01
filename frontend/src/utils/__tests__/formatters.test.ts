@@ -6,7 +6,7 @@ import {
   formatDate,
   formatRelativeTime,
   formatDuration,
-} from '../formatters';
+} from '@shared/utils/formatters';
 
 // ============================================================================
 // formatCurrency

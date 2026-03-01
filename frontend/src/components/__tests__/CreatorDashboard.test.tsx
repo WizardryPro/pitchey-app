@@ -65,7 +65,7 @@ vi.mock('../../services/investment.service', () => ({
   },
 }))
 
-vi.mock('../../contexts/WebSocketContext', () => ({
+vi.mock('@shared/contexts/WebSocketContext', () => ({
   useWebSocket: () => mockWebSocket,
 }))
 
@@ -77,7 +77,7 @@ vi.mock('../../hooks/useSentryPortal', () => ({
   }),
 }))
 
-vi.mock('../../components/ErrorBoundary/PortalErrorBoundary', () => ({
+vi.mock('@/components/ErrorBoundary/PortalErrorBoundary', () => ({
   withPortalErrorBoundary: (Component: any) => Component,
 }))
 
