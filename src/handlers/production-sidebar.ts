@@ -423,6 +423,8 @@ export async function productionRevenueHandler(
     revenueByProject: [],
     revenueByMonth: [],
     projectedRevenue: 0,
+    avgDealSize: 0,
+    revenueByCategory: [],
   };
 
   const userId = await getUserId(request, env);
@@ -514,6 +516,61 @@ export async function productionRevenueHandler(
       projectedRevenue = Math.round(avgMonthly * 12);
     }
 
+    // Average deal size from production_deals table
+    let avgDealSize = 0;
+    const dealCheck = await sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'production_deals'
+      ) AS exists
+    `.catch(() => [{ exists: false }]);
+
+    if (dealCheck[0]?.exists) {
+      const dealStats = await sql`
+        SELECT
+          AVG(COALESCE(NULLIF(option_amount, 0), NULLIF(purchase_price, 0), NULLIF(development_fee, 0))) AS avg_deal
+        FROM production_deals
+        WHERE production_company_id = ${Number(userId)}
+          AND deal_state NOT IN ('rejected', 'cancelled')
+      `.catch(() => []);
+
+      avgDealSize = Number(dealStats[0]?.avg_deal) || 0;
+    }
+
+    // Fallback: derive from revenueByProject if no deals exist
+    if (avgDealSize === 0 && revenueByProject.length > 0) {
+      const projectTotal = revenueByProject.reduce(
+        (sum: number, p: any) => sum + (Number(p.revenue) || 0), 0
+      );
+      avgDealSize = Math.round(projectTotal / revenueByProject.length);
+    }
+
+    // Revenue by category (pitch format)
+    const revenueByCategory = await sql`
+      SELECT
+        COALESCE(p.format, 'Other') AS category,
+        COALESCE(SUM(i.amount), 0) AS revenue
+      FROM production_pipeline pp
+      JOIN pitches p ON pp.pitch_id = p.id
+      LEFT JOIN investments i ON i.pitch_id = pp.pitch_id
+        AND i.status IN ('active', 'funded', 'committed', 'completed')
+      WHERE pp.production_company_id::text = ${String(userId)}
+      GROUP BY p.format
+      ORDER BY revenue DESC
+    `.catch(() => []);
+
+    // Compute percentages for each category
+    const categoryTotal = revenueByCategory.reduce(
+      (sum: number, c: any) => sum + (Number(c.revenue) || 0), 0
+    );
+    const revenueByCategoryWithPct = revenueByCategory.map((c: any) => ({
+      category: String(c.category),
+      revenue: Number(c.revenue) || 0,
+      percentage: categoryTotal > 0
+        ? Math.round(((Number(c.revenue) || 0) / categoryTotal) * 100)
+        : 0,
+    }));
+
     return jsonResponse({
       success: true,
       data: {
@@ -524,6 +581,8 @@ export async function productionRevenueHandler(
         revenueByProject,
         revenueByMonth,
         projectedRevenue,
+        avgDealSize,
+        revenueByCategory: revenueByCategoryWithPct,
       },
     }, origin);
   } catch (error) {

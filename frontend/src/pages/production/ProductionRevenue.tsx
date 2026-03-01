@@ -3,7 +3,7 @@ import {
   DollarSign, TrendingUp, Calendar, Download,
   Filter, ArrowUp, FileText,
   PieChart, BarChart3, Activity, CreditCard,
-  AlertCircle, RefreshCw
+  AlertCircle, RefreshCw, Target
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -88,13 +88,22 @@ interface ChartDataPoint {
   revenue: number;
 }
 
+interface CategoryBreakdown {
+  category: string;
+  revenue: number;
+  percentage: number;
+}
+
 interface RevenueData {
   totalRevenue: number;
   monthlyRevenue: number;
   yearlyRevenue: number;
   growth: number;
+  avgDealSize: number;
+  projectedRevenue: number;
   transactions: Transaction[];
   chartData: ChartDataPoint[];
+  revenueByCategory: CategoryBreakdown[];
 }
 
 export default function ProductionRevenue() {
@@ -106,8 +115,11 @@ export default function ProductionRevenue() {
     monthlyRevenue: 0,
     yearlyRevenue: 0,
     growth: 0,
+    avgDealSize: 0,
+    projectedRevenue: 0,
     transactions: [],
-    chartData: []
+    chartData: [],
+    revenueByCategory: []
   });
 
   useEffect(() => {
@@ -151,13 +163,18 @@ export default function ProductionRevenue() {
         growth = Math.round(((curr - prev) / prev) * 100);
       }
 
+      const revenueByCategory = (data.revenueByCategory || []) as CategoryBreakdown[];
+
       setRevenueData({
         totalRevenue: Number(data.totalRevenue) || 0,
         monthlyRevenue: Number(data.monthlyRevenue) || 0,
         yearlyRevenue: Number(data.yearlyRevenue) || 0,
         growth,
+        avgDealSize: Number(data.avgDealSize) || 0,
+        projectedRevenue: Number(data.projectedRevenue) || 0,
         transactions,
-        chartData
+        chartData,
+        revenueByCategory
       });
     } catch (err) {
       console.error('Error fetching revenue data:', err);
@@ -310,7 +327,11 @@ export default function ProductionRevenue() {
               <Activity className="h-4 w-4 text-orange-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">$375K</div>
+              <div className="text-2xl font-bold">
+                {revenueData.avgDealSize >= 1000000
+                  ? `$${(revenueData.avgDealSize / 1000000).toFixed(2)}M`
+                  : `$${(revenueData.avgDealSize / 1000).toFixed(0)}K`}
+              </div>
               <p className="text-xs text-gray-500 mt-1">Per project</p>
             </CardContent>
           </Card>
@@ -417,58 +438,53 @@ export default function ProductionRevenue() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 bg-purple-600 rounded-full" />
-                    <span className="text-sm">Feature Films</span>
-                  </div>
-                  <span className="font-semibold">45%</span>
+              {revenueData.revenueByCategory.length === 0 ? (
+                <p className="text-sm text-gray-500">No category data yet</p>
+              ) : (
+                <div className="space-y-4">
+                  {revenueData.revenueByCategory.map((cat, i) => {
+                    const colors = ['bg-purple-600', 'bg-blue-600', 'bg-green-600', 'bg-orange-600', 'bg-pink-600', 'bg-teal-600'];
+                    return (
+                      <div key={cat.category} className="flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-3 h-3 ${colors[i % colors.length]} rounded-full`} />
+                          <span className="text-sm">{cat.category}</span>
+                        </div>
+                        <span className="font-semibold">{cat.percentage}%</span>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 bg-blue-600 rounded-full" />
-                    <span className="text-sm">TV Series</span>
-                  </div>
-                  <span className="font-semibold">30%</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 bg-green-600 rounded-full" />
-                    <span className="text-sm">Web Series</span>
-                  </div>
-                  <span className="font-semibold">15%</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 bg-orange-600 rounded-full" />
-                    <span className="text-sm">Documentaries</span>
-                  </div>
-                  <span className="font-semibold">10%</span>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Payment Methods</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="w-5 h-5" />
+                Projected Revenue
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Wire Transfer</span>
-                  <span className="font-semibold">65%</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">ACH</span>
-                  <span className="font-semibold">25%</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Check</span>
-                  <span className="font-semibold">10%</span>
-                </div>
+              <div className="text-3xl font-bold text-purple-700 mb-2">
+                {revenueData.projectedRevenue >= 1000000
+                  ? `$${(revenueData.projectedRevenue / 1000000).toFixed(2)}M`
+                  : `$${(revenueData.projectedRevenue / 1000).toFixed(0)}K`}
               </div>
+              <p className="text-sm text-gray-500">Annual projection based on recent trends</p>
+              {revenueData.yearlyRevenue > 0 && (
+                <div className="mt-4 pt-4 border-t">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600">Year to date</span>
+                    <span className="font-semibold">
+                      {revenueData.yearlyRevenue >= 1000000
+                        ? `$${(revenueData.yearlyRevenue / 1000000).toFixed(2)}M`
+                        : `$${(revenueData.yearlyRevenue / 1000).toFixed(0)}K`}
+                    </span>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
