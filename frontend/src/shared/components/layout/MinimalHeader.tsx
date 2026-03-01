@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Bell, ChevronDown, CircleUser, Coins, Menu, X, LogOut, Home, Store } from 'lucide-react';
-import { useBetterAuthStore } from '../../store/betterAuthStore';
-import { paymentsAPI } from '../../lib/apiServices';
-import { WebSocketStatusCompact } from '../WebSocketStatus';
+import { useBetterAuthStore } from '@/store/betterAuthStore';
+import { paymentsAPI } from '@/lib/apiServices';
+import { WebSocketStatusCompact } from '@/components/WebSocketStatus';
 
 
 interface MinimalHeaderProps {

@@ -15,7 +15,7 @@ import { AuthService } from './services/auth.service';
 // Import enhanced route components
 import { AllCreatorRoutes, AllInvestorRoutes, AllProductionRoutes } from './components/routing/AllEnhancedRoutes';
 // Import new Portal Layout
-import { PortalLayout } from './components/layout/PortalLayout';
+import { PortalLayout } from '@shared/components/layout/PortalLayout';
 import { ProfileGuard } from './components/guards/CreatorProfileGuard';
 import { PermissionRoute } from './components/PermissionGuard';
 import { Permission } from './hooks/usePermissions';

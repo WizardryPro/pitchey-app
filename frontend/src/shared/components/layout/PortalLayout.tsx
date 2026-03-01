@@ -2,9 +2,9 @@ import React, { useState, Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { MinimalHeader } from './MinimalHeader';
 import { BreadcrumbNav } from './BreadcrumbNav';
-import { EnhancedCreatorNav } from '../navigation/EnhancedCreatorNav';
-import { EnhancedInvestorNav } from '../navigation/EnhancedInvestorNav';
-import { EnhancedProductionNav } from '../navigation/EnhancedProductionNav';
+import { EnhancedCreatorNav } from '@/components/navigation/EnhancedCreatorNav';
+import { EnhancedInvestorNav } from '@/components/navigation/EnhancedInvestorNav';
+import { EnhancedProductionNav } from '@/components/navigation/EnhancedProductionNav';
 
 interface PortalLayoutProps {
   userType: string | null;
