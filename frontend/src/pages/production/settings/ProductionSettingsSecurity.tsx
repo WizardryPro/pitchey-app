@@ -9,8 +9,8 @@ import {
 import DashboardHeader from '../../../components/DashboardHeader';
 import { useBetterAuthStore } from '../../../store/betterAuthStore';
 import { getDashboardRoute } from '../../../utils/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
-import { Badge } from '../../../components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
+import { Badge } from '@shared/components/ui/badge';
 import { toast } from 'react-hot-toast';
 
 interface SecuritySettings {

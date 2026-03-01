@@ -6,8 +6,8 @@ import {
   ArrowUp, ArrowDown, Activity,
   Clock, AlertCircle
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
+import { Button } from '@shared/components/ui/button';
 import { useBetterAuthStore } from '../../store/betterAuthStore';
 import { API_URL } from '../../config';
 

@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useOnboardingStore } from '../../store/onboardingStore';
-import { Button } from '../ui/button';
-import { Card } from '../ui/card';
-import { Progress } from '../ui/progress';
+import { Button } from '@shared/components/ui/button';
+import { Card } from '@shared/components/ui/card';
+import { Progress } from '@shared/components/ui/progress';
 
 interface TutorialTooltipProps {
   target: string;

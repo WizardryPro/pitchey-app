@@ -5,8 +5,8 @@ import {
   History, Download, Filter, Search, ArrowUpRight,
   ArrowDownLeft, Calendar, DollarSign, RefreshCw, ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
+import { Button } from '@shared/components/ui/button';
 import { investorApi } from '@/services/investor.service';
 
 interface Transaction {

@@ -3,8 +3,8 @@ import {
   Search, Download, FileText,
   Filter, AlertCircle, CheckCircle2, Clock
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
+import { Button } from '@shared/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useBetterAuthStore } from '../../store/betterAuthStore';
 import { investorApi } from '@/services/investor.service';

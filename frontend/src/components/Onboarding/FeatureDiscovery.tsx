@@ -2,9 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { InteractiveTooltip } from './InteractiveTooltip';
-import { Card } from '../ui/card';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
+import { Card } from '@shared/components/ui/card';
+import { Button } from '@shared/components/ui/button';
+import { Badge } from '@shared/components/ui/badge';
 
 interface FeatureSpotlightProps {
   featureId: string;

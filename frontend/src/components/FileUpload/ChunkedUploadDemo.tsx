@@ -13,7 +13,7 @@ import {
   UploadError,
   ChunkedUploadSession
 } from '../../types/chunked-upload';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card';
 
 const ChunkedUploadDemo: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState<ChunkedUploadProgress | null>(null);

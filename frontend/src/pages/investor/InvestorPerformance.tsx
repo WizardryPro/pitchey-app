@@ -4,8 +4,8 @@ import {
   Calendar, BarChart3, PieChart, Download, RefreshCw,
   ArrowUp, ArrowDown, Activity, Globe, Users, Building
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@shared/components/ui/chart';
 import { 
   LineChart, Line, 
   BarChart, Bar, 

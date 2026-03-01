@@ -5,8 +5,8 @@ import {
   DollarSign, TrendingUp, Wallet, PiggyBank,
   CreditCard, Coins, BarChart3, Download, RefreshCw
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
+import { Button } from '@shared/components/ui/button';
 import { investorApi } from '@/services/investor.service';
 
 interface FinancialSummaryData {

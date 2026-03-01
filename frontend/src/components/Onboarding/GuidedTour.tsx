@@ -1,10 +1,10 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import { useOnboardingStore, type TutorialStep } from '../../store/onboardingStore';
 import { TutorialTooltip } from './TutorialTooltip';
-import { Button } from '../ui/button';
-import { Card } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Progress } from '../ui/progress';
+import { Button } from '@shared/components/ui/button';
+import { Card } from '@shared/components/ui/card';
+import { Badge } from '@shared/components/ui/badge';
+import { Progress } from '@shared/components/ui/progress';
 
 interface GuidedTourProps {
   tourId: string;

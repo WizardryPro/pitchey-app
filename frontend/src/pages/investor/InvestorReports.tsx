@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { investorApi } from '../../services/investor.service';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
+import { Button } from '@shared/components/ui/button';
 import { Download, FileText, Calendar, TrendingUp, DollarSign, BarChart3, PieChart, FileSpreadsheet, Loader2 } from 'lucide-react';
 
 interface Report {

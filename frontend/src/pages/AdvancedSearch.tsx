@@ -8,8 +8,8 @@ import {
 } from 'lucide-react';
 import DashboardHeader from '../components/DashboardHeader';
 import { useBetterAuthStore } from '../store/betterAuthStore';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
+import { Badge } from '@shared/components/ui/badge';
 import { toast } from 'react-hot-toast';
 import { API_URL } from '../config';
 

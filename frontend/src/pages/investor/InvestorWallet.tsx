@@ -5,11 +5,11 @@ import {
   DollarSign, TrendingUp, Plus, History, AlertCircle, Bell, Settings,
   CheckCircle, XCircle, Clock, ExternalLink
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
+import { Button } from '@shared/components/ui/button';
+import { Badge } from '@shared/components/ui/badge';
+import { Switch } from '@shared/components/ui/switch';
+import { Alert, AlertDescription } from '@shared/components/ui/alert';
 import { useBetterAuthStore } from '../../store/betterAuthStore';
 import { toast } from 'react-hot-toast';
 import { investorApi } from '@/services/investor.service';

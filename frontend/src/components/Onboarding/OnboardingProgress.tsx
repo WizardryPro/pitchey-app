@@ -1,9 +1,9 @@
 import React from 'react';
 import { useOnboardingStore } from '../../store/onboardingStore';
-import { Card } from '../ui/card';
-import { Progress } from '../ui/progress';
-import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
+import { Card } from '@shared/components/ui/card';
+import { Progress } from '@shared/components/ui/progress';
+import { Badge } from '@shared/components/ui/badge';
+import { Button } from '@shared/components/ui/button';
 
 interface OnboardingProgressProps {
   showDetails?: boolean;

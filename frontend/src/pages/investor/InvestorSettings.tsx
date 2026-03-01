@@ -4,8 +4,8 @@ import {
   User, Bell, Shield, CreditCard, FileText,
   Globe, Key, Smartphone, Mail, Save, Loader2
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
+import { Button } from '@shared/components/ui/button';
 import { toast } from 'react-hot-toast';
 import { investorApi } from '../../services/investor.service';
 

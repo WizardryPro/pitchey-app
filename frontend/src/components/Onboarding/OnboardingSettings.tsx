@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { useOnboarding } from './OnboardingManager';
-import { Card } from '../ui/card';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
-import { Progress } from '../ui/progress';
+import { Card } from '@shared/components/ui/card';
+import { Button } from '@shared/components/ui/button';
+import { Badge } from '@shared/components/ui/badge';
+import { Progress } from '@shared/components/ui/progress';
 import { OnboardingAnalytics } from './OnboardingAnalytics';
 import { AchievementGallery, ProgressStats } from './AchievementSystem';
 

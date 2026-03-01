@@ -1,7 +1,7 @@
 import {
   CreditCard, Shield, Building2
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card';
 
 const PaymentMethods = () => {
   return (

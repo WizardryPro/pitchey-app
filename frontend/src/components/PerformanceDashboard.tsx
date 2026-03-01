@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Progress } from '@/components/ui/progress'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card'
+import { Alert, AlertDescription } from '@shared/components/ui/alert'
+import { Progress } from '@shared/components/ui/progress'
+import { Badge } from '@shared/components/ui/badge'
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { Activity, AlertTriangle, CheckCircle, Clock, Database, Globe, HardDrive, Zap } from 'lucide-react'
 
