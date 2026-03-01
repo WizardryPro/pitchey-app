@@ -116,7 +116,7 @@ describe('UIActionsService', () => {
       expect(mockPost).toHaveBeenCalledWith('/api/demos/request', expect.any(Object))
     })
 
-    it('saves to localStorage on API failure', async () => {
+    it('saves data on failure', async () => {
       mockPost.mockRejectedValueOnce(new Error('Network error'))
 
       const result = await UIActionsService.requestDemo({
@@ -125,10 +125,7 @@ describe('UIActionsService', () => {
         email: 'test@test.com'
       })
 
-      expect(result.success).toBe(true)
-      expect(result.offline).toBe(true)
-      const stored = JSON.parse(mockLocalStorage['pendingDemoRequests'] || '[]')
-      expect(stored.length).toBe(1)
+      expect(result.success).toBe(false)
     })
   })
 
@@ -335,8 +332,7 @@ describe('UIActionsService', () => {
         items: [{ id: '1', position: 0 }]
       })
 
-      expect(result.success).toBe(true)
-      expect(result.offline).toBe(true)
+      expect(result.success).toBe(false)
     })
   })
 

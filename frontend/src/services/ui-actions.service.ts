@@ -81,14 +81,9 @@ export class UIActionsService {
     } catch (error) {
       console.error('Error requesting demo:', error);
       
-      // Store locally for later processing
-      const demoRequests = JSON.parse(localStorage.getItem('pendingDemoRequests') || '[]');
-      demoRequests.push({ ...data, timestamp: new Date().toISOString() });
-      localStorage.setItem('pendingDemoRequests', JSON.stringify(demoRequests));
-      
       return {
-        success: true,
-        message: 'Demo request saved. We\'ll process it as soon as possible.',
+        success: false,
+        message: 'Failed to submit demo request. Please try again later.',
         offline: true,
       };
     }
@@ -255,17 +250,9 @@ export class UIActionsService {
   /**
    * Get cached data for export
    */
-  private static getExportDataFromCache(type: string): any[] {
-    switch (type) {
-      case 'analytics':
-        return JSON.parse(localStorage.getItem('analyticsData') || '[]');
-      case 'pitches':
-        return JSON.parse(localStorage.getItem('pitchesData') || '[]');
-      case 'investments':
-        return JSON.parse(localStorage.getItem('investmentsData') || '[]');
-      default:
-        return [];
-    }
+  private static getExportDataFromCache(_type: string): any[] {
+    // No client-side cache — data must be fetched from API at export time
+    return [];
   }
 
   /**
@@ -311,13 +298,6 @@ export class UIActionsService {
   static async verifyTwoFactor(code: string) {
     try {
       const response = await apiClient.post<any>('/api/auth/2fa/verify', { code });
-
-      if (response.data?.success) {
-        // Store 2FA status
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        user.twoFactorEnabled = true;
-        localStorage.setItem('user', JSON.stringify(user));
-      }
 
       return response.data;
     } catch (error) {
@@ -459,8 +439,8 @@ export class UIActionsService {
       localStorage.setItem(`${data.type}_order`, JSON.stringify(data.items));
       
       return {
-        success: true,
-        message: 'Order saved locally',
+        success: false,
+        message: 'Failed to save order. Please try again.',
         offline: true,
       };
     }

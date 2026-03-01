@@ -63,7 +63,7 @@ describe('Register', () => {
   it('renders sign-in link', () => {
     renderRegister()
     const signInLink = screen.getByRole('link', { name: 'Sign in' })
-    expect(signInLink).toHaveAttribute('href', '/login')
+    expect(signInLink).toHaveAttribute('href', '/login/creator')
   })
 
   it('renders user type selection buttons', () => {
@@ -172,7 +172,7 @@ describe('Register', () => {
     })
 
     expect(screen.getByText(/we've sent a verification email to/i)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Go to login' })).toHaveAttribute('href', '/login')
+    expect(screen.getByRole('link', { name: 'Go to login' })).toHaveAttribute('href', '/login/creator')
   })
 
   it('stores pending verification email in localStorage on success', async () => {

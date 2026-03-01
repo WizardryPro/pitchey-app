@@ -62,83 +62,21 @@ export default function ProductionSettingsBilling() {
   const [activeTab, setActiveTab] = useState<'overview' | 'methods' | 'billing' | 'invoices'>('overview');
 
   const [billingInfo, setBillingInfo] = useState<BillingInfo>({
-    company: 'Stellar Productions LLC',
-    taxId: '12-3456789',
-    email: 'billing@stellarproductions.com',
+    company: '',
+    taxId: '',
+    email: user?.email || '',
     address: {
-      line1: '1234 Hollywood Blvd',
-      line2: 'Suite 567',
-      city: 'Los Angeles',
-      state: 'CA',
-      postal_code: '90028',
+      line1: '',
+      city: '',
+      state: '',
+      postal_code: '',
       country: 'US'
     }
   });
 
-  const [paymentMethods] = useState<PaymentMethod[]>([
-    {
-      id: '1',
-      type: 'credit',
-      last4: '4242',
-      brand: 'Visa',
-      expiryMonth: 12,
-      expiryYear: 2025,
-      isDefault: true,
-      billingAddress: {
-        name: 'Stellar Productions LLC',
-        line1: '1234 Hollywood Blvd',
-        line2: 'Suite 567',
-        city: 'Los Angeles',
-        state: 'CA',
-        postal_code: '90028',
-        country: 'US'
-      }
-    },
-    {
-      id: '2',
-      type: 'bank',
-      last4: '1234',
-      brand: 'Chase',
-      expiryMonth: 0,
-      expiryYear: 0,
-      isDefault: false,
-      billingAddress: {
-        name: 'Stellar Productions LLC',
-        line1: '1234 Hollywood Blvd',
-        city: 'Los Angeles',
-        state: 'CA',
-        postal_code: '90028',
-        country: 'US'
-      }
-    }
-  ]);
+  const [paymentMethods] = useState<PaymentMethod[]>([]);
 
-  const [invoices] = useState<Invoice[]>([
-    {
-      id: 'INV-2024-001',
-      date: '2024-01-01',
-      amount: 499,
-      status: 'paid',
-      description: 'Professional Plan - January 2024',
-      downloadUrl: '/invoices/INV-2024-001.pdf'
-    },
-    {
-      id: 'INV-2024-002',
-      date: '2024-02-01',
-      amount: 499,
-      status: 'paid',
-      description: 'Professional Plan - February 2024',
-      downloadUrl: '/invoices/INV-2024-002.pdf'
-    },
-    {
-      id: 'INV-2024-003',
-      date: '2024-03-01',
-      amount: 499,
-      status: 'pending',
-      description: 'Professional Plan - March 2024',
-      downloadUrl: '/invoices/INV-2024-003.pdf'
-    }
-  ]);
+  const [invoices] = useState<Invoice[]>([]);
 
   const handleInputChange = (field: string, value: string) => {
     if (field.includes('.')) {
@@ -161,9 +99,7 @@ export default function ProductionSettingsBilling() {
   const handleSave = async () => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      toast.success('Billing information updated successfully!');
+      toast.error('Billing integration is not yet configured. Contact support to set up Stripe.');
     } catch (error) {
       toast.error('Failed to update billing information');
     } finally {
@@ -172,15 +108,15 @@ export default function ProductionSettingsBilling() {
   };
 
   const downloadInvoice = (invoice: Invoice) => {
-    toast.success(`Downloading invoice ${invoice.id}...`);
+    toast.error('Invoice downloads are not yet available');
   };
 
   const addPaymentMethod = () => {
-    toast.success('Redirecting to secure payment method setup...');
+    toast.error('Payment method management requires Stripe configuration');
   };
 
   const removePaymentMethod = (id: string) => {
-    toast.success('Payment method removed successfully');
+    toast.error('Payment method management requires Stripe configuration');
   };
 
   const formatCurrency = (amount: number) => {

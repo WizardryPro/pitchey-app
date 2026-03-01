@@ -418,28 +418,28 @@ export default function ProductionStats() {
                 <TrendingUp className="w-8 h-8 text-green-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-green-900">Revenue Growth</p>
-                <p className="text-lg font-bold text-green-600">+15.8%</p>
+                <p className="text-sm font-medium text-green-900">Deal Conversion</p>
+                <p className="text-lg font-bold text-green-600">{kpiSummary?.dealConversionRate != null ? `${kpiSummary.dealConversionRate}%` : '—'}</p>
               </div>
             </div>
-            
+
             <div className="flex items-center p-4 bg-blue-50 rounded-lg">
               <div className="flex-shrink-0">
-                <Users className="w-8 h-8 text-blue-600" />
+                <Clock className="w-8 h-8 text-blue-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-blue-900">Team Expansion</p>
-                <p className="text-lg font-bold text-blue-600">+8 Members</p>
+                <p className="text-sm font-medium text-blue-900">Avg Production Time</p>
+                <p className="text-lg font-bold text-blue-600">{kpiSummary?.avgProductionTime != null ? `${kpiSummary.avgProductionTime}d` : '—'}</p>
               </div>
             </div>
-            
+
             <div className="flex items-center p-4 bg-purple-50 rounded-lg">
               <div className="flex-shrink-0">
                 <CheckCircle className="w-8 h-8 text-purple-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-purple-900">Completion Rate</p>
-                <p className="text-lg font-bold text-purple-600">94%</p>
+                <p className="text-sm font-medium text-purple-900">Success Rate</p>
+                <p className="text-lg font-bold text-purple-600">{kpiSummary?.successRate != null ? `${kpiSummary.successRate}%` : '—'}</p>
               </div>
             </div>
           </div>

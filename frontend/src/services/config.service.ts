@@ -89,7 +89,7 @@ const FALLBACK_CONFIG: ConfigurationData = {
 };
 
 class ConfigService {
-  private config: ConfigurationData | null = FALLBACK_CONFIG;
+  private config: ConfigurationData | null = null;
   private isLoading = false;
   private loadPromise: Promise<ConfigurationData> | null = null;
 

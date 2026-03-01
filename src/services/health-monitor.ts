@@ -275,10 +275,10 @@ export class HealthMonitor {
     // This would connect to Hyperdrive metrics
     // Placeholder for actual implementation
     return {
-      activeConnections: 5,
-      idleConnections: 15,
-      maxConnections: 25,
-      waitingRequests: 0
+      activeConnections: null,
+      idleConnections: null,
+      maxConnections: null,
+      waitingRequests: null
     };
   }
 
@@ -444,25 +444,25 @@ export class HealthMonitor {
   /**
    * Calculate error rate
    */
-  private async calculateErrorRate(): Promise<number> {
+  private async calculateErrorRate(): Promise<number | null> {
     // Would fetch from CloudFlare Analytics or metrics endpoint
-    return 0.005; // Placeholder
+    return null;
   }
 
   /**
    * Calculate cache hit rate
    */
-  private async calculateCacheHitRate(): Promise<number> {
+  private async calculateCacheHitRate(): Promise<number | null> {
     // Would fetch from cache statistics
-    return 0.85; // Placeholder
+    return null;
   }
 
   /**
    * Get active user count
    */
-  private async getActiveUsers(): Promise<number> {
+  private async getActiveUsers(): Promise<number | null> {
     // Would fetch from WebSocket connections or session store
-    return 42; // Placeholder
+    return null;
   }
 
   /**

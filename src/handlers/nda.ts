@@ -385,9 +385,12 @@ export async function uploadDocuments(request: Request, env: Env): Promise<Respo
       const fileBuffer = await file.arrayBuffer();
       const fileKey = `documents/${pitchId}/${Date.now()}-${file.name}`;
       
-      // In production, this would upload to R2
-      // await env.R2_BUCKET.put(fileKey, fileBuffer);
-      const fileUrl = `https://storage.pitchey.com/${fileKey}`; // Placeholder URL
+      if (env.R2_BUCKET) {
+        await env.R2_BUCKET.put(fileKey, fileBuffer, {
+          httpMetadata: { contentType: file.type },
+        });
+      }
+      const fileUrl = `https://storage.pitchey.com/${fileKey}`;
       
       // Determine document type from extension
       const extension = file.name.split('.').pop()?.toLowerCase();

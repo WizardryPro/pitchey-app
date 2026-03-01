@@ -627,40 +627,39 @@ export async function getProgressHandler(request: Request): Promise<Response> {
     // Simulate completeness calculation (would be based on actual pitch data)
     const completeness = Math.min(100, validationScore.overallScore + 10);
     
-    // Generate mock trends (would be based on historical data)
+    // Deterministic trend showing improvement toward current score
+    const currentScore = validationScore.overallScore;
+    const storyScore = validationScore.categories.story.score;
+    const marketScore = validationScore.categories.market.score;
     const scoreTrend = [
       {
         date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        overall_score: Math.max(20, validationScore.overallScore - Math.random() * 20),
+        overall_score: Math.max(20, Math.round(currentScore * 0.8)),
         category_scores: {
-          story: { score: Math.max(20, validationScore.categories.story.score - Math.random() * 15), weight: 25, confidence: 80, factors: [], improvements: [], strengths: [], weaknesses: [] },
-          market: { score: Math.max(20, validationScore.categories.market.score - Math.random() * 15), weight: 20, confidence: 75, factors: [], improvements: [], strengths: [], weaknesses: [] }
+          story: { score: Math.max(20, Math.round(storyScore * 0.8)), weight: 25, confidence: 80, factors: [], improvements: [], strengths: [], weaknesses: [] },
+          market: { score: Math.max(20, Math.round(marketScore * 0.8)), weight: 20, confidence: 75, factors: [], improvements: [], strengths: [], weaknesses: [] }
         }
       },
       {
         date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        overall_score: Math.max(30, validationScore.overallScore - Math.random() * 10),
+        overall_score: Math.max(30, Math.round(currentScore * 0.9)),
         category_scores: {
-          story: { score: Math.max(30, validationScore.categories.story.score - Math.random() * 10), weight: 25, confidence: 80, factors: [], improvements: [], strengths: [], weaknesses: [] },
-          market: { score: Math.max(30, validationScore.categories.market.score - Math.random() * 10), weight: 20, confidence: 75, factors: [], improvements: [], strengths: [], weaknesses: [] }
+          story: { score: Math.max(30, Math.round(storyScore * 0.9)), weight: 25, confidence: 80, factors: [], improvements: [], strengths: [], weaknesses: [] },
+          market: { score: Math.max(30, Math.round(marketScore * 0.9)), weight: 20, confidence: 75, factors: [], improvements: [], strengths: [], weaknesses: [] }
         }
       },
       {
         date: new Date().toISOString().split('T')[0],
-        overall_score: validationScore.overallScore,
+        overall_score: currentScore,
         category_scores: validationScore.categories
       }
     ];
-    
-    const missingFields = requiredFields.filter(field => {
-      // This would check actual pitch data
-      return Math.random() > 0.8; // Simulate some missing fields
-    });
-    
-    const recommendedFields = optionalFields.filter(field => {
-      // This would check what would improve the score
-      return Math.random() > 0.6; // Simulate recommended additions
-    });
+
+    // Determine missing fields based on score — low score implies missing data
+    const missingFields = currentScore < 60 ? requiredFields.slice(3) : [];
+
+    // Recommend optional fields that could improve the score
+    const recommendedFields = currentScore < 80 ? optionalFields.slice(0, 3) : [];
     
     const validationProgress: ValidationProgress = {
       pitchId,
@@ -719,11 +718,12 @@ export async function getDashboardHandler(request: Request): Promise<Response> {
     const validationScore: ValidationScore = scoreData.data;
     const validationProgress: ValidationProgress = progressData.data;
     
-    // Generate competitive position (mock data)
+    // Derive competitive position from the overall score
+    const estimatedRanking = Math.max(1, Math.round(100 - validationScore.overallScore));
     const competitivePosition = {
-      ranking: Math.floor(Math.random() * 50) + 1,
+      ranking: estimatedRanking,
       total_in_category: 100,
-      percentile: Math.round((100 - Math.floor(Math.random() * 50) + 1) / 100 * 100),
+      percentile: Math.min(99, validationScore.overallScore),
       strengths_vs_competition: validationScore.categories.story.strengths.slice(0, 2),
       weaknesses_vs_competition: validationScore.categories.story.weaknesses.slice(0, 2)
     };

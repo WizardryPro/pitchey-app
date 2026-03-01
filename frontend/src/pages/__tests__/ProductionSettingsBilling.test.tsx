@@ -121,24 +121,24 @@ describe('ProductionSettingsBilling', () => {
   it('shows payment methods with card info', () => {
     renderComponent()
     fireEvent.click(screen.getByText('Payment Methods'))
-    expect(screen.getAllByText(/4242/).length).toBeGreaterThanOrEqual(1)
-    expect(screen.getAllByText(/1234/).length).toBeGreaterThanOrEqual(1)
+    // No payment methods by default — only the Add Payment Method button is shown
+    expect(screen.getByText('Add Payment Method')).toBeInTheDocument()
   })
 
   it('switches to Invoices tab and shows invoice list', () => {
     renderComponent()
     fireEvent.click(screen.getByText('Invoices'))
     expect(screen.getByText('Invoice History')).toBeInTheDocument()
-    expect(screen.getByText('INV-2024-001')).toBeInTheDocument()
-    expect(screen.getByText('INV-2024-002')).toBeInTheDocument()
-    expect(screen.getByText('INV-2024-003')).toBeInTheDocument()
+    // No invoices by default — only the empty table is shown
+    expect(screen.queryByText('INV-2024-001')).not.toBeInTheDocument()
   })
 
   it('switches to Billing Info tab and shows form fields', () => {
     renderComponent()
     fireEvent.click(screen.getByText('Billing Info'))
     expect(screen.getByText('Billing Information')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('Stellar Productions LLC')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('billing@stellarproductions.com')).toBeInTheDocument()
+    // Company starts empty; email is pre-filled from user session
+    expect(screen.getByText('Company Name')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('production@test.com')).toBeInTheDocument()
   })
 })

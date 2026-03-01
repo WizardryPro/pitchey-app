@@ -119,32 +119,31 @@ describe('ProductionSettingsSecurity', () => {
     expect(screen.getByText(/Two-Factor Authentication is/)).toBeInTheDocument()
   })
 
-  it('shows 2FA enabled state with backup codes options', () => {
+  it('shows 2FA disabled state with enable option', () => {
     renderComponent()
     fireEvent.click(screen.getByText('Two-Factor Auth'))
-    // Default state has twoFactorEnabled: true
-    expect(screen.getByText('2FA is Active')).toBeInTheDocument()
-    expect(screen.getByText('View Backup Codes')).toBeInTheDocument()
-    expect(screen.getByText('Regenerate Codes')).toBeInTheDocument()
-    expect(screen.getByText('Disable 2FA')).toBeInTheDocument()
+    // Default state has twoFactorEnabled: false
+    expect(screen.getByText('Two-Factor Authentication is Disabled')).toBeInTheDocument()
+    expect(screen.getByText('Enable 2FA')).toBeInTheDocument()
+    expect(screen.getByText('Setup 2FA')).toBeInTheDocument()
   })
 
   it('switches to Active Sessions tab', () => {
     renderComponent()
     fireEvent.click(screen.getByText('Active Sessions'))
     expect(screen.getAllByText('Active Sessions').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText('MacBook Pro')).toBeInTheDocument()
-    expect(screen.getByText('iPhone 15')).toBeInTheDocument()
-    expect(screen.getByText('Windows Desktop')).toBeInTheDocument()
+    // No sessions by default
+    expect(screen.queryByText('MacBook Pro')).not.toBeInTheDocument()
+    expect(screen.getByText('Download Report')).toBeInTheDocument()
   })
 
   it('switches to Security Logs tab', () => {
     renderComponent()
     fireEvent.click(screen.getByText('Security Logs'))
     expect(screen.getByText('Security Activity')).toBeInTheDocument()
-    expect(screen.getByText('Login successful')).toBeInTheDocument()
-    expect(screen.getByText('Password changed')).toBeInTheDocument()
-    expect(screen.getByText('Failed login attempt')).toBeInTheDocument()
+    // No security logs by default
+    expect(screen.queryByText('Login successful')).not.toBeInTheDocument()
+    expect(screen.getByText('Refresh')).toBeInTheDocument()
   })
 
   it('navigates on Cancel click', () => {

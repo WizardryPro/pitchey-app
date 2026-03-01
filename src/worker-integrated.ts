@@ -4296,16 +4296,16 @@ class RouteRegistry {
           connections: dbHealthData.data?.performance?.connection_pool === 'active' ? 'Active' : 'Inactive'
         },
         auth: {
-          status: 'healthy', // Better Auth is operational
-          activeSessions: 150, // Placeholder - would query from session table
-          successRate: 98.5,
+          status: 'healthy',
+          activeSessions: null,
+          successRate: null,
           provider: 'Better Auth'
         },
         api: {
           status: overallHealthData.data?.status === 'ok' ? 'healthy' : 'error',
-          avgResponseTime: 125, // Placeholder - would calculate from Analytics Engine
-          errorRate: 0.8,
-          requestsPerMinute: 450
+          avgResponseTime: null,
+          errorRate: null,
+          requestsPerMinute: null
         },
         analytics: analyticsData,
         timestamp: new Date().toISOString(),
@@ -5986,7 +5986,9 @@ pitchey_analytics_datapoints_per_minute 1250
     const key = url.pathname.split('/').pop();
 
     try {
-      // Mock successful deletion
+      if (key && this.env.R2_BUCKET) {
+        await this.env.R2_BUCKET.delete(`uploads/${authResult.user.id}/${key}`);
+      }
       return builder.success({
         message: 'File deleted successfully',
         key: key
@@ -6480,31 +6482,25 @@ pitchey_analytics_datapoints_per_minute 1250
         return builder.error(ErrorCode.VALIDATION_ERROR, 'Missing sessionId');
       }
 
-      // Retrieve session info (would normally fetch from KV/database)
-      // For now, return a mock session
-      const session = {
-        sessionId,
-        uploadId: `multipart-${sessionId}`,
-        fileKey: `uploads/${authResult.user.id}/session-${sessionId}`,
-        fileName: `file-${sessionId.substring(0, 8)}.txt`,
-        fileSize: 1024000,
-        mimeType: 'text/plain',
-        chunkSize: 262144, // 256KB
-        totalChunks: 4,
-        uploadedChunks: [0, 1], // Chunks 0 and 1 completed
-        status: 'uploading',
-        category: 'document',
-        createdAt: new Date(Date.now() - 300000).toISOString(), // 5 minutes ago
-        updatedAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-      };
+      // Try to retrieve session from KV
+      const kvKey = `upload_session:${authResult.user.id}:${sessionId}`;
+      const stored = this.env.UPLOAD_SESSIONS ? await this.env.UPLOAD_SESSIONS.get(kvKey) : null;
+
+      if (!stored) {
+        return builder.error(ErrorCode.NOT_FOUND, 'Upload session not found or expired');
+      }
+
+      const session = JSON.parse(stored);
+      const uploadedChunks: number[] = session.uploadedChunks || [];
+      const totalChunks: number = session.totalChunks || 0;
+      const remainingChunks = Array.from({ length: totalChunks }, (_, i) => i).filter(i => !uploadedChunks.includes(i));
 
       const resumeInfo = {
         sessionId,
-        uploadedChunks: session.uploadedChunks,
-        remainingChunks: [2, 3], // Remaining chunks to upload
-        nextChunkIndex: 2,
-        canResume: true
+        uploadedChunks,
+        remainingChunks,
+        nextChunkIndex: remainingChunks[0] ?? totalChunks,
+        canResume: remainingChunks.length > 0
       };
 
       return builder.success({
@@ -6531,19 +6527,35 @@ pitchey_analytics_datapoints_per_minute 1250
         return builder.error(ErrorCode.VALIDATION_ERROR, 'Missing sessionId');
       }
 
-      // Check if session exists and can be resumed
-      // For now, return mock resume information
-      const resumeInfo = {
-        sessionId,
-        canResume: true,
-        uploadedChunks: [0, 1, 2], // Already uploaded chunks
-        remainingChunks: [3, 4], // Chunks still to upload
-        nextChunkIndex: 3,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        reason: 'Session found and ready to resume'
-      };
+      // Retrieve session from KV
+      const kvKey = `upload_session:${authResult.user.id}:${sessionId}`;
+      const stored = this.env.UPLOAD_SESSIONS ? await this.env.UPLOAD_SESSIONS.get(kvKey) : null;
 
-      return builder.success(resumeInfo);
+      if (!stored) {
+        return builder.success({
+          sessionId,
+          canResume: false,
+          uploadedChunks: [],
+          remainingChunks: [],
+          nextChunkIndex: 0,
+          reason: 'Session not found or expired'
+        });
+      }
+
+      const session = JSON.parse(stored);
+      const uploadedChunks: number[] = session.uploadedChunks || [];
+      const totalChunks: number = session.totalChunks || 0;
+      const remainingChunks = Array.from({ length: totalChunks }, (_, i) => i).filter(i => !uploadedChunks.includes(i));
+
+      return builder.success({
+        sessionId,
+        canResume: remainingChunks.length > 0,
+        uploadedChunks,
+        remainingChunks,
+        nextChunkIndex: remainingChunks[0] ?? totalChunks,
+        expiresAt: session.expiresAt || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        reason: 'Session found and ready to resume'
+      });
 
     } catch (error) {
       console.error('Resume upload session error:', error);
@@ -8081,8 +8093,8 @@ pitchey_analytics_datapoints_per_minute 1250
           totalPitches: this.safeParseInt(overview.total_pitches),
           totalInvestments: this.safeParseInt(investments.total_investments),
           totalRevenue: this.safeParseFloat(investments.total_revenue),
-          averageRating: this.safeParseFloat(overview.avg_rating) || 4.2,
-          conversionRate: 3.2,
+          averageRating: this.safeParseFloat(overview.avg_rating) || null,
+          conversionRate: null,
           activeUsers: this.safeParseInt(users.active_users)
         },
         trends: {
@@ -8109,7 +8121,7 @@ pitchey_analytics_datapoints_per_minute 1250
             title: p.title,
             views: this.safeParseInt(p.views),
             investments: this.safeParseInt(p.investments),
-            rating: this.safeParseFloat(p.rating) || 4.0
+            rating: this.safeParseFloat(p.rating) || null
           })),
           topCreators: topCreatorsResult.map((c: any) => ({
             id: c.id,
@@ -8121,9 +8133,9 @@ pitchey_analytics_datapoints_per_minute 1250
           topInvestors: []
         },
         engagement: {
-          averageSessionDuration: 320,
-          bounceRate: 28.5,
-          pageViewsPerSession: 4.8,
+          averageSessionDuration: null,
+          bounceRate: null,
+          pageViewsPerSession: null,
           mostViewedPages: []
         }
       });
@@ -9295,7 +9307,7 @@ pitchey_analytics_datapoints_per_minute 1250
 
     try {
       const [overview] = await this.db.query(`
-        SELECT 
+        SELECT
           COALESCE(SUM(i.amount), 0) as total_raised,
           COUNT(DISTINCT i.investor_id) as total_investors,
           COUNT(DISTINCT i.pitch_id) as funded_pitches,
@@ -9305,12 +9317,24 @@ pitchey_analytics_datapoints_per_minute 1250
         WHERE p.user_id = $1 AND i.status = 'completed'
       `, [authResult.user.id]);
 
+      const recentInvestments = await this.db.query(`
+        SELECT i.id, i.amount, i.status, i.created_at,
+               p.title AS pitch_title,
+               COALESCE(u.name, CONCAT(u.first_name, ' ', u.last_name), u.email) AS investor_name
+        FROM investments i
+        JOIN pitches p ON i.pitch_id = p.id
+        JOIN users u ON i.investor_id = u.id
+        WHERE p.user_id = $1
+        ORDER BY i.created_at DESC
+        LIMIT 5
+      `, [authResult.user.id]);
+
       return builder.success({
         totalRaised: overview?.total_raised || 0,
         totalInvestors: overview?.total_investors || 0,
         fundedPitches: overview?.funded_pitches || 0,
         averageInvestment: overview?.average_investment || 0,
-        recentInvestments: []
+        recentInvestments: recentInvestments || []
       });
     } catch (error) {
       return errorHandler(error, request);
@@ -11539,7 +11563,7 @@ pitchey_analytics_datapoints_per_minute 1250
 
     try {
       // Fetch multiple data sources in parallel
-      const [notifications, unreadCount, dashboardStats, presenceUsers] = await Promise.all([
+      const [notifications, unreadCount, dashboardStats, presenceUsers, recentMessages] = await Promise.all([
         // Get recent notifications
         this.db.query(`
           SELECT id, type, title, message, created_at, is_read
@@ -11572,7 +11596,18 @@ pitchey_analytics_datapoints_per_minute 1250
           WHERE up.updated_at > NOW() - INTERVAL '5 minutes'
             AND up.status != 'offline'
           ORDER BY up.updated_at DESC
-        `).catch(() => [])
+        `).catch(() => []),
+
+        // Get recent unread messages
+        this.db.query(`
+          SELECT m.id, m.sender_id, m.content, m.created_at,
+                 COALESCE(u.name, u.username, u.email) as sender_name
+          FROM messages m
+          JOIN users u ON m.sender_id = u.id
+          WHERE m.recipient_id = $1 AND m.read_at IS NULL
+          ORDER BY m.created_at DESC
+          LIMIT 5
+        `, [authResult.user.id]).catch(() => [])
       ]);
 
       // Determine next poll interval based on activity
@@ -11581,7 +11616,7 @@ pitchey_analytics_datapoints_per_minute 1250
 
       return builder.success({
         notifications: notifications || [],
-        messages: [], // Messages would come from a messaging system if implemented
+        messages: recentMessages || [],
         dashboardMetrics: dashboardStats,
         presence: { users: presenceUsers || [] },
         unreadCount: this.safeParseInt(unreadCount),
@@ -17398,56 +17433,25 @@ Signatures: [To be completed upon signing]
    */
   private async getDatabasePerformance(request: Request): Promise<Response> {
     try {
-      // This would query Analytics Engine datasets in production
-      // For now, return sample structure based on current implementation
+      // Requires Analytics Engine integration for real metrics
       const performanceData = {
         overview: {
-          total_queries: 0,
-          avg_response_time: 55, // Based on current monitoring
-          slow_queries_count: 0,
-          error_rate: 0.1,
-          connections_active: 12,
-          database_health: 'excellent'
+          total_queries: null,
+          avg_response_time: null,
+          slow_queries_count: null,
+          error_rate: null,
+          connections_active: null,
+          database_health: 'unknown'
         },
         query_performance: {
-          select_queries: {
-            count: 0,
-            avg_duration_ms: 45,
-            p95_duration_ms: 89,
-            p99_duration_ms: 156
-          },
-          insert_queries: {
-            count: 0,
-            avg_duration_ms: 52,
-            p95_duration_ms: 98,
-            p99_duration_ms: 167
-          },
-          update_queries: {
-            count: 0,
-            avg_duration_ms: 48,
-            p95_duration_ms: 92,
-            p99_duration_ms: 145
-          },
-          delete_queries: {
-            count: 0,
-            avg_duration_ms: 41,
-            p95_duration_ms: 78,
-            p99_duration_ms: 124
-          }
+          select_queries: { count: 0, avg_duration_ms: null, p95_duration_ms: null, p99_duration_ms: null },
+          insert_queries: { count: 0, avg_duration_ms: null, p95_duration_ms: null, p99_duration_ms: null },
+          update_queries: { count: 0, avg_duration_ms: null, p95_duration_ms: null, p99_duration_ms: null },
+          delete_queries: { count: 0, avg_duration_ms: null, p95_duration_ms: null, p99_duration_ms: null }
         },
         table_performance: {
-          most_accessed: [
-            { table: 'pitches', access_count: 0, avg_duration: 45 },
-            { table: 'users', access_count: 0, avg_duration: 38 },
-            { table: 'investments', access_count: 0, avg_duration: 52 },
-            { table: 'ndas', access_count: 0, avg_duration: 41 },
-            { table: 'notifications', access_count: 0, avg_duration: 35 }
-          ],
-          slowest: [
-            { table: 'user_analytics_daily', avg_duration: 89 },
-            { table: 'pitch_view_history', avg_duration: 76 },
-            { table: 'investment_history', avg_duration: 67 }
-          ]
+          most_accessed: [],
+          slowest: []
         },
         time_series: {
           last_hour: [],
@@ -17873,25 +17877,8 @@ Signatures: [To be completed upon signing]
 
       query += ` ORDER BY timestamp DESC LIMIT ${limit} OFFSET ${offset}`;
 
-      // Mock data for now - in real implementation, query Analytics Engine
-      const traces = [
-        {
-          traceId: 'abc123def456',
-          operation: 'api.pitches.get',
-          status: 'success',
-          duration: 145,
-          timestamp: new Date().toISOString(),
-          service: 'pitchey-api'
-        },
-        {
-          traceId: 'def456ghi789',
-          operation: 'db.pitches.select',
-          status: 'success',
-          duration: 89,
-          timestamp: new Date(Date.now() - 60000).toISOString(),
-          service: 'pitchey-api'
-        }
-      ];
+      // Tracing requires Analytics Engine integration — return empty until configured
+      const traces: any[] = [];
 
       const origin = request.headers.get('Origin');
       return new Response(JSON.stringify({

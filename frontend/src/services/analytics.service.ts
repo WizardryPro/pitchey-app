@@ -139,7 +139,7 @@ export class AnalyticsService {
   private static getDefaultPitchAnalytics(pitchId: number): PitchAnalytics {
     return {
       pitchId,
-      title: 'Analytics Unavailable',
+      title: '',
       views: 0,
       uniqueViews: 0,
       likes: 0,
@@ -164,7 +164,7 @@ export class AnalyticsService {
   private static getDefaultUserAnalytics(userId: number): UserAnalytics {
     return {
       userId,
-      username: 'Analytics Unavailable',
+      username: '',
       totalPitches: 0,
       publishedPitches: 0,
       totalViews: 0,
@@ -278,14 +278,14 @@ export class AnalyticsService {
       // So response.data is { analytics: {...} }
       if (!response.success || !response.data?.analytics) {
         console.warn('User analytics not available:', response.error?.message);
-        return this.getDefaultUserAnalytics(userId || 1);
+        return this.getDefaultUserAnalytics(userId ?? 0);
       }
 
       // Transform the API response with defensive parsing
       const apiAnalytics = safeAccess(response, 'data.analytics', {});
-      
+
       return {
-        userId: userId || 1,
+        userId: userId ?? 0,
         username: safeString(safeAccess(apiAnalytics, 'username', 'User')),
         totalPitches: safeNumber(safeAccess(apiAnalytics, 'totalPitches', 0)),
         publishedPitches: safeNumber(safeAccess(apiAnalytics, 'publishedPitches', 0)),
@@ -307,7 +307,7 @@ export class AnalyticsService {
       };
     } catch (error) {
       console.error('Failed to fetch user analytics:', error);
-      return this.getDefaultUserAnalytics(userId || 1);
+      return this.getDefaultUserAnalytics(userId ?? 0);
     }
   }
 
@@ -405,7 +405,7 @@ export class AnalyticsService {
   static async trackEvent(event: {
     type: string;
     entityType: string;
-    entityId: number;
+    entityId: number | null;
     metadata?: any;
   }): Promise<void> {
     try {
@@ -428,7 +428,7 @@ export class AnalyticsService {
     await this.trackEvent({
       type: 'page_view',
       entityType: 'page',
-      entityId: 0,
+      entityId: null,
       metadata: { page, ...metadata }
     });
   }

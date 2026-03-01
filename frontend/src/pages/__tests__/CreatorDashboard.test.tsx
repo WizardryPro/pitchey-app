@@ -141,19 +141,28 @@ vi.mock('../../utils/defensive', () => ({
 const mockDashboardResponse = (overrides: Record<string, any> = {}) => ({
   success: true,
   data: {
-    totalViews: 150,
-    totalPitches: 5,
-    publishedPitches: 3,
-    totalNDAs: 2,
-    fundingReceived: 10000,
-    successRate: 60,
-    pitches: [
+    overview: {
+      totalPitches: 5,
+      totalViews: 150,
+      totalFollowers: 10,
+      totalInvestments: 3,
+      activeDeals: 3,
+      pendingActions: 2,
+    },
+    revenue: {
+      totalRevenue: 10000,
+    },
+    recentPitches: [
       { id: 1, title: 'Pitch A', status: 'published', views: 100, likes: 10, ndaRequests: 1, rating: 4.5 },
       { id: 2, title: 'Pitch B', status: 'draft', views: 50, likes: 5, ndaRequests: 1, rating: 3.5 },
     ],
-    recentActivity: [
-      { id: 1, title: 'New view on Pitch A', description: '2 hours ago', color: 'blue', icon: 'eye' },
-    ],
+    recentActivity: {
+      investments: [],
+      ndaRequests: [],
+      notifications: [
+        { id: 1, title: 'New view on Pitch A', description: '2 hours ago', color: 'blue', icon: 'eye' },
+      ],
+    },
     ...overrides,
   },
 })
@@ -186,7 +195,7 @@ describe('CreatorDashboard', () => {
     mockGetSubscriptionStatus.mockResolvedValue({ tier: 'watcher', status: 'inactive' })
     mockGetCreatorFunding.mockResolvedValue({
       success: true,
-      data: { totalFunding: 25000, activeFunding: 15000, pendingFunding: 10000, investors: [], recentInvestments: [] },
+      data: { totalRaised: 25000, fundedPitches: 2, totalInvestors: 3, averageInvestment: 12500, recentInvestments: [] },
     })
 
     // Ensure localStorage has user data
@@ -280,9 +289,9 @@ describe('CreatorDashboard', () => {
         expect(screen.getAllByText('Total Views').length).toBeGreaterThanOrEqual(1)
         expect(screen.getByText('Pending NDAs')).toBeInTheDocument()
         // Values appear in hero + KPI cards — verify at least one instance
-        expect(screen.getAllByText('3').length).toBeGreaterThanOrEqual(1)   // publishedPitches
+        expect(screen.getAllByText('5').length).toBeGreaterThanOrEqual(1)   // totalPitches (used for active too)
         expect(screen.getAllByText('150').length).toBeGreaterThanOrEqual(1) // totalViews
-        expect(screen.getAllByText('2').length).toBeGreaterThanOrEqual(1)   // totalNDAs
+        expect(screen.getAllByText('2').length).toBeGreaterThanOrEqual(1)   // pendingActions
       })
     })
 
@@ -311,7 +320,7 @@ describe('CreatorDashboard', () => {
     it('shows empty pitch state when no pitches', async () => {
       mockApiGet.mockImplementation((url: string) => {
         if (url.includes('/api/creator/dashboard')) {
-          return Promise.resolve(mockDashboardResponse({ pitches: [], totalPitches: 0, publishedPitches: 0 }))
+          return Promise.resolve(mockDashboardResponse({ recentPitches: [], overview: { totalPitches: 0, totalViews: 0, totalFollowers: 0, totalInvestments: 0, activeDeals: 0, pendingActions: 0 } }))
         }
         return Promise.resolve({ success: true, data: { followers: [], following: [] } })
       })

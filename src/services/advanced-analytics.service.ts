@@ -501,7 +501,7 @@ export class AdvancedAnalyticsService {
       production_success_rate: 72.5
     };
     
-    const value = mockValues[metric.id] || Math.floor(Math.random() * 1000);
+    const value = mockValues[metric.id] || 0;
     return this.formatMetricValue(value, metric.dataType);
   }
 
@@ -568,21 +568,8 @@ export class AdvancedAnalyticsService {
     config: AdvancedAnalyticsConfig,
     userId?: number
   ): Promise<any> {
-    // Generate mock trend data
-    const days = 30;
-    const daily = Array.from({ length: days }, (_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - (days - i - 1));
-      
-      return {
-        date: date.toISOString().split('T')[0],
-        views: Math.floor(Math.random() * 1000) + 200,
-        engagement: Math.random() * 0.5 + 0.1,
-        revenue: Math.floor(Math.random() * 5000) + 500
-      };
-    });
-    
-    return { daily, weekly: [], monthly: [] };
+    // Return empty trend data — no real data source available yet
+    return { daily: [], weekly: [], monthly: [] };
   }
 
   private async getGeographicData(config: AdvancedAnalyticsConfig, userId?: number): Promise<any> {
@@ -673,20 +660,20 @@ export class AdvancedAnalyticsService {
     return Array.from({ length: days }, (_, i) => {
       const date = new Date();
       date.setDate(date.getDate() + i + 1);
-      
+
       const predicted = baseValue * Math.pow(1 + growthRate, i);
-      const noise = predicted * 0.1;
-      
+      const margin = predicted * 0.1;
+
       return {
         date: date.toISOString().split('T')[0],
-        predicted: Math.max(0, predicted + (Math.random() - 0.5) * noise),
-        lowerBound: Math.max(0, predicted - noise),
-        upperBound: predicted + noise,
-        confidence: Math.random() * 20 + 70,
+        predicted: Math.max(0, predicted),
+        lowerBound: Math.max(0, predicted - margin),
+        upperBound: predicted + margin,
+        confidence: Math.max(50, 90 - i),
         factors: {
           trend: growthRate * 100,
           seasonality: Math.sin(i * Math.PI / 30) * 5,
-          noise: (Math.random() - 0.5) * 10
+          noise: 0
         }
       };
     });

@@ -179,8 +179,11 @@ export async function searchExportHandler(request: Request, env: any): Promise<R
       return builder.error(ErrorCode.VALIDATION_ERROR, 'searchResults array required');
     }
 
-    // Mock user ID - in production, extract from authentication
-    const userId = 1; 
+    const user = (request as any).user;
+    if (!user?.id) {
+      return builder.error(ErrorCode.UNAUTHORIZED, 'Authentication required');
+    }
+    const userId = user.id;
 
     const exportResult = await searchExportService.exportSearchResults(
       userId,
@@ -219,8 +222,11 @@ export async function createSavedSearchHandler(request: Request, env: any): Prom
       return builder.error(ErrorCode.VALIDATION_ERROR, 'Name and search_query are required');
     }
 
-    // Mock user ID - in production, extract from authentication
-    const userId = 1;
+    const user = (request as any).user;
+    if (!user?.id) {
+      return builder.error(ErrorCode.UNAUTHORIZED, 'Authentication required');
+    }
+    const userId = user.id;
 
     const savedSearch = await savedSearchService.createSavedSearch(userId, {
       name,
@@ -250,8 +256,11 @@ export async function getSavedSearchesHandler(request: Request, env: any): Promi
     const url = new URL(request.url);
     const includePublic = url.searchParams.get('includePublic') === 'true';
 
-    // Mock user ID - in production, extract from authentication
-    const userId = 1;
+    const user = (request as any).user;
+    if (!user?.id) {
+      return builder.error(ErrorCode.UNAUTHORIZED, 'Authentication required');
+    }
+    const userId = user.id;
 
     const savedSearches = await savedSearchService.getUserSavedSearches(userId, includePublic);
 
@@ -277,8 +286,11 @@ export async function executeSavedSearchHandler(request: Request, env: any): Pro
       return builder.error(ErrorCode.VALIDATION_ERROR, 'Invalid search ID');
     }
 
-    // Mock user ID - in production, extract from authentication
-    const userId = 1;
+    const user = (request as any).user;
+    if (!user?.id) {
+      return builder.error(ErrorCode.UNAUTHORIZED, 'Authentication required');
+    }
+    const userId = user.id;
 
     const result = await savedSearchService.executeSavedSearch(searchId, userId);
 
@@ -305,8 +317,11 @@ export async function updateSavedSearchHandler(request: Request, env: any): Prom
       return builder.error(ErrorCode.VALIDATION_ERROR, 'Invalid search ID');
     }
 
-    // Mock user ID - in production, extract from authentication
-    const userId = 1;
+    const user = (request as any).user;
+    if (!user?.id) {
+      return builder.error(ErrorCode.UNAUTHORIZED, 'Authentication required');
+    }
+    const userId = user.id;
 
     const updatedSearch = await savedSearchService.updateSavedSearch(searchId, userId, updateData);
 
@@ -336,8 +351,11 @@ export async function deleteSavedSearchHandler(request: Request, env: any): Prom
       return builder.error(ErrorCode.VALIDATION_ERROR, 'Invalid search ID');
     }
 
-    // Mock user ID - in production, extract from authentication
-    const userId = 1;
+    const user = (request as any).user;
+    if (!user?.id) {
+      return builder.error(ErrorCode.UNAUTHORIZED, 'Authentication required');
+    }
+    const userId = user.id;
 
     const success = await savedSearchService.deleteSavedSearch(searchId, userId);
 

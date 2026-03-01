@@ -84,7 +84,7 @@ describe('AnalyticsService', () => {
 
       expect(result.pitchId).toBe(99);
       expect(result.views).toBe(0);
-      expect(result.title).toBe('Analytics Unavailable');
+      expect(result.title).toBe('');
     });
 
     it('returns default analytics when API throws', async () => {
@@ -298,7 +298,7 @@ describe('AnalyticsService', () => {
       expect(mockPost).toHaveBeenCalledWith('/api/analytics/track', expect.objectContaining({
         type: 'page_view',
         entityType: 'page',
-        entityId: 0,
+        entityId: null,
         metadata: expect.objectContaining({ page: '/dashboard' }),
       }));
     });

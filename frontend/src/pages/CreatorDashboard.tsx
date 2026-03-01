@@ -135,10 +135,10 @@ function CreatorDashboard() {
       if (safeAccess(fundingResponse, 'success', false)) {
         const fundingData = safeAccess(fundingResponse, 'data', {});
         const safeFunding = {
-          totalFunding: safeNumber(safeAccess(fundingData, 'totalFunding', 0)),
-          activeFunding: safeNumber(safeAccess(fundingData, 'activeFunding', 0)),
-          pendingFunding: safeNumber(safeAccess(fundingData, 'pendingFunding', 0)),
-          investors: safeArray(safeAccess(fundingData, 'investors', [])),
+          totalFunding: safeNumber(safeAccess(fundingData, 'totalRaised', 0)),
+          activeFunding: safeNumber(safeAccess(fundingData, 'fundedPitches', 0)),
+          pendingFunding: 0,
+          investors: safeNumber(safeAccess(fundingData, 'totalInvestors', 0)),
           recentInvestments: safeArray(safeAccess(fundingData, 'recentInvestments', []))
         };
         setFundingMetrics(safeFunding);
@@ -196,13 +196,15 @@ function CreatorDashboard() {
       const dashboardResponse = dashboardResult.value;
       if (dashboardResponse.success) {
         const data = safeAccess(dashboardResponse, 'data', {});
+        const overview = safeAccess(data, 'overview', {});
+        const revenue = safeAccess(data, 'revenue', {});
 
-        const actualTotalViews = safeNumber(safeAccess(data, 'totalViews', 0));
-        const actualTotalPitches = safeNumber(safeAccess(data, 'totalPitches', 0));
-        const actualActivePitches = safeNumber(safeAccess(data, 'publishedPitches', 0));
-        const actualTotalInterest = safeNumber(safeAccess(data, 'totalNDAs', 0));
+        const actualTotalViews = safeNumber(safeAccess(overview, 'totalViews', 0));
+        const actualTotalPitches = safeNumber(safeAccess(overview, 'totalPitches', 0));
+        const actualActivePitches = actualTotalPitches;
+        const actualTotalInterest = safeNumber(safeAccess(overview, 'pendingActions', 0));
 
-        const pitchesArray = safeArray(safeAccess(data, 'pitches', []));
+        const pitchesArray = safeArray(safeAccess(data, 'recentPitches', []));
         const calculatedAvgRating = safeExecute(
           () => {
             if (pitchesArray.length === 0) return 0;
@@ -222,8 +224,10 @@ function CreatorDashboard() {
           active_pitches: actualActivePitches,
           views_count: actualTotalViews,
           interest_count: actualTotalInterest,
-          funding_received: safeNumber(safeAccess(data, 'fundingReceived', 0)),
-          success_rate: safeNumber(safeAccess(data, 'successRate', 0)),
+          funding_received: safeNumber(safeAccess(revenue, 'totalRevenue', 0)),
+          success_rate: actualTotalPitches > 0
+            ? Math.round((safeNumber(safeAccess(overview, 'activeDeals', 0)) / actualTotalPitches) * 100)
+            : 0,
           average_rating: calculatedAvgRating
         });
 
@@ -239,8 +243,14 @@ function CreatorDashboard() {
 
         setTotalViews(validatedStats.views_count);
         setAvgRating(validatedStats.average_rating);
-        setRecentActivity(safeArray(safeAccess(data, 'recentActivity', [])));
-        setPitches(safeArray(safeAccess(data, 'pitches', [])));
+        const activityObj = safeAccess(data, 'recentActivity', {});
+        const flatActivity = [
+          ...safeArray(safeAccess(activityObj, 'investments', [])),
+          ...safeArray(safeAccess(activityObj, 'ndaRequests', [])),
+          ...safeArray(safeAccess(activityObj, 'notifications', []))
+        ] as Record<string, unknown>[];
+        setRecentActivity(flatActivity);
+        setPitches(safeArray(safeAccess(data, 'recentPitches', [])));
 
         setSectionStatus(prev => ({ ...prev, dashboard: { loaded: true, error: null } }));
       } else {
@@ -732,11 +742,11 @@ function CreatorDashboard() {
         <EnhancedCreatorAnalytics
           pitchPerformance={{
             totalViews: totalViews,
-            viewsChange: 15,
+            viewsChange: 0,
             totalLikes: safeNumber(stats?.totalLikes),
-            likesChange: 12,
+            likesChange: 0,
             totalShares: safeNumber(stats?.totalShares),
-            sharesChange: 8,
+            sharesChange: 0,
             potentialInvestment: safeNumber(fundingMetrics?.totalFunding),
             investmentChange: safeNumber(fundingMetrics?.growth)
           }}

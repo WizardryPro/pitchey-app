@@ -302,16 +302,45 @@ export class UserService {
   }
 
   static async getUserCreditsBalance(userId: number) {
-    // Mock credits system for demo - returns default values
-    // In production, this would query a proper credits table
-    return {
-      userId,
-      balance: 100, // Demo user starts with 100 credits
-      totalPurchased: 100,
-      totalUsed: 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    try {
+      const result = await db.query(`
+        SELECT balance, total_purchased, total_used, last_updated
+        FROM user_credits
+        WHERE user_id = $1
+      `, [userId]);
+
+      if (result && result[0]) {
+        return {
+          userId,
+          balance: result[0].balance ?? 0,
+          totalPurchased: result[0].total_purchased ?? 0,
+          totalUsed: result[0].total_used ?? 0,
+          createdAt: result[0].last_updated ?? new Date(),
+          updatedAt: result[0].last_updated ?? new Date(),
+        };
+      }
+
+      // User has no credits record yet
+      return {
+        userId,
+        balance: 0,
+        totalPurchased: 0,
+        totalUsed: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      console.error('Failed to fetch credits balance:', e.message);
+      return {
+        userId,
+        balance: 0,
+        totalPurchased: 0,
+        totalUsed: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+    }
   }
 
   static async createUser(data: any) {

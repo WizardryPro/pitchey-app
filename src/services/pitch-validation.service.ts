@@ -1103,15 +1103,16 @@ export class PitchValidationService {
       'fantasy': 75
     };
     
+    const demandBase = demandScores[genre.toLowerCase()] || 50;
     return {
       primaryDemographic: targetAudience || '18-34',
       secondaryDemographics: ['25-44', '35-54'],
-      demandScore: demandScores[genre.toLowerCase()] || 50,
+      demandScore: demandBase,
       engagementMetrics: {
-        socialMediaBuzz: Math.random() * 40 + 40,
-        searchTrends: Math.random() * 30 + 50,
-        streamingDemand: Math.random() * 35 + 45,
-        boxOfficePotential: Math.random() * 40 + 40
+        socialMediaBuzz: Math.min(100, demandBase * 0.85 + 10),
+        searchTrends: Math.min(100, demandBase * 0.9 + 5),
+        streamingDemand: Math.min(100, demandBase * 0.8 + 15),
+        boxOfficePotential: Math.min(100, demandBase * 0.75 + 10)
       },
       psychographics: ['entertainment seekers', 'genre enthusiasts', 'social viewers']
     };
@@ -1173,10 +1174,12 @@ export class PitchValidationService {
     if (budget > 50000000) adjustedCompetition += 15;
     else if (budget < 5000000) adjustedCompetition -= 10;
     
+    // Derive competitor counts from budget tier — higher budget = more competition
+    const budgetTier = budget > 50000000 ? 3 : budget > 15000000 ? 2 : budget > 5000000 ? 1 : 0;
     return {
       competitive_intensity: Math.min(100, adjustedCompetition),
-      direct_competitors: Math.floor(Math.random() * 5) + 3,
-      indirect_competitors: Math.floor(Math.random() * 10) + 5,
+      direct_competitors: 3 + budgetTier,
+      indirect_competitors: 5 + budgetTier * 3,
       market_gaps: ['underserved demographics', 'unique perspectives'],
       differentiation_opportunities: ['fresh take on genre', 'unique visual style']
     };
@@ -1556,30 +1559,38 @@ export class PitchValidationService {
   // Team Analysis Helper Methods
 
   private async analyzeTrackRecord(name: string, role: string): Promise<any> {
-    // This would integrate with industry databases like IMDb Pro
-    // For now, return simulated data
-    
+    // Deterministic scores derived from name+role hash — consistent per person
+    const hash = this.deterministicHash(name + role);
     return {
       name,
-      experience: Math.floor(Math.random() * 20) + 5,
+      experience: 5 + (hash % 20),
       previousProjects: [
         {
-          title: `Previous ${role} Project 1`,
+          title: `Previous ${role} Project`,
           year: 2022,
           role,
           budget: 5000000,
           box_office: 15000000,
           critical_score: 75,
-          awards: ['Best Director - Regional Film Festival']
+          awards: []
         }
       ],
-      averageROI: Math.floor(Math.random() * 200) + 150,
+      averageROI: 150 + (hash % 200),
       genreExpertise: ['drama', 'thriller'],
-      awards: ['Regional Film Award', 'Industry Recognition'],
-      boxOfficeTotal: Math.floor(Math.random() * 50000000) + 10000000,
-      criticalRating: Math.floor(Math.random() * 30) + 60,
-      reputation: Math.floor(Math.random() * 40) + 50
+      awards: [],
+      boxOfficeTotal: 10000000 + (hash % 50000000),
+      criticalRating: 60 + (hash % 30),
+      reputation: 50 + (hash % 40)
     };
+  }
+
+  private deterministicHash(input: string): number {
+    let h = 0;
+    for (let i = 0; i < input.length; i++) {
+      h = ((h << 5) - h) + input.charCodeAt(i);
+      h = h & h;
+    }
+    return Math.abs(h);
   }
 
   private getDefaultTrackRecord(): any {
@@ -1597,17 +1608,17 @@ export class PitchValidationService {
   }
 
   private async analyzeCastStrength(cast: string[]): Promise<any> {
-    // Simulated cast analysis
-    const avgStarPower = Math.floor(Math.random() * 40) + 40;
-    
+    // Deterministic scores based on cast size — larger cast = higher potential
+    const castSize = cast.length;
+    const basePower = Math.min(80, 30 + castSize * 8);
     return {
-      starPower: avgStarPower,
-      fanBase: Math.floor(Math.random() * 30) + 50,
+      starPower: basePower,
+      fanBase: Math.min(80, 40 + castSize * 6),
       demographicAppeal: ['18-34', '25-54'],
-      internationalRecognition: Math.floor(Math.random() * 35) + 35,
-      socialMediaReach: Math.floor(Math.random() * 40) + 40,
-      pastPerformance: Math.floor(Math.random() * 35) + 45,
-      chemistryPotential: Math.floor(Math.random() * 30) + 60
+      internationalRecognition: Math.min(70, 30 + castSize * 5),
+      socialMediaReach: Math.min(80, 35 + castSize * 7),
+      pastPerformance: Math.min(80, 40 + castSize * 5),
+      chemistryPotential: Math.min(90, 55 + castSize * 4)
     };
   }
 
@@ -1624,7 +1635,12 @@ export class PitchValidationService {
   }
 
   private async assessCrewQuality(pitchData: any): Promise<any> {
-    // Simulated crew assessment
+    // Derive crew quality from pitch completeness
+    const hasDirector = !!pitchData?.director;
+    const hasProducer = !!pitchData?.producer;
+    const hasCast = Array.isArray(pitchData?.cast) && pitchData.cast.length > 0;
+    const completeness = (hasDirector ? 1 : 0) + (hasProducer ? 1 : 0) + (hasCast ? 1 : 0);
+    const baseScore = 40 + completeness * 12;
     return {
       department_heads: [
         {
@@ -1636,10 +1652,10 @@ export class PitchValidationService {
           rate: 5000
         }
       ],
-      overall_experience: Math.floor(Math.random() * 30) + 50,
-      budget_efficiency: Math.floor(Math.random() * 25) + 60,
-      schedule_reliability: Math.floor(Math.random() * 30) + 55,
-      creative_quality: Math.floor(Math.random() * 35) + 50
+      overall_experience: Math.min(80, baseScore + 10),
+      budget_efficiency: Math.min(85, baseScore + 15),
+      schedule_reliability: Math.min(85, baseScore + 5),
+      creative_quality: Math.min(85, baseScore)
     };
   }
 

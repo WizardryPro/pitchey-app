@@ -152,9 +152,9 @@ describe('ProductionRevenue', () => {
     await waitFor(() => {
       expect(screen.getByText('Revenue by Category')).toBeInTheDocument()
     })
-    expect(screen.getByText('Payment Methods')).toBeInTheDocument()
-    expect(screen.getByText('Feature Films')).toBeInTheDocument()
-    expect(screen.getByText('Wire Transfer')).toBeInTheDocument()
+    expect(screen.getByText('Projected Revenue')).toBeInTheDocument()
+    // Category data comes from API; empty by default so the empty state message appears
+    expect(screen.getByText('No category data yet')).toBeInTheDocument()
   })
 
   // ─── Time Range Selector ─────────────────────────────────────────

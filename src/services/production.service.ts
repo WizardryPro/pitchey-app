@@ -212,7 +212,8 @@ export class ProductionService {
   // Get production analytics
   static async getProductionAnalytics(productionId: number) {
     try {
-      // For now, return mock analytics
+      // Returns zero-state — production analytics requires integration with
+      // production_projects/production_checklists tables via a DB connection
       const analytics = {
         dailyBurnRate: 0,
         projectedOverrun: 0,

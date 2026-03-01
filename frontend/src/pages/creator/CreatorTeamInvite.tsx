@@ -245,15 +245,15 @@ export default function CreatorTeamInvite() {
   const handleGenerateLink = async () => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const link = `https://pitchey.com/invite/${Math.random().toString(36).substring(7)}`;
+      // Use crypto API for secure token generation
+      const tokenBytes = new Uint8Array(16);
+      crypto.getRandomValues(tokenBytes);
+      const token = Array.from(tokenBytes, b => b.toString(16).padStart(2, '0')).join('');
+      const link = `${window.location.origin}/invite/${token}`;
       setLinkForm(prev => ({
         ...prev,
         generatedLink: link
       }));
-      
     } catch (error) {
       console.error('Failed to generate link:', error);
     } finally {

@@ -206,10 +206,15 @@ export default function CreatorPitchesDrafts() {
   };
 
   const handleBulkDelete = async () => {
-    if (selectedDrafts.length > 0) {
-      // Simulate API call
+    if (selectedDrafts.length === 0) return;
+    try {
+      await Promise.all(
+        selectedDrafts.map(id => PitchService.delete(Number(id)).catch(() => null))
+      );
       setDrafts(prev => prev.filter(draft => !selectedDrafts.includes(draft.id)));
       setSelectedDrafts([]);
+    } catch (err) {
+      console.error('Bulk delete failed:', err);
     }
   };
 

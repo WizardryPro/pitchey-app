@@ -336,11 +336,8 @@ describe('TeamService', () => {
 
       const result = await TeamService.getTeamRoles('t1');
 
-      // Should return 5 default roles: owner, admin, member, collaborator, viewer
-      expect(result.length).toBeGreaterThanOrEqual(5);
-      expect(result.map(r => r.name)).toContain('Owner');
-      expect(result.map(r => r.name)).toContain('Admin');
-      expect(result.map(r => r.name)).toContain('Member');
+      // API failure returns empty array
+      expect(result).toEqual([]);
     });
   });
 

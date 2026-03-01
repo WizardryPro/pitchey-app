@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Bell, Mail, MessageSquare, Film, DollarSign, 
+import {
+  Bell, Mail, MessageSquare, Film, DollarSign,
   Users, Calendar, AlertCircle, Save, X, Smartphone,
   Volume2, VolumeX, Clock, Star, Zap
 } from 'lucide-react';
@@ -10,6 +10,7 @@ import { useBetterAuthStore } from '../../../store/betterAuthStore';
 import { getDashboardRoute } from '../../../utils/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { toast } from 'react-hot-toast';
+import { NotificationsService } from '../../../services/notifications.service';
 
 interface NotificationSettings {
   email: {
@@ -101,6 +102,26 @@ export default function ProductionSettingsNotifications() {
     }
   });
 
+  // Load saved preferences from API on mount
+  useEffect(() => {
+    const loadPreferences = async () => {
+      try {
+        const prefs = await NotificationsService.getPreferences();
+        if (prefs) {
+          setSettings(prev => ({
+            ...prev,
+            email: { ...prev.email, enabled: prefs.email ?? prev.email.enabled },
+            push: { ...prev.push, enabled: prefs.push ?? prev.push.enabled },
+            sms: { ...prev.sms, enabled: prefs.sms ?? prev.sms.enabled },
+          }));
+        }
+      } catch {
+        // Use defaults if preferences endpoint fails
+      }
+    };
+    loadPreferences();
+  }, []);
+
   const handleToggle = (category: keyof NotificationSettings, setting: string) => {
     setSettings(prev => ({
       ...prev,
@@ -134,11 +155,16 @@ export default function ProductionSettingsNotifications() {
   const handleSave = async () => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await NotificationsService.updatePreferences({
+        email: settings.email.enabled,
+        push: settings.push.enabled,
+        sms: settings.sms.enabled,
+        marketing: settings.email.marketingEmails,
+      });
       toast.success('Notification settings updated successfully!');
-    } catch (error) {
-      toast.error('Failed to update notification settings');
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      toast.error(e.message || 'Failed to update notification settings');
     } finally {
       setLoading(false);
     }

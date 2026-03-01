@@ -165,20 +165,30 @@ function renderDashboard() {
 const mockDashboardData = (overrides = {}) => ({
   success: true,
   data: {
-    totalViews: 250,
-    totalPitches: 5,
-    publishedPitches: 3,
-    totalNDAs: 2,
-    fundingReceived: 50000,
-    successRate: 60,
-    pitches: [
+    overview: {
+      totalPitches: 5,
+      totalViews: 250,
+      totalFollowers: 10,
+      totalInvestments: 3,
+      activeDeals: 3,
+      pendingActions: 2,
+    },
+    revenue: {
+      totalRevenue: 50000,
+    },
+    recentPitches: [
       { id: 1, title: 'My First Pitch', status: 'published', views: 120, likes: 15, ndaRequests: 1, rating: 4.5 },
       { id: 2, title: 'Second Pitch', status: 'draft', views: 30, likes: 5, ndaRequests: 0, rating: 3.8 },
     ],
-    recentActivity: [
-      { id: 1, title: 'New view on My First Pitch', description: 'From investor', icon: 'eye', color: 'blue' },
-      { id: 2, title: 'NDA request received', description: 'For Second Pitch', icon: 'dollar-sign', color: 'green' },
-    ],
+    recentActivity: {
+      investments: [
+        { id: 1, title: 'New view on My First Pitch', description: 'From investor', icon: 'eye', color: 'blue' },
+      ],
+      ndaRequests: [
+        { id: 2, title: 'NDA request received', description: 'For Second Pitch', icon: 'dollar-sign', color: 'green' },
+      ],
+      notifications: [],
+    },
     ...overrides,
   },
 })
@@ -200,7 +210,7 @@ describe('CreatorDashboard', () => {
     mockGetSubscriptionStatus.mockResolvedValue({ tier: 'pro', status: 'active' })
     mockGetCreatorFunding.mockResolvedValue({
       success: true,
-      data: { totalFunding: 75000, activeFunding: 50000, pendingFunding: 25000, investors: [], recentInvestments: [] },
+      data: { totalRaised: 75000, fundedPitches: 3, totalInvestors: 5, averageInvestment: 15000, recentInvestments: [] },
     })
 
     // Reset WebSocket state
@@ -356,7 +366,7 @@ describe('CreatorDashboard', () => {
     it('shows empty state when no pitches', async () => {
       mockApiGet.mockImplementation((url: string) => {
         if (url.includes('/api/creator/dashboard')) {
-          return Promise.resolve(mockDashboardData({ pitches: [] }))
+          return Promise.resolve(mockDashboardData({ recentPitches: [] }))
         }
         return Promise.resolve({ success: true, data: {} })
       })
@@ -397,7 +407,7 @@ describe('CreatorDashboard', () => {
     it('shows empty activity state', async () => {
       mockApiGet.mockImplementation((url: string) => {
         if (url.includes('/api/creator/dashboard')) {
-          return Promise.resolve(mockDashboardData({ recentActivity: [] }))
+          return Promise.resolve(mockDashboardData({ recentActivity: { investments: [], ndaRequests: [], notifications: [] } }))
         }
         return Promise.resolve({ success: true, data: {} })
       })

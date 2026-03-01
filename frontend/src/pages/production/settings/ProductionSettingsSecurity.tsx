@@ -58,79 +58,18 @@ export default function ProductionSettingsSecurity() {
   });
 
   const [settings, setSettings] = useState<SecuritySettings>({
-    twoFactorEnabled: true,
+    twoFactorEnabled: false,
     passwordRequireUpdate: false,
     sessionTimeout: 24,
-    ipWhitelist: ['192.168.1.1', '10.0.0.1'],
-    deviceTrust: true,
+    ipWhitelist: [],
+    deviceTrust: false,
     emailNotifications: true,
     loginAlerts: true
   });
 
-  const [sessions] = useState<LoginSession[]>([
-    {
-      id: '1',
-      device: 'MacBook Pro',
-      location: 'Los Angeles, CA',
-      ip: '192.168.1.100',
-      browser: 'Chrome 120',
-      lastActive: '2024-01-15T10:30:00Z',
-      current: true
-    },
-    {
-      id: '2',
-      device: 'iPhone 15',
-      location: 'Los Angeles, CA',
-      ip: '192.168.1.101',
-      browser: 'Safari Mobile',
-      lastActive: '2024-01-15T09:45:00Z',
-      current: false
-    },
-    {
-      id: '3',
-      device: 'Windows Desktop',
-      location: 'Burbank, CA',
-      ip: '10.0.0.50',
-      browser: 'Edge 120',
-      lastActive: '2024-01-14T16:20:00Z',
-      current: false
-    }
-  ]);
+  const [sessions] = useState<LoginSession[]>([]);
 
-  const [securityLogs] = useState<SecurityLog[]>([
-    {
-      id: '1',
-      action: 'Login successful',
-      timestamp: '2024-01-15T10:30:00Z',
-      ip: '192.168.1.100',
-      location: 'Los Angeles, CA',
-      status: 'success'
-    },
-    {
-      id: '2',
-      action: 'Password changed',
-      timestamp: '2024-01-14T14:22:00Z',
-      ip: '192.168.1.100',
-      location: 'Los Angeles, CA',
-      status: 'success'
-    },
-    {
-      id: '3',
-      action: 'Failed login attempt',
-      timestamp: '2024-01-13T08:15:00Z',
-      ip: '45.76.123.456',
-      location: 'Unknown',
-      status: 'failed'
-    },
-    {
-      id: '4',
-      action: 'Multiple failed logins',
-      timestamp: '2024-01-12T23:45:00Z',
-      ip: '123.45.67.89',
-      location: 'Shanghai, China',
-      status: 'suspicious'
-    }
-  ]);
+  const [securityLogs] = useState<SecurityLog[]>([]);
 
   const handlePasswordChange = (field: keyof typeof passwords, value: string) => {
     setPasswords(prev => ({
@@ -171,12 +110,19 @@ export default function ProductionSettingsSecurity() {
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const { apiClient } = await import('../../../lib/api-client');
+      const response = await apiClient.post('/api/auth/change-password', {
+        currentPassword: passwords.current,
+        newPassword: passwords.new,
+      });
+      if (!response.success) {
+        throw new Error((response.error as any)?.message || 'Failed to update password');
+      }
       toast.success('Password updated successfully!');
       setPasswords({ current: '', new: '', confirm: '' });
-    } catch (error) {
-      toast.error('Failed to update password');
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      toast.error(e.message || 'Failed to update password');
     } finally {
       setLoading(false);
     }
@@ -185,30 +131,38 @@ export default function ProductionSettingsSecurity() {
   const handleSave = async () => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const { default: apiClient } = await import('../../../lib/api-client');
+      const response = await apiClient.put('/api/user/settings', {
+        sessionTimeout: settings.sessionTimeout,
+        emailNotifications: settings.emailNotifications,
+        loginAlerts: settings.loginAlerts,
+      });
+      if (!response.success) {
+        throw new Error((response.error as any)?.message || 'Failed to save');
+      }
       toast.success('Security settings updated successfully!');
-    } catch (error) {
-      toast.error('Failed to update security settings');
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      toast.error(e.message || 'Failed to update security settings');
     } finally {
       setLoading(false);
     }
   };
 
-  const revokeSession = (sessionId: string) => {
-    toast.success('Session revoked successfully');
+  const revokeSession = (_sessionId: string) => {
+    toast.error('Session management is not yet available');
   };
 
   const enable2FA = () => {
-    toast.success('2FA setup initiated. Check your email for instructions.');
+    toast.error('Two-factor authentication is not yet available');
   };
 
   const disable2FA = () => {
-    toast.success('2FA disabled successfully');
+    toast.error('Two-factor authentication is not yet available');
   };
 
   const downloadSecurityReport = () => {
-    toast.success('Security report download started...');
+    toast.error('Security report downloads are not yet available');
   };
 
   const formatDateTime = (dateString: string) => {

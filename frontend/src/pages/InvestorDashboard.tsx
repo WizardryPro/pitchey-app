@@ -222,7 +222,7 @@ function InvestorDashboard() {
     if (investmentsRes.status === 'fulfilled') {
       const investmentsData = safeAccess(investmentsRes, 'value.data.data', []);
       const safeInvestments = safeMap(investmentsData, (investment: unknown) => ({
-        id: safeNumber(safeAccess(investment, 'id', Math.floor(Math.random() * 10000))),
+        id: safeNumber(safeAccess(investment, 'id', 0)),
         pitchTitle: safeString(safeAccess(investment, 'pitchTitle', 'Unknown Project')),
         amount: safeNumber(safeAccess(investment, 'amount', 0)),
         status: safeString(safeAccess(investment, 'status', 'unknown')),
@@ -245,7 +245,7 @@ function InvestorDashboard() {
     if (savedRes.status === 'fulfilled') {
       const savedData = safeAccess(savedRes, 'value.data.data', []);
       const safePitches = safeMap(savedData, (pitch: unknown) => ({
-        id: safeNumber(safeAccess(pitch, 'id', Math.floor(Math.random() * 10000))),
+        id: safeNumber(safeAccess(pitch, 'id', 0)),
         title: safeString(safeAccess(pitch, 'title', 'Unknown Title')),
         creator: safeString(safeAccess(pitch, 'creator', 'Unknown Creator')),
         genre: safeString(safeAccess(pitch, 'genre', 'Unknown')),
@@ -268,7 +268,7 @@ function InvestorDashboard() {
     if (ndaRes.status === 'fulfilled') {
       const ndaData = safeAccess(ndaRes, 'value.data.data', []);
       const safeNDAs: NDARequest[] = safeMap(ndaData, (nda: unknown) => ({
-        id: safeNumber(safeAccess(nda, 'id', Math.floor(Math.random() * 10000))),
+        id: safeNumber(safeAccess(nda, 'id', 0)),
         pitchTitle: safeString(safeAccess(nda, 'pitchTitle', 'Unknown Project')),
         status: safeString(safeAccess(nda, 'status', 'pending')),
         requestedAt: isValidDate(safeAccess(nda, 'requestedAt', null))
@@ -301,7 +301,7 @@ function InvestorDashboard() {
     if (recommendationsRes.status === 'fulfilled') {
       const recommendationData = safeAccess(recommendationsRes, 'value.data.data', []);
       const safeRecommendations = safeMap(recommendationData, (rec: unknown) => ({
-        id: safeNumber(safeAccess(rec, 'id', Math.floor(Math.random() * 10000))),
+        id: safeNumber(safeAccess(rec, 'id', 0)),
         title: safeString(safeAccess(rec, 'title', 'Unknown Title')),
         genre: safeString(safeAccess(rec, 'genre', 'Unknown')),
         tagline: safeString(safeAccess(rec, 'tagline', 'No description available')),
@@ -586,8 +586,8 @@ function InvestorDashboard() {
                     </div>
                   ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {safeArray(recommendations).slice(0, 3).map((pitch: unknown) => (
-                      <div key={safeAccess(pitch, 'id', Math.random())} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                    {safeArray(recommendations).slice(0, 3).map((pitch: unknown, idx: number) => (
+                      <div key={safeAccess(pitch, 'id', `rec-${idx}`)} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
                         <div className="flex items-start justify-between">
                           <h4 className="font-medium text-gray-900">{safeString(safeAccess(pitch, 'title', 'Unknown Title'))}</h4>
                           <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">
@@ -706,8 +706,8 @@ function InvestorDashboard() {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {safeArray(investments).map((investment) => (
-                          <tr key={safeAccess(investment, 'id', Math.random())}>
+                        {safeArray(investments).map((investment, idx) => (
+                          <tr key={safeAccess(investment, 'id', `inv-${idx}`)}>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm font-medium text-gray-900">
                                 {safeString(safeAccess(investment, 'pitchTitle', 'Unknown Project'))}
@@ -819,8 +819,8 @@ function InvestorDashboard() {
                     </div>
                   ) : safeArray(savedPitches).length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {safeArray(savedPitches).slice(0, 4).map((pitch) => (
-                        <div key={safeAccess(pitch, 'id', Math.random())} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                      {safeArray(savedPitches).slice(0, 4).map((pitch, idx) => (
+                        <div key={safeAccess(pitch, 'id', `saved-${idx}`)} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
                           <div className="flex items-start justify-between">
                             <h4 className="font-medium text-gray-900">{safeString(safeAccess(pitch, 'title', 'Unknown Title'))}</h4>
                             <Star className="w-4 h-4 text-yellow-500 fill-current" />
@@ -894,8 +894,8 @@ function InvestorDashboard() {
                     </div>
                   ) : safeArray<NDARequest>(ndaRequests).length > 0 ? (
                     <div className="space-y-3">
-                      {safeArray<NDARequest>(ndaRequests).slice(0, 5).map((nda) => (
-                        <div key={safeAccess(nda, 'id', Math.random())} className="border rounded-lg p-4">
+                      {safeArray<NDARequest>(ndaRequests).slice(0, 5).map((nda, idx) => (
+                        <div key={safeAccess(nda, 'id', `nda-${idx}`)} className="border rounded-lg p-4">
                           <div className="flex items-center justify-between">
                             <div>
                               <h4 className="font-medium text-gray-900">{safeString(safeAccess(nda, 'pitchTitle', 'Unknown Project'))}</h4>

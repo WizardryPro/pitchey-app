@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, BellRing, X } from 'lucide-react';
+import { NotificationsService } from '../../services/notifications.service';
 
 interface Notification {
   id: string;
@@ -30,26 +31,23 @@ function NotificationWidgetSafe({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Safe notification loading
   useEffect(() => {
     const loadNotifications = async () => {
       try {
         setLoading(true);
         setError(null);
-        
-        // Mock data for safety - replace with actual API call when stable
-        const mockNotifications: Notification[] = [
-          {
-            id: '1',
-            type: 'info',
-            title: 'Welcome to your dashboard',
-            message: 'Your investor portal is ready to use.',
-            timestamp: new Date(),
-            read: false
-          }
-        ];
-        
-        setNotifications(mockNotifications.slice(0, maxNotifications));
+
+        const apiNotifications = await NotificationsService.getNotifications(maxNotifications);
+        const mapped: Notification[] = apiNotifications.map((n) => ({
+          id: String(n.id),
+          type: (n.type === 'success' || n.type === 'warning' || n.type === 'error') ? n.type : 'info',
+          title: n.title || 'Notification',
+          message: n.message || '',
+          timestamp: new Date(n.createdAt),
+          read: n.isRead,
+        }));
+
+        setNotifications(mapped);
       } catch (err) {
         console.warn('NotificationWidget: Failed to load notifications:', err);
         setError('Could not load notifications');
@@ -62,18 +60,23 @@ function NotificationWidgetSafe({
     loadNotifications();
   }, [maxNotifications]);
 
-  const markAsRead = (notificationId: string) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === notificationId 
+  const markAsRead = async (notificationId: string) => {
+    setNotifications(prev =>
+      prev.map(notification =>
+        notification.id === notificationId
           ? { ...notification, read: true }
           : notification
       )
     );
+    try {
+      await NotificationsService.markAsRead(parseInt(notificationId, 10));
+    } catch {
+      // Best effort — UI already updated
+    }
   };
 
   const dismissNotification = (notificationId: string) => {
-    setNotifications(prev => 
+    setNotifications(prev =>
       prev.filter(notification => notification.id !== notificationId)
     );
   };
@@ -92,11 +95,11 @@ function NotificationWidgetSafe({
       const now = new Date();
       const diff = now.getTime() - timestamp.getTime();
       const hours = Math.floor(diff / (1000 * 60 * 60));
-      
+
       if (hours < 1) return 'Just now';
       if (hours === 1) return '1 hour ago';
       if (hours < 24) return `${hours} hours ago`;
-      
+
       return timestamp.toLocaleDateString();
     } catch {
       return 'Recently';
@@ -125,7 +128,7 @@ function NotificationWidgetSafe({
       <div className={`bg-white rounded-lg shadow p-4 ${className}`}>
         <div className="text-center py-4">
           <p className="text-sm text-red-600">{error}</p>
-          <button 
+          <button
             onClick={() => window.location.reload()}
             className="mt-2 text-xs text-blue-600 hover:underline"
           >
@@ -157,7 +160,7 @@ function NotificationWidgetSafe({
         <div className="flex items-center">
           <BellRing className="w-5 h-5 text-blue-600 mr-2" />
           <h3 className="font-medium text-gray-900">
-            Notifications {notifications.filter(n => !n.read).length > 0 && 
+            Notifications {notifications.filter(n => !n.read).length > 0 &&
             `(${notifications.filter(n => !n.read).length})`}
           </h3>
         </div>
@@ -193,7 +196,7 @@ function NotificationWidgetSafe({
                   }`}>
                     {notification.message}
                   </p>
-                  
+
                   {/* Actions */}
                   {notification.actions && (
                     <div className="flex gap-2 mt-2">
@@ -221,7 +224,7 @@ function NotificationWidgetSafe({
                   )}
                 </div>
               </div>
-              
+
               {/* Dismiss button */}
               <button
                 onClick={() => dismissNotification(notification.id)}

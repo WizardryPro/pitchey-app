@@ -1,6 +1,7 @@
 /**
- * Authentication Middleware Stubs for Workers
- * These are placeholder implementations - real auth is handled by Better Auth
+ * Authentication Middleware Types and Guards
+ * Real auth is handled by Better Auth in worker-integrated.ts.
+ * These wrappers reject unauthenticated requests with 401.
  */
 
 export type UserRole = 'creator' | 'investor' | 'production' | 'admin';
@@ -13,36 +14,44 @@ export interface AuthUser {
 }
 
 /**
- * Middleware that requires authentication
+ * Middleware that requires authentication.
+ * Rejects with 401 if request.user is not set by upstream auth.
  */
 export function requireAuth(handler: (request: Request, user: AuthUser) => Promise<Response>) {
   return async (request: Request): Promise<Response> => {
-    // In production, this would validate the Better Auth session
-    // For now, allow requests through for API compatibility
-    const mockUser: AuthUser = {
-      id: 'auth-required',
-      email: 'auth@required.com',
-      name: 'Auth Required',
-      role: 'creator'
-    };
-    return handler(request, mockUser);
+    const user = (request as any).user as AuthUser | undefined;
+    if (!user?.id) {
+      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    return handler(request, user);
   };
 }
 
 /**
- * Middleware that requires a specific role
+ * Middleware that requires a specific role.
+ * Rejects with 401 if unauthenticated, 403 if wrong role.
  */
 export function requireRole(roles: UserRole | UserRole[]) {
   return (handler: (request: Request, user: AuthUser) => Promise<Response>) => {
     return async (request: Request): Promise<Response> => {
-      // In production, this would validate the role from Better Auth session
-      const mockUser: AuthUser = {
-        id: 'role-required',
-        email: 'role@required.com',
-        name: 'Role Required',
-        role: Array.isArray(roles) ? roles[0] : roles
-      };
-      return handler(request, mockUser);
+      const user = (request as any).user as AuthUser | undefined;
+      if (!user?.id) {
+        return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      const allowedRoles = Array.isArray(roles) ? roles : [roles];
+      if (!allowedRoles.includes(user.role)) {
+        return new Response(JSON.stringify({ success: false, error: 'Insufficient permissions' }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      return handler(request, user);
     };
   };
 }

@@ -38,7 +38,7 @@ function ChartSkeleton() {
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="flex-1 flex flex-col items-center">
               <Skeleton className="h-3 w-8 mb-2" />
-              <Skeleton className="w-full rounded-t" style={{ height: `${40 + Math.random() * 120}px` }} />
+              <Skeleton className="w-full rounded-t" style={{ height: `${40 + (i + 1) * 20}px` }} />
               <Skeleton className="h-3 w-6 mt-2" />
             </div>
           ))}

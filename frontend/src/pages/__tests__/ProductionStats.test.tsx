@@ -209,9 +209,9 @@ describe('ProductionStats', () => {
     await waitFor(() => {
       expect(screen.getByText('Recent Trends')).toBeInTheDocument()
     })
-    expect(screen.getByText('Revenue Growth')).toBeInTheDocument()
-    expect(screen.getByText('Team Expansion')).toBeInTheDocument()
-    expect(screen.getByText('Completion Rate')).toBeInTheDocument()
+    expect(screen.getByText('Deal Conversion')).toBeInTheDocument()
+    expect(screen.getByText('Avg Production Time')).toBeInTheDocument()
+    expect(screen.getByText('Success Rate')).toBeInTheDocument()
   })
 
   // ─── Empty / Error State ───────────────────────────────────────────

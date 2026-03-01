@@ -360,7 +360,7 @@ export const authAPI = {
     return response.data;
   },
 
-  // Password reset methods (stub implementations)
+  // Password reset methods
   async requestPasswordReset(email: string) {
     const response = await api.post('/api/auth/forgot-password', { email });
     return response.data;
@@ -371,7 +371,7 @@ export const authAPI = {
     return response.data;
   },
 
-  // Email verification methods (stub implementations)
+  // Email verification methods
   async verifyEmail(token: string) {
     const response = await api.post('/api/auth/verify-email', { token });
     return response.data;
