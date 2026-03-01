@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@shared/components/feedback/ToastProvider';
 import { NDAService } from '../../services/nda.service';
-import type { NDA } from '../../types/api';
+import type { NDA } from '@shared/types/api';
 import { formatDistanceToNow } from 'date-fns';
 
 export interface NDANotification {

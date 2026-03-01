@@ -13,7 +13,7 @@ import { PitchFormSchema, type PitchFormData, getCharacterCountInfo } from '../s
 import { a11y } from '../utils/accessibility';
 import { MESSAGES, VALIDATION_MESSAGES, SUCCESS_MESSAGES, ERROR_MESSAGES } from '../constants/messages';
 import { CharacterManagement } from '../components/CharacterManagement';
-import type { Character } from '../types/character';
+import type { Character } from '@shared/types/character';
 import { serializeCharacters } from '../utils/characterUtils';
 // DocumentUpload removed — using DocumentUploadHub instead (Karl feedback #6)
 import type { DocumentFile } from '../components/DocumentUpload';

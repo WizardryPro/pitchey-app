@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Plus, Users, AlertCircle, ArrowUpDown, Info } from 'lucide-react';
-import type { Character } from '../../types/character';
+import type { Character } from '@shared/types/character';
 import { CharacterCard } from './CharacterCard';
 import { CharacterForm } from './CharacterForm';
 import { getCharacterStats } from '../../utils/characterUtils';

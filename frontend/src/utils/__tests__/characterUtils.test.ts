@@ -9,7 +9,7 @@ import {
   reorderCharacters,
   getCharacterStats,
 } from '../characterUtils';
-import type { Character } from '../../types/character';
+import type { Character } from '@shared/types/character';
 
 const validCharacter: Character = {
   id: 'char_1',

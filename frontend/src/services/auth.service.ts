@@ -5,10 +5,10 @@ import type {
   LoginCredentials, 
   RegisterData, 
   AuthResponse 
-} from '../types/api';
+} from '@shared/types/api';
 
 // Export types from centralized types file
-export type { LoginCredentials, RegisterData, AuthResponse } from '../types/api';
+export type { LoginCredentials, RegisterData, AuthResponse } from '@shared/types/api';
 
 export interface TokenValidation {
   valid: boolean;

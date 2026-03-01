@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useWebSocket } from '../contexts/WebSocketContext';
-import type { ConnectionQuality } from '../types/websocket';
+import type { ConnectionQuality } from '@shared/types/websocket';
 
 interface NetworkInformation extends EventTarget {
   type?: string;

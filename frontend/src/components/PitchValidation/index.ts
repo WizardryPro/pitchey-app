@@ -21,7 +21,7 @@ export type {
   ComparableProject,
   BenchmarkData,
   ScoreTrend
-} from '../../types/pitch-validation.types';
+} from '@shared/types/pitch-validation.types';
 
 // Component configuration types
 export interface ValidationComponentConfig {

@@ -3,7 +3,7 @@ import { X, Upload, FileText, Shield, AlertCircle, CheckCircle, Loader2 } from '
 import { ndaService } from '../services/nda.service';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import FileUpload from './FileUpload';
-import type { NDARequestFormData, UploadedNDAFile } from '../types/nda.types';
+import type { NDARequestFormData, UploadedNDAFile } from '@shared/types/nda.types';
 
 interface NDAModalProps {
   isOpen: boolean;

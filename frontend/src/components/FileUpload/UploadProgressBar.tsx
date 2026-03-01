@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Clock, Zap, FileText, AlertTriangle } from 'lucide-react';
-import { ProgressBarProps } from '../../types/chunked-upload';
+import { ProgressBarProps } from '@shared/types/chunked-upload';
 
 const UploadProgressBar: React.FC<ProgressBarProps> = ({
   progress,

@@ -27,7 +27,7 @@ import {
   UploadError,
   ChunkedFileUploadProps,
   UploadQueueStats
-} from '../../types/chunked-upload';
+} from '@shared/types/chunked-upload';
 
 interface FileUploadState {
   sessionId: string;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChevronUp, ChevronDown, Edit, Trash2, GripVertical } from 'lucide-react';
-import type { Character } from '../../types/character';
+import type { Character } from '@shared/types/character';
 
 interface CharacterCardProps {
   character: Character;

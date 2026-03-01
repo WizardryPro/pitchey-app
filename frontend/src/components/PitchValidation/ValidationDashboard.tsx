@@ -24,7 +24,7 @@ import type {
   ValidationRecommendation,
   CompetitivePosition,
   ValidationMilestone
-} from '../../types/pitch-validation.types';
+} from '@shared/types/pitch-validation.types';
 
 interface ValidationDashboardProps {
   pitchId: string;

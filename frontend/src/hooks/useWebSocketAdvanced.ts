@@ -8,7 +8,7 @@ import type {
   ConnectionQuality,
   ReconnectionConfig,
   HeartbeatConfig
-} from '../types/websocket';
+} from '@shared/types/websocket';
 
 interface UseWebSocketAdvancedOptions {
   onMessage?: (message: WebSocketMessage) => void;

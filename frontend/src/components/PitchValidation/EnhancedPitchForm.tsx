@@ -17,7 +17,7 @@ import type {
   ValidationScore, 
   RealTimeValidation,
   ValidationRecommendation 
-} from '../../types/pitch-validation.types';
+} from '@shared/types/pitch-validation.types';
 
 interface PitchFormData {
   title: string;

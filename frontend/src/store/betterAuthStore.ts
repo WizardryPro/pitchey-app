@@ -5,7 +5,7 @@
  */
 
 import { create } from 'zustand';
-import type { User } from '../types';
+import type { User } from '@shared/types';
 import { portalAuth } from '../lib/better-auth-client';
 import { sessionCache } from './sessionCache';
 import { sessionManager } from '../lib/session-manager';

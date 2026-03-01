@@ -1,4 +1,4 @@
-import type { User } from '../types';
+import type { User } from '@shared/types';
 
 /**
  * Checks if a user's profile is complete enough to access their portal.

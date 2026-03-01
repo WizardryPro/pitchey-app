@@ -9,7 +9,7 @@ import type {
   InvestorPortfolio, 
   WatchlistItem,
   DashboardResponse 
-} from '../types/api';
+} from '@shared/types/api';
 
 const isDev = import.meta.env.MODE === 'development';
 const API_BASE_URL = (import.meta.env['VITE_API_URL'] as string | undefined) ?? (isDev ? 'http://localhost:8001' : '');
@@ -20,7 +20,7 @@ export type {
   InvestmentOpportunity, 
   InvestorPortfolio, 
   WatchlistItem 
-} from '../types/api';
+} from '@shared/types/api';
 
 // Keep local types for backward compatibility
 export type InvestorStats = InvestorDashboardStats;

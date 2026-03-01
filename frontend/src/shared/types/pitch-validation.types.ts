@@ -22,7 +22,7 @@ export type {
   SuccessPrediction,
   MarketTimingAnalysis,
   RiskAssessment
-} from '../../../src/types/pitch-validation.types';
+} from '../../../../src/types/pitch-validation.types';
 
 // Frontend-specific component configuration
 export interface ValidationComponentConfig {

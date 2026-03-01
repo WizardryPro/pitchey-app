@@ -1,6 +1,6 @@
 // User Service - Complete user management
 import { apiClient } from '../lib/api-client';
-import type { User as ApiUser, ApiResponse } from '../types/api';
+import type { User as ApiUser, ApiResponse } from '@shared/types/api';
 
 const isDev = import.meta.env.MODE === 'development';
 const API_BASE_URL = import.meta.env.VITE_API_URL || (isDev ? 'http://localhost:8001' : '');

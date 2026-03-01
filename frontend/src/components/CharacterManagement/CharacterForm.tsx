@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, User } from 'lucide-react';
-import type { Character } from '../../types/character';
+import type { Character } from '@shared/types/character';
 
 interface CharacterFormProps {
   character?: Character;

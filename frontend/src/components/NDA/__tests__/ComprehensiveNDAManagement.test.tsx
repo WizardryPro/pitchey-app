@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ComprehensiveNDAManagement from '../ComprehensiveNDAManagement';
-import type { NDARequest } from '../../../types/nda.types';
+import type { NDARequest } from '@shared/types/nda.types';
 
 // Use vi.hoisted so mock objects are available before vi.mock hoisting
 const { mockNdaService, mockAuthStore } = vi.hoisted(() => ({

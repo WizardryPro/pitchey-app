@@ -26,7 +26,7 @@ function debounce<T extends (...args: any[]) => any>(
   return debounced as any;
 }
 
-import type { RealTimeValidation } from '../../types/pitch-validation.types';
+import type { RealTimeValidation } from '@shared/types/pitch-validation.types';
 
 interface RealTimeValidatorProps {
   pitchId: string;

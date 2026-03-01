@@ -27,7 +27,7 @@ import {
   ChunkedUploadProgress,
   CompletedUploadResult,
   UploadError
-} from '../../types/chunked-upload';
+} from '@shared/types/chunked-upload';
 import UploadProgressBar from './UploadProgressBar';
 
 interface QueuedUpload {

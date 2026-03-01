@@ -6,7 +6,7 @@ import {
   ArrowUp, ArrowDown, RefreshCw, Trash2, Send
 } from 'lucide-react';
 import { ndaService } from '../../services/nda.service';
-import type { NDA, NDARequest } from '../../types/nda.types';
+import type { NDA, NDARequest } from '@shared/types/nda.types';
 import NDAManagementPanel from '../NDAManagementPanel';
 import NDAStatusBadge from '../NDAStatusBadge';
 import { useBetterAuthStore } from '../../store/betterAuthStore';

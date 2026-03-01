@@ -20,7 +20,7 @@ import {
 import { useToast } from '@shared/components/feedback/ToastProvider';
 import { ndaService } from '../../services/nda.service';
 import { formatDistanceToNow } from 'date-fns';
-import type { NDA } from '../../types/api';
+import type { NDA } from '@shared/types/api';
 
 interface NDARequestPanelProps {
   pitchId: number;

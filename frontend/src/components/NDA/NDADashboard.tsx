@@ -22,7 +22,7 @@ import { ndaService } from '../../services/nda.service';
 import NDAApprovalWorkflow from './NDAApprovalWorkflow';
 import NDANotificationCenter from './NDANotificationCenter';
 import { formatDistanceToNow, format } from 'date-fns';
-import type { NDA } from '../../types/api';
+import type { NDA } from '@shared/types/api';
 
 interface NDADashboardProps {
   userId: number;

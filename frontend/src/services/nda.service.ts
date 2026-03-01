@@ -4,7 +4,7 @@ import type {
   NDA,
   NDARequest,
   User
-} from '../types/api';
+} from '@shared/types/api';
 
 const isDev = import.meta.env.MODE === 'development';
 const API_BASE_URL = (import.meta.env['VITE_API_URL'] as string | undefined) ?? (isDev ? 'http://localhost:8001' : '');
@@ -39,7 +39,7 @@ interface NDAAnalyticsData {
 }
 
 // Export types from centralized types file
-export type { NDA, NDARequest } from '../types/api';
+export type { NDA, NDARequest } from '@shared/types/api';
 
 export interface NDATemplate {
   id: number;

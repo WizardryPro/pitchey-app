@@ -23,7 +23,7 @@ import type {
   ComparableProject,
   BenchmarkData,
   ScoreTrend
-} from '../../types/pitch-validation.types';
+} from '@shared/types/pitch-validation.types';
 
 // Main chart container component
 export const ValidationChartsContainer: React.FC<{

@@ -1,6 +1,6 @@
 // Production Service - Dashboard and production company-specific operations
 import { apiClient } from '../lib/api-client';
-import type { Pitch, User } from '../types/api';
+import type { Pitch, User } from '@shared/types/api';
 
 const isDev = import.meta.env.MODE === 'development';
 const API_BASE_URL = (import.meta.env['VITE_API_URL'] as string | undefined) ?? (isDev ? 'http://localhost:8001' : '');

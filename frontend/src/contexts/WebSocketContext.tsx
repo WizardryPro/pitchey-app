@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode, useMemo } from 'react';
 import { useWebSocketAdvanced } from '../hooks/useWebSocketAdvanced';
-import type { WebSocketMessage, ConnectionStatus, MessageQueueStatus, ConnectionQuality } from '../types/websocket';
+import type { WebSocketMessage, ConnectionStatus, MessageQueueStatus, ConnectionQuality } from '@shared/types/websocket';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { config } from '../config';
 import { presenceFallbackService } from '../services/presence-fallback.service';

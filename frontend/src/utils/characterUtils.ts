@@ -1,4 +1,4 @@
-import type { Character } from '../types/character';
+import type { Character } from '@shared/types/character';
 
 /**
  * Character validation rules

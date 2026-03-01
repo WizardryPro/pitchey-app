@@ -1,5 +1,5 @@
 import { apiClient } from '../lib/api-client';
-import type { WebSocketMessage } from '../types/websocket';
+import type { WebSocketMessage } from '@shared/types/websocket';
 
 interface PollingConfig {
   interval: number;

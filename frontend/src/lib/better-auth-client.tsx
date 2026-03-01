@@ -10,7 +10,7 @@ import { organizationClient } from 'better-auth/client/plugins';
 import { adminClient } from 'better-auth/client/plugins';
 import { multiSessionClient } from 'better-auth/client/plugins';
 import { API_URL } from '../config';
-import type { User } from '../types/api';
+import type { User } from '@shared/types/api';
 
 // Portal types
 export type PortalType = 'creator' | 'investor' | 'production';

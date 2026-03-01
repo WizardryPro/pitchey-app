@@ -25,7 +25,7 @@ import type {
   InvestorDashboardStats,
   CreatorDashboardStats,
   ProductionDashboardStats
-} from '../types/api';
+} from '@shared/types/api';
 import { 
   ValidatedPitchesResponse,
   ValidatedSinglePitchResponse,
@@ -40,7 +40,7 @@ import {
   RegisterDataSchema,
   CreatePitchInputSchema,
   UpdatePitchInputSchema
-} from '../types/zod-schemas';
+} from '@shared/types/zod-schemas';
 
 // API URL configuration
 // In production: Use same-origin via Pages Functions proxy (no cross-origin issues!)

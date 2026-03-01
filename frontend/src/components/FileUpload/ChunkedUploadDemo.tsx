@@ -12,7 +12,7 @@ import {
   CompletedUploadResult,
   UploadError,
   ChunkedUploadSession
-} from '../../types/chunked-upload';
+} from '@shared/types/chunked-upload';
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card';
 
 const ChunkedUploadDemo: React.FC = () => {

@@ -23,7 +23,7 @@ import {
   CompleteChunkedUploadResponse,
   GetUploadSessionResponse,
   ChunkedUploadEvents
-} from '../types/chunked-upload';
+} from '@shared/types/chunked-upload';
 
 class ChunkedUploadService {
   private baseUrl: string;
@@ -864,4 +864,4 @@ export const chunkedUploadService = new ChunkedUploadService();
 export { ChunkedUploadService };
 
 // Re-export types for convenience
-export * from '../types/chunked-upload';
+export * from '@shared/types/chunked-upload';

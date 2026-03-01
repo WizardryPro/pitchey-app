@@ -2,7 +2,7 @@
 // Provides comprehensive character CRUD and ordering operations
 
 import { apiClient } from '../lib/api-client';
-import type { Character } from '../types/character';
+import type { Character } from '@shared/types/character';
 
 export interface CharacterOrderItem {
   id: number;

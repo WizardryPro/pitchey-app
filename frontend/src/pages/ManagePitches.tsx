@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Eye, Edit3, Trash2, BarChart3, Search, Filter, RefreshCw } from 'lucide-react';
 import { pitchService } from '../services/pitch.service';
-import type { Pitch } from '../types/api';
+import type { Pitch } from '@shared/types/api';
 import FormatDisplay from '../components/FormatDisplay';
 
 export default function ManagePitches() {
