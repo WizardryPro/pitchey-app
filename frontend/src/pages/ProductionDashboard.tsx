@@ -33,7 +33,7 @@ import {
   safeAccess,
   safeNumber,
   safeString,
-} from '../utils/defensive';
+} from '@shared/utils/defensive';
 // import DashboardHeader from '../components/DashboardHeader';
 // EnhancedProductionNav is now handled by PortalLayout
 // import * as Sentry from '@sentry/react';

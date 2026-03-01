@@ -22,8 +22,8 @@ import {
   safeString,
   safeReduce,
   safeExecute
-} from '../utils/defensive';
-import { formatNumber } from '../utils/formatters';
+} from '@shared/utils/defensive';
+import { formatNumber } from '@shared/utils/formatters';
 // EnhancedCreatorNav is now handled by PortalLayout
 // import DashboardHeader from '../components/DashboardHeader';
 // import * as Sentry from '@sentry/react';

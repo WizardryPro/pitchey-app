@@ -31,7 +31,7 @@ import { useBetterAuthStore } from '../store/betterAuthStore';
 import api from '../lib/api';
 // Using the enhanced Investor-specific navigation
 // EnhancedInvestorNav is now handled by PortalLayout
-import { formatCurrency, formatPercentage, formatDate } from '../utils/formatters';
+import { formatCurrency, formatPercentage, formatDate } from '@shared/utils/formatters';
 import {
   safeArray,
   safeMap,
@@ -39,7 +39,7 @@ import {
   safeNumber,
   safeString,
   isValidDate
-} from '../utils/defensive';
+} from '@shared/utils/defensive';
 import { useWebSocket } from '../contexts/WebSocketContext';
 import { useSentryPortal } from '../hooks/useSentryPortal';
 import { withPortalErrorBoundary } from '../components/ErrorBoundary/PortalErrorBoundary';

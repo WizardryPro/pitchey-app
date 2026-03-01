@@ -8,7 +8,7 @@ import {
   safeExecute,
   isValidDate,
   safeTimestamp
-} from '../utils/defensive';
+} from '@shared/utils/defensive';
 
 const isDev = import.meta.env.MODE === 'development';
 const API_BASE_URL = import.meta.env.VITE_API_URL || (isDev ? 'http://localhost:8001' : '');
