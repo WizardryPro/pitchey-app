@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { ImageOff, Loader } from 'lucide-react';
-import Skeleton from '@/components/Loading/Skeleton';
+import Skeleton from '@shared/components/feedback/Skeleton';
 
 interface LazyImageProps {
   src: string;

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Filter, Check, CheckCheck, Trash2, Settings, Bell, BellOff } from 'lucide-react';
 import { useNotifications } from '../contexts/WebSocketContext';
 import { NotificationsService, type Notification as BackendNotification } from '../services/notifications.service';
-import { useNotificationToast } from '../components/Toast/NotificationToastContainer';
+import { useNotificationToast } from '@shared/components/feedback/NotificationToastContainer';
 
 type NotificationFilter = 'all' | 'unread' | 'nda' | 'investment' | 'message' | 'follow' | 'system';
 

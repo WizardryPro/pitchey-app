@@ -11,7 +11,7 @@ import {
   Download,
   Eye
 } from 'lucide-react';
-import { useToast } from '../Toast/ToastProvider';
+import { useToast } from '@shared/components/feedback/ToastProvider';
 import MultipleFileUpload, { EnhancedMediaFile } from './MultipleFileUpload';
 import NDAUploadSection, { NDADocument } from './NDAUploadSection';
 import { enhancedUploadService, EnhancedUploadOptions, EnhancedUploadResult, BatchUploadProgress } from '../../services/enhanced-upload.service';

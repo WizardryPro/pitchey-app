@@ -3,10 +3,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 // React Query temporarily disabled to resolve JavaScript initialization errors
 // Using Better Auth store instead of legacy authStore
 import { useBetterAuthStore } from './store/betterAuthStore';
-import { GlobalErrorBoundary } from './components/ConsoleErrorBoundary';
-import ToastProvider from './components/Toast/ToastProvider';
-import { NotificationToastProvider } from './components/Toast/NotificationToastContainer';
-import LoadingSpinner from './components/Loading/LoadingSpinner';
+import { GlobalErrorBoundary } from '@shared/components/feedback/ConsoleErrorBoundary';
+import ToastProvider from '@shared/components/feedback/ToastProvider';
+import { NotificationToastProvider } from '@shared/components/feedback/NotificationToastContainer';
+import LoadingSpinner from '@shared/components/feedback/LoadingSpinner';
 // Import safe context provider (without legacy AuthProvider)
 import { AppContextProviderSafe } from './contexts/AppContextProviderSafe';
 import { configService } from './services/config.service';

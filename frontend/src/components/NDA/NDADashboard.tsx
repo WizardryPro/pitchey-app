@@ -17,7 +17,7 @@ import {
   Zap,
   BarChart3
 } from 'lucide-react';
-import { useToast } from '../Toast/ToastProvider';
+import { useToast } from '@shared/components/feedback/ToastProvider';
 import { ndaService } from '../../services/nda.service';
 import NDAApprovalWorkflow from './NDAApprovalWorkflow';
 import NDANotificationCenter from './NDANotificationCenter';

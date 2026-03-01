@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useRef } from 'react';
-import { useNotificationToast } from '../components/Toast/NotificationToastContainer';
+import { useNotificationToast } from '@shared/components/feedback/NotificationToastContainer';
 import { notificationService } from '../services/notification.service';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { useWebSocket } from '../contexts/WebSocketContext';

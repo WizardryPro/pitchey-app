@@ -13,7 +13,7 @@ import {
   SortAsc,
   SortDesc
 } from 'lucide-react';
-import { useToast } from '../Toast/ToastProvider';
+import { useToast } from '@shared/components/feedback/ToastProvider';
 import { ndaService } from '../../services/nda.service';
 
 export interface NDAApprovalRequest {

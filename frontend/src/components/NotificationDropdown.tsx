@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNotifications } from '../contexts/WebSocketContext';
 import { NotificationsService, type Notification as BackendNotification } from '../services/notifications.service';
 import { useBetterAuthStore } from '../store/betterAuthStore';
-import { useToast } from './Toast/ToastProvider';
+import { useToast } from '@shared/components/feedback/ToastProvider';
 
 interface NotificationAction {
   label: string;

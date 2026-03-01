@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useToast } from './Toast/ToastProvider';
+import { useToast } from '@shared/components/feedback/ToastProvider';
 import api from '../lib/api';
 import {
   Bell,

@@ -12,7 +12,7 @@ import {
   Library,
   RefreshCw
 } from 'lucide-react';
-import { useToast } from '../Toast/ToastProvider';
+import { useToast } from '@shared/components/feedback/ToastProvider';
 import { uploadService } from '../../services/upload.service';
 import { NDAService, type NDATemplate } from '../../services/nda.service';
 

@@ -31,7 +31,7 @@ import {
 import { Badge } from "@shared/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@shared/components/ui/tabs";
 import { NDAService } from '../../services/nda.service';
-import { useToast } from '../../components/Toast/ToastProvider';
+import { useToast } from '@shared/components/feedback/ToastProvider';
 import { useBetterAuthStore } from '../../store/betterAuthStore';
 
 interface NDARequest {

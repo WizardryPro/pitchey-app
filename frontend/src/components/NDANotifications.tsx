@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { ndaService, type NDA } from '../services/nda.service';
-import { useToast } from './Toast/ToastProvider';
+import { useToast } from '@shared/components/feedback/ToastProvider';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { notificationService } from '../services/notification.service';
 

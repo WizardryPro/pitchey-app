@@ -1,7 +1,7 @@
 import React, { type ReactElement } from 'react'
 import { render, RenderOptions } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
-import { NotificationToastProvider } from '../components/Toast/NotificationToastContainer'
+import { NotificationToastProvider } from '@shared/components/feedback/NotificationToastContainer'
 import { vi } from 'vitest'
 
 // Mock react-router-dom

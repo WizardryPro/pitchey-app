@@ -15,7 +15,7 @@ import {
   ExternalLink,
   Zap
 } from 'lucide-react';
-import { useToast } from '../Toast/ToastProvider';
+import { useToast } from '@shared/components/feedback/ToastProvider';
 import { NDAService } from '../../services/nda.service';
 import type { NDA } from '../../types/api';
 import { formatDistanceToNow } from 'date-fns';

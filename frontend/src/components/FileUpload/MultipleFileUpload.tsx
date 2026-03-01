@@ -23,7 +23,7 @@ import {
   Search,
   FolderPlus
 } from 'lucide-react';
-import { useToast } from '../Toast/ToastProvider';
+import { useToast } from '@shared/components/feedback/ToastProvider';
 import { uploadService, UploadResult, UploadProgress } from '../../services/upload.service';
 
 export interface EnhancedMediaFile {
