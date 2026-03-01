@@ -190,4 +190,19 @@ describe('ProductionProjectsCompleted', () => {
       expect(screen.getByText('No completed projects found')).toBeInTheDocument()
     })
   })
+
+  it('fetches from correct API endpoint with completed status', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ projects: [] }),
+    })
+    renderComponent()
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalled()
+    })
+    const calledUrl: string = mockFetch.mock.calls[0][0]
+    expect(calledUrl).toContain('/api/production/projects')
+    expect(calledUrl).toContain('status=completed')
+  })
 })

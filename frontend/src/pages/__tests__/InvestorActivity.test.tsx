@@ -259,4 +259,15 @@ describe('InvestorActivity', () => {
       expect(screen.getByText('Mark Read')).toBeInTheDocument()
     })
   })
+
+  it('calls GET /api/investor/activity/feed on mount', async () => {
+    render(
+      <MemoryRouter>
+        <InvestorActivity />
+      </MemoryRouter>
+    )
+    await waitFor(() => {
+      expect(mockApiClientGet).toHaveBeenCalledWith('/api/investor/activity/feed')
+    })
+  })
 })

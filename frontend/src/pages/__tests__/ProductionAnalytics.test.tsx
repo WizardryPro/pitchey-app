@@ -263,6 +263,27 @@ describe('ProductionAnalytics', () => {
     expect(screen.getByText(/Network failure/)).toBeInTheDocument()
   })
 
+  // ─── URL Assertion ────────────────────────────────────────────────
+
+  it('fetches from correct API endpoint', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockApiResponse),
+    })
+
+    render(
+      <MemoryRouter>
+        <Component />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalled()
+    })
+    const calledUrl: string = mockFetch.mock.calls[0][0]
+    expect(calledUrl).toContain('/api/production/analytics')
+  })
+
   // ─── Time Range ──────────────────────────────────────────────────
 
   it('renders time range selector', async () => {

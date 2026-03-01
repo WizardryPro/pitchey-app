@@ -73,15 +73,37 @@ const CreatorProfile = () => {
     }
     
     try {
-      // Fetch creator profile from API
-      const response = await fetch(`${config.API_URL}/api/creators/${creatorId}`, {
+      // Fetch creator profile from users API
+      const response = await fetch(`${config.API_URL}/api/users/${creatorId}`, {
         method: 'GET',
-        credentials: 'include' // Send cookies for Better Auth session
+        credentials: 'include'
       });
-      
+
       if (response.ok) {
-        const data = await response.json();
-        setCreator(data);
+        const raw = await response.json() as Record<string, unknown>;
+        const u = (raw.data as Record<string, unknown>) ?? (raw.user as Record<string, unknown>) ?? raw;
+        setCreator({
+          id: Number(u.id) || 0,
+          username: String(u.username ?? u.email ?? ''),
+          firstName: u.first_name as string | undefined ?? u.firstName as string | undefined,
+          lastName: u.last_name as string | undefined ?? u.lastName as string | undefined,
+          companyName: u.company_name as string | undefined ?? u.companyName as string | undefined,
+          email: String(u.email ?? ''),
+          phone: u.phone as string | undefined,
+          bio: u.bio as string | undefined,
+          location: u.location as string | undefined,
+          website: u.website as string | undefined,
+          userType: (u.user_type ?? u.userType ?? 'creator') as CreatorData['userType'],
+          joinedDate: String(u.created_at ?? u.joinedDate ?? ''),
+          followers: Number(u.follower_count ?? u.followers) || 0,
+          following: Number(u.following_count ?? u.following) || 0,
+          pitchesCount: Number(u.pitches_count ?? u.pitchesCount) || 0,
+          viewsCount: Number(u.views_count ?? u.viewsCount) || 0,
+          verified: Boolean(u.verified),
+          profileImage: u.profile_image as string | undefined ?? u.image as string | undefined,
+          specialties: Array.isArray(u.specialties) ? u.specialties as string[] : undefined,
+          awards: Array.isArray(u.awards) ? u.awards as string[] : undefined,
+        });
         // Check if current user follows this creator
         try {
           const following = await followService.isFollowing(creatorId);
@@ -105,15 +127,34 @@ const CreatorProfile = () => {
     if (!creatorId) return;
     
     try {
-      // Fetch creator's pitches from API
-      const response = await fetch(`${config.API_URL}/api/creators/${creatorId}/pitches`, {
+      // Fetch creator's published pitches via public search
+      const response = await fetch(`${config.API_URL}/api/pitches/public/search?q=*&limit=50&offset=0`, {
         method: 'GET',
-        credentials: 'include' // Send cookies for Better Auth session
+        credentials: 'include'
       });
-      
+
       if (response.ok) {
-        const data = await response.json();
-        setPitches(Array.isArray(data.pitches) ? data.pitches : []);
+        const data = await response.json() as Record<string, unknown>;
+        const dataObj = (data.data as Record<string, unknown>) ?? data;
+        const allPitches = Array.isArray(dataObj.pitches) ? dataObj.pitches as Record<string, unknown>[] : [];
+        // Filter pitches by this creator's ID
+        const creatorPitches = allPitches
+          .filter(p => String(p.user_id) === String(creatorId))
+          .map(p => ({
+            id: Number(p.id),
+            title: String(p.title ?? ''),
+            logline: String(p.logline ?? ''),
+            genre: String(p.genre ?? ''),
+            format: String(p.format ?? ''),
+            formatCategory: p.format_category as string | undefined,
+            formatSubtype: p.format_subtype as string | undefined,
+            status: String(p.status ?? 'published'),
+            viewCount: Number(p.view_count ?? 0),
+            likeCount: Number(p.like_count ?? 0),
+            createdAt: String(p.created_at ?? ''),
+            ndaRequired: Boolean(p.nda_required),
+          }));
+        setPitches(creatorPitches);
       } else {
         console.error('Failed to fetch creator pitches:', response.status, response.statusText);
         setPitches([]);

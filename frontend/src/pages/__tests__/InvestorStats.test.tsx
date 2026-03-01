@@ -221,4 +221,18 @@ describe('InvestorStats', () => {
       expect(screen.getByText('Investment Analytics')).toBeInTheDocument()
     })
   })
+
+  it('calls GET /api/investor/investments/summary on mount', async () => {
+    render(
+      <MemoryRouter>
+        <InvestorStats />
+      </MemoryRouter>
+    )
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/investor/investments/summary'),
+        expect.objectContaining({ credentials: 'include' })
+      )
+    })
+  })
 })

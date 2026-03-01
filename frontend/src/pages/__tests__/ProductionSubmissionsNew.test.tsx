@@ -252,6 +252,23 @@ describe('ProductionSubmissionsNew', () => {
     expect(screen.getAllByText('1').length).toBeGreaterThanOrEqual(1)
   })
 
+  // --- URL assertion ---
+  it('fetches from correct API endpoint', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: { submissions: [] } }),
+    })
+
+    renderComponent()
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalled()
+    })
+    const calledUrl: string = mockFetch.mock.calls[0][0]
+    expect(calledUrl).toContain('/api/production/submissions')
+    expect(calledUrl).toContain('status=new')
+  })
+
   // --- Empty State ---
   it('shows empty state when no submissions', async () => {
     mockFetch.mockResolvedValue({

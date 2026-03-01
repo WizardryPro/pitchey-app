@@ -108,6 +108,15 @@ import {
   productionCrewHireHandler
 } from './handlers/production-dashboard-extended';
 
+import {
+  getProductionDeals,
+  createProductionDeal,
+  getProductionContract,
+  getDistributionChannels,
+  exportProjectData,
+  updateProjectMilestone
+} from './handlers/production-deals';
+
 // Import legal document automation handler
 import LegalDocumentHandler from './handlers/legal-document-automation';
 
@@ -2701,6 +2710,30 @@ class RouteRegistry {
     );
     this.register('POST', '/api/production/crew/:id/hire', (req: Request) =>
       productionCrewHireHandler(req, this.env)
+    );
+
+    // Deals
+    this.register('GET', '/api/production/deals', (req: Request) =>
+      getProductionDeals(req, this.env)
+    );
+    this.register('POST', '/api/production/deals', (req: Request) =>
+      createProductionDeal(req, this.env)
+    );
+    this.register('GET', '/api/production/deals/:dealId/contract', (req: Request) =>
+      getProductionContract(req, this.env)
+    );
+
+    // Distribution & Export
+    this.register('GET', '/api/production/projects/:id/distribution', (req: Request) =>
+      getDistributionChannels(req, this.env)
+    );
+    this.register('GET', '/api/production/projects/:id/export', (req: Request) =>
+      exportProjectData(req, this.env)
+    );
+
+    // Milestones
+    this.register('PUT', '/api/production/projects/:projectId/milestones/:milestoneId', (req: Request) =>
+      updateProjectMilestone(req, this.env)
     );
 
     // Production Analytics

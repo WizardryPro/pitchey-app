@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Building2, TrendingUp, Eye, Heart, Users, Film, Plus,
-  BarChart3, FileText, Shield, Star, Bell, Settings,
-  Calendar, DollarSign, UserPlus, ArrowUp, ArrowDown,
+  BarChart3, FileText, Shield, Bell, Settings,
+  Calendar, DollarSign, UserPlus,
   BookOpen, Video, Upload, UserCheck, Clock, Activity,
   X, AlertCircle, User, Trash2, CheckCircle, LogOut, CreditCard, Coins,
   Bookmark, Filter, Search,
@@ -23,23 +23,17 @@ import { config } from '../config';
 import FollowButton from '../components/FollowButton';
 import NDAManagementPanel from '../components/NDAManagementPanel';
 import FormatDisplay from '../components/FormatDisplay';
-import { InvestmentService } from '../services/investment.service';
-import InvestmentOpportunities from '../components/Investment/InvestmentOpportunities';
 import { EnhancedProductionAnalytics } from '../components/Analytics/EnhancedProductionAnalytics';
 import { withPortalErrorBoundary } from '../components/ErrorBoundary/PortalErrorBoundary';
 import { useSentryPortal } from '../hooks/useSentryPortal';
 import { useWebSocket } from '../contexts/WebSocketContext';
 import {
-  validateProductionStats,
   safeArray,
   safeMap,
   safeAccess,
   safeNumber,
   safeString,
-  safeExecute,
-  safeBudgetCalc
 } from '../utils/defensive';
-import { formatCurrency, formatNumber, formatPercentage, formatDate } from '../utils/formatters';
 // import DashboardHeader from '../components/DashboardHeader';
 // EnhancedProductionNav is now handled by PortalLayout
 // import * as Sentry from '@sentry/react';
@@ -108,22 +102,16 @@ function ProductionDashboard() {
   const [credits, setCredits] = useState<any>(null);
   const [subscription, setSubscription] = useState<any>(null);
 
-  // Investment tracking state
-  const [investmentMetrics, setInvestmentMetrics] = useState<any>(null);
-  const [investmentOpportunities, setInvestmentOpportunities] = useState<any[]>([]);
-
   // Per-section status tracking
   interface SectionStatus { loaded: boolean; error: string | null; }
   const [sectionStatus, setSectionStatus] = useState<{
     analytics: SectionStatus;
     ndas: SectionStatus;
     following: SectionStatus;
-    investments: SectionStatus;
   }>({
     analytics:   { loaded: false, error: null },
     ndas:        { loaded: false, error: null },
     following:   { loaded: false, error: null },
-    investments: { loaded: false, error: null },
   });
 
   const initialLoading = !sectionStatus.analytics.loaded && !sectionStatus.analytics.error;
@@ -145,66 +133,6 @@ function ProductionDashboard() {
   }
   const [ndaTemplates, setNdaTemplates] = useState<NDATemplate[]>([]);
   const ndaFileInputRef = useRef<HTMLInputElement>(null);
-
-  const fetchInvestmentData = useCallback(async () => {
-    // Guard against calling without a valid session (prevents 401 errors in Sentry)
-    if (!user?.id) {
-      return;
-    }
-
-    let cancelled = false;
-    try {
-      setSectionStatus(prev => ({ ...prev, investments: { loaded: false, error: null } }));
-
-      // Track investment data fetch
-      trackEvent('investment.data.fetch', { userId: user?.id });
-
-      // Fetch production investment metrics with defensive parsing
-      const metricsResponse = await InvestmentService.getProductionInvestments();
-      if (safeAccess(metricsResponse, 'success', false)) {
-        const metricsData = safeAccess(metricsResponse, 'data', {});
-        const safeMetrics = validateProductionStats({
-          total_projects: safeAccess(metricsData, 'totalProjects', 0),
-          active_projects: safeAccess(metricsData, 'activeProjects', 0),
-          completed_projects: safeAccess(metricsData, 'completedProjects', 0),
-          total_revenue: safeAccess(metricsData, 'totalRevenue', 0),
-          average_budget: safeAccess(metricsData, 'averageBudget', 0),
-          success_rate: safeAccess(metricsData, 'successRate', 0),
-          upcoming_releases: safeAccess(metricsData, 'upcomingReleases', 0)
-        });
-        setInvestmentMetrics(safeMetrics);
-      } else {
-        trackApiError('/api/production/investments', { success: false });
-      }
-
-      // Fetch investment opportunities with safe parsing
-      const opportunitiesResponse = await InvestmentService.getInvestmentOpportunities({ limit: 8 });
-      if (safeAccess(opportunitiesResponse, 'success', false)) {
-        const opportunitiesData = safeAccess(opportunitiesResponse, 'data', []);
-        const safeOpportunities = safeMap(opportunitiesData, (opp: any) => ({
-          id: safeAccess(opp, 'id', Math.random()),
-          title: safeString(safeAccess(opp, 'title', 'Unknown Opportunity')),
-          amount: safeNumber(safeAccess(opp, 'amount', 0)),
-          expectedROI: safeNumber(safeAccess(opp, 'expectedROI', 0)),
-          riskLevel: safeString(safeAccess(opp, 'riskLevel', 'Unknown'))
-        }));
-        setInvestmentOpportunities(safeOpportunities);
-      } else {
-        trackApiError('/api/investor/recommendations', { success: false });
-      }
-
-      if (!cancelled) {
-        setSectionStatus(prev => ({ ...prev, investments: { loaded: true, error: null } }));
-      }
-    } catch (err) {
-      if (!cancelled) {
-        const e = err instanceof Error ? err : new Error(String(err));
-        console.error('Error fetching investment data:', e);
-        reportError(e, { context: 'fetchInvestmentData' });
-        setSectionStatus(prev => ({ ...prev, investments: { loaded: true, error: 'Failed to load investment data. Please try again.' } }));
-      }
-    }
-  }, [user?.id, trackEvent, reportError, trackApiError]);
 
   // Check session on mount and redirect if not authenticated
   useEffect(() => {
@@ -488,20 +416,17 @@ function ProductionDashboard() {
     }
 
     let fetchCleanup: (() => void) | undefined;
-    let investmentCleanup: (() => void) | undefined;
 
     const initializeData = async () => {
       fetchCleanup = (await fetchData()) as (() => void) | undefined;
-      investmentCleanup = (await fetchInvestmentData()) as (() => void) | undefined;
     };
 
     void initializeData();
 
     return () => {
       if (fetchCleanup) fetchCleanup();
-      if (investmentCleanup) investmentCleanup();
     };
-  }, [fetchData, fetchInvestmentData, sessionChecked, isAuthenticated]);
+  }, [fetchData, sessionChecked, isAuthenticated]);
 
   const handleViewTerms = (nda: any) => {
     setSelectedNDA(nda);
@@ -705,12 +630,8 @@ function ProductionDashboard() {
 
   const handleRetrySection = useCallback((section: string) => {
     trackEvent('dashboard.retry', { section });
-    if (section === 'investments') {
-      fetchInvestmentData();
-    } else {
-      fetchData();
-    }
-  }, [fetchData, fetchInvestmentData, trackEvent]);
+    fetchData();
+  }, [fetchData, trackEvent]);
 
   // NDA Template Upload Handlers
   const handleNDAFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -833,38 +754,6 @@ function ProductionDashboard() {
     
     return 'Supporting Material';
   };
-
-  const StatCard = ({ 
-    title, 
-    value, 
-    change, 
-    icon: Icon, 
-    color 
-  }: { 
-    title: string; 
-    value: number | string; 
-    change?: number; 
-    icon: any; 
-    color: string; 
-  }) => (
-    <div className="bg-white rounded-xl shadow-sm p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className={`p-3 rounded-lg ${color}`}>
-          <Icon className="w-6 h-6 text-white" />
-        </div>
-        {change !== undefined && (
-          <div className={`flex items-center text-sm ${change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {change >= 0 ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
-            <span className="ml-1">{Math.abs(change)}%</span>
-          </div>
-        )}
-      </div>
-      <h3 className="text-2xl font-bold text-gray-900">
-        {typeof value === 'number' ? value.toLocaleString() : (value || '0')}
-      </h3>
-      <p className="text-sm text-gray-600 mt-1">{title}</p>
-    </div>
-  );
 
   if (initialLoading) {
     return (
@@ -1028,88 +917,13 @@ function ProductionDashboard() {
               </div>
             )}
 
-            {/* Stats Grid with Feature Flag */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-              <StatCard
-                title="Total Views"
-                value={analytics.totalViews}
-                change={analytics.viewsChange}
-                icon={Eye}
-                color="bg-blue-500"
-              />
-              <StatCard
-                title="Total Likes"
-                value={analytics.totalLikes}
-                change={analytics.likesChange}
-                icon={Heart}
-                color="bg-red-500"
-              />
-              <StatCard
-                title="NDAs Signed"
-                value={analytics.totalNDAs}
-                change={analytics.ndasChange}
-                icon={Shield}
-                color="bg-green-500"
-              />
-              <StatCard
-                title="Following"
-                value={followingPitches.length}
-                icon={Users}
-                color="bg-purple-500"
-              />
-            </div>
-
-            {/* Investment Error */}
-            {sectionStatus.investments.error && (
-              <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-lg p-4">
-                <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
-                <p className="text-red-700 text-sm flex-1">{sectionStatus.investments.error}</p>
-                <button
-                  onClick={() => handleRetrySection('investments')}
-                  className="flex items-center gap-1 text-sm font-medium text-red-700 hover:text-red-800 bg-red-100 hover:bg-red-200 px-3 py-1 rounded transition"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" /> Retry
-                </button>
-              </div>
-            )}
-
-            {/* Investment Metrics */}
-            {investmentMetrics && sectionStatus.investments.loaded && !sectionStatus.investments.error && (
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Investment Overview</h2>
-                  <DollarSign className="w-5 h-5 text-green-500" />
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-gray-900">{investmentMetrics.totalInvestments || 0}</p>
-                    <p className="text-sm text-gray-600">Total Investments</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-gray-900">{investmentMetrics.activeDeals || 0}</p>
-                    <p className="text-sm text-gray-600">Active Deals</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-gray-900">
-                      {investmentMetrics.pipelineValue ? `$${(investmentMetrics.pipelineValue / 1000000).toFixed(1)}M` : '$0'}
-                    </p>
-                    <p className="text-sm text-gray-600">Pipeline Value</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-green-600">+{investmentMetrics.monthlyGrowth || 0}%</p>
-                    <p className="text-sm text-gray-600">Monthly Growth</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* Quick Actions */}
             <div className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
                 <Activity className="w-5 h-5 text-purple-500" />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <button
                   onClick={() => navigate('/marketplace')}
                   className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 hover:shadow-lg hover:from-blue-100 hover:to-indigo-100 transition-all"
@@ -1122,7 +936,7 @@ function ProductionDashboard() {
                     <p className="text-xs text-gray-500">Find new projects</p>
                   </div>
                 </button>
-                
+
                 <button
                   onClick={() => navigate('/production/search')}
                   className="flex items-center gap-3 p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition"
@@ -1133,7 +947,7 @@ function ProductionDashboard() {
                     <p className="text-xs text-gray-500">Filter by criteria</p>
                   </div>
                 </button>
-                
+
                 <button
                   onClick={() => navigate('/production/ndas')}
                   className="flex items-center gap-3 p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition"
@@ -1144,60 +958,8 @@ function ProductionDashboard() {
                     <p className="text-xs text-gray-500">View agreements</p>
                   </div>
                 </button>
-                
-                <button
-                  onClick={() => navigate('/production/analytics')}
-                  className="flex items-center gap-3 p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition"
-                >
-                  <BarChart3 className="w-6 h-6 text-gray-600" />
-                  <div className="text-left">
-                    <p className="font-medium text-gray-900">Analytics</p>
-                    <p className="text-xs text-gray-500">View insights</p>
-                  </div>
-                </button>
               </div>
             </div>
-
-            {/* Investment Opportunities */}
-            {investmentOpportunities.length > 0 && (
-              <InvestmentOpportunities
-                opportunities={investmentOpportunities}
-                loading={!sectionStatus.investments.loaded}
-                showMatchScore={false}
-                className="max-h-96 overflow-y-auto"
-              />
-            )}
-
-            {/* Top Performing Pitch */}
-            {analytics.topPitch && (
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Top Performing Pitch</h2>
-                  <Star className="w-5 h-5 text-yellow-500" />
-                </div>
-                <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{analytics.topPitch.title}</h3>
-                    <p className="text-sm text-gray-600 mt-1">{analytics.topPitch.genre} • {analytics.topPitch.format}</p>
-                    <p className="text-sm text-gray-500 mt-2">Budget: {analytics.topPitch.budget}</p>
-                  </div>
-                  <div className="flex space-x-6 text-sm">
-                    <div className="text-center">
-                      <p className="font-semibold text-gray-900">{analytics.topPitch.viewCount}</p>
-                      <p className="text-gray-600">Views</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="font-semibold text-gray-900">{analytics.topPitch.likeCount}</p>
-                      <p className="text-gray-600">Likes</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="font-semibold text-gray-900">{analytics.topPitch.ndaCount}</p>
-                      <p className="text-gray-600">NDAs</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Recent Activity */}
             <div className="bg-white rounded-xl shadow-sm p-6">

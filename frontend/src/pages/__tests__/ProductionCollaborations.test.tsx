@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, fireEvent } from '../../test/utils'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+import React from 'react'
 import ProductionCollaborations from '../production/ProductionCollaborations'
 
 // Mock config
@@ -69,7 +71,7 @@ describe('ProductionCollaborations', () => {
   it('shows loading spinner while fetching collaborations', () => {
     mockGetCollaborations.mockReturnValue(new Promise(() => {}))
 
-    render(<ProductionCollaborations />)
+    render(<MemoryRouter><ProductionCollaborations /></MemoryRouter>)
 
     const spinner = document.querySelector('.animate-spin')
     expect(spinner).toBeInTheDocument()
@@ -80,7 +82,7 @@ describe('ProductionCollaborations', () => {
   it('shows empty state when no collaborations are returned', async () => {
     mockGetCollaborations.mockResolvedValue([])
 
-    render(<ProductionCollaborations />)
+    render(<MemoryRouter><ProductionCollaborations /></MemoryRouter>)
 
     await waitFor(() => {
       expect(screen.getByText('No collaborations found')).toBeInTheDocument()
@@ -93,7 +95,7 @@ describe('ProductionCollaborations', () => {
   it('displays collaboration cards after successful fetch', async () => {
     mockGetCollaborations.mockResolvedValue(mockCollaborations)
 
-    render(<ProductionCollaborations />)
+    render(<MemoryRouter><ProductionCollaborations /></MemoryRouter>)
 
     await waitFor(() => {
       expect(screen.getByText('Summit Studios')).toBeInTheDocument()
@@ -105,7 +107,7 @@ describe('ProductionCollaborations', () => {
   it('renders page header and New Collaboration button', async () => {
     mockGetCollaborations.mockResolvedValue(mockCollaborations)
 
-    render(<ProductionCollaborations />)
+    render(<MemoryRouter><ProductionCollaborations /></MemoryRouter>)
 
     await waitFor(() => {
       expect(screen.getByText('Collaborations')).toBeInTheDocument()
@@ -119,7 +121,7 @@ describe('ProductionCollaborations', () => {
   it('shows empty state when API call fails', async () => {
     mockGetCollaborations.mockRejectedValue(new Error('Network error'))
 
-    render(<ProductionCollaborations />)
+    render(<MemoryRouter><ProductionCollaborations /></MemoryRouter>)
 
     await waitFor(() => {
       // On error, collaborations array stays empty, so empty state appears
@@ -132,7 +134,7 @@ describe('ProductionCollaborations', () => {
   it('filters collaborations by search term', async () => {
     mockGetCollaborations.mockResolvedValue(mockCollaborations)
 
-    render(<ProductionCollaborations />)
+    render(<MemoryRouter><ProductionCollaborations /></MemoryRouter>)
 
     await waitFor(() => {
       expect(screen.getByText('Summit Studios')).toBeInTheDocument()

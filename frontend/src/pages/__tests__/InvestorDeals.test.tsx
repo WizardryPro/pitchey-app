@@ -259,4 +259,18 @@ describe('InvestorDeals', () => {
       expect(screen.getByText('Jane Smith')).toBeInTheDocument()
     })
   })
+
+  it('calls GET /api/investor/deals on mount', async () => {
+    render(
+      <MemoryRouter>
+        <InvestorDeals />
+      </MemoryRouter>
+    )
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/investor/deals'),
+        expect.objectContaining({ credentials: 'include' })
+      )
+    })
+  })
 })

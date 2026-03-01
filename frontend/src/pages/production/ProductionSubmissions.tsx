@@ -44,13 +44,13 @@ export default function ProductionSubmissions() {
 
   useEffect(() => {
     fetchSubmissions();
-  }, []);
+  }, [statusFilter]);
 
   const fetchSubmissions = async () => {
     try {
       setLoading(true);
       const API_URL = import.meta.env.VITE_API_URL || '';
-      const response = await fetch(`${API_URL}/api/pitches?limit=50&sortBy=created_at&sortOrder=desc`, {
+      const response = await fetch(`${API_URL}/api/production/submissions?status=${statusFilter === 'all' ? 'new' : statusFilter}&limit=50`, {
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -58,21 +58,22 @@ export default function ProductionSubmissions() {
       if (!response.ok) throw new Error('Failed to fetch submissions');
 
       const data = await response.json();
-      const pitches = data.data?.pitches || data.pitches || [];
+      const items = data.data?.submissions || [];
 
-      const mapped: Submission[] = pitches.map((p: any) => ({
-        id: p.id?.toString() || '',
-        title: p.title || 'Untitled',
-        creator: p.creator_name || p.username || 'Unknown Creator',
-        creatorEmail: p.creator_email || '',
-        submittedDate: p.created_at || new Date().toISOString(),
-        genre: p.genre || 'Unspecified',
-        budget: p.estimated_budget || p.budget || 0,
-        status: mapPitchStatus(p.status),
-        rating: 0,
-        synopsis: p.logline || p.short_synopsis || '',
+      const mapped: Submission[] = items.map((s: any) => ({
+        id: s.id?.toString() || '',
+        title: s.title || 'Untitled',
+        creator: s.creator || 'Unknown Creator',
+        creatorEmail: s.creator_email || '',
+        submittedDate: s.created_at || new Date().toISOString(),
+        genre: s.genre || 'Unspecified',
+        budget: s.estimated_budget || 0,
+        status: mapReviewStatus(s.review_status),
+        rating: Number(s.review_rating) || 0,
+        synopsis: s.logline || s.short_synopsis || '',
         attachments: 0,
-        lastActivity: p.updated_at ? getRelativeTime(p.updated_at) : 'Unknown'
+        lastActivity: s.updated_at ? getRelativeTime(s.updated_at) : 'Unknown',
+        reviewNotes: s.review_notes || undefined
       }));
 
       setSubmissions(mapped);
@@ -84,12 +85,11 @@ export default function ProductionSubmissions() {
     }
   };
 
-  const mapPitchStatus = (status: string): Submission['status'] => {
+  const mapReviewStatus = (status: string): Submission['status'] => {
     const mapping: Record<string, Submission['status']> = {
-      published: 'new',
-      draft: 'review',
-      review: 'review',
-      approved: 'shortlisted',
+      new: 'new',
+      reviewing: 'review',
+      shortlisted: 'shortlisted',
       accepted: 'accepted',
       rejected: 'rejected',
       archived: 'archived'
@@ -298,11 +298,17 @@ export default function ProductionSubmissions() {
                     </div>
 
                     <div className="flex gap-2">
-                      <button className="px-4 py-2 text-purple-600 hover:bg-purple-50 rounded-lg transition flex items-center gap-2">
+                      <button
+                        onClick={() => navigate(`/production/pitches/${submission.id}`)}
+                        className="px-4 py-2 text-purple-600 hover:bg-purple-50 rounded-lg transition flex items-center gap-2"
+                      >
                         <Eye className="w-4 h-4" />
                         View Details
                       </button>
-                      <button className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition flex items-center gap-2">
+                      <button
+                        onClick={() => navigate(`/production/messages?to=${encodeURIComponent(submission.creatorEmail)}&subject=${encodeURIComponent('Re: ' + submission.title)}`)}
+                        className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition flex items-center gap-2"
+                      >
                         <MessageSquare className="w-4 h-4" />
                         Contact
                       </button>

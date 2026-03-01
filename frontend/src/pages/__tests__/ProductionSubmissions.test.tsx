@@ -19,29 +19,31 @@ vi.mock('react-router-dom', async () => {
 const mockFetch = vi.fn()
 global.fetch = mockFetch
 
-const mockPitches = [
+const mockSubmissions = [
   {
     id: 1,
     title: 'Sci-Fi Blockbuster',
-    creator_name: 'John Creator',
+    creator: 'John Creator',
     creator_email: 'john@test.com',
     created_at: '2026-01-15T00:00:00Z',
     updated_at: '2026-02-10T00:00:00Z',
     genre: 'Sci-Fi',
     estimated_budget: 5000000,
-    status: 'published',
+    review_status: 'new',
+    review_rating: 0,
     logline: 'A thrilling sci-fi adventure.',
   },
   {
     id: 2,
     title: 'Drama Film',
-    creator_name: 'Jane Director',
+    creator: 'Jane Director',
     creator_email: 'jane@test.com',
     created_at: '2026-01-20T00:00:00Z',
     updated_at: '2026-02-15T00:00:00Z',
     genre: 'Drama',
     estimated_budget: 2000000,
-    status: 'draft',
+    review_status: 'reviewing',
+    review_rating: 0,
     logline: 'An emotional drama story.',
   },
 ]
@@ -77,7 +79,7 @@ describe('ProductionSubmissions', () => {
   it('renders stats cards section', async () => {
     mockFetch.mockResolvedValue({
       ok: true,
-      json: async () => ({ data: { pitches: mockPitches } }),
+      json: async () => ({ data: { submissions: mockSubmissions } }),
     })
 
     renderComponent()
@@ -93,7 +95,7 @@ describe('ProductionSubmissions', () => {
   it('renders search input', async () => {
     mockFetch.mockResolvedValue({
       ok: true,
-      json: async () => ({ data: { pitches: mockPitches } }),
+      json: async () => ({ data: { submissions: mockSubmissions } }),
     })
 
     renderComponent()
@@ -107,7 +109,7 @@ describe('ProductionSubmissions', () => {
   it('displays submissions from API', async () => {
     mockFetch.mockResolvedValue({
       ok: true,
-      json: async () => ({ data: { pitches: mockPitches } }),
+      json: async () => ({ data: { submissions: mockSubmissions } }),
     })
 
     renderComponent()
@@ -123,7 +125,7 @@ describe('ProductionSubmissions', () => {
   it('renders correct stat counts', async () => {
     mockFetch.mockResolvedValue({
       ok: true,
-      json: async () => ({ data: { pitches: mockPitches } }),
+      json: async () => ({ data: { submissions: mockSubmissions } }),
     })
 
     renderComponent()
@@ -137,7 +139,7 @@ describe('ProductionSubmissions', () => {
   it('shows genre badges for submissions', async () => {
     mockFetch.mockResolvedValue({
       ok: true,
-      json: async () => ({ data: { pitches: mockPitches } }),
+      json: async () => ({ data: { submissions: mockSubmissions } }),
     })
 
     renderComponent()
@@ -154,7 +156,7 @@ describe('ProductionSubmissions', () => {
   it('shows empty state when no submissions match', async () => {
     mockFetch.mockResolvedValue({
       ok: true,
-      json: async () => ({ data: { pitches: [] } }),
+      json: async () => ({ data: { submissions: [] } }),
     })
 
     renderComponent()
@@ -192,7 +194,7 @@ describe('ProductionSubmissions', () => {
   it('renders status filter buttons', async () => {
     mockFetch.mockResolvedValue({
       ok: true,
-      json: async () => ({ data: { pitches: mockPitches } }),
+      json: async () => ({ data: { submissions: mockSubmissions } }),
     })
 
     renderComponent()
@@ -213,7 +215,7 @@ describe('ProductionSubmissions', () => {
   it('renders genre filter dropdown', async () => {
     mockFetch.mockResolvedValue({
       ok: true,
-      json: async () => ({ data: { pitches: mockPitches } }),
+      json: async () => ({ data: { submissions: mockSubmissions } }),
     })
 
     renderComponent()
@@ -226,7 +228,7 @@ describe('ProductionSubmissions', () => {
   it('renders View Details and Contact buttons for each submission', async () => {
     mockFetch.mockResolvedValue({
       ok: true,
-      json: async () => ({ data: { pitches: mockPitches } }),
+      json: async () => ({ data: { submissions: mockSubmissions } }),
     })
 
     renderComponent()
@@ -239,11 +241,27 @@ describe('ProductionSubmissions', () => {
     expect(screen.getAllByText('Contact')).toHaveLength(2)
   })
 
+  // --- URL assertion ---
+  it('fetches from correct API endpoint', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: { submissions: [] } }),
+    })
+
+    renderComponent()
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalled()
+    })
+    const calledUrl: string = mockFetch.mock.calls[0][0]
+    expect(calledUrl).toContain('/api/production/submissions')
+  })
+
   // --- Search filtering ---
   it('filters submissions by search term', async () => {
     mockFetch.mockResolvedValue({
       ok: true,
-      json: async () => ({ data: { pitches: mockPitches } }),
+      json: async () => ({ data: { submissions: mockSubmissions } }),
     })
 
     renderComponent()

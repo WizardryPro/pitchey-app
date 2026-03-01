@@ -84,16 +84,16 @@ export default function Profile() {
         const rawData = await response.json() as Record<string, unknown>;
         const followers = (rawData['followerCount'] as number | undefined) ?? 0;
 
-        // Get following count
-        const followingResponse = await fetch(`${API_URL}/api/users/following/count`, {
-          credentials: 'include' // Send cookies for Better Auth session
+        // Get following count from follows/stats endpoint
+        const followingResponse = await fetch(`${API_URL}/api/follows/stats`, {
+          credentials: 'include'
         });
 
         let following = 0;
         if (followingResponse.ok) {
           const followingData = await followingResponse.json() as Record<string, unknown>;
-          const counts = followingData['counts'] as Record<string, number> | undefined;
-          following = counts?.['creators'] ?? 0;
+          const data = (followingData['data'] as Record<string, unknown>) ?? followingData;
+          following = Number(data['followingCount'] ?? data['following_count']) || 0;
         }
 
         setSocialStats({ followers, following });

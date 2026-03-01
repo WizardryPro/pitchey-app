@@ -191,4 +191,55 @@ describe('Analytics', () => {
     expect(screen.getByText('Last 3 months')).toBeInTheDocument()
     expect(screen.getByText('Last year')).toBeInTheDocument()
   })
+
+  // ─── URL Assertion Tests ──────────────────────────────────────────────────
+
+  it('calls GET /api/analytics/dashboard with preset param', async () => {
+    vi.mocked(global.fetch)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockAnalyticsData,
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockUserData,
+      } as Response)
+
+    render(<Analytics />)
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/analytics/dashboard?preset='),
+        expect.objectContaining({ credentials: 'include' })
+      )
+    })
+  })
+
+  it('calls GET /api/analytics/user (not /users) with preset param', async () => {
+    vi.mocked(global.fetch)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockAnalyticsData,
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockUserData,
+      } as Response)
+
+    render(<Analytics />)
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/analytics/user?preset='),
+        expect.objectContaining({ credentials: 'include' })
+      )
+    })
+
+    // Ensure the wrong URL is NOT called
+    const calls = vi.mocked(global.fetch).mock.calls.map(c => c[0])
+    const hasWrongUrl = calls.some(url =>
+      typeof url === 'string' && url.includes('/api/analytics/users')
+    )
+    expect(hasWrongUrl).toBe(false)
+  })
 })

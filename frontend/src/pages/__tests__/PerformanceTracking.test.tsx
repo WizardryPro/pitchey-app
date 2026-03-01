@@ -269,4 +269,23 @@ describe('PerformanceTracking', () => {
       expect(screen.getByText(/No investments yet/)).toBeInTheDocument()
     })
   })
+
+  it('calls GET /api/investor/performance on mount', async () => {
+    const mockFetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockPerformanceData),
+    })
+    vi.stubGlobal('fetch', mockFetchSpy)
+    render(
+      <MemoryRouter>
+        <PerformanceTracking />
+      </MemoryRouter>
+    )
+    await waitFor(() => {
+      expect(mockFetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining('/api/investor/performance'),
+        expect.objectContaining({ credentials: 'include' })
+      )
+    })
+  })
 })

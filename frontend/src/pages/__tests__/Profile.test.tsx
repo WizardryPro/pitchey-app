@@ -79,10 +79,10 @@ describe('Profile', () => {
           }),
         })
       }
-      if (url.includes('/api/users/following/count')) {
+      if (url.includes('/api/follows/stats')) {
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ counts: { creators: 10 } }),
+          json: () => Promise.resolve({ data: { followingCount: 10 } }),
         })
       }
       return Promise.resolve({ ok: false, json: () => Promise.resolve({}) })
@@ -326,5 +326,63 @@ describe('Profile', () => {
       fireEvent.click(backButton)
       expect(mockNavigate).toHaveBeenCalledWith(-1)
     }
+  })
+
+  // ─── URL Assertion Tests ──────────────────────────────────────────────────
+
+  it('calls GET /api/user/profile for profile data', async () => {
+    render(
+      <MemoryRouter>
+        <Profile />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/user/profile'),
+        expect.objectContaining({ credentials: 'include' })
+      )
+    })
+  })
+
+  it('calls GET /api/follows/stats for following count', async () => {
+    render(
+      <MemoryRouter>
+        <Profile />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/follows/stats'),
+        expect.objectContaining({ credentials: 'include' })
+      )
+    })
+  })
+
+  it('calls PUT /api/user/profile when saving', async () => {
+    render(
+      <MemoryRouter>
+        <Profile />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Edit Profile')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('Edit Profile'))
+    await waitFor(() => {
+      expect(screen.getByText('Save Changes')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('Save Changes'))
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/user/profile'),
+        expect.objectContaining({ method: 'PUT', credentials: 'include' })
+      )
+    })
   })
 })

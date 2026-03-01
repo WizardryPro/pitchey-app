@@ -350,4 +350,33 @@ describe('Calendar', () => {
       expect(screen.getByText('Reminder')).toBeInTheDocument()
     })
   })
+
+  it('calls GET /api/creator/calendar/events on mount', async () => {
+    render(
+      <MemoryRouter>
+        <Calendar />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/creator/calendar/events'),
+        expect.objectContaining({ credentials: 'include' })
+      )
+    })
+  })
+
+  it('passes start and end query params when fetching events', async () => {
+    render(
+      <MemoryRouter>
+        <Calendar />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      const callUrl: string = mockFetch.mock.calls[0][0]
+      expect(callUrl).toContain('start=')
+      expect(callUrl).toContain('end=')
+    })
+  })
 })

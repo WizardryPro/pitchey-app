@@ -89,8 +89,8 @@ export default function Analytics() {
         fetch(`${API_URL}/api/analytics/dashboard?preset=${preset}`, {
           credentials: 'include' // Send cookies for Better Auth session
         }),
-        fetch(`${API_URL}/api/analytics/users?preset=${preset}`, {
-          credentials: 'include' // Send cookies for Better Auth session
+        fetch(`${API_URL}/api/analytics/user?preset=${preset}`, {
+          credentials: 'include'
         })
       ]);
       

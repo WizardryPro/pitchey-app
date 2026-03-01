@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { GitBranch, ArrowRight, Clock, TrendingUp, DollarSign, Calendar, Users, Filter, BarChart3, CheckCircle, AlertCircle } from 'lucide-react';
-import { useBetterAuthStore } from '../../store/betterAuthStore';
-import { config, API_URL } from '../../config';
+import { ProductionService } from '../../services/production.service';
 
 interface PipelineProject {
   id: string;
@@ -57,7 +56,6 @@ const riskColors = {
 const stageOrder = ['development', 'pre-production', 'production', 'post-production', 'delivery', 'release'];
 
 export default function ProductionPipeline() {
-    const { user, logout } = useBetterAuthStore();
   const [projects, setProjects] = useState<PipelineProject[]>([]);
   const [stats, setStats] = useState<PipelineStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -73,18 +71,47 @@ export default function ProductionPipeline() {
   const fetchPipelineData = async () => {
     try {
       setLoading(true);
-    const response = await fetch(`${API_URL}/api/production/projects`, {
-      method: 'GET',
-      credentials: 'include' // Send cookies for Better Auth session
-    });
+      const data = await ProductionService.getProjects({ limit: 50 });
+      const mapped: PipelineProject[] = (data.projects || []).map((p: any) => ({
+        id: p.id?.toString() || '',
+        title: p.title || 'Untitled',
+        genre: p.genre || 'Unknown',
+        stage: p.stage || 'development',
+        budget: Number(p.budget_allocated || p.estimated_budget) || 0,
+        progress: Number(p.completion_percentage) || 0,
+        team: 0,
+        director: p.director || undefined,
+        producer: p.producer || undefined,
+        estimatedCompletion: p.target_completion_date || new Date(Date.now() + 90 * 86400000).toISOString(),
+        priority: p.priority || 'medium',
+        risk: 'low',
+        daysInStage: p.start_date ? Math.max(0, Math.floor((Date.now() - new Date(p.start_date).getTime()) / 86400000)) : 0,
+        nextMilestone: p.next_milestone || 'No milestone set',
+        blockers: []
+      }));
+      setProjects(mapped);
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch pipeline data: ${response.status}`);
+      // Compute stats from mapped projects
+      const projectsByStage: Record<string, number> = {};
+      for (const p of mapped) {
+        projectsByStage[p.stage] = (projectsByStage[p.stage] || 0) + 1;
       }
-
-      const data = await response.json();
-      setProjects(data.projects || []);
-      setStats(data.stats);
+      setStats({
+        totalProjects: mapped.length,
+        totalBudget: mapped.reduce((sum, p) => sum + p.budget, 0),
+        averageProgress: mapped.length > 0 ? Math.round(mapped.reduce((sum, p) => sum + p.progress, 0) / mapped.length) : 0,
+        projectsByStage,
+        upcomingDeadlines: mapped.filter(p => {
+          const days = Math.ceil((new Date(p.estimatedCompletion).getTime() - Date.now()) / 86400000);
+          return days <= 14 && days > 0;
+        }).length,
+        blockedProjects: mapped.filter(p => p.blockers.length > 0).length,
+        onTrackProjects: mapped.filter(p => p.progress >= 50).length,
+        behindSchedule: mapped.filter(p => {
+          const days = Math.ceil((new Date(p.estimatedCompletion).getTime() - Date.now()) / 86400000);
+          return days <= 0;
+        }).length,
+      });
       setError(null);
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));

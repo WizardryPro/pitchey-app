@@ -83,17 +83,45 @@ export default function ProductionPitchDetail() {
         return;
       }
       
-      // Fetch from API using public endpoint
-      const token = localStorage.getItem('authToken');
-    const response = await fetch(`${API_URL}/api/endpoint`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include' // Send cookies for Better Auth session
-    });
-      
+      // Fetch from API using public pitch endpoint
+      const response = await fetch(`${API_URL}/api/pitches/public/${id}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+
       if (response.ok) {
-        const data = await response.json();
-        setPitch(data);
+        const raw = await response.json() as Record<string, unknown>;
+        const p = (raw.data as Record<string, unknown>) ?? raw;
+        // Map snake_case API response to PitchDetails interface
+        setPitch({
+          id: Number(p.id) || 0,
+          title: String(p.title ?? ''),
+          logline: String(p.logline ?? ''),
+          genre: String(p.genre ?? ''),
+          format: String(p.format ?? ''),
+          formatCategory: p.format_category as string | undefined,
+          formatSubtype: p.format_subtype as string | undefined,
+          shortSynopsis: String(p.short_synopsis ?? p.shortSynopsis ?? ''),
+          longSynopsis: String(p.long_synopsis ?? p.longSynopsis ?? ''),
+          budget: String(p.budget ?? p.budget_range ?? ''),
+          estimatedBudget: Number(p.estimated_budget) || undefined,
+          productionTimeline: p.production_timeline as string | undefined,
+          targetReleaseDate: p.target_release_date as string | undefined,
+          targetAudience: p.target_audience as string | undefined,
+          comparableTitles: p.comparable_films as string | undefined,
+          characters: Array.isArray(p.characters) ? p.characters as PitchDetails['characters'] : [],
+          themes: Array.isArray(p.themes) ? p.themes as string[] : [],
+          viewCount: Number(p.view_count ?? p.viewCount) || 0,
+          likeCount: Number(p.like_count ?? p.likeCount) || 0,
+          ndaCount: Number(p.nda_count ?? p.ndaCount) || 0,
+          followersCount: Number(p.followers_count ?? p.followersCount) || 0,
+          status: String(p.status ?? 'draft'),
+          createdAt: String(p.created_at ?? ''),
+          publishedAt: p.published_at as string | undefined,
+          titleImage: p.title_image as string | undefined,
+          mediaFiles: Array.isArray(p.media_files) ? p.media_files as PitchDetails['mediaFiles'] : undefined,
+        });
       } else {
         console.error('Failed to fetch pitch:', response.status, response.statusText);
         // Don't set any fallback data - let the "not found" state show

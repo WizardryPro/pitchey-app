@@ -258,4 +258,35 @@ describe('ROIAnalysis', () => {
       expect(screen.getByText('Retry')).toBeInTheDocument()
     })
   })
+
+  it('calls getROISummary and getROIByCategory via investorApi', async () => {
+    render(
+      <MemoryRouter>
+        <ROIAnalysis />
+      </MemoryRouter>
+    )
+    await waitFor(() => {
+      expect(mockGetROISummary).toHaveBeenCalledTimes(1)
+      expect(mockGetROIByCategory).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('calls GET /api/investor/performance for trend data', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockPerfResponse),
+    })
+    vi.stubGlobal('fetch', fetchSpy)
+    render(
+      <MemoryRouter>
+        <ROIAnalysis />
+      </MemoryRouter>
+    )
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining('/api/investor/performance'),
+        expect.objectContaining({ credentials: 'include' })
+      )
+    })
+  })
 })
