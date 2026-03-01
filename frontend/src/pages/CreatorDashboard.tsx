@@ -13,7 +13,7 @@ import { EnhancedCreatorAnalytics } from '../components/Analytics/EnhancedCreato
 // import { NotificationWidget } from '../components/Dashboard/NotificationWidget';
 import { withPortalErrorBoundary } from '../components/ErrorBoundary/PortalErrorBoundary';
 import { useSentryPortal } from '../hooks/useSentryPortal';
-import { useWebSocket } from '../contexts/WebSocketContext';
+import { useWebSocket } from '@shared/contexts/WebSocketContext';
 import {
   validateCreatorStats,
   safeArray,

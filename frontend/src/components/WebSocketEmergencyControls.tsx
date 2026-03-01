@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { WifiOff, Wifi, Settings, AlertTriangle } from 'lucide-react';
-import { useWebSocket } from '../contexts/WebSocketContext';
+import { useWebSocket } from '@shared/contexts/WebSocketContext';
 
 interface WebSocketEmergencyControlsProps {
   className?: string;

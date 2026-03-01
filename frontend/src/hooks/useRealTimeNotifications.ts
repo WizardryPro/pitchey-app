@@ -2,7 +2,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import { useNotificationToast } from '@shared/components/feedback/NotificationToastContainer';
 import { notificationService } from '../services/notification.service';
 import { useBetterAuthStore } from '../store/betterAuthStore';
-import { useWebSocket } from '../contexts/WebSocketContext';
+import { useWebSocket } from '@shared/contexts/WebSocketContext';
 import { BRAND } from '../constants/brand';
 
 interface NotificationData {

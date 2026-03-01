@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useTyping } from '../contexts/WebSocketContext';
+import { useTyping } from '@shared/contexts/WebSocketContext';
 
 interface TypingIndicatorProps {
   conversationId: number;

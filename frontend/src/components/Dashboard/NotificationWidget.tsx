@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, BellRing, ArrowRight, EyeOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useNotifications } from '../../contexts/WebSocketContext';
+import { useNotifications } from '@shared/contexts/WebSocketContext';
 import { NotificationsService, type Notification as BackendNotification } from '../../services/notifications.service';
 import { useRealTimeNotifications } from '../../hooks/useRealTimeNotifications';
 

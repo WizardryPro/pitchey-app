@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { notificationService } from '../services/notification.service';
-import { useWebSocket as useWebSocketContext } from '../contexts/WebSocketContext';
+import { useWebSocket as useWebSocketContext } from '@shared/contexts/WebSocketContext';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { BRAND } from '../constants/brand';
 

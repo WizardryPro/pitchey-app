@@ -8,7 +8,7 @@ import ToastProvider from '@shared/components/feedback/ToastProvider';
 import { NotificationToastProvider } from '@shared/components/feedback/NotificationToastContainer';
 import LoadingSpinner from '@shared/components/feedback/LoadingSpinner';
 // Import safe context provider (without legacy AuthProvider)
-import { AppContextProviderSafe } from './contexts/AppContextProviderSafe';
+import { AppContextProviderSafe } from '@shared/contexts/AppContextProviderSafe';
 import { configService } from './services/config.service';
 import { config, API_URL } from './config';
 import { AuthService } from './services/auth.service';

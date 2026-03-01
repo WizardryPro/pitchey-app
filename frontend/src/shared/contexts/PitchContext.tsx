@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { pitchService, type Pitch } from '../services/pitch.service';
+import { pitchService, type Pitch } from '@/services/pitch.service';
 
 interface PitchContextType {
   pitches: Pitch[];

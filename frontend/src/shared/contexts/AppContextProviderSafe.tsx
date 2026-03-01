@@ -6,7 +6,7 @@ import { NotificationProvider } from './NotificationContext';
 import { PitchProvider } from './PitchContext';
 import { UserProvider } from './UserContext';
 import { WebSocketProvider } from './WebSocketContext';
-import { useBetterAuthStore } from '../store/betterAuthStore';
+import { useBetterAuthStore } from '@/store/betterAuthStore';
 
 interface AppProviderProps {
   children: ReactNode;

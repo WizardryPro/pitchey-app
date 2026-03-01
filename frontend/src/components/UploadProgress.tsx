@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useUploadProgress } from '../contexts/WebSocketContext';
+import { useUploadProgress } from '@shared/contexts/WebSocketContext';
 
 interface UploadProgressData {
   uploadId: string;

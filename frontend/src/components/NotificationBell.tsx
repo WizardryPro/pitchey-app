@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bell, BellRing, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useNotifications } from '../contexts/WebSocketContext';
+import { useNotifications } from '@shared/contexts/WebSocketContext';
 import { NotificationsService } from '../services/notifications.service';
 
 interface NotificationBellProps {

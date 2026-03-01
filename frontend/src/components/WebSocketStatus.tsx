@@ -1,6 +1,6 @@
 import React from 'react';
 import { Wifi, WifiOff, RotateCcw, AlertCircle } from 'lucide-react';
-import { useWebSocket } from '../contexts/WebSocketContext';
+import { useWebSocket } from '@shared/contexts/WebSocketContext';
 
 interface WebSocketStatusProps {
   showDetails?: boolean;

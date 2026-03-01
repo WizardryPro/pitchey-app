@@ -40,7 +40,7 @@ import {
   safeString,
   isValidDate
 } from '@shared/utils/defensive';
-import { useWebSocket } from '../contexts/WebSocketContext';
+import { useWebSocket } from '@shared/contexts/WebSocketContext';
 import { useSentryPortal } from '../hooks/useSentryPortal';
 import { withPortalErrorBoundary } from '../components/ErrorBoundary/PortalErrorBoundary';
 

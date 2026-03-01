@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { notificationService } from '../services/notification.service';
+import { notificationService } from '@/services/notification.service';
 // WebSocket removed - was causing circular dependency and reload issues
 // import { useWebSocket } from './WebSocketContext';
 

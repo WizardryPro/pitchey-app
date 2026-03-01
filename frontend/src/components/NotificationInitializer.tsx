@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { useRealTimeNotifications } from '../hooks/useRealTimeNotifications';
-import { useWebSocket } from '../contexts/WebSocketContext';
+import { useWebSocket } from '@shared/contexts/WebSocketContext';
 
 /**
  * Component that initializes the notification system when user is authenticated

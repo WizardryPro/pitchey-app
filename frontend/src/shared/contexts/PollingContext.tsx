@@ -4,8 +4,8 @@
  */
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
-import { apiClient } from '../lib/api-client';
-import { useBetterAuthStore } from '../store/betterAuthStore';
+import { apiClient } from '@/lib/api-client';
+import { useBetterAuthStore } from '@/store/betterAuthStore';
 
 interface PollResponse {
   notifications?: any[];

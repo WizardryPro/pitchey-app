@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { userService } from '../services/user.service';
+import { userService } from '@/services/user.service';
 import type { User } from '@shared/types';
 
 interface UserProfile extends User {

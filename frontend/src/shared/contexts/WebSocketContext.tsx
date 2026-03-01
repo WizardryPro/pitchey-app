@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode, useMemo } from 'react';
-import { useWebSocketAdvanced } from '../hooks/useWebSocketAdvanced';
+import { useWebSocketAdvanced } from '@/hooks/useWebSocketAdvanced';
 import type { WebSocketMessage, ConnectionStatus, MessageQueueStatus, ConnectionQuality } from '@shared/types/websocket';
-import { useBetterAuthStore } from '../store/betterAuthStore';
-import { config } from '../config';
-import { presenceFallbackService } from '../services/presence-fallback.service';
-import { pollingService } from '../services/polling.service';
-import { BRAND } from '../constants/brand';
+import { useBetterAuthStore } from '@/store/betterAuthStore';
+import { config } from '@/config';
+import { presenceFallbackService } from '@/services/presence-fallback.service';
+import { pollingService } from '@/services/polling.service';
+import { BRAND } from '@/constants/brand';
 
 interface NotificationData {
   id: string;

@@ -26,7 +26,7 @@ import FormatDisplay from '../components/FormatDisplay';
 import { EnhancedProductionAnalytics } from '../components/Analytics/EnhancedProductionAnalytics';
 import { withPortalErrorBoundary } from '../components/ErrorBoundary/PortalErrorBoundary';
 import { useSentryPortal } from '../hooks/useSentryPortal';
-import { useWebSocket } from '../contexts/WebSocketContext';
+import { useWebSocket } from '@shared/contexts/WebSocketContext';
 import {
   safeArray,
   safeMap,
