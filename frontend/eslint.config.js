@@ -167,6 +167,80 @@ export default [
     },
   },
 
+  // ── Feature boundary rules — features cannot import from other features ────
+  {
+    files: ['src/features/**/*.{ts,tsx}', 'src/shared/**/*.{ts,tsx}'],
+    ignores: TEST_FILE_PATTERNS,
+    rules: {
+      'import/no-restricted-paths': ['error', {
+        zones: [
+          // Features cannot import from other features (compose at portal level)
+          {
+            target: './src/features/auth/**',
+            from: './src/features/!(auth)/**',
+            message: 'Features must not import from other features. Compose at the portal level instead.',
+          },
+          {
+            target: './src/features/pitches/**',
+            from: './src/features/!(pitches)/**',
+            message: 'Features must not import from other features. Compose at the portal level instead.',
+          },
+          {
+            target: './src/features/ndas/**',
+            from: './src/features/!(ndas)/**',
+            message: 'Features must not import from other features. Compose at the portal level instead.',
+          },
+          {
+            target: './src/features/deals/**',
+            from: './src/features/!(deals)/**',
+            message: 'Features must not import from other features. Compose at the portal level instead.',
+          },
+          {
+            target: './src/features/messaging/**',
+            from: './src/features/!(messaging)/**',
+            message: 'Features must not import from other features. Compose at the portal level instead.',
+          },
+          {
+            target: './src/features/notifications/**',
+            from: './src/features/!(notifications)/**',
+            message: 'Features must not import from other features. Compose at the portal level instead.',
+          },
+          {
+            target: './src/features/browse/**',
+            from: './src/features/!(browse)/**',
+            message: 'Features must not import from other features. Compose at the portal level instead.',
+          },
+          {
+            target: './src/features/analytics/**',
+            from: './src/features/!(analytics)/**',
+            message: 'Features must not import from other features. Compose at the portal level instead.',
+          },
+          {
+            target: './src/features/billing/**',
+            from: './src/features/!(billing)/**',
+            message: 'Features must not import from other features. Compose at the portal level instead.',
+          },
+          {
+            target: './src/features/uploads/**',
+            from: './src/features/!(uploads)/**',
+            message: 'Features must not import from other features. Compose at the portal level instead.',
+          },
+          // Shared layer cannot import from features or portals
+          {
+            target: './src/shared/**',
+            from: './src/features/**',
+            message: 'Shared layer must not import from features. Move shared code to shared/ instead.',
+          },
+          {
+            target: './src/shared/**',
+            from: './src/portals/**',
+            message: 'Shared layer must not import from portals.',
+          },
+        ],
+      }],
+    },
+  },
+
   // ── Special: react-global.tsx ───────────────────────────────────────────────
   // Both react-global.ts and react-global.tsx exist. TypeScript module resolution
   // picks only the .ts file, so the .tsx is not included in any tsconfig project.
