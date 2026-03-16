@@ -192,6 +192,22 @@ export class WorkerEmailService {
         <p><a href="${data.acceptUrl}">Accept Invitation</a></p>
         <p>This invitation expires in 7 days.</p>
       `,
+
+      collaboratorInvite: (data) => `
+        <h2>You've Been Invited to Collaborate</h2>
+        <p><strong>${data.inviterName}</strong> from ${data.companyName} has invited you as <strong>${data.role}</strong> on "<strong>${data.projectTitle}</strong>".</p>
+        <p>Click below to view the project and start collaborating.</p>
+        <p style="margin: 24px 0;">
+          <a href="${data.acceptUrl}" style="background-color: #7c3aed; color: #fff; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block;">Accept Invitation</a>
+        </p>
+        <p style="font-size: 13px; color: #666;">This invitation expires in 7 days.</p>
+      `,
+
+      collaboratorAccepted: (data) => `
+        <h2>Collaborator Joined Your Project</h2>
+        <p><strong>${data.collaboratorName}</strong> has accepted your invitation to "<strong>${data.projectTitle}</strong>" as <strong>${data.role}</strong>.</p>
+        <p><a href="${data.projectUrl}">View Project</a></p>
+      `,
     };
 
     const renderFn = templates[template];

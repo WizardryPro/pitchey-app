@@ -49,6 +49,7 @@ export const creatorNavigationSections: NavigationSection[] = [
       { label: 'Invite', path: CREATOR_ROUTES.teamInvite, icon: UserPlus },
       { label: 'Roles', path: CREATOR_ROUTES.teamRoles, icon: Shield },
       { label: 'Collaborations', path: CREATOR_ROUTES.collaborations, icon: GitBranch },
+      { label: 'My Collaborations', path: CREATOR_ROUTES.myCollaborations, icon: GitBranch },
     ],
   },
   {

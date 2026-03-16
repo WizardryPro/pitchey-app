@@ -76,3 +76,38 @@ export async function sendTeamInviteEmail(to: string, data: {
     subject: `You've been invited to join "${data.teamName}" on Pitchey`
   });
 }
+
+/**
+ * Send Collaborator Invite Email
+ * @param apiKey - Pass env.RESEND_API_KEY from Worker env
+ */
+export async function sendCollaboratorInviteEmail(to: string, data: {
+  inviterName: string;
+  companyName: string;
+  role: string;
+  projectTitle: string;
+  acceptUrl: string;
+}, apiKey?: string) {
+  const service = getEmailService(apiKey);
+  return await service.sendTemplate(to, 'collaboratorInvite', {
+    ...data,
+    subject: `You've been invited to collaborate on "${data.projectTitle}" — Pitchey`
+  });
+}
+
+/**
+ * Send Collaborator Accepted Notification Email
+ * @param apiKey - Pass env.RESEND_API_KEY from Worker env
+ */
+export async function sendCollaboratorAcceptedEmail(to: string, data: {
+  collaboratorName: string;
+  role: string;
+  projectTitle: string;
+  projectUrl: string;
+}, apiKey?: string) {
+  const service = getEmailService(apiKey);
+  return await service.sendTemplate(to, 'collaboratorAccepted', {
+    ...data,
+    subject: `${data.collaboratorName} joined "${data.projectTitle}" on Pitchey`
+  });
+}

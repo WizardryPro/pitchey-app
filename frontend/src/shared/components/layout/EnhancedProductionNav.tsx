@@ -60,6 +60,7 @@ export const productionNavigationSections: NavigationSection[] = [
     items: [
       { label: 'Revenue', path: PRODUCTION_ROUTES.revenue, icon: DollarSign },
       { label: 'Collaborations', path: PRODUCTION_ROUTES.collaborations, icon: GitBranch },
+      { label: 'My Collaborations', path: PRODUCTION_ROUTES.myCollaborations, icon: GitBranch },
       { label: 'NDAs', path: '/production/dashboard', icon: Shield },
     ],
   },

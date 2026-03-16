@@ -21,6 +21,7 @@ export const CREATOR_ROUTES = {
   teamInvite: '/creator/team/invite',
   teamRoles: '/creator/team/roles',
   collaborations: '/creator/collaborations',
+  myCollaborations: '/creator/my-collaborations',
   
   // Onboarding
   onboarding: '/creator/onboarding',
@@ -93,6 +94,7 @@ export const INVESTOR_ROUTES = {
   settings: '/investor/settings',
   following: '/investor/following',
   ndaRequests: '/investor/nda-requests',
+  myCollaborations: '/investor/my-collaborations',
 };
 
 export const PRODUCTION_ROUTES = {
@@ -129,6 +131,7 @@ export const PRODUCTION_ROUTES = {
   revenue: '/production/revenue',
   saved: '/production/saved',
   collaborations: '/production/collaborations',
+  myCollaborations: '/production/my-collaborations',
   
   // Team
   teamManagement: '/production/team',

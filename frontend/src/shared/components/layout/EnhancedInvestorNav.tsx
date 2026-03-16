@@ -4,7 +4,8 @@ import {
   Home, BarChart3, Activity, LineChart, Briefcase, Clock, CheckCircle,
   FolderOpen, Globe, Bookmark, Eye, DollarSign, FileText, PieChart,
   TrendingUp, AlertTriangle, Users, Building2, UserCheck, Wallet,
-  CreditCard, Settings, Shield, Receipt, Calculator, FileCheck, Store, ExternalLink
+  CreditCard, Settings, Shield, Receipt, Calculator, FileCheck, Store, ExternalLink,
+  GitBranch
 } from 'lucide-react';
 import { INVESTOR_ROUTES } from '@/config/navigation.routes';
 
@@ -75,6 +76,7 @@ export const investorNavigationSections: NavigationSection[] = [
       { label: 'Co-Investors', path: INVESTOR_ROUTES.coInvestors, icon: UserCheck},
       { label: 'Creators', path: INVESTOR_ROUTES.creators, icon: Users},
       { label: 'Production Companies', path: INVESTOR_ROUTES.productionCompanies, icon: Building2},
+      { label: 'My Collaborations', path: INVESTOR_ROUTES.myCollaborations, icon: GitBranch},
     ],
   },
   {

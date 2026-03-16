@@ -2145,6 +2145,10 @@ class RouteRegistry {
       const { aiPitchExtract } = await import('./handlers/ai-pitch-extract');
       return aiPitchExtract(req, this.env);
     });
+    this.register('POST', '/api/production/ai-autofill', async (req) => {
+      const { aiProductionAutofill } = await import('./handlers/ai-production-autofill');
+      return aiProductionAutofill(req, this.env);
+    });
     this.register('GET', '/api/pitches/public/:id', this.getPublicPitch.bind(this));
     this.register('GET', '/api/pitches/following', this.getPitchesFollowing.bind(this));
     this.register('GET', '/api/pitches/search', this.searchPitches.bind(this));  // Add search BEFORE :id
@@ -2815,6 +2819,60 @@ class RouteRegistry {
     this.register('PUT', '/api/production/pitches/:pitchId/team', async (req) => {
       const { updateProductionTeam } = await import('./handlers/production-pitch-data');
       return updateProductionTeam(req, this.env);
+    });
+
+    // Project Collaborators — invitation management + scoped project access
+    this.register('POST', '/api/projects/:projectId/collaborators/invite', async (req) => {
+      const { inviteCollaborator } = await import('./handlers/collaborator');
+      return inviteCollaborator(req, this.env);
+    });
+    this.register('GET', '/api/projects/:projectId/collaborators', async (req) => {
+      const { listCollaborators } = await import('./handlers/collaborator');
+      return listCollaborators(req, this.env);
+    });
+    this.register('DELETE', '/api/projects/:projectId/collaborators/:collaboratorId', async (req) => {
+      const { removeCollaborator } = await import('./handlers/collaborator');
+      return removeCollaborator(req, this.env);
+    });
+    this.register('PATCH', '/api/projects/:projectId/collaborators/:collaboratorId', async (req) => {
+      const { updateCollaboratorRole } = await import('./handlers/collaborator');
+      return updateCollaboratorRole(req, this.env);
+    });
+    this.register('POST', '/api/projects/:projectId/collaborators/:collaboratorId/resend', async (req) => {
+      const { resendInvite } = await import('./handlers/collaborator');
+      return resendInvite(req, this.env);
+    });
+    this.register('POST', '/api/collaborate/accept', async (req) => {
+      const { acceptInvite } = await import('./handlers/collaborator');
+      return acceptInvite(req, this.env);
+    });
+    this.register('GET', '/api/my/collaborations', async (req) => {
+      const { getMyCollaborations } = await import('./handlers/collaborator');
+      return getMyCollaborations(req, this.env);
+    });
+    this.register('GET', '/api/my/collaborations/:projectId', async (req) => {
+      const { getCollaborationProject } = await import('./handlers/collaborator');
+      return getCollaborationProject(req, this.env);
+    });
+    this.register('GET', '/api/my/collaborations/:projectId/checklist', async (req) => {
+      const { getCollaborationChecklist } = await import('./handlers/collaborator');
+      return getCollaborationChecklist(req, this.env);
+    });
+    this.register('PATCH', '/api/my/collaborations/:projectId/checklist/:itemId', async (req) => {
+      const { toggleCollaborationChecklist } = await import('./handlers/collaborator');
+      return toggleCollaborationChecklist(req, this.env);
+    });
+    this.register('GET', '/api/my/collaborations/:projectId/notes', async (req) => {
+      const { getCollaborationNotes } = await import('./handlers/collaborator');
+      return getCollaborationNotes(req, this.env);
+    });
+    this.register('POST', '/api/my/collaborations/:projectId/notes', async (req) => {
+      const { addCollaborationNote } = await import('./handlers/collaborator');
+      return addCollaborationNote(req, this.env);
+    });
+    this.register('GET', '/api/my/collaborations/:projectId/activity', async (req) => {
+      const { getCollaborationActivity } = await import('./handlers/collaborator');
+      return getCollaborationActivity(req, this.env);
     });
 
     // Generic collaboration routes (aliases for portal-specific endpoints)

@@ -202,6 +202,7 @@ const InvestorProductionCompanies = lazyRetry(() => import('@portals/investor/pa
 const InvestorCreators = lazyRetry(() => import('@portals/investor/pages/InvestorCreators'));
 const Transactions = lazyRetry(() => import('@portals/admin/pages/Transactions'));
 const SystemSettings = lazyRetry(() => import('@portals/admin/pages/SystemSettings'));
+const AcceptInvitePage = lazyRetry(() => import('./pages/AcceptInvitePage'));
 
 // Test Pages
 const TestNavigation = lazyRetry(() => import('./pages/TestNavigation'));
@@ -416,6 +417,9 @@ function App() {
             <Navigate to={userType ? `/${userType}/dashboard` : '/'} />
           } />
           
+          {/* Collaborator Invite Acceptance */}
+          <Route path="/collaborate/accept" element={<AcceptInvitePage />} />
+
           {/* Creator Portal Routes - with profile guard + PortalLayout */}
           <Route path="/creator/*" element={
             isAuthenticated && userType === 'creator' ? <ProfileGuard userType="creator" /> :

@@ -185,6 +185,55 @@ Flow: View pitch → "Start Project" → modal pre-fills from pitch data → cre
 | Production projects use `production_pipeline` table | Was querying `pitches` table instead | DONE |
 | Production users can create pitches | `creator-pitches.ts` accepts both creator + production roles | DONE |
 
+#### 6C. AI Production Auto-Fill (Mar 2026) — DONE
+
+Upload a document (script, treatment, pitch deck) to auto-fill production assessment forms via Claude API.
+
+| Component | File | Status |
+|-----------|------|--------|
+| Backend handler (Claude Haiku 4.5) | `src/handlers/ai-production-autofill.ts` | DONE |
+| Route registration | `src/worker-integrated.ts` POST `/api/production/ai-autofill` | DONE |
+| Service method | `frontend/src/portals/production/services/production.service.ts` | DONE |
+| Auto-fill button + file upload | `frontend/src/portals/production/pages/ProductionPitchView.tsx` | DONE |
+
+Flow: Click "Auto-fill from Document" → upload PDF/TXT/DOCX → Claude analyzes → populates checklist (10 items), team priorities (6 roles), and categorized production notes (3-8 notes). Costs 5 credits. Uses same Anthropic API key as `ai-pitch-extract.ts`.
+
+### Stage 7: Team Collaboration (Post-Launch)
+
+**Decision**: Team members are metadata records for launch (70 users). Post-launch adds scoped collaborator access.
+
+#### Current State (Launch)
+- Team tab on ProductionPitchView: 6 roles (Director, Producer, Cinematographer, Production Designer, Editor, Composer) with name + status
+- `production_team_assignments` table stores team as JSONB per user/pitch
+- `teams`, `team_members`, `team_invitations` tables exist with owner/editor/viewer roles
+- TeamInvite page sends email invites via Resend
+- Frontend types already define `'collaborator'` role but backend only accepts `'owner' | 'editor' | 'viewer'`
+
+#### 7A. Collaborator System (Mar 2026) — DONE
+
+Production companies invite external team members to specific pipeline projects with scoped access. Collaborator access is additive — any user can also be a collaborator. NOT a fourth portal.
+
+Full implementation guide: `docs/collaborator-implementation.md`
+
+| Step | Description | Files | Status |
+|------|-------------|-------|--------|
+| 1 | Database migration (project_collaborators + activity_log) | `src/db/migrations/045_project_collaborators.sql` | DONE |
+| 2 | Invitation endpoints (invite, list, remove, update, resend) | `src/handlers/collaborator.ts` | DONE |
+| 3 | Invite acceptance endpoint | `src/handlers/collaborator.ts` | DONE |
+| 4 | Collaborator read endpoints (/api/my/collaborations/*) | `src/handlers/collaborator.ts` | DONE |
+| 5 | Collaborator write endpoints (checklist, notes, activity) | `src/handlers/collaborator.ts` | DONE |
+| 6 | Frontend: InviteCollaboratorModal + CollaboratorList | `frontend/src/portals/production/components/` | DONE |
+| 7 | Frontend: AcceptInvitePage | `frontend/src/pages/AcceptInvitePage.tsx` | DONE |
+| 8 | Frontend: MyCollaborations dashboard + sidebar nav | `frontend/src/pages/MyCollaborations.tsx` | DONE |
+| 9 | Frontend: CollaborationProjectView (5 tabs) | `frontend/src/pages/CollaborationProjectView.tsx` | DONE |
+| 10 | Email integration (invite + acceptance notifications) | Resend integration | DONE |
+
+**Not building**: A fourth portal. Collaborators get a scoped project view within the existing routing, not a separate navigation tree. Think "guest access" not "new portal."
+
+#### 7B. Full Crew Features (Later) — DEFERRED
+
+Availability calendars, rate cards, crew project dashboards. Competes with StudioBinder — not where Pitchey's differentiation lies. Only build if user demand justifies it post-launch.
+
 ### Current Numbers
 - 612+ API routes, 135 pages, 166 components, 26 services, 4 stores
 - 166 test files, 3109 tests (82% page coverage)

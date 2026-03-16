@@ -86,6 +86,10 @@ const ProductionSettingsBilling = lazy(() => import('@portals/production/pages/P
 const ProductionSettingsNotifications = lazy(() => import('@portals/production/pages/ProductionSettingsNotifications'));
 const ProductionSettingsSecurity = lazy(() => import('@portals/production/pages/ProductionSettingsSecurity'));
 
+// Collaborator pages (shared across portals)
+const MyCollaborations = lazy(() => import('../../pages/MyCollaborations'));
+const CollaborationProjectView = lazy(() => import('../../pages/CollaborationProjectView'));
+
 // Shared pages used across portals
 const Following = lazy(() => import('../../pages/Following'));
 const Settings = lazy(() => import('../../pages/Settings'));
@@ -134,6 +138,12 @@ export function AllCreatorRoutes({ isAuthenticated, userType }: RoutesProps) {
       } />
       <Route path={getRelativePath(CREATOR_ROUTES.collaborations, '/creator')} element={
         isCreator ? <CreatorCollaborations /> : <Navigate to="/login/creator" />
+      } />
+      <Route path="my-collaborations" element={
+        isCreator ? <MyCollaborations /> : <Navigate to="/login/creator" />
+      } />
+      <Route path="my-collaborations/:projectId" element={
+        isCreator ? <CollaborationProjectView /> : <Navigate to="/login/creator" />
       } />
 
       {/* Funding & Investors */}
@@ -249,6 +259,12 @@ export function AllInvestorRoutes({ isAuthenticated, userType }: RoutesProps) {
       <Route path={getRelativePath(INVESTOR_ROUTES.ndaRequests, '/investor')} element={
         isInvestor ? <NDARequests /> : <Navigate to="/login/investor" />
       } />
+      <Route path="my-collaborations" element={
+        isInvestor ? <MyCollaborations /> : <Navigate to="/login/investor" />
+      } />
+      <Route path="my-collaborations/:projectId" element={
+        isInvestor ? <CollaborationProjectView /> : <Navigate to="/login/investor" />
+      } />
     </>
   );
 }
@@ -322,7 +338,13 @@ export function AllProductionRoutes({ isAuthenticated, userType }: RoutesProps) 
       <Route path={getRelativePath(PRODUCTION_ROUTES.collaborations, '/production')} element={
         isProduction ? <ProductionCollaborations /> : <Navigate to="/login/production" />
       } />
-      
+      <Route path="my-collaborations" element={
+        isProduction ? <MyCollaborations /> : <Navigate to="/login/production" />
+      } />
+      <Route path="my-collaborations/:projectId" element={
+        isProduction ? <CollaborationProjectView /> : <Navigate to="/login/production" />
+      } />
+
       {/* Pitch Creation */}
       <Route path={getRelativePath(PRODUCTION_ROUTES.pitchNew, '/production')} element={
         isProduction ? <ProductionPitchCreate /> : <Navigate to="/login/production" />
