@@ -5,7 +5,6 @@ import {
   MoreVertical, Edit2, Trash2, CheckCircle, XCircle,
   Briefcase, Star, AlertCircle, RefreshCw
 } from 'lucide-react';
-import DashboardHeader from '../components/DashboardHeader';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { TeamService, Team, TeamMember as ServiceTeamMember } from '../services/team.service';
 import { toast } from 'react-hot-toast';
@@ -22,7 +21,7 @@ interface DisplayMember {
 
 export default function TeamManagement() {
   const navigate = useNavigate();
-  const { user, logout } = useBetterAuthStore();
+  const { user } = useBetterAuthStore();
   const userType = user?.userType || 'production';
   const [teams, setTeams] = useState<Team[]>([]);
   const [members, setMembers] = useState<DisplayMember[]>([]);
@@ -142,15 +141,8 @@ export default function TeamManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50">
-      <DashboardHeader
-        user={user}
-        userType={userType as any}
-        title="Team Management"
-        onLogout={logout}
-      />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div>
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
