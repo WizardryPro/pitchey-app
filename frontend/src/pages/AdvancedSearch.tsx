@@ -6,7 +6,6 @@ import {
   MapPin, Film, Award, Eye, Heart, ChevronDown,
   X, RefreshCw, Download, ArrowUpDown, User
 } from 'lucide-react';
-import DashboardHeader from '../components/DashboardHeader';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
 import { Badge } from '@shared/components/ui/badge';
@@ -58,7 +57,7 @@ interface SearchResult {
 export default function AdvancedSearch() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useBetterAuthStore();
+  const { user } = useBetterAuthStore();
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(true);
@@ -243,15 +242,7 @@ export default function AdvancedSearch() {
   const totalPages = Math.ceil(totalResults / resultsPerPage);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardHeader
-        user={user}
-        userType={(user?.userType as 'creator' | 'investor' | 'production') || 'creator'}
-        title="Advanced Search"
-        onLogout={logout}
-        useEnhancedNav={true}
-      />
-
+    <div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">

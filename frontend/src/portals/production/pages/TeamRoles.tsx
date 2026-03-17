@@ -5,7 +5,6 @@ import {
   CheckCircle, XCircle, Eye, EyeOff, Lock, Unlock,
   Settings, UserCheck, AlertCircle, Crown, Star, Info
 } from 'lucide-react';
-import DashboardHeader from '@/components/DashboardHeader';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { TeamService } from '@/services/team.service';
 import { useCurrentTeam } from '@/shared/hooks/useCurrentTeam';
@@ -75,7 +74,7 @@ const defaultPermissions: Permission[] = [
 
 export default function TeamRoles() {
   const navigate = useNavigate();
-  const { user, logout } = useBetterAuthStore();
+  const { user } = useBetterAuthStore();
   const userType = user?.userType || 'production';
   const { teamId } = useCurrentTeam();
 
@@ -409,14 +408,7 @@ export default function TeamRoles() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardHeader
-        user={user}
-        userType={userType as any}
-        title="Roles & Permissions"
-        onLogout={logout}
-      />
-
+    <div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Navigation */}
         <div className="flex items-center gap-4 mb-6">

@@ -5,7 +5,6 @@ import {
   Users, Calendar, Save, X, Upload, Star,
   Twitter, Linkedin, Instagram, Youtube, Award
 } from 'lucide-react';
-import DashboardHeader from '@/components/DashboardHeader';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { getDashboardRoute } from '@/utils/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
@@ -39,7 +38,7 @@ interface CompanyProfileData {
 
 export default function ProductionSettingsProfile() {
   const navigate = useNavigate();
-  const { user, logout } = useBetterAuthStore();
+  const { user } = useBetterAuthStore();
   const [loading, setLoading] = useState(false);
   const [profileData, setProfileData] = useState<CompanyProfileData>({
     companyName: user?.companyName || '',
@@ -152,15 +151,7 @@ export default function ProductionSettingsProfile() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardHeader
-        user={user}
-        userType="production"
-        title="Company Profile Settings"
-        onLogout={logout}
-        useEnhancedNav={true}
-      />
-
+    <div>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">

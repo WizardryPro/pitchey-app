@@ -5,7 +5,6 @@ import {
   ArrowLeft, Copy, RefreshCw, Trash2, Eye, AlertCircle,
   Users, Calendar, Shield
 } from 'lucide-react';
-import DashboardHeader from '@/components/DashboardHeader';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { TeamService } from '@/services/team.service';
 import { useCurrentTeam } from '@/shared/hooks/useCurrentTeam';
@@ -43,7 +42,7 @@ const permissions = [
 
 export default function TeamInvite() {
   const navigate = useNavigate();
-  const { user, logout } = useBetterAuthStore();
+  const { user } = useBetterAuthStore();
   const userType = user?.userType ?? 'production';
   const { teamId } = useCurrentTeam();
 
@@ -367,14 +366,7 @@ export default function TeamInvite() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardHeader
-        user={user}
-        userType={userType as 'creator' | 'investor' | 'production'}
-        title="Team Invitations"
-        onLogout={() => { void logout(); }}
-      />
-
+    <div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Navigation */}
         <div className="flex items-center gap-4 mb-6">

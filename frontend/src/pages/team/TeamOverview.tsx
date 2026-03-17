@@ -6,7 +6,6 @@ import {
   BarChart3, CheckCircle, AlertTriangle, Eye,
   FileText, Star, Briefcase, Plus
 } from 'lucide-react';
-import DashboardHeader from '../../components/DashboardHeader';
 import { useBetterAuthStore } from '../../store/betterAuthStore';
 import { TeamService } from '../../services/team.service';
 import { useCurrentTeam } from '@/shared/hooks/useCurrentTeam';
@@ -46,7 +45,7 @@ interface UpcomingEvent {
 
 export default function TeamOverview() {
   const navigate = useNavigate();
-  const { user, logout } = useBetterAuthStore();
+  const { user } = useBetterAuthStore();
   const userType = user?.userType || 'production';
   const { team, teamId } = useCurrentTeam();
 
@@ -198,14 +197,7 @@ export default function TeamOverview() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardHeader
-        user={user}
-        userType={userType as any}
-        title="Team Overview"
-        onLogout={logout}
-      />
-
+    <div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Quick Actions */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">

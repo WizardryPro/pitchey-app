@@ -5,7 +5,6 @@ import {
   RefreshCw, X, Shield, Users, Calendar, AlertCircle,
   Copy, Download, Settings, MoreVertical, Eye
 } from 'lucide-react';
-import DashboardHeader from '../../components/DashboardHeader';
 import { useBetterAuthStore } from '../../store/betterAuthStore';
 import { TeamService, type TeamInvitation as TeamInvite_ } from '../../services/team.service';
 
@@ -48,7 +47,7 @@ const availablePermissions = [
 
 export default function TeamInvite() {
   const navigate = useNavigate();
-  const { user, logout } = useBetterAuthStore();
+  const { user } = useBetterAuthStore();
   const userType = user?.userType || 'production';
   
   const [invitations, setInvitations] = useState<Invitation[]>([]);
@@ -304,14 +303,7 @@ export default function TeamInvite() {
   const expiredInvites = invitations.filter(inv => inv.status === 'expired');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50">
-      <DashboardHeader
-        user={user}
-        userType={userType as any}
-        title="Team Invitations"
-        onLogout={logout}
-      />
-
+    <div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">

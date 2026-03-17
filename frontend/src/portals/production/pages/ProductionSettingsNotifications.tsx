@@ -5,7 +5,6 @@ import {
   Users, Calendar, AlertCircle, Save, X, Smartphone,
   Volume2, VolumeX, Clock, Star, Zap
 } from 'lucide-react';
-import DashboardHeader from '@/components/DashboardHeader';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { getDashboardRoute } from '@/utils/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
@@ -57,7 +56,7 @@ interface NotificationSettings {
 
 export default function ProductionSettingsNotifications() {
   const navigate = useNavigate();
-  const { user, logout } = useBetterAuthStore();
+  const { user } = useBetterAuthStore();
   const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState<NotificationSettings>({
     email: {
@@ -181,15 +180,7 @@ export default function ProductionSettingsNotifications() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardHeader
-        user={user}
-        userType="production"
-        title="Notification Settings"
-        onLogout={logout}
-        useEnhancedNav={true}
-      />
-
+    <div>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">

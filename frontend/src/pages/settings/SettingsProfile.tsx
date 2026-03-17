@@ -4,7 +4,6 @@ import {
   Camera, Save, X,
   Twitter, Linkedin, Instagram, Youtube
 } from 'lucide-react';
-import DashboardHeader from '../../components/DashboardHeader';
 import { useBetterAuthStore } from '../../store/betterAuthStore';
 import { UserService } from '../../services/user.service';
 import { toast } from 'react-hot-toast';
@@ -32,7 +31,7 @@ interface ProfileData {
 
 export default function SettingsProfile() {
   const navigate = useNavigate();
-  const { user, logout, checkSession } = useBetterAuthStore();
+  const { user, checkSession } = useBetterAuthStore();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [profileData, setProfileData] = useState<ProfileData>({
@@ -147,14 +146,7 @@ export default function SettingsProfile() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardHeader
-        user={user}
-        userType={(user?.userType || 'creator') as 'creator' | 'investor' | 'production'}
-        title="Profile Settings"
-        onLogout={logout}
-      />
-
+    <div>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Cover Image */}
         <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-8">

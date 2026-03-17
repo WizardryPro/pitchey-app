@@ -5,7 +5,6 @@ import {
   Calendar, TrendingUp, Star, Clock, ChevronDown,
   Grid, List, SortAsc, SortDesc, WifiOff
 } from 'lucide-react';
-import DashboardHeader from '../components/DashboardHeader';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { apiClient } from '../lib/api-client';
 
@@ -39,7 +38,7 @@ const searchFilters = {
 export default function SearchPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, logout } = useBetterAuthStore();
+  const { user } = useBetterAuthStore();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -168,14 +167,7 @@ export default function SearchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardHeader
-        user={user}
-        userType={(user?.userType as 'creator' | 'investor' | 'production') || 'creator'}
-        title="Search"
-        onLogout={logout}
-      />
-
+    <div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Offline banner */}
         {!isOnline && (

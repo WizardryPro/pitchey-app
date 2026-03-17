@@ -6,7 +6,6 @@ import {
   Calendar, MapPin, Monitor, Save, X, 
   RefreshCw, Download, Trash2, Plus, QrCode
 } from 'lucide-react';
-import DashboardHeader from '@/components/DashboardHeader';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { getDashboardRoute } from '@/utils/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
@@ -44,7 +43,7 @@ interface SecurityLog {
 
 export default function ProductionSettingsSecurity() {
   const navigate = useNavigate();
-  const { user, logout } = useBetterAuthStore();
+  const { user } = useBetterAuthStore();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'general' | 'sessions' | 'logs' | '2fa'>('general');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -196,15 +195,7 @@ export default function ProductionSettingsSecurity() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardHeader
-        user={user}
-        userType="production"
-        title="Security Settings"
-        onLogout={logout}
-        useEnhancedNav={true}
-      />
-
+    <div>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">

@@ -6,7 +6,6 @@ import {
   Plus, Edit3, Trash2, Save, X, Building2,
   FileText, Star, Crown, Zap
 } from 'lucide-react';
-import DashboardHeader from '@/components/DashboardHeader';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { getDashboardRoute } from '@/utils/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
@@ -57,7 +56,7 @@ interface BillingInfo {
 
 export default function ProductionSettingsBilling() {
   const navigate = useNavigate();
-  const { user, logout } = useBetterAuthStore();
+  const { user } = useBetterAuthStore();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'methods' | 'billing' | 'invoices'>('overview');
 
@@ -137,15 +136,7 @@ export default function ProductionSettingsBilling() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardHeader
-        user={user}
-        userType="production"
-        title="Billing Settings"
-        onLogout={logout}
-        useEnhancedNav={true}
-      />
-
+    <div>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">

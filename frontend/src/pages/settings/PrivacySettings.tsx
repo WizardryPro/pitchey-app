@@ -5,7 +5,6 @@ import {
   Save, X, Smartphone, Globe, Users,
   AlertTriangle, MapPin, AlertCircle, RefreshCw
 } from 'lucide-react';
-import DashboardHeader from '../../components/DashboardHeader';
 import { useBetterAuthStore } from '../../store/betterAuthStore';
 import { UserService } from '../../services/user.service';
 import { toast } from 'react-hot-toast';
@@ -176,13 +175,7 @@ export default function PrivacySettings() {
 
   if (initialLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50">
-        <DashboardHeader
-          user={user}
-          userType={(user?.userType || 'creator') as 'creator' | 'investor' | 'production'}
-          title="Privacy & Security"
-          onLogout={logout}
-        />
+      <div>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="bg-white rounded-lg shadow-lg p-6 animate-pulse">
             <div className="h-6 w-48 bg-gray-200 rounded mb-4" />
@@ -197,13 +190,7 @@ export default function PrivacySettings() {
 
   if (loadError) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50">
-        <DashboardHeader
-          user={user}
-          userType={(user?.userType || 'creator') as 'creator' | 'investor' | 'production'}
-          title="Privacy & Security"
-          onLogout={logout}
-        />
+      <div>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="bg-red-50 border border-red-200 rounded-lg p-6 flex items-center gap-4">
             <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0" />
@@ -225,14 +212,7 @@ export default function PrivacySettings() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50">
-      <DashboardHeader
-        user={user}
-        userType={(user?.userType || 'creator') as 'creator' | 'investor' | 'production'}
-        title="Privacy & Security"
-        onLogout={logout}
-      />
-
+    <div>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           <div className="p-6 border-b border-gray-200">
