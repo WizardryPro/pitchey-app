@@ -162,7 +162,7 @@ describe('ProductionSubmissions', () => {
     renderComponent()
 
     await waitFor(() => {
-      expect(screen.getByText('No submissions found')).toBeInTheDocument()
+      expect(screen.getByText('No submissions yet')).toBeInTheDocument()
     })
   })
 
@@ -173,7 +173,7 @@ describe('ProductionSubmissions', () => {
     renderComponent()
 
     await waitFor(() => {
-      expect(screen.getByText('No submissions found')).toBeInTheDocument()
+      expect(screen.getByText('No submissions yet')).toBeInTheDocument()
     })
   })
 
@@ -186,7 +186,7 @@ describe('ProductionSubmissions', () => {
     renderComponent()
 
     await waitFor(() => {
-      expect(screen.getByText('No submissions found')).toBeInTheDocument()
+      expect(screen.getByText('No submissions yet')).toBeInTheDocument()
     })
   })
 
@@ -237,7 +237,7 @@ describe('ProductionSubmissions', () => {
       expect(screen.getByText('Sci-Fi Blockbuster')).toBeInTheDocument()
     })
 
-    expect(screen.getAllByText('View Details')).toHaveLength(2)
+    expect(screen.getAllByText('View')).toHaveLength(2)
     expect(screen.getAllByText('Contact')).toHaveLength(2)
   })
 

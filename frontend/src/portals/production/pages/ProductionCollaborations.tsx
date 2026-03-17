@@ -40,6 +40,7 @@ interface CollaborationDocument {
   type: 'contract' | 'nda' | 'proposal' | 'agreement' | 'other';
   uploadedAt: string;
   size: string;
+  url?: string;
 }
 
 interface CollaborationProject {
@@ -392,7 +393,13 @@ export default function ProductionCollaborations() {
                       </div>
                     </div>
                     <button
-                      onClick={() => toast('Document download coming soon')}
+                      onClick={() => {
+                        if (doc.url) {
+                          window.open(doc.url, '_blank');
+                        } else {
+                          toast('Document not yet available for download', { icon: 'ℹ️' });
+                        }
+                      }}
                       className="px-3 py-1 text-purple-600 hover:bg-purple-50 rounded transition text-sm"
                     >
                       Download
@@ -418,7 +425,7 @@ export default function ProductionCollaborations() {
             <p className="text-gray-600">Manage partnerships and external collaborations</p>
           </div>
           <button
-            onClick={() => toast('Collaboration creation coming soon')}
+            onClick={() => setShowCreateModal(true)}
             className="mt-4 md:mt-0 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition flex items-center gap-2"
           >
             <Plus className="w-5 h-5" />
@@ -505,6 +512,73 @@ export default function ProductionCollaborations() {
         {/* Collaboration Detail Modal */}
         {selectedCollaboration && (
           <CollaborationDetail collaboration={selectedCollaboration} />
+        )}
+
+        {/* New Collaboration Modal */}
+        {showCreateModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">New Collaboration</h2>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                const form = e.currentTarget;
+                const formData = new FormData(form);
+                try {
+                  await CollaborationService.createCollaboration({
+                    title: formData.get('title') as string,
+                    type: formData.get('type') as any,
+                    partnerId: formData.get('partnerId') as string,
+                    description: formData.get('description') as string,
+                    priority: (formData.get('priority') as any) || 'medium',
+                  });
+                  toast.success('Collaboration created');
+                  setShowCreateModal(false);
+                  fetchCollaborations();
+                } catch (err) {
+                  const error = err instanceof Error ? err : new Error(String(err));
+                  toast.error(error.message);
+                }
+              }}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                    <input name="title" required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" placeholder="Collaboration title" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                    <select name="type" required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                      <option value="co-production">Co-Production</option>
+                      <option value="distribution">Distribution</option>
+                      <option value="financing">Financing</option>
+                      <option value="talent">Talent</option>
+                      <option value="vendor">Vendor</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Partner ID</label>
+                    <input name="partnerId" required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" placeholder="Partner user ID or email" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                    <select name="priority" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                      <option value="low">Low</option>
+                      <option value="medium" selected>Medium</option>
+                      <option value="high">High</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea name="description" required rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" placeholder="Describe the collaboration..." />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3 mt-6">
+                  <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancel</button>
+                  <button type="submit" className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Create</button>
+                </div>
+              </form>
+            </div>
+          </div>
         )}
       </div>
     </div>

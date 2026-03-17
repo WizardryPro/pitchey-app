@@ -6,6 +6,7 @@ import {
   Eye, Download, MessageSquare, ThumbsUp, ThumbsDown,
   AlertCircle, Timer, Edit3, Bookmark
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@shared/components/ui/dialog';
 import { config, API_URL } from '@/config';
 
 interface Submission {
@@ -37,6 +38,9 @@ export default function ProductionSubmissionsReview() {
   const [selectedGenre, setSelectedGenre] = useState('all');
   const [reviewerFilter, setReviewerFilter] = useState('all');
   const [sortBy, setSortBy] = useState<'progress' | 'timeInReview' | 'rating' | 'budget'>('timeInReview');
+  const [noteModalOpen, setNoteModalOpen] = useState(false);
+  const [noteModalSubmissionId, setNoteModalSubmissionId] = useState<string | null>(null);
+  const [noteText, setNoteText] = useState('');
 
   useEffect(() => {
     const fetchReviewSubmissions = async () => {
@@ -128,10 +132,18 @@ export default function ProductionSubmissionsReview() {
   };
 
   const handleAddNote = (submissionId: string) => {
-    const note = prompt('Add review note:');
-    if (note) {
-      updateStatus(submissionId, 'reviewing', note);
+    setNoteModalSubmissionId(submissionId);
+    setNoteText('');
+    setNoteModalOpen(true);
+  };
+
+  const handleSaveNote = () => {
+    if (noteModalSubmissionId && noteText.trim()) {
+      updateStatus(noteModalSubmissionId, 'reviewing', noteText.trim());
     }
+    setNoteModalOpen(false);
+    setNoteModalSubmissionId(null);
+    setNoteText('');
   };
 
   const getProgressColor = (progress: number) => {
@@ -148,7 +160,26 @@ export default function ProductionSubmissionsReview() {
 
   return (
     <div>
-      
+      {/* Notes Modal */}
+      <Dialog open={noteModalOpen} onOpenChange={setNoteModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Review Notes</DialogTitle>
+          </DialogHeader>
+          <textarea
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+            placeholder="Enter your review notes..."
+            className="w-full min-h-[120px] p-3 border border-gray-300 rounded-lg resize-y focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            autoFocus
+          />
+          <DialogFooter>
+            <button onClick={() => setNoteModalOpen(false)} className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancel</button>
+            <button onClick={handleSaveNote} disabled={!noteText.trim()} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50">Save Note</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">

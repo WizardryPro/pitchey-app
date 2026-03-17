@@ -234,6 +234,93 @@ Full implementation guide: `docs/collaborator-implementation.md`
 
 Availability calendars, rate cards, crew project dashboards. Competes with StudioBinder — not where Pitchey's differentiation lies. Only build if user demand justifies it post-launch.
 
+### Stage 8: Production Portal Remediation (Mar 2026)
+
+26-issue audit of the production portal. 11 batches ordered by user impact. First 3 batches resolve 13 of 18 critical issues.
+
+#### 8A. Dashboard Uploads & Alerts (Issues #1-3) — DONE
+
+| Issue | Description | File | Lines |
+|-------|-------------|------|-------|
+| #1 | `handleSmartUpload()` shows fake "AI Analysis" alert, uploads nothing | ProductionDashboard.tsx | 770-794 |
+| #2 | `handleUploadMedia()` updates local state only, never persists | ProductionDashboard.tsx | 602-639 |
+| #3 | 5× `alert()` calls instead of toast | ProductionDashboard.tsx | 704, 711, 780, 785, 793 |
+
+#### 8B. Project Pages Dead Buttons (Issues #4-8) — DONE
+
+13 non-functional buttons across 4 project pages. All need onClick handlers wired to navigation or actions.
+
+| Issue | Page | Dead Buttons | Lines |
+|-------|------|-------------|-------|
+| #4 | ProjectsActive | View Details, Dailies | 334-342 |
+| #5 | ProjectsDevelopment | View Details, Edit | 321-327 |
+| #6 | ProjectsPost | View Details, Dailies | 390-397 |
+| #7 | ProjectsCompleted | View Details, Analytics, Download | 397-407 |
+| #8 | All 4 pages | MoreVertical (3-dot menu) not clickable | various |
+
+#### 8C. Following Page (Issues #10-11) — DONE
+
+| Issue | Description | File | Lines |
+|-------|-------------|------|-------|
+| #10 | "Unfollow" button has no onClick handler | Following.tsx | 462-464 |
+| #11 | Timeframe selector (24h/7d/30d/all) never passed to API | Following.tsx | 58, 199-208 |
+
+#### 8D. ProductionSaved Sort & Data (Issues #12-13) — DONE
+
+| Issue | Description | File | Lines |
+|-------|-------------|------|-------|
+| #12 | "Highest Rated" + "Most Viewed" sort options not implemented | ProductionSaved.tsx | 119-123 |
+| #13 | `rating: 0` and `hasNDA: false` hardcoded for all pitches | ProductionSaved.tsx | 112-113 |
+
+#### 8E. ProductionPipeline Data (Issue #9) — DONE
+
+| Issue | Description | File | Lines |
+|-------|-------------|------|-------|
+| #9 | `team: 0` hardcoded, `blockers: []` always empty | ProductionPipeline.tsx | 112, 146 |
+
+#### 8F. Submissions Pages (Issues #14-15) — DONE
+
+| Issue | Description | File | Lines |
+|-------|-------------|------|-------|
+| #14 | "View Contract" button shows toast stub only | SubmissionsAccepted.tsx | 117 |
+| #15 | Uses browser `prompt()` for notes instead of modal | SubmissionsReview.tsx | 131 |
+
+#### 8G. Collaboration + Revenue Stubs (Issues #16-18) — DONE
+
+| Issue | Description | File | Lines |
+|-------|-------------|------|-------|
+| #16 | "New Collaboration" button — toast stub | ProductionCollaborations.tsx | 421 |
+| #17 | "Download" document button — toast stub | ProductionCollaborations.tsx | 395 |
+| #18 | "Generate Invoice" button — toast stub | ProductionRevenue.tsx | 232 |
+
+#### 8H. Settings Billing (Issues #19-21) — DONE
+
+| Issue | Description | File | Lines |
+|-------|-------------|------|-------|
+| #19 | Hardcoded $499 plan, "Apr 1" bill date, "50 members", "1TB" | SettingsBilling.tsx | 194-260 |
+| #20 | Payment methods + invoices arrays always empty, no API calls | SettingsBilling.tsx | 77, 79 |
+| #21 | 4 stub buttons (save, download invoice, add/remove payment) | SettingsBilling.tsx | 102-119 |
+
+#### 8I. Settings Security (Issues #22-23) — DONE
+
+| Issue | Description | File | Lines |
+|-------|-------------|------|-------|
+| #22 | 2FA enable/disable, revoke session, download report — all stubs | SettingsSecurity.tsx | 153-165 |
+| #23 | Sessions + security logs arrays always empty | SettingsSecurity.tsx | 70, 72 |
+
+#### 8J. Settings Notifications (Issue #24) — DONE
+
+| Issue | Description | File | Lines |
+|-------|-------------|------|-------|
+| #24 | "Test notification" + "Verify phone" show fake success toasts | SettingsNotifications.tsx | 173-179 |
+
+#### 8K. Calendar (Issues #25-26) — DONE
+
+| Issue | Description | File | Lines |
+|-------|-------------|------|-------|
+| #25 | 5× `alert()` calls instead of toast | Calendar.tsx | 116-209 |
+| #26 | Week + Day views are placeholder stubs | Calendar.tsx | 477-513 |
+
 ### Current Numbers
 - 612+ API routes, 135 pages, 166 components, 26 services, 4 stores
 - 166 test files, 3109 tests (82% page coverage)

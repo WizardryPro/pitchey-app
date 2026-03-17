@@ -171,11 +171,13 @@ export default function ProductionSettingsNotifications() {
   };
 
   const testNotification = () => {
-    toast.success('Test notification sent! Check your notification preferences.');
+    // TODO: POST /api/notifications/test when notification system supports it
+    toast('Test notifications are coming soon', { icon: 'ℹ️' });
   };
 
   const verifyPhone = () => {
-    toast.success('Verification code sent to your phone!');
+    // TODO: POST /api/auth/phone/verify when phone verification is implemented
+    toast('Phone verification is coming soon', { icon: 'ℹ️' });
   };
 
   return (

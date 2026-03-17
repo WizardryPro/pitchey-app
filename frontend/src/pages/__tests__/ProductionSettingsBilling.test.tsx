@@ -87,29 +87,25 @@ describe('ProductionSettingsBilling', () => {
   it('shows the overview tab by default with plan info', () => {
     renderComponent()
     expect(screen.getByText('Current Plan')).toBeInTheDocument()
-    expect(screen.getByText('Professional Plan')).toBeInTheDocument()
-    expect(screen.getByText('per month')).toBeInTheDocument()
+    expect(screen.getByText('Free Plan')).toBeInTheDocument()
+    expect(screen.getByText('Active')).toBeInTheDocument()
   })
 
-  it('displays billing summary cards in overview', () => {
+  it('displays coming soon message for paid plans in overview', () => {
     renderComponent()
-    expect(screen.getByText('Current Balance')).toBeInTheDocument()
-    expect(screen.getByText('Next Bill Date')).toBeInTheDocument()
-    expect(screen.getByText('Next Amount')).toBeInTheDocument()
+    expect(screen.getByText(/Paid plans with premium features are coming soon/)).toBeInTheDocument()
   })
 
-  it('shows plan features', () => {
+  it('does not show old plan feature rows', () => {
     renderComponent()
-    expect(screen.getByText('Pitch Submissions')).toBeInTheDocument()
-    expect(screen.getByText('Unlimited')).toBeInTheDocument()
-    expect(screen.getByText('Team Members')).toBeInTheDocument()
-    expect(screen.getByText('Storage')).toBeInTheDocument()
+    expect(screen.queryByText('Unlimited')).not.toBeInTheDocument()
+    expect(screen.queryByText('per month')).not.toBeInTheDocument()
   })
 
-  it('shows Upgrade Plan button', () => {
+  it('does not show Upgrade Plan or Change Plan buttons', () => {
     renderComponent()
-    expect(screen.getByText('Upgrade Plan')).toBeInTheDocument()
-    expect(screen.getByText('Change Plan')).toBeInTheDocument()
+    expect(screen.queryByText('Upgrade Plan')).not.toBeInTheDocument()
+    expect(screen.queryByText('Change Plan')).not.toBeInTheDocument()
   })
 
   it('switches to Payment Methods tab', () => {

@@ -7,6 +7,7 @@ import {
   Eye, Download, MessageSquare, Play, Pause, Settings,
   Award, Briefcase, Users, BarChart3
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@shared/components/ui/dialog';
 import { config, API_URL } from '@/config';
 
 interface Submission {
@@ -42,6 +43,8 @@ export default function ProductionSubmissionsAccepted() {
   const [selectedGenre, setSelectedGenre] = useState('all');
   const [productionFilter, setProductionFilter] = useState('all');
   const [contractFilter, setContractFilter] = useState('all');
+  const [contractModalOpen, setContractModalOpen] = useState(false);
+  const [contractModalSubmission, setContractModalSubmission] = useState<Submission | null>(null);
   const [sortBy, setSortBy] = useState<'progress' | 'budget' | 'completion' | 'rating'>('progress');
 
   useEffect(() => {
@@ -113,8 +116,10 @@ export default function ProductionSubmissionsAccepted() {
     navigate(`/production/projects/${submissionId}`);
   };
 
-  const handleViewContract = (_submissionId: string) => {
-    toast('Contract management coming soon');
+  const handleViewContract = (submissionId: string) => {
+    const submission = submissions.find(s => s.id === submissionId);
+    setContractModalSubmission(submission || null);
+    setContractModalOpen(true);
   };
 
   const getProductionStatusColor = (status: string) => {
@@ -145,7 +150,28 @@ export default function ProductionSubmissionsAccepted() {
 
   return (
     <div>
-      
+      {/* Contract Details Modal */}
+      <Dialog open={contractModalOpen} onOpenChange={setContractModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Contract Details — {contractModalSubmission?.title || 'Submission'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><span className="text-gray-500">Creator:</span> <span className="font-medium">{contractModalSubmission?.creator}</span></div>
+                <div><span className="text-gray-500">Status:</span> <span className="font-medium capitalize">{contractModalSubmission?.contractStatus?.replace('-', ' ')}</span></div>
+                <div><span className="text-gray-500">Budget:</span> <span className="font-medium">${((contractModalSubmission?.budget || 0) / 1000000).toFixed(1)}M</span></div>
+                <div><span className="text-gray-500">Genre:</span> <span className="font-medium">{contractModalSubmission?.genre}</span></div>
+              </div>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-800">Contract document management is being set up. You will be notified when contracts are ready for digital signing.</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">

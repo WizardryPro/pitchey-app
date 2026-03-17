@@ -9,6 +9,7 @@ import {
   Bookmark, Filter, Search,
   Wifi, WifiOff, AlertTriangle, RefreshCw
 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { usePitchStore } from '@features/pitches/store/pitchStore';
 import { pitchAPI } from '../lib/api';
@@ -26,6 +27,7 @@ import FormatDisplay from '../components/FormatDisplay';
 import { EnhancedProductionAnalytics } from '@features/analytics/components/Analytics/EnhancedProductionAnalytics';
 import { withPortalErrorBoundary } from '../components/ErrorBoundary/PortalErrorBoundary';
 import StartProjectModal from '@portals/production/components/StartProjectModal';
+import { uploadService } from '@features/uploads/services/upload.service';
 import { useSentryPortal } from '@/shared/hooks/useSentryPortal';
 import { useWebSocket } from '@shared/contexts/WebSocketContext';
 import {
@@ -602,39 +604,47 @@ function ProductionDashboard() {
   const handleUploadMedia = async () => {
     if (!selectedPitchForMedia || mediaFiles.length === 0) return;
 
-    try {
-      const formData = new FormData();
-      formData.append('pitchId', selectedPitchForMedia.id.toString());
-      
-      mediaFiles.forEach(file => {
-        formData.append('files', file);
-      });
+    const toastId = toast.loading(`Uploading ${mediaFiles.length} file${mediaFiles.length > 1 ? 's' : ''}...`);
 
-      // In production, this would upload to the server
-      
-      // Update the pitch's media files locally
+    try {
+      const pitchId = selectedPitchForMedia.id;
+      const uploadedTypes: { type: string; count: number; uploaded: boolean }[] = [];
+
+      for (const file of mediaFiles) {
+        const mediaType = file.type.startsWith('video/') ? 'video' as const
+          : file.type.startsWith('image/') ? 'image' as const
+          : 'document' as const;
+
+        await uploadService.uploadPitchMedia(pitchId, file, mediaType);
+        uploadedTypes.push({
+          type: detectFileType(file.name),
+          count: 1,
+          uploaded: true
+        });
+      }
+
+      // Update local state with server-confirmed uploads
       setMyPitches(prev => prev.map(pitch => {
-        if (pitch.id === selectedPitchForMedia.id) {
+        if (pitch.id === pitchId) {
           return {
             ...pitch,
             mediaFiles: [
               ...(pitch.mediaFiles || []),
-              ...mediaFiles.map(file => ({
-                type: detectFileType(file.name),
-                count: 1,
-                uploaded: true
-              }))
+              ...uploadedTypes
             ]
           };
         }
         return pitch;
       }));
 
+      toast.success(`${mediaFiles.length} file${mediaFiles.length > 1 ? 's' : ''} uploaded`, { id: toastId });
       setShowMediaModal(false);
       setMediaFiles([]);
       setSelectedPitchForMedia(null);
-    } catch (error) {
-      console.error('Error uploading media:', error);
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      console.error('Error uploading media:', e);
+      toast.error(`Upload failed: ${e.message}`, { id: toastId });
     }
   };
 
@@ -701,14 +711,14 @@ function ProductionDashboard() {
     // Validate file type
     const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     if (!allowedTypes.includes(file.type)) {
-      alert('Please select a PDF, DOC, or DOCX file.');
+      toast.error('Please select a PDF, DOC, or DOCX file.');
       return;
     }
 
     // Validate file size (10MB limit)
     const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
-      alert('File size must be less than 10MB.');
+      toast.error('File size must be less than 10MB.');
       return;
     }
 
@@ -766,7 +776,7 @@ function ProductionDashboard() {
     setNdaTemplates(prev => prev.filter(t => t.id !== templateId));
   };
 
-  // Smart Upload Handler with AI Analysis
+  // Smart Upload Handler — uploads document and categorizes by filename
   const handleSmartUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -777,20 +787,27 @@ function ProductionDashboard() {
       // Validate file
       const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
       if (!allowedTypes.includes(file.type)) {
-        alert(`${file.name}: Please select a PDF, DOC, or DOCX file.`);
+        toast.error(`${file.name}: Please select a PDF, DOC, or DOCX file.`);
         continue;
       }
 
       if (file.size > 10 * 1024 * 1024) {
-        alert(`${file.name}: File size must be less than 10MB.`);
+        toast.error(`${file.name}: File size must be less than 10MB.`);
         continue;
       }
 
-      // Smart categorization based on filename
       const smartCategory = detectSmartCategory(file.name);
-      
-      // Show analysis notification
-      alert(`📁 Smart Upload: "${file.name}" categorized as ${smartCategory}.\n\n🔍 AI Analysis:\n• Format validation: ✓\n• Content type: Detected\n• Processing recommendation: Approved`);
+      const toastId = toast.loading(`Uploading "${file.name}" as ${smartCategory}...`);
+
+      try {
+        await uploadService.uploadDocument(file, 'document', {
+          folder: `production/${smartCategory.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+        });
+        toast.success(`"${file.name}" uploaded as ${smartCategory}`, { id: toastId });
+      } catch (err) {
+        const uploadErr = err instanceof Error ? err : new Error(String(err));
+        toast.error(`Failed to upload "${file.name}": ${uploadErr.message}`, { id: toastId });
+      }
     }
 
     // Reset the input
@@ -1094,8 +1111,13 @@ function ProductionDashboard() {
                 <div key={pitch.id} className={`bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-lg transition-shadow border-2 ${
                   pitch.status === 'draft' ? 'border-yellow-300' : 'border-purple-200'
                 }`}>
-                  <div className="aspect-video bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center relative">
-                    <Film className="w-12 h-12 text-white" />
+                  <div
+                    className="aspect-video bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center relative bg-cover bg-center"
+                    style={pitch.titleImage ? { backgroundImage: `url(${pitch.titleImage})` } : undefined}
+                  >
+                    {!pitch.titleImage && (
+                      <Film className="w-12 h-12 text-white" />
+                    )}
                     <span className="absolute top-2 right-2 bg-white/20 backdrop-blur px-2 py-1 rounded text-xs text-white">
                       {pitch.status === 'draft' ? 'Draft' : 'Published'}
                     </span>
@@ -1549,12 +1571,17 @@ function ProductionDashboard() {
                       pitch.creator?.userType === 'investor' ? 'border-green-200' :
                       'border-gray-200'
                     }`}>
-                      <div className={`aspect-video bg-gradient-to-br ${
-                        pitch.creator?.userType === 'production' ? 'from-purple-400 to-purple-600' :
-                        pitch.creator?.userType === 'investor' ? 'from-green-400 to-green-600' :
-                        'from-gray-400 to-gray-600'
-                      } flex items-center justify-center relative`}>
-                        <Film className="w-12 h-12 text-white" />
+                      <div
+                        className={`aspect-video bg-gradient-to-br ${
+                          pitch.creator?.userType === 'production' ? 'from-purple-400 to-purple-600' :
+                          pitch.creator?.userType === 'investor' ? 'from-green-400 to-green-600' :
+                          'from-gray-400 to-gray-600'
+                        } flex items-center justify-center relative bg-cover bg-center`}
+                        style={pitch.titleImage ? { backgroundImage: `url(${pitch.titleImage})` } : undefined}
+                      >
+                        {!pitch.titleImage && (
+                          <Film className="w-12 h-12 text-white" />
+                        )}
                         {pitch.creator?.userType && pitch.creator.userType !== 'creator' && (
                           <span className="absolute top-2 right-2 bg-white/20 backdrop-blur px-2 py-1 rounded text-xs text-white">
                             {pitch.creator.userType === 'production' ? 'Production Co.' : 'Investor'}

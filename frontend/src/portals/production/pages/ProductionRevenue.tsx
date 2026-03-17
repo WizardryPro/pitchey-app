@@ -229,7 +229,9 @@ export default function ProductionRevenue() {
             </Button>
             <Button
               className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
-              onClick={() => toast('Invoice generation coming soon')}
+              onClick={() => toast('Invoice generation will be available when billing is connected', { icon: 'ℹ️' })}
+              disabled={!revenueData.totalRevenue}
+              title={!revenueData.totalRevenue ? 'No revenue data to invoice' : 'Generate invoice'}
             >
               <FileText className="w-4 h-4" />
               Generate Invoice

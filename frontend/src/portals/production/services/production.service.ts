@@ -603,6 +603,38 @@ export class ProductionService {
       { team }
     );
   }
+
+  static async aiAutofill(file: File): Promise<{
+    checklist: Record<string, boolean>;
+    team: Array<{ role: string; name: string; status: string; priority?: string; note?: string }>;
+    notes: Array<{ category: string; content: string }>;
+    creditsUsed: number;
+    remainingCredits: number;
+  }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(
+      `${API_BASE_URL}/api/production/ai-autofill`,
+      {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      }
+    );
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({ error: 'AI analysis failed' })) as Record<string, unknown>;
+      throw new Error(typeof body.error === 'string' ? body.error : 'AI analysis failed');
+    }
+
+    const json = await response.json() as { success: boolean; data: any };
+    if (!json.success || !json.data) {
+      throw new Error('AI analysis returned no data');
+    }
+
+    return json.data;
+  }
 }
 
 // Export singleton instance

@@ -42,7 +42,8 @@ export const InvestorAnalytics: React.FC<InvestorAnalyticsProps> = ({
           Investment Portfolio Analytics
         </h2>
         <div className="flex items-center gap-4">
-          <TimeRangeFilter 
+          <TimeRangeFilter
+            value={timeRange}
             onChange={(range) => setTimeRange(range)}
             defaultRange="30d"
           />

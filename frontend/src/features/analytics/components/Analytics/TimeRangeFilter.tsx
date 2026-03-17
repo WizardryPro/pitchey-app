@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Calendar } from 'lucide-react';
 
 type TimeRange = '7d' | '30d' | '90d' | '1y';
@@ -9,31 +9,19 @@ interface TimeRangeFilterProps {
   defaultRange?: TimeRange;
 }
 
-export const TimeRangeFilter: React.FC<TimeRangeFilterProps> = ({ 
-  onChange, 
+const ranges: { label: string; value: TimeRange }[] = [
+  { label: '7 Days', value: '7d' },
+  { label: '30 Days', value: '30d' },
+  { label: '90 Days', value: '90d' },
+  { label: '1 Year', value: '1y' }
+];
+
+export const TimeRangeFilter: React.FC<TimeRangeFilterProps> = ({
+  onChange,
   value,
-  defaultRange = '30d' 
+  defaultRange = '30d'
 }) => {
-  const [selectedRange, setSelectedRange] = useState<TimeRange>(value || defaultRange);
-
-  // Update local state when value prop changes
-  React.useEffect(() => {
-    if (value) {
-      setSelectedRange(value);
-    }
-  }, [value]);
-
-  const handleRangeChange = (range: TimeRange) => {
-    setSelectedRange(range);
-    onChange(range);
-  };
-
-  const ranges: { label: string; value: TimeRange }[] = [
-    { label: '7 Days', value: '7d' },
-    { label: '30 Days', value: '30d' },
-    { label: '90 Days', value: '90d' },
-    { label: '1 Year', value: '1y' }
-  ];
+  const activeRange = value ?? defaultRange;
 
   return (
     <div className="flex items-center gap-2 bg-white rounded-lg shadow-sm p-1">
@@ -41,9 +29,9 @@ export const TimeRangeFilter: React.FC<TimeRangeFilterProps> = ({
       {ranges.map((range) => (
         <button
           key={range.value}
-          onClick={() => handleRangeChange(range.value)}
+          onClick={() => onChange(range.value)}
           className={`px-3 py-1 rounded-md text-xs transition-all duration-300 ${
-            selectedRange === range.value
+            activeRange === range.value
               ? 'bg-purple-600 text-white'
               : 'text-gray-600 hover:bg-gray-100'
           }`}

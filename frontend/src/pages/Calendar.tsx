@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ChevronLeft, ChevronRight, Plus, Clock, MapPin, Users, Video, Calendar as CalendarIcon, X } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { API_URL } from '../config';
 
 interface CalendarEvent {
@@ -113,12 +114,12 @@ export default function Calendar() {
     try {
       // Validate required fields
       if (!newEvent.title.trim()) {
-        alert('Please enter a title for the event');
+        toast.error('Please enter a title for the event');
         return;
       }
       
       if (!newEvent.date || !newEvent.time) {
-        alert('Please select both date and time for the event');
+        toast.error('Please select both date and time for the event');
         return;
       }
       
@@ -147,7 +148,7 @@ export default function Calendar() {
           time: newEvent.time,
           parsedDate: eventDateTime
         });
-        alert('Invalid date or time format. Please check your input.');
+        toast.error('Invalid date or time format. Please check your input.');
         return;
       }
       
@@ -197,7 +198,7 @@ export default function Calendar() {
         setShowEventModal(false);
         
         // Show success notification
-        alert('Event created successfully!');
+        toast.success('Event created successfully!');
         
         // Refresh events to ensure consistency
         fetchEvents();
@@ -206,7 +207,7 @@ export default function Calendar() {
       }
     } catch (error) {
       console.error('Error creating event:', error);
-      alert('Failed to create event. Please try again.');
+      toast.error('Failed to create event. Please try again.');
     }
   };
 
@@ -474,43 +475,82 @@ export default function Calendar() {
             </div>
           )}
 
-          {view === 'week' && (
-            <div className="p-6">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
-                <CalendarIcon className="w-12 h-12 text-blue-500 mx-auto mb-3" />
-                <h3 className="text-lg font-semibold text-blue-900 mb-2">Week View</h3>
-                <p className="text-blue-800 mb-4">
-                  The weekly calendar view is currently being developed. This will provide a detailed 
-                  7-day layout with hourly time slots for better scheduling.
-                </p>
-                <button
-                  onClick={() => setView('month')}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                >
-                  Switch to Month View
-                </button>
+          {view === 'week' && (() => {
+            const weekStart = new Date(currentDate);
+            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+            const weekDays = Array.from({ length: 7 }, (_, i) => {
+              const d = new Date(weekStart);
+              d.setDate(d.getDate() + i);
+              return d;
+            });
+            return (
+              <div className="p-4">
+                <div className="grid grid-cols-7 gap-2">
+                  {weekDays.map((day) => {
+                    const dayStr = day.toISOString().split('T')[0];
+                    const dayEvents = events.filter(e => e.date?.startsWith(dayStr));
+                    const isToday = dayStr === new Date().toISOString().split('T')[0];
+                    return (
+                      <div key={dayStr} className={`border rounded-lg p-3 min-h-[200px] ${isToday ? 'border-blue-400 bg-blue-50/50' : 'border-gray-200'}`}>
+                        <div className={`text-sm font-medium mb-2 ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
+                          {day.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                        </div>
+                        {dayEvents.length === 0 ? (
+                          <p className="text-xs text-gray-400">No events</p>
+                        ) : (
+                          <div className="space-y-1">
+                            {dayEvents.map(ev => (
+                              <div key={ev.id} className="text-xs bg-purple-100 text-purple-700 rounded px-2 py-1 truncate">
+                                {ev.start && <span className="font-medium">{ev.start} </span>}
+                                {ev.title}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
-          {view === 'day' && (
-            <div className="p-6">
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-6 text-center">
-                <Clock className="w-12 h-12 text-purple-500 mx-auto mb-3" />
-                <h3 className="text-lg font-semibold text-purple-900 mb-2">Day View</h3>
-                <p className="text-purple-800 mb-4">
-                  The daily calendar view is in development. This will show a detailed hourly breakdown 
-                  of your schedule for focused day planning.
-                </p>
-                <button
-                  onClick={() => setView('month')}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
-                >
-                  Switch to Month View
-                </button>
+          {view === 'day' && (() => {
+            const dayStr = (selectedDate || currentDate).toISOString().split('T')[0];
+            const dayEvents = events.filter(e => e.date?.startsWith(dayStr));
+            const hours = Array.from({ length: 14 }, (_, i) => i + 7); // 7 AM to 8 PM
+            return (
+              <div className="p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  {(selectedDate || currentDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                </h3>
+                <div className="space-y-0">
+                  {hours.map(hour => {
+                    const hourStr = `${hour.toString().padStart(2, '0')}:`;
+                    const hourEvents = dayEvents.filter(e => e.start?.startsWith(hourStr));
+                    return (
+                      <div key={hour} className="flex border-t border-gray-100 min-h-[48px]">
+                        <div className="w-16 text-xs text-gray-500 py-2 pr-2 text-right shrink-0">
+                          {hour > 12 ? `${hour - 12} PM` : hour === 12 ? '12 PM' : `${hour} AM`}
+                        </div>
+                        <div className="flex-1 py-1 pl-2">
+                          {hourEvents.map(ev => (
+                            <div key={ev.id} className="text-sm bg-purple-100 text-purple-800 rounded px-2 py-1 mb-1">
+                              <span className="font-medium">{ev.title}</span>
+                              {ev.location && <span className="text-purple-600 ml-2 text-xs">{ev.location}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {dayEvents.length === 0 && (
+                  <div className="text-center text-gray-500 py-8">No events scheduled for this day</div>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
         {/* Today's Events Sidebar */}

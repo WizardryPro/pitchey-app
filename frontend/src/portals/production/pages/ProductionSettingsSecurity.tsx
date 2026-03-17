@@ -150,19 +150,23 @@ export default function ProductionSettingsSecurity() {
   };
 
   const revokeSession = (_sessionId: string) => {
-    toast.error('Session management is not yet available');
+    // TODO: DELETE /api/auth/sessions/:id when session management is implemented
+    toast('Session management is coming soon', { icon: 'ℹ️' });
   };
 
   const enable2FA = () => {
-    toast.error('Two-factor authentication is not yet available');
+    // TODO: POST /api/auth/2fa/enable when 2FA is implemented
+    toast('Two-factor authentication is coming soon', { icon: 'ℹ️' });
   };
 
   const disable2FA = () => {
-    toast.error('Two-factor authentication is not yet available');
+    // TODO: POST /api/auth/2fa/disable when 2FA is implemented
+    toast('Two-factor authentication is coming soon', { icon: 'ℹ️' });
   };
 
   const downloadSecurityReport = () => {
-    toast.error('Security report downloads are not yet available');
+    // TODO: GET /api/security/report/download
+    toast('Security report downloads are coming soon', { icon: 'ℹ️' });
   };
 
   const formatDateTime = (dateString: string) => {
@@ -539,6 +543,11 @@ export default function ProductionSettingsSecurity() {
             </div>
 
             <div className="space-y-4">
+              {sessions.length === 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center text-sm text-blue-700">
+                  Session management is being set up. Your current session is active.
+                </div>
+              )}
               {sessions.map((session) => (
                 <Card key={session.id}>
                   <CardContent className="p-6">
@@ -627,6 +636,9 @@ export default function ProductionSettingsSecurity() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
+                      {securityLogs.length === 0 && (
+                        <tr><td colSpan={5} className="px-6 py-8 text-center text-sm text-gray-500">Security logs will appear here once enabled</td></tr>
+                      )}
                       {securityLogs.map((log) => (
                         <tr key={log.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap">

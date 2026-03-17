@@ -98,6 +98,8 @@ export default function ProductionSaved() {
         const savedAt = (raw.saved_at as string) || sp.savedAt;
         const pitchId = Number(raw.pitch_id ?? sp.pitchId);
 
+        const requireNda = raw.require_nda === true || raw.require_nda === 'true';
+
         return {
           id: pitchId,
           title,
@@ -109,8 +111,8 @@ export default function ProductionSaved() {
           status,
           thumbnail: titleImage || '',
           views: viewCount,
-          rating: 0,
-          hasNDA: false,
+          rating: likeCount,
+          hasNDA: requireNda,
           notes: sp.notes
         };
       });
@@ -118,6 +120,10 @@ export default function ProductionSaved() {
       // Apply sorting
       if (sortBy === 'recent') {
         transformedPitches.sort((a, b) => new Date(b.savedDate).getTime() - new Date(a.savedDate).getTime());
+      } else if (sortBy === 'rating') {
+        transformedPitches.sort((a, b) => b.rating - a.rating);
+      } else if (sortBy === 'views') {
+        transformedPitches.sort((a, b) => b.views - a.views);
       } else if (sortBy === 'newest') {
         transformedPitches.sort((a, b) => new Date(b.pitchDate).getTime() - new Date(a.pitchDate).getTime());
       }

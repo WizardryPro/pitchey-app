@@ -450,7 +450,8 @@ export async function productionPipelineHandler(request: Request, env: Env) {
               pp.next_milestone, pp.milestone_date, pp.notes,
               pp.pitch_id, pp.created_at, pp.updated_at,
               p.genre, p.format, p.logline, p.short_synopsis,
-              p.view_count, p.like_count
+              p.view_count, p.like_count,
+              COALESCE((SELECT COUNT(*)::int FROM project_collaborators pc WHERE pc.project_id = pp.id), 0) as team_count
             FROM production_pipeline pp
             LEFT JOIN pitches p ON pp.pitch_id = p.id
             WHERE pp.production_company_id = ${user.id}
@@ -467,7 +468,8 @@ export async function productionPipelineHandler(request: Request, env: Env) {
               pp.next_milestone, pp.milestone_date, pp.notes,
               pp.pitch_id, pp.created_at, pp.updated_at,
               p.genre, p.format, p.logline, p.short_synopsis,
-              p.view_count, p.like_count
+              p.view_count, p.like_count,
+              COALESCE((SELECT COUNT(*)::int FROM project_collaborators pc WHERE pc.project_id = pp.id), 0) as team_count
             FROM production_pipeline pp
             LEFT JOIN pitches p ON pp.pitch_id = p.id
             WHERE pp.production_company_id = ${user.id}
@@ -484,7 +486,8 @@ export async function productionPipelineHandler(request: Request, env: Env) {
               pp.next_milestone, pp.milestone_date, pp.notes,
               pp.pitch_id, pp.created_at, pp.updated_at,
               p.genre, p.format, p.logline, p.short_synopsis,
-              p.view_count, p.like_count
+              p.view_count, p.like_count,
+              COALESCE((SELECT COUNT(*)::int FROM project_collaborators pc WHERE pc.project_id = pp.id), 0) as team_count
             FROM production_pipeline pp
             LEFT JOIN pitches p ON pp.pitch_id = p.id
             WHERE pp.production_company_id = ${user.id}
@@ -501,7 +504,8 @@ export async function productionPipelineHandler(request: Request, env: Env) {
               pp.next_milestone, pp.milestone_date, pp.notes,
               pp.pitch_id, pp.created_at, pp.updated_at,
               p.genre, p.format, p.logline, p.short_synopsis,
-              p.view_count, p.like_count
+              p.view_count, p.like_count,
+              COALESCE((SELECT COUNT(*)::int FROM project_collaborators pc WHERE pc.project_id = pp.id), 0) as team_count
             FROM production_pipeline pp
             LEFT JOIN pitches p ON pp.pitch_id = p.id
             WHERE pp.production_company_id = ${user.id}

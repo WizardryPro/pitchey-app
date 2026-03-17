@@ -38,7 +38,7 @@ export const CreatorAnalytics: React.FC<CreatorAnalyticsProps> = ({
   engagementRate = 0,
   trends
 }) => {
-  const [_timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
+  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
 
   // Build chart data from trends
   const performanceData = {
@@ -66,7 +66,8 @@ export const CreatorAnalytics: React.FC<CreatorAnalyticsProps> = ({
           Pitch Performance Analytics
         </h2>
         <div className="flex items-center gap-4">
-          <TimeRangeFilter 
+          <TimeRangeFilter
+            value={timeRange}
             onChange={(range) => setTimeRange(range)}
             defaultRange="30d"
           />

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, TrendingUp, Users, Film, Calendar, MapPin, Eye, Heart, AlertCircle } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { API_URL } from '../config';
 import { useBetterAuthStore } from '../store/betterAuthStore';
+import { SocialService } from '@features/browse/services/social.service';
 
 interface Creator {
   id: number;
@@ -62,7 +64,7 @@ const Following: React.FC = () => {
 
   useEffect(() => {
     fetchFollowingData();
-  }, [activeTab]);
+  }, [activeTab, timeframe]);
 
   const fetchFollowingData = async () => {
     setLoading(true);
@@ -86,7 +88,9 @@ const Following: React.FC = () => {
         endpoint = '/api/follows/following'; // default
       }
       
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    const separator = endpoint.includes('?') ? '&' : '?';
+    const url = timeframe && timeframe !== 'all' ? `${API_URL}${endpoint}${separator}timeframe=${timeframe}` : `${API_URL}${endpoint}`;
+    const response = await fetch(url, {
       method: 'GET',
       credentials: 'include' // Send cookies for Better Auth session
     });
@@ -459,7 +463,19 @@ const Following: React.FC = () => {
                   >
                     View Portfolio
                   </button>
-                  <button className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200">
+                  <button
+                    className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 disabled:opacity-50"
+                    onClick={async () => {
+                      try {
+                        await SocialService.unfollowUser(creator.id);
+                        setData(prev => (prev as Creator[]).filter(c => c.id !== creator.id));
+                        toast.success(`Unfollowed ${getDisplayName(creator)}`);
+                      } catch (err) {
+                        const e = err instanceof Error ? err : new Error(String(err));
+                        toast.error(`Failed to unfollow: ${e.message}`);
+                      }
+                    }}
+                  >
                     Unfollow
                   </button>
                 </div>

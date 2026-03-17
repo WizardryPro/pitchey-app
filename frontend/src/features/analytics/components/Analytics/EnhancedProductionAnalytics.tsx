@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   DollarSign,
   TrendingUp,
@@ -90,13 +90,19 @@ export const EnhancedProductionAnalytics: React.FC<ProductionAnalyticsProps> = (
   const [error, setError] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
 
+  // Use ref to always read the latest timeRange inside the callback,
+  // avoiding stale-closure issues that cause "click twice to update"
+  const timeRangeRef = useRef(timeRange);
+  timeRangeRef.current = timeRange;
+
   const fetchAnalyticsData = useCallback(async () => {
+    const range = timeRangeRef.current;
     try {
       setLoading(true);
 
       // Call the production analytics API with timeframe parameter
       const response = await fetch(
-        `${config.API_URL}/api/production/analytics?timeframe=${timeRange}`,
+        `${config.API_URL}/api/production/analytics?timeframe=${range}`,
         {
           method: 'GET',
           credentials: 'include',
@@ -116,7 +122,7 @@ export const EnhancedProductionAnalytics: React.FC<ProductionAnalyticsProps> = (
       if (result.success && (result.data || result.analytics)) {
         // Transform API response to component data structure
         const apiData = result.data || result.analytics;
-        const transformedData: ProductionAnalyticsData = transformApiResponse(apiData, timeRange);
+        const transformedData: ProductionAnalyticsData = transformApiResponse(apiData, range);
         setAnalyticsData(transformedData);
       } else {
         console.warn('API returned unexpected structure', result);
@@ -278,7 +284,8 @@ export const EnhancedProductionAnalytics: React.FC<ProductionAnalyticsProps> = (
               <span>Auto Refresh</span>
             </button>
             
-            <TimeRangeFilter 
+            <TimeRangeFilter
+              value={timeRange}
               onChange={(range) => setTimeRange(range)}
               defaultRange="30d"
             />

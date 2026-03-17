@@ -173,6 +173,6 @@ describe('ProductionProjectsActive', () => {
     })
     const calledUrl: string = mockFetch.mock.calls[0][0]
     expect(calledUrl).toContain('/api/production/projects')
-    expect(calledUrl).toContain('status=active')
+    expect(calledUrl).toContain('stage=production')
   })
 })

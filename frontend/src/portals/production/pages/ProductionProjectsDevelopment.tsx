@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { FileText, Clock, CheckCircle, AlertTriangle, TrendingUp, DollarSign, Calendar, Users, MoreVertical, Eye, Edit, Trash2, PlusCircle, Filter, Search } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { FileText, Clock, CheckCircle, AlertTriangle, TrendingUp, DollarSign, Calendar, Users, MoreVertical, Eye, Edit, Trash2, PlusCircle, Filter, Search, Archive } from 'lucide-react';
 import { config, API_URL } from '@/config';
 
 interface Project {
@@ -18,6 +19,7 @@ interface Project {
   phase: 'concept' | 'script' | 'planning' | 'pre-production';
   lastActivity: string;
   daysInDevelopment: number;
+  pitch_id?: number | null;
 }
 
 const statusColors = {
@@ -44,11 +46,21 @@ const phaseColors = {
 };
 
 export default function ProductionProjectsDevelopment() {
-    
+  const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpenMenuId(null);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
@@ -244,9 +256,18 @@ export default function ProductionProjectsDevelopment() {
                       <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusColors[project.status]}`}>
                         {project.status.replace('-', ' ')}
                       </span>
-                      <button className="p-1 hover:bg-gray-100 rounded">
-                        <MoreVertical className="w-4 h-4 text-gray-500" />
-                      </button>
+                      <div className="relative" ref={openMenuId === project.id ? menuRef : undefined}>
+                        <button className="p-1 hover:bg-gray-100 rounded" onClick={() => setOpenMenuId(openMenuId === project.id ? null : project.id)}>
+                          <MoreVertical className="w-4 h-4 text-gray-500" />
+                        </button>
+                        {openMenuId === project.id && (
+                          <div className="absolute right-0 top-8 z-10 w-40 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
+                            <button onClick={() => { navigate(project.pitch_id ? `/production/pitch/${project.pitch_id}` : `/production/projects`); setOpenMenuId(null); }} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"><Eye className="w-4 h-4" />View Details</button>
+                            <button onClick={() => { navigate(project.pitch_id ? `/production/pitch/${project.pitch_id}` : `/production/projects`); setOpenMenuId(null); }} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"><Edit className="w-4 h-4" />Edit</button>
+                            <button onClick={() => { navigate('/production/projects'); setOpenMenuId(null); }} className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"><Trash2 className="w-4 h-4" />Delete Draft</button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -318,11 +339,17 @@ export default function ProductionProjectsDevelopment() {
 
                   {/* Action Buttons */}
                   <div className="flex gap-2">
-                    <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                    <button
+                      onClick={() => navigate(project.pitch_id ? `/production/pitch/${project.pitch_id}` : `/production/projects`)}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                    >
                       <Eye className="w-4 h-4" />
                       View Details
                     </button>
-                    <button className="flex items-center justify-center p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition">
+                    <button
+                      onClick={() => navigate(project.pitch_id ? `/production/pitch/${project.pitch_id}` : `/production/projects`)}
+                      className="flex items-center justify-center p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
+                    >
                       <Edit className="w-4 h-4" />
                     </button>
                   </div>

@@ -109,7 +109,7 @@ export default function ProductionPipeline() {
         stage: p.stage || 'development',
         budget: Number(p.budget_allocated || p.estimated_budget) || 0,
         progress: Number(p.completion_percentage) || 0,
-        team: 0,
+        team: Number(p.team_count) || 0,
         director: p.director || undefined,
         producer: p.producer || undefined,
         estimatedCompletion: p.target_completion_date || new Date(Date.now() + 90 * 86400000).toISOString(),

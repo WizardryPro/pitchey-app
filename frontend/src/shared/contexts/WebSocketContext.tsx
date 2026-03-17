@@ -156,15 +156,27 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   const [authStabilized, setAuthStabilized] = useState(false);
   
   // CRITICAL: Enhanced timing control to prevent premature WebSocket connections
-  // This addresses the "WebSocket is closed before connection is established" error
+  // This addresses the "WebSocket is closed before connection is established" and
+  // "connection was interrupted while the page was loading" errors
   useEffect(() => {
     if (!loading && isAuthenticated && user) {
-      // Only allow WebSocket connection after authentication is fully stable
-      const timer = setTimeout(() => {
-        setAuthStabilized(true);
-      }, 500); // Increased delay to ensure complete authentication stability
-      
-      return () => clearTimeout(timer);
+      const stabilize = () => {
+        const timer = setTimeout(() => {
+          setAuthStabilized(true);
+        }, 500);
+        return () => clearTimeout(timer);
+      };
+
+      // Wait for page to fully load before connecting — prevents
+      // "interrupted while the page was loading" browser warnings
+      if (document.readyState === 'complete') {
+        const cleanup = stabilize();
+        return cleanup;
+      } else {
+        const onLoad = () => { stabilize(); };
+        window.addEventListener('load', onLoad, { once: true });
+        return () => window.removeEventListener('load', onLoad);
+      }
     } else if (!isAuthenticated) {
       // Immediately disable WebSocket if user logs out
       setAuthStabilized(false);

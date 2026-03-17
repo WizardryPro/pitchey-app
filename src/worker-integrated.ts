@@ -15517,7 +15517,7 @@ Signatures: [To be completed upon signing]
       savedPitches = await this.db.query(`
         SELECT sp.id, sp.pitch_id, sp.notes, sp.created_at as saved_at,
                p.title, p.logline, p.genre, p.status, p.thumbnail_url, p.budget_range,
-               p.view_count, p.like_count, p.title_image,
+               p.view_count, p.like_count, p.title_image, p.require_nda,
                COALESCE(u.first_name || ' ' || u.last_name, u.company_name, u.email) as creator_name,
                COALESCE(u.verified, false) as creator_verified
         FROM saved_pitches sp
@@ -16855,7 +16855,7 @@ Signatures: [To be completed upon signing]
       // Production analytics: based on saved pitches + own production_projects
       // (Production companies evaluate creator pitches, they don't own them)
 
-      // Metrics from production_projects table
+      // Metrics from production_projects table — filtered by timeframe
       const metricsQuery = `
         SELECT
           COUNT(DISTINCT pp.id) as total_projects,
@@ -16863,11 +16863,12 @@ Signatures: [To be completed upon signing]
           SUM(CASE WHEN pp.status = 'completed' THEN 1 ELSE 0 END) as completed_projects,
           COALESCE(SUM(pp.budget), 0) as total_budget,
           COALESCE(AVG(pp.budget), 0) as avg_budget,
-          (SELECT COUNT(*) FROM saved_pitches WHERE user_id = $1) as pitches_evaluated,
+          (SELECT COUNT(*) FROM saved_pitches WHERE user_id = $1 AND created_at >= NOW() - INTERVAL '${days} days') as pitches_evaluated,
           (SELECT COUNT(*) FROM saved_pitches WHERE user_id = $1 AND created_at >= NOW() - INTERVAL '${days} days') as recent_evaluations,
           CASE WHEN COUNT(*) > 0 THEN COUNT(CASE WHEN pp.status = 'completed' THEN 1 END)::float / COUNT(*) * 100 ELSE 0 END as avg_completion_rate
         FROM production_projects pp
         WHERE pp.production_company_id = $1
+          AND pp.created_at >= NOW() - INTERVAL '${days} days'
       `;
       let rawMetrics: any = {};
       try {
@@ -16882,7 +16883,7 @@ Signatures: [To be completed upon signing]
         total_likes: parseInt(rawMetrics.recent_evaluations) || 0
       };
 
-      // Genre performance from saved (evaluated) pitches
+      // Genre performance from saved (evaluated) pitches — filtered by timeframe
       const genreQuery = `
         SELECT
           COALESCE(p.genre, 'Other') as genre,
@@ -16892,6 +16893,7 @@ Signatures: [To be completed upon signing]
         FROM saved_pitches sp
         JOIN pitches p ON p.id = sp.pitch_id
         WHERE sp.user_id = $1
+          AND sp.created_at >= NOW() - INTERVAL '${days} days'
         GROUP BY p.genre
         ORDER BY project_count DESC
         LIMIT 6
@@ -16923,6 +16925,7 @@ Signatures: [To be completed upon signing]
             COALESCE(pp.budget, 0) as budget
           FROM production_projects pp
           WHERE pp.production_company_id = $1
+            AND pp.created_at >= NOW() - INTERVAL '${days} days'
         ) sub
         GROUP BY stage
         ORDER BY

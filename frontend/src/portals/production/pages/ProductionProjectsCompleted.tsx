@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
-import { CheckCircle, Trophy, Star, TrendingUp, DollarSign, Calendar, Users, MoreVertical, Eye, Download, BarChart3, Award, Film } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import { CheckCircle, Trophy, Star, TrendingUp, DollarSign, Calendar, Users, MoreVertical, Eye, Download, BarChart3, Award, Film, Archive } from 'lucide-react';
 import { config, API_URL } from '@/config';
 
 interface Project {
@@ -37,6 +39,7 @@ interface Project {
   performance: 'excellent' | 'good' | 'fair' | 'poor';
   lessons: string[];
   totalDays: number;
+  pitch_id?: number | null;
 }
 
 const statusColors = {
@@ -63,11 +66,21 @@ const ratingColors = {
 };
 
 export default function ProductionProjectsCompleted() {
-    
+  const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpenMenuId(null);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [performanceFilter, setPerformanceFilter] = useState<string>('all');
   const [genreFilter, setGenreFilter] = useState<string>('all');
@@ -291,9 +304,18 @@ export default function ProductionProjectsCompleted() {
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${performanceColors[project.performance]}`}>
                         {project.performance.toUpperCase()}
                       </span>
-                      <button className="p-1 hover:bg-gray-100 rounded">
-                        <MoreVertical className="w-4 h-4 text-gray-500" />
-                      </button>
+                      <div className="relative" ref={openMenuId === project.id ? menuRef : undefined}>
+                        <button className="p-1 hover:bg-gray-100 rounded" onClick={() => setOpenMenuId(openMenuId === project.id ? null : project.id)}>
+                          <MoreVertical className="w-4 h-4 text-gray-500" />
+                        </button>
+                        {openMenuId === project.id && (
+                          <div className="absolute right-0 top-8 z-10 w-40 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
+                            <button onClick={() => { navigate(project.pitch_id ? `/production/pitch/${project.pitch_id}` : `/production/projects`); setOpenMenuId(null); }} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"><Eye className="w-4 h-4" />View Details</button>
+                            <button onClick={() => { navigate(project.pitch_id ? `/production/pitch/${project.pitch_id}` : `/production/projects`); setOpenMenuId(null); }} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"><BarChart3 className="w-4 h-4" />Analytics</button>
+                            <button onClick={() => { navigate('/production/projects'); setOpenMenuId(null); }} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"><Archive className="w-4 h-4" />Archive</button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -394,15 +416,24 @@ export default function ProductionProjectsCompleted() {
 
                   {/* Action Buttons */}
                   <div className="flex gap-2">
-                    <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                    <button
+                      onClick={() => navigate(project.pitch_id ? `/production/pitch/${project.pitch_id}` : `/production/projects`)}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                    >
                       <Eye className="w-4 h-4" />
                       View Details
                     </button>
-                    <button className="flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
+                    <button
+                      onClick={() => navigate(project.pitch_id ? `/production/pitch/${project.pitch_id}` : `/production/projects`)}
+                      className="flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+                    >
                       <BarChart3 className="w-4 h-4 mr-1" />
                       Analytics
                     </button>
-                    <button className="flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
+                    <button
+                      onClick={() => toast('Export will be available soon', { icon: 'ℹ️' })}
+                      className="flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+                    >
                       <Download className="w-4 h-4" />
                     </button>
                   </div>

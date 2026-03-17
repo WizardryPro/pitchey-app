@@ -112,8 +112,8 @@ describe('subscription-plans credit utilities', () => {
 
   // ── CREDIT_COSTS constants ─────────────────────────────────────
   describe('CREDIT_COSTS', () => {
-    it('contains 9 action entries', () => {
-      expect(CREDIT_COSTS).toHaveLength(9)
+    it('contains 10 action entries', () => {
+      expect(CREDIT_COSTS).toHaveLength(10)
     })
 
     it('every entry has action, credits, and description', () => {

@@ -260,7 +260,8 @@ export const EnhancedInvestorAnalytics: React.FC<InvestorAnalyticsProps> = ({
               <span>Auto Refresh</span>
             </button>
             
-            <TimeRangeFilter 
+            <TimeRangeFilter
+              value={timeRange}
               onChange={(range) => setTimeRange(range)}
               defaultRange="30d"
             />

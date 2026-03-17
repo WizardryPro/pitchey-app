@@ -6,9 +6,10 @@ import {
   Briefcase, Shield, CheckCircle, XCircle, Clock,
   Eye, Download, Settings
 } from 'lucide-react';
-import DashboardHeader from '../../components/DashboardHeader';
 import { useBetterAuthStore } from '../../store/betterAuthStore';
 import { TeamService } from '../../services/team.service';
+import { CollaboratorService } from '../../services/collaborator.service';
+import { ProductionService } from '@portals/production/services/production.service';
 import { useCurrentTeam } from '@/shared/hooks/useCurrentTeam';
 import { Permission } from '@features/auth/hooks/usePermissions';
 
@@ -63,8 +64,61 @@ export default function TeamMembers() {
   });
 
   useEffect(() => {
-    if (teamId) fetchTeamMembers();
+    if (teamId) {
+      fetchTeamMembers();
+    } else {
+      // No formal team — load collaborators from projects instead
+      fetchCollaborators();
+    }
   }, [teamId]);
+
+  const fetchCollaborators = async () => {
+    try {
+      setLoading(true);
+      // Get production projects to find collaborators
+      const projectsData = await ProductionService.getProjects({ limit: 50 });
+      const projects = projectsData.projects || [];
+
+      // Fetch collaborators from each project
+      const allCollaborators: TeamMember[] = [];
+      const seenIds = new Set<string>();
+
+      for (const project of projects.slice(0, 10)) {
+        try {
+          const res = await CollaboratorService.listCollaborators(project.id);
+          const collaborators = (res as any)?.data?.collaborators || (res as any)?.collaborators || [];
+          for (const c of collaborators) {
+            const id = String(c.id || c.user_id || c.userId);
+            if (!seenIds.has(id)) {
+              seenIds.add(id);
+              allCollaborators.push({
+                id,
+                name: c.name || c.email?.split('@')[0] || 'Collaborator',
+                email: c.email || '',
+                role: c.role || c.access_level || 'viewer',
+                department: 'Collaborator',
+                joinDate: c.invited_at || c.created_at || new Date().toISOString(),
+                lastActive: c.last_active || new Date().toISOString(),
+                status: c.status === 'accepted' ? 'active' : c.status === 'pending' ? 'pending' : 'active',
+                projects: 1,
+                rating: 0,
+                permissions: derivePermissions(c.role || 'viewer'),
+                skills: [],
+              });
+            }
+          }
+        } catch {
+          // Skip projects with no collaborator access
+        }
+      }
+
+      setTeamMembers(allCollaborators);
+    } catch (err) {
+      console.error('Failed to fetch collaborators:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const derivePermissions = (role: string): string[] => {
     // Map team roles to backend RBAC permissions for consistency
@@ -229,24 +283,17 @@ export default function TeamMembers() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50">
-      <DashboardHeader
-        user={user}
-        userType={userType as any}
-        title="Team Members"
-        onLogout={logout}
-      />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div>
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Team Members</h1>
-            <p className="text-gray-600">{filteredMembers.length} members in your team</p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-1">Team Management</h1>
+            <p className="text-gray-600">{filteredMembers.length} {teamId ? 'members in your team' : 'collaborators across your projects'}</p>
           </div>
           <div className="flex gap-3 mt-4 md:mt-0">
             <button
-              onClick={() => navigate('/team/invite')}
+              onClick={() => navigate(`/${userType}/team/invite`)}
               className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center gap-2"
             >
               <UserPlus className="w-5 h-5" />
@@ -519,8 +566,23 @@ export default function TeamMembers() {
         {filteredMembers.length === 0 && !loading && (
           <div className="text-center py-12 bg-white rounded-lg border border-gray-200 shadow-sm">
             <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 text-lg font-medium mb-2">No team members found</p>
-            <p className="text-gray-500">Try adjusting your search or filters</p>
+            <p className="text-gray-600 text-lg font-medium mb-2">
+              {searchTerm || filters.department !== 'all' || filters.role !== 'all' || filters.status !== 'all'
+                ? 'No team members match your filters'
+                : 'No team members yet'}
+            </p>
+            <p className="text-gray-500 mb-4">
+              {searchTerm || filters.department !== 'all' || filters.role !== 'all' || filters.status !== 'all'
+                ? 'Try adjusting your search or filters'
+                : 'Invite collaborators to your projects or create a team to get started'}
+            </p>
+            <button
+              onClick={() => navigate(`/${userType}/team/invite`)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+            >
+              <UserPlus className="w-4 h-4" />
+              Invite Member
+            </button>
           </div>
         )}
       </div>

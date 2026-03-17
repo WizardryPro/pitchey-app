@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Eye, Heart, Share2, Bookmark, BookmarkCheck,
@@ -7,7 +7,7 @@ import {
   FileText, Download, Calculator, MapPin, Camera,
   Clapperboard, Settings, CheckSquare, Square,
   AlertCircle, CheckCircle, XCircle, Star, ChevronRight,
-  Truck, Home, Globe, Mic, Edit3, Package
+  Truck, Home, Globe, Mic, Edit3, Package, Upload, Sparkles
 } from 'lucide-react';
 import { pitchAPI } from '@/lib/api';
 import apiClient, { savedPitchesAPI } from '@/lib/api-client';
@@ -117,6 +117,8 @@ const ProductionPitchView: React.FC = () => {
 
   const isOwner = !!(pitch?.userId && authUser?.id && String(pitch.userId) === String(authUser.id));
   const [hasExistingProject, setHasExistingProject] = useState(false);
+  const [autoFillLoading, setAutoFillLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (id) {
@@ -377,6 +379,76 @@ const ProductionPitchView: React.FC = () => {
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
       console.error('Failed to save team:', e.message);
+    }
+  };
+
+  const handleAutoFill = async (file: File) => {
+    const pitchId = parseInt(id!, 10);
+    setAutoFillLoading(true);
+
+    try {
+      const result = await ProductionService.aiAutofill(file);
+
+      // Apply checklist
+      if (result.checklist) {
+        const merged = { ...productionChecklist, ...result.checklist };
+        setProductionChecklist(merged);
+        await ProductionService.updatePitchChecklist(pitchId, merged).catch(() => {});
+      }
+
+      // Apply team (preserve existing names if AI returns empty ones)
+      if (result.team && result.team.length > 0) {
+        const newTeam = result.team.map((aiMember) => {
+          const existing = teamMembers.find(m => m.role === aiMember.role);
+          return {
+            role: aiMember.role,
+            name: existing?.name || aiMember.name || '',
+            status: (aiMember.status || existing?.status || 'pending') as 'confirmed' | 'pending' | 'considering',
+          };
+        });
+        setTeamMembers(newTeam);
+        await ProductionService.updatePitchTeam(pitchId, newTeam).catch(() => {});
+      }
+
+      // Apply notes — create each via API
+      if (result.notes && result.notes.length > 0) {
+        const validCategories = ['casting', 'location', 'budget', 'schedule', 'team', 'general'];
+        for (const aiNote of result.notes) {
+          const category = validCategories.includes(aiNote.category) ? aiNote.category : 'general';
+          const tempNote: ProductionNote = {
+            id: Date.now().toString() + Math.random().toString(36).substring(2),
+            content: aiNote.content,
+            createdAt: new Date().toISOString(),
+            category: category as ProductionNote['category'],
+            author: 'AI Auto-fill',
+          };
+          setNotes(prev => [...prev, tempNote]);
+
+          try {
+            const saved = await ProductionService.createPitchNote(pitchId, {
+              content: tempNote.content,
+              category,
+              author: 'AI Auto-fill',
+            });
+            setNotes(prev => prev.map(n =>
+              n.id === tempNote.id
+                ? { ...n, id: String(saved.id), createdAt: saved.created_at }
+                : n
+            ));
+          } catch {
+            // Keep the optimistic note even if save fails
+          }
+        }
+      }
+
+      toast.success(`Auto-fill complete! ${result.creditsUsed} credits used.`);
+      setActiveTab('production');
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      toast.error(e.message);
+    } finally {
+      setAutoFillLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -970,6 +1042,42 @@ const ProductionPitchView: React.FC = () => {
                   <span className="font-semibold">{pitch.locations?.length || 'TBD'}</span>
                 </div>
               </div>
+            </div>
+
+            {/* AI Auto-fill */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">AI Assessment</h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Upload a script, treatment, or pitch deck to auto-fill the feasibility checklist, team priorities, and production notes.
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.txt,.docx"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleAutoFill(file);
+                }}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={autoFillLoading}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition disabled:opacity-50 text-sm font-medium shadow-sm"
+              >
+                {autoFillLoading ? (
+                  <>
+                    <Sparkles className="h-4 w-4 animate-pulse" />
+                    Analyzing document...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4" />
+                    Auto-fill from Document
+                  </>
+                )}
+              </button>
+              <p className="text-xs text-gray-400 mt-2 text-center">PDF, TXT, or DOCX — 5 credits</p>
             </div>
 
             {/* Documents */}

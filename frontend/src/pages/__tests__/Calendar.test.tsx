@@ -279,7 +279,8 @@ describe('Calendar', () => {
     fireEvent.click(screen.getByText('week'))
 
     await waitFor(() => {
-      expect(screen.getByText('Week View')).toBeInTheDocument()
+      // Week view renders a 7-column grid; days without events show "No events"
+      expect(screen.getAllByText('No events').length).toBeGreaterThan(0)
     })
   })
 
@@ -293,7 +294,9 @@ describe('Calendar', () => {
     fireEvent.click(screen.getByText('day'))
 
     await waitFor(() => {
-      expect(screen.getByText('Day View')).toBeInTheDocument()
+      // Day view renders an hourly time grid starting at 7 AM
+      expect(screen.getByText('7 AM')).toBeInTheDocument()
+      expect(screen.getByText('12 PM')).toBeInTheDocument()
     })
   })
 

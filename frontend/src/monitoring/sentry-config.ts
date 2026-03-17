@@ -29,15 +29,6 @@ export function initSentry() {
         maskAllText: false,
         maskAllInputs: true,
         blockAllMedia: false,
-
-        // Sampling rates
-        ...(({ replaysSessionSampleRate: REPLAY_SAMPLE_RATE, replaysOnErrorSampleRate: 1.0 }) as any),
-
-        // Privacy settings
-        maskTextSelector: '[data-sentry-mask]',
-        ignoreSelector: '[data-sentry-ignore]',
-
-        // Network recording
         networkDetailAllowUrls: [
           'pitchey-api-prod.ndlovucavelle.workers.dev'
         ],
@@ -55,6 +46,10 @@ export function initSentry() {
 
     // Performance monitoring sample rate
     tracesSampleRate: TRACES_SAMPLE_RATE,
+
+    // Session replay sample rates (must be at init level, not inside replayIntegration)
+    replaysSessionSampleRate: REPLAY_SAMPLE_RATE,
+    replaysOnErrorSampleRate: 1.0,
 
     // Session tracking
     autoSessionTracking: true,

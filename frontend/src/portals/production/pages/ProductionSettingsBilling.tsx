@@ -99,24 +99,26 @@ export default function ProductionSettingsBilling() {
   const handleSave = async () => {
     setLoading(true);
     try {
-      toast.error('Billing integration is not yet configured. Contact support to set up Stripe.');
-    } catch (error) {
-      toast.error('Failed to update billing information');
+      // TODO: POST /api/billing/settings when Stripe is connected
+      toast('Billing settings will be saved when billing is connected', { icon: 'ℹ️' });
     } finally {
       setLoading(false);
     }
   };
 
-  const downloadInvoice = (invoice: Invoice) => {
-    toast.error('Invoice downloads are not yet available');
+  const downloadInvoice = (_invoice: Invoice) => {
+    // TODO: GET /api/billing/invoices/:id/download
+    toast('Invoice downloads will be available when billing is connected', { icon: 'ℹ️' });
   };
 
   const addPaymentMethod = () => {
-    toast.error('Payment method management requires Stripe configuration');
+    // TODO: POST /api/billing/payment-methods via Stripe Elements
+    toast('Payment methods will be available when billing is connected', { icon: 'ℹ️' });
   };
 
-  const removePaymentMethod = (id: string) => {
-    toast.error('Payment method management requires Stripe configuration');
+  const removePaymentMethod = (_id: string) => {
+    // TODO: DELETE /api/billing/payment-methods/:id
+    toast('Payment methods will be available when billing is connected', { icon: 'ℹ️' });
   };
 
   const formatCurrency = (amount: number) => {
@@ -189,81 +191,24 @@ export default function ProductionSettingsBilling() {
                 <CardDescription>Your subscription details and usage</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h3 className="text-lg font-semibold">Professional Plan</h3>
-                    <p className="text-gray-600">Perfect for growing production companies</p>
+                    <h3 className="text-lg font-semibold">Free Plan</h3>
+                    <p className="text-gray-600">You are currently on the free plan</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-bold">{formatCurrency(499)}</p>
-                    <p className="text-sm text-gray-500">per month</p>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-medium text-gray-900">Pitch Submissions</h4>
-                    <p className="text-2xl font-bold text-purple-600">Unlimited</p>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-medium text-gray-900">Team Members</h4>
-                    <p className="text-2xl font-bold text-purple-600">50</p>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-medium text-gray-900">Storage</h4>
-                    <p className="text-2xl font-bold text-purple-600">1TB</p>
+                    <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-medium rounded-full">Active</span>
                   </div>
                 </div>
 
-                <div className="flex gap-3">
-                  <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
-                    Upgrade Plan
-                  </button>
-                  <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
-                    Change Plan
-                  </button>
+                {/* TODO: Connect to Stripe when billing goes live
+                   Endpoint: GET /api/billing/subscription → current plan
+                   Endpoint: POST /api/billing/checkout → Stripe Checkout session */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-800">Paid plans with premium features are coming soon. You'll be notified when subscription options are available.</p>
                 </div>
               </CardContent>
             </Card>
-
-            {/* Billing Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Current Balance</p>
-                      <p className="text-2xl font-bold text-gray-900">{formatCurrency(0)}</p>
-                    </div>
-                    <DollarSign className="w-8 h-8 text-green-600" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Next Bill Date</p>
-                      <p className="text-2xl font-bold text-gray-900">Apr 1</p>
-                    </div>
-                    <Calendar className="w-8 h-8 text-blue-600" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Next Amount</p>
-                      <p className="text-2xl font-bold text-gray-900">{formatCurrency(499)}</p>
-                    </div>
-                    <Receipt className="w-8 h-8 text-purple-600" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
           </div>
         )}
 
