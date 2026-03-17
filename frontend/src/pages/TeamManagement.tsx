@@ -91,11 +91,24 @@ export default function TeamManagement() {
     loadTeamData();
   }, [loadTeamData]);
 
+  const ensureTeamExists = async (): Promise<string> => {
+    if (teams.length > 0) return teams[0].id;
+    // Auto-create a default team for this production company
+    const companyName = user?.companyName || user?.username || 'My Company';
+    const newTeam = await TeamService.createTeam({
+      name: `${companyName} Team`,
+      description: `Default team for ${companyName}`
+    });
+    setTeams([newTeam]);
+    return newTeam.id;
+  };
+
   const handleInvite = async () => {
-    if (!inviteEmail || teams.length === 0) return;
+    if (!inviteEmail) return;
     setInviting(true);
     try {
-      await TeamService.inviteToTeam(teams[0].id, {
+      const teamId = await ensureTeamExists();
+      await TeamService.inviteToTeam(teamId, {
         email: inviteEmail,
         role: inviteRole,
         message: inviteMessage || undefined,
@@ -152,8 +165,7 @@ export default function TeamManagement() {
           <div className="flex gap-3 mt-4 md:mt-0">
             <button
               onClick={() => setShowInviteModal(true)}
-              disabled={teams.length === 0}
-              className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center gap-2 disabled:opacity-50"
+              className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center gap-2"
             >
               <UserPlus className="w-5 h-5" />
               Invite Member
@@ -307,10 +319,15 @@ export default function TeamManagement() {
         {filteredMembers.length === 0 && !loading && !error && (
           <div className="text-center py-12 bg-white rounded-lg border border-gray-200 shadow-sm">
             <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">No team members found</p>
-            {teams.length === 0 && (
-              <p className="text-sm text-gray-500 mt-2">Create a team first to start managing members</p>
-            )}
+            <p className="text-gray-600">No team members yet</p>
+            <p className="text-sm text-gray-500 mt-2">Invite members to start building your team</p>
+            <button
+              onClick={() => setShowInviteModal(true)}
+              className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+            >
+              <UserPlus className="w-4 h-4" />
+              Invite Member
+            </button>
           </div>
         )}
       </div>
