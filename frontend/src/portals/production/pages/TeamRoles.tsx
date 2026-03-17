@@ -89,7 +89,12 @@ export default function TeamRoles() {
   const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
-    if (teamId) fetchRolesAndMembers();
+    if (teamId) {
+      fetchRolesAndMembers();
+    } else {
+      // No team yet — stop loading and show empty state
+      setLoading(false);
+    }
   }, [teamId]);
 
   const roleNameMap: Record<string, string> = {

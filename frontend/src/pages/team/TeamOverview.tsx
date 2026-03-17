@@ -64,7 +64,11 @@ export default function TeamOverview() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (teamId) fetchTeamData();
+    if (teamId) {
+      fetchTeamData();
+    } else {
+      setLoading(false);
+    }
   }, [teamId]);
 
   const fetchTeamData = async () => {
