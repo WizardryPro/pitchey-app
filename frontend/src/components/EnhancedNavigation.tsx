@@ -122,7 +122,6 @@ function EnhancedNavigation({
       icon: Users,
       dropdown: [
         { label: 'Team Members', href: `/${userType}/team`, icon: Users },
-        { label: 'Invite Members', href: `/${userType}/team/invite`, icon: UserPlus },
         { label: 'Roles & Permissions', href: `/${userType}/team/roles`, icon: Shield },
         { label: 'Collaborations', href: `/${userType}/collaborations`, icon: Users },
         { label: 'Messages', href: '/messages', icon: MessageSquare },

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import { ArrowLeft, Eye, Heart, MessageSquare, Share2, TrendingUp, Calendar, Users, Download } from 'lucide-react';
 import { analyticsService, type PitchAnalytics } from '@features/analytics/services/analytics.service';
 import { pitchService } from '@features/pitches/services/pitch.service';
@@ -175,7 +176,10 @@ export default function PitchAnalytics() {
                 <option value="30d">Last 30 days</option>
                 <option value="90d">Last 90 days</option>
               </select>
-              <button className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+              <button
+                onClick={() => toast('Analytics export coming soon', { icon: 'ℹ️' })}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+              >
                 <Download className="w-4 h-4" />
                 Export
               </button>

@@ -453,6 +453,72 @@ export async function acceptInvite(request: Request, env: Env): Promise<Response
 }
 
 // ---------------------------------------------------------------------------
+// Aggregate Team View (Production Company)
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /api/production/team/collaborators
+ * Returns all collaborators across all projects owned by the authenticated user.
+ */
+export async function getAllTeamCollaborators(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin');
+  const userId = await getUserId(request, env);
+  if (!userId) return errorResponse('Unauthorized', origin, 401);
+
+  const sql = getDb(env);
+  if (!sql) return jsonResponse({ success: true, data: { collaborators: [], stats: { total: 0, active: 0, pending: 0, projects: 0 } } }, origin);
+
+  try {
+    const collaborators = await sql`
+      SELECT pc.id, pc.project_id, pc.user_id, pc.invited_email, pc.role, pc.custom_role_name,
+             pc.status, pc.invited_at, pc.accepted_at,
+             pp.title AS project_title,
+             COALESCE(u.name, u.first_name || ' ' || u.last_name, u.email) AS name,
+             u.email, u.avatar_url, u.profile_image_url
+      FROM project_collaborators pc
+      JOIN production_pipeline pp ON pc.project_id = pp.id
+      LEFT JOIN users u ON pc.user_id = u.id
+      WHERE pp.production_company_id = ${Number(userId)} AND pc.status != 'removed'
+      ORDER BY pc.invited_at DESC
+    `;
+
+    const mapped = collaborators.map(c => ({
+      id: c.id,
+      project_id: c.project_id,
+      project_title: c.project_title,
+      user_id: c.user_id,
+      invited_email: c.invited_email,
+      role: c.role,
+      custom_role_name: c.custom_role_name,
+      status: c.status,
+      invited_at: c.invited_at,
+      accepted_at: c.accepted_at,
+      user: c.user_id ? {
+        name: c.name || c.invited_email.split('@')[0],
+        email: c.email,
+        avatar_url: c.avatar_url || c.profile_image_url || null,
+      } : null,
+    }));
+
+    const active = mapped.filter(c => c.status === 'active').length;
+    const pending = mapped.filter(c => c.status === 'pending').length;
+    const projects = new Set(mapped.map(c => c.project_id)).size;
+
+    return jsonResponse({
+      success: true,
+      data: {
+        collaborators: mapped,
+        stats: { total: mapped.length, active, pending, projects },
+      },
+    }, origin);
+  } catch (err) {
+    const e = err instanceof Error ? err : new Error(String(err));
+    console.error('getAllTeamCollaborators error:', e.message);
+    return jsonResponse({ success: true, data: { collaborators: [], stats: { total: 0, active: 0, pending: 0, projects: 0 } } }, origin);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Collaborator Read Endpoints
 // ---------------------------------------------------------------------------
 

@@ -5,6 +5,9 @@ import { toast } from 'react-hot-toast';
 import { apiClient } from '@/lib/api-client';
 import StartProjectModal from '../components/StartProjectModal';
 
+// Menu state for three-dot dropdown
+type MenuState = number | null;
+
 interface PipelineProject {
   id: number;
   title: string;
@@ -76,6 +79,7 @@ export default function ProductionProjects() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<MenuState>(null);
 
   const loadProjects = useCallback(async () => {
     try {
@@ -214,7 +218,7 @@ export default function ProductionProjects() {
         {/* Filter Tabs */}
         <div className="bg-white rounded-lg shadow mb-6">
           <div className="border-b">
-            <nav className="flex -mb-px overflow-x-auto">
+            <nav className="flex -mb-px overflow-x-auto scrollbar-hide">
               {['all', 'development', 'pre-production', 'production', 'post-production', 'delivery', 'release'].map((stage) => (
                 <button
                   key={stage}
@@ -275,9 +279,41 @@ export default function ProductionProjects() {
                       <span className={`text-xs font-medium ${priorityColors[project.priority] || 'text-gray-600'}`}>
                         {project.priority}
                       </span>
-                      <button className="p-1 hover:bg-gray-100 rounded">
-                        <MoreVertical className="w-4 h-4 text-gray-500" />
-                      </button>
+                      <div className="relative">
+                        <button
+                          onClick={() => setOpenMenuId(openMenuId === project.id ? null : project.id)}
+                          className="p-1 hover:bg-gray-100 rounded"
+                        >
+                          <MoreVertical className="w-4 h-4 text-gray-500" />
+                        </button>
+                        {openMenuId === project.id && (
+                          <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-1 w-40">
+                            {project.pitch_id && (
+                              <button
+                                onClick={() => { navigate(`/production/pitch/${project.pitch_id}`); setOpenMenuId(null); }}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                              >
+                                <Eye className="w-4 h-4" />
+                                View Pitch
+                              </button>
+                            )}
+                            <button
+                              onClick={() => { navigate(`/production/pitch/${project.pitch_id || project.id}`); setOpenMenuId(null); }}
+                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                            >
+                              <Edit className="w-4 h-4" />
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => { void handleArchiveProject(project.id); setOpenMenuId(null); }}
+                              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Archive
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 

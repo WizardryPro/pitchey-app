@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import {
   Users, UserPlus, Search, Filter, MoreVertical,
   Edit2, Trash2, Mail, Phone, Calendar, Star,
@@ -299,7 +300,10 @@ export default function TeamMembers() {
               <UserPlus className="w-5 h-5" />
               Invite Member
             </button>
-            <button className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition flex items-center gap-2">
+            <button
+              onClick={() => toast('Team export coming soon', { icon: 'ℹ️' })}
+              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition flex items-center gap-2"
+            >
               <Download className="w-5 h-5" />
               Export
             </button>
@@ -397,10 +401,16 @@ export default function TeamMembers() {
               {selectedMembers.length} member{selectedMembers.length > 1 ? 's' : ''} selected
             </div>
             <div className="flex gap-3">
-              <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+              <button
+                onClick={() => toast('Bulk role update coming soon', { icon: 'ℹ️' })}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+              >
                 Update Roles
               </button>
-              <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+              <button
+                onClick={() => toast('Bulk removal coming soon', { icon: 'ℹ️' })}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+              >
                 Remove Members
               </button>
             </div>

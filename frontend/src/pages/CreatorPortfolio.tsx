@@ -222,7 +222,7 @@ export default function CreatorPortfolio() {
             <h2 className="text-xl font-bold text-gray-900">Pitches</h2>
             {isOwnProfile && (
               <Link
-                to="/creator/create-pitch"
+                to="/creator/pitch/new"
                 className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
               >
                 <Plus className="w-4 h-4" />
@@ -302,7 +302,7 @@ export default function CreatorPortfolio() {
               </p>
               {isOwnProfile && (
                 <Link
-                  to="/creator/create-pitch"
+                  to="/creator/pitch/new"
                   className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
                 >
                   <Plus className="w-5 h-5" />

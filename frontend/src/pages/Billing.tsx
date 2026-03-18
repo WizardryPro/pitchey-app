@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import {
   CreditCard,
   Download,
@@ -417,7 +418,10 @@ function InvoicesTab({ invoices, onRefresh }: any) {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <button className="text-purple-600 hover:text-purple-700 flex items-center gap-1">
+                    <button
+                      onClick={() => toast('Available after billing is connected', { icon: 'ℹ️' })}
+                      className="text-purple-600 hover:text-purple-700 flex items-center gap-1"
+                    >
                       <Download className="w-4 h-4" />
                       Download
                     </button>

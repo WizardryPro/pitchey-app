@@ -2821,7 +2821,11 @@ class RouteRegistry {
       return updateProductionTeam(req, this.env);
     });
 
-    // Project Collaborators — invitation management + scoped project access
+    // Project Collaborators — aggregate team view + invitation management + scoped project access
+    this.register('GET', '/api/production/team/collaborators', async (req) => {
+      const { getAllTeamCollaborators } = await import('./handlers/collaborator');
+      return getAllTeamCollaborators(req, this.env);
+    });
     this.register('POST', '/api/projects/:projectId/collaborators/invite', async (req) => {
       const { inviteCollaborator } = await import('./handlers/collaborator');
       return inviteCollaborator(req, this.env);
@@ -5858,9 +5862,15 @@ pitchey_analytics_datapoints_per_minute 1250
         return new Response(JSON.stringify({ message: 'No file provided' }), { status: 400, headers });
       }
 
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/quicktime'];
+      const allowedTypes = [
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+        'video/mp4', 'video/quicktime', 'video/x-msvideo',
+        'application/pdf',
+        'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      ];
       if (!allowedTypes.includes(file.type)) {
-        return new Response(JSON.stringify({ message: 'Invalid file type. Allowed: JPEG, PNG, GIF, WebP, MP4, MOV' }), { status: 400, headers });
+        return new Response(JSON.stringify({ message: `Invalid file type: ${file.type}. Allowed: images, videos, PDF, DOC, DOCX, PPT, PPTX` }), { status: 400, headers });
       }
 
       const handler = new (await import('./handlers/media-access')).MediaAccessHandler(this.db, this.env);
@@ -5899,6 +5909,14 @@ pitchey_analytics_datapoints_per_minute 1250
         0,
         JSON.stringify({ uploadedAt: new Date().toISOString(), originalName: file.name })
       ]);
+
+      // If this is an image upload, set it as the pitch title_image if none exists
+      if (mediaType === 'image' && uploadResult.url) {
+        await this.db.query(
+          `UPDATE pitches SET title_image = $1 WHERE id = $2 AND (title_image IS NULL OR title_image = '')`,
+          [uploadResult.url, pitchId]
+        );
+      }
 
       return new Response(JSON.stringify({
         url: uploadResult.url,

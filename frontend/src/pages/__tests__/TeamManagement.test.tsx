@@ -6,11 +6,9 @@ import React from 'react'
 
 // ─── Hoisted mock functions ─────────────────────────────────────────
 const mockNavigate = vi.fn()
-const mockLogout = vi.fn()
-const mockGetTeams = vi.fn()
-const mockGetTeamMembers = vi.fn()
-const mockInviteToTeam = vi.fn()
-const mockRemoveMember = vi.fn()
+const mockGetAllTeamCollaborators = vi.fn()
+const mockRemoveCollaborator = vi.fn()
+const mockResendInvite = vi.fn()
 const mockToastSuccess = vi.fn()
 const mockToastError = vi.fn()
 
@@ -23,81 +21,88 @@ vi.mock('react-router-dom', async () => {
   }
 })
 
-// ─── Auth store (STABLE reference) ──────────────────────────────────
-const mockUser = {
-  id: 1,
-  name: 'Test User',
-  email: 'test@example.com',
-  userType: 'production',
-}
-
-const mockAuthState = {
-  user: mockUser,
-  isAuthenticated: true,
-  logout: mockLogout,
-}
-
-vi.mock('../../store/betterAuthStore', () => ({
-  useBetterAuthStore: () => mockAuthState,
-}))
-
-// ─── TeamService ─────────────────────────────────────────────────────
-vi.mock('../../services/team.service', () => ({
-  TeamService: {
-    getTeams: (...args: any[]) => mockGetTeams(...args),
-    getTeamMembers: (...args: any[]) => mockGetTeamMembers(...args),
-    inviteToTeam: (...args: any[]) => mockInviteToTeam(...args),
-    removeMember: (...args: any[]) => mockRemoveMember(...args),
+// ─── CollaboratorService ────────────────────────────────────────────
+vi.mock('../../services/collaborator.service', () => ({
+  CollaboratorService: {
+    getAllTeamCollaborators: (...args: any[]) => mockGetAllTeamCollaborators(...args),
+    removeCollaborator: (...args: any[]) => mockRemoveCollaborator(...args),
+    resendInvite: (...args: any[]) => mockResendInvite(...args),
+    inviteCollaborator: vi.fn(),
+    listCollaborators: vi.fn(),
   },
 }))
 
-// ─── react-hot-toast ─────────────────────────────────────────────────
+// ─── InviteCollaboratorWithProjectPicker ────────────────────────────
+vi.mock('../../portals/production/components/InviteCollaboratorWithProjectPicker', () => ({
+  default: ({ onClose }: any) => (
+    <div data-testid="invite-modal">
+      <button onClick={onClose}>Close Invite Modal</button>
+    </div>
+  ),
+}))
+
+// ─── react-hot-toast ────────────────────────────────────────────────
 vi.mock('react-hot-toast', () => ({
   default: { success: mockToastSuccess, error: mockToastError, loading: vi.fn() },
   toast: { success: mockToastSuccess, error: mockToastError, loading: vi.fn() },
 }))
 
-// ─── DashboardHeader ─────────────────────────────────────────────────
-vi.mock('../../components/DashboardHeader', () => ({
-  default: ({ title }: any) => <div data-testid="dashboard-header">{title}</div>,
-}))
-
-// ─── Mock data ───────────────────────────────────────────────────────
-const mockTeams = [
+// ─── Mock data ──────────────────────────────────────────────────────
+const mockCollaborators = [
   {
-    id: 'team-1',
-    name: 'Production Team Alpha',
-    memberCount: 3,
-    members: [
-      {
-        id: 'member-1',
-        name: 'Alice Producer',
-        email: 'alice@studio.com',
-        role: 'producer',
-        status: 'active' as const,
-        joinedDate: '2025-01-15T00:00:00Z',
-      },
-      {
-        id: 'member-2',
-        name: 'Bob Director',
-        email: 'bob@studio.com',
-        role: 'director',
-        status: 'active' as const,
-        joinedDate: '2025-02-01T00:00:00Z',
-      },
-      {
-        id: 'member-3',
-        name: 'Charlie Pending',
-        email: 'charlie@studio.com',
-        role: 'collaborator',
-        status: 'pending' as const,
-        joinedDate: '2025-03-01T00:00:00Z',
-      },
-    ],
+    id: 1,
+    project_id: 10,
+    project_title: 'Project Alpha',
+    user_id: 100,
+    invited_email: 'alice@studio.com',
+    role: 'director',
+    custom_role_name: null,
+    status: 'active' as const,
+    invited_at: '2025-01-15T00:00:00Z',
+    accepted_at: '2025-01-16T00:00:00Z',
+    user: { name: 'Alice Producer', email: 'alice@studio.com', avatar_url: null },
+  },
+  {
+    id: 2,
+    project_id: 10,
+    project_title: 'Project Alpha',
+    user_id: 101,
+    invited_email: 'bob@studio.com',
+    role: 'editor',
+    custom_role_name: null,
+    status: 'active' as const,
+    invited_at: '2025-02-01T00:00:00Z',
+    accepted_at: '2025-02-02T00:00:00Z',
+    user: { name: 'Bob Editor', email: 'bob@studio.com', avatar_url: null },
+  },
+  {
+    id: 3,
+    project_id: 11,
+    project_title: 'Project Beta',
+    user_id: null,
+    invited_email: 'charlie@studio.com',
+    role: 'dp',
+    custom_role_name: null,
+    status: 'pending' as const,
+    invited_at: '2025-03-01T00:00:00Z',
+    accepted_at: null,
+    user: null,
   },
 ]
 
-// ─── Dynamic import ──────────────────────────────────────────────────
+const mockStats = { total: 3, active: 2, pending: 1, projects: 2 }
+
+const mockSuccessResponse = {
+  success: true,
+  data: { collaborators: mockCollaborators, stats: mockStats },
+}
+
+const mockEmptyResponse = {
+  success: true,
+  data: { collaborators: [], stats: { total: 0, active: 0, pending: 0, projects: 0 } },
+}
+
+// ─── Dynamic import ─────────────────────────────────────────────────
 let TeamManagement: React.ComponentType
 beforeAll(async () => {
   const mod = await import('../TeamManagement')
@@ -114,16 +119,15 @@ const renderComponent = () =>
 describe('TeamManagement', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockGetTeams.mockResolvedValue(mockTeams)
-    mockGetTeamMembers.mockResolvedValue([])
-    mockInviteToTeam.mockResolvedValue({ id: 'inv-new', createdAt: new Date().toISOString() })
-    mockRemoveMember.mockResolvedValue(undefined)
+    mockGetAllTeamCollaborators.mockResolvedValue(mockSuccessResponse)
+    mockRemoveCollaborator.mockResolvedValue({ success: true })
+    mockResendInvite.mockResolvedValue({ success: true })
     vi.spyOn(window, 'confirm').mockReturnValue(true)
   })
 
   describe('Loading state', () => {
-    it('shows loading spinner while fetching team data', () => {
-      mockGetTeams.mockReturnValue(new Promise(() => {}))
+    it('shows loading spinner while fetching data', () => {
+      mockGetAllTeamCollaborators.mockReturnValue(new Promise(() => {}))
       renderComponent()
       expect(document.querySelector('.animate-spin')).toBeInTheDocument()
     })
@@ -131,7 +135,7 @@ describe('TeamManagement', () => {
 
   describe('Error state', () => {
     it('shows error message when API fails', async () => {
-      mockGetTeams.mockRejectedValue(new Error('Network error'))
+      mockGetAllTeamCollaborators.mockRejectedValue(new Error('Network error'))
       renderComponent()
 
       await waitFor(() => {
@@ -140,7 +144,7 @@ describe('TeamManagement', () => {
     })
 
     it('shows Retry button in error state', async () => {
-      mockGetTeams.mockRejectedValue(new Error('Failed'))
+      mockGetAllTeamCollaborators.mockRejectedValue(new Error('Failed'))
       renderComponent()
 
       await waitFor(() => {
@@ -150,39 +154,25 @@ describe('TeamManagement', () => {
   })
 
   describe('Layout', () => {
-    it('renders the dashboard header with "Team Management" title', async () => {
-      renderComponent()
-      await waitFor(() => {
-        expect(screen.getByTestId('dashboard-header')).toHaveTextContent('Team Management')
-      })
-    })
-
     it('renders the page heading and description', async () => {
       renderComponent()
       await waitFor(() => {
-        expect(screen.getAllByText('Team Management').length).toBeGreaterThanOrEqual(1)
+        expect(screen.getByText('Team Management')).toBeInTheDocument()
       })
-      expect(screen.getByText('Manage your production team, roles, and permissions')).toBeInTheDocument()
+      expect(screen.getByText('Manage collaborators across your production projects')).toBeInTheDocument()
     })
 
-    it('renders Invite Member button', async () => {
+    it('renders Invite Collaborator button', async () => {
       renderComponent()
       await waitFor(() => {
-        expect(screen.getByText('Invite Member')).toBeInTheDocument()
-      })
-    })
-
-    it('renders Manage Roles button', async () => {
-      renderComponent()
-      await waitFor(() => {
-        expect(screen.getByText('Manage Roles')).toBeInTheDocument()
+        expect(screen.getByText('Invite Collaborator')).toBeInTheDocument()
       })
     })
 
     it('renders search input', async () => {
       renderComponent()
       await waitFor(() => {
-        expect(screen.getByPlaceholderText('Search team members...')).toBeInTheDocument()
+        expect(screen.getByPlaceholderText('Search by name or email...')).toBeInTheDocument()
       })
     })
   })
@@ -191,64 +181,62 @@ describe('TeamManagement', () => {
     it('renders all stats cards', async () => {
       renderComponent()
       await waitFor(() => {
-        expect(screen.getByText('Total Members')).toBeInTheDocument()
+        expect(screen.getByText('Total Collaborators')).toBeInTheDocument()
       })
-      expect(screen.getByText('Active')).toBeInTheDocument()
-      expect(screen.getByText('Pending')).toBeInTheDocument()
-      expect(screen.getByText('Teams')).toBeInTheDocument()
+      // "Active" and "Pending" appear as both stat labels and status badges
+      expect(screen.getByText('Total Collaborators')).toBeInTheDocument()
+      expect(screen.getByText('Projects')).toBeInTheDocument()
     })
 
-    it('shows correct member count', async () => {
+    it('shows correct total count', async () => {
       renderComponent()
       await waitFor(() => {
-        expect(screen.getByText('Total Members')).toBeInTheDocument()
+        expect(screen.getByText('Total Collaborators')).toBeInTheDocument()
       })
-      // 3 members total
-      const totalEl = screen.getByText('Total Members').closest('div')?.parentElement
+      const totalEl = screen.getByText('Total Collaborators').closest('div')?.parentElement
       expect(totalEl?.querySelector('.text-2xl')?.textContent).toBe('3')
     })
 
     it('shows correct active count', async () => {
       renderComponent()
       await waitFor(() => {
-        expect(screen.getByText('Active')).toBeInTheDocument()
+        expect(screen.getByText('Total Collaborators')).toBeInTheDocument()
       })
-      // 2 active members
-      const activeEl = screen.getByText('Active').closest('div')?.parentElement
-      expect(activeEl?.querySelector('.text-2xl')?.textContent).toBe('2')
+      // Find the stat card for "Active" — it's the one with the green text
+      const activeCount = document.querySelector('.text-green-600.text-2xl')
+      expect(activeCount?.textContent).toBe('2')
     })
 
     it('shows correct pending count', async () => {
       renderComponent()
       await waitFor(() => {
-        expect(screen.getByText('Pending')).toBeInTheDocument()
+        expect(screen.getByText('Total Collaborators')).toBeInTheDocument()
       })
-      // 1 pending member
-      const pendingEl = screen.getByText('Pending').closest('div')?.parentElement
-      expect(pendingEl?.querySelector('.text-2xl')?.textContent).toBe('1')
+      // Find the stat card for "Pending" — it's the one with the yellow text
+      const pendingCount = document.querySelector('.text-yellow-600.text-2xl')
+      expect(pendingCount?.textContent).toBe('1')
     })
 
-    it('shows correct teams count', async () => {
+    it('shows correct projects count', async () => {
       renderComponent()
       await waitFor(() => {
-        expect(screen.getByText('Teams')).toBeInTheDocument()
+        expect(screen.getByText('Projects')).toBeInTheDocument()
       })
-      const teamsEl = screen.getByText('Teams').closest('div')?.parentElement
-      expect(teamsEl?.querySelector('.text-2xl')?.textContent).toBe('1')
+      const projectsEl = screen.getByText('Projects').closest('div')?.parentElement
+      expect(projectsEl?.querySelector('.text-2xl')?.textContent).toBe('2')
     })
   })
 
-  describe('Member cards', () => {
-    it('renders member names', async () => {
+  describe('Collaborator table', () => {
+    it('renders collaborator names', async () => {
       renderComponent()
       await waitFor(() => {
         expect(screen.getByText('Alice Producer')).toBeInTheDocument()
       })
-      expect(screen.getByText('Bob Director')).toBeInTheDocument()
-      expect(screen.getByText('Charlie Pending')).toBeInTheDocument()
+      expect(screen.getByText('Bob Editor')).toBeInTheDocument()
     })
 
-    it('renders member emails', async () => {
+    it('renders collaborator emails', async () => {
       renderComponent()
       await waitFor(() => {
         expect(screen.getByText('alice@studio.com')).toBeInTheDocument()
@@ -256,240 +244,128 @@ describe('TeamManagement', () => {
       expect(screen.getByText('bob@studio.com')).toBeInTheDocument()
     })
 
-    it('renders member roles', async () => {
+    it('renders role labels', async () => {
       renderComponent()
       await waitFor(() => {
-        expect(screen.getByText('producer')).toBeInTheDocument()
+        expect(screen.getByText('Director')).toBeInTheDocument()
       })
-      expect(screen.getByText('director')).toBeInTheDocument()
-      expect(screen.getByText('collaborator')).toBeInTheDocument()
+      expect(screen.getByText('Editor')).toBeInTheDocument()
+      expect(screen.getByText('Director of Photography')).toBeInTheDocument()
     })
 
-    it('renders status badges for members', async () => {
+    it('renders project titles', async () => {
       renderComponent()
       await waitFor(() => {
-        expect(screen.getAllByText('active').length).toBeGreaterThanOrEqual(2)
+        // 2 in table rows + 1 in project filter dropdown = 3
+        expect(screen.getAllByText('Project Alpha').length).toBeGreaterThanOrEqual(2)
+      })
+      expect(screen.getAllByText('Project Beta').length).toBeGreaterThanOrEqual(1)
+    })
+
+    it('renders status badges', async () => {
+      renderComponent()
+      await waitFor(() => {
+        expect(screen.getAllByText('active').length).toBe(2)
       })
       expect(screen.getByText('pending')).toBeInTheDocument()
-    })
-
-    it('renders member initials in avatar', async () => {
-      renderComponent()
-      await waitFor(() => {
-        expect(screen.getByText('AP')).toBeInTheDocument()
-      })
-      expect(screen.getByText('BD')).toBeInTheDocument()
     })
   })
 
   describe('Empty state', () => {
-    it('shows empty state when no members found', async () => {
-      mockGetTeams.mockResolvedValue([{ id: 'team-1', name: 'Empty Team', memberCount: 0, members: [] }])
+    it('shows empty state when no collaborators exist', async () => {
+      mockGetAllTeamCollaborators.mockResolvedValue(mockEmptyResponse)
       renderComponent()
 
       await waitFor(() => {
-        expect(screen.getByText('No team members found')).toBeInTheDocument()
+        expect(screen.getByText('No collaborators yet')).toBeInTheDocument()
       })
+      expect(screen.getByText('Invite team members to your production projects')).toBeInTheDocument()
     })
 
-    it('shows message to create a team when no teams exist', async () => {
-      mockGetTeams.mockResolvedValue([])
+    it('shows invite button in empty state', async () => {
+      mockGetAllTeamCollaborators.mockResolvedValue(mockEmptyResponse)
       renderComponent()
 
       await waitFor(() => {
-        expect(screen.getByText('No team members found')).toBeInTheDocument()
+        expect(screen.getAllByText('Invite Collaborator').length).toBeGreaterThanOrEqual(2)
       })
-      expect(screen.getByText('Create a team first to start managing members')).toBeInTheDocument()
-    })
-
-    it('disables Invite Member button when no teams exist', async () => {
-      mockGetTeams.mockResolvedValue([])
-      renderComponent()
-
-      await waitFor(() => {
-        expect(screen.getByText('Invite Member')).toBeInTheDocument()
-      })
-      const inviteBtn = screen.getByText('Invite Member').closest('button')
-      expect(inviteBtn).toBeDisabled()
     })
   })
 
   describe('Search filter', () => {
-    it('filters members by name', async () => {
+    it('filters collaborators by name', async () => {
       const user = userEvent.setup()
       renderComponent()
 
       await waitFor(() => {
-        expect(screen.getByPlaceholderText('Search team members...')).toBeInTheDocument()
+        expect(screen.getByPlaceholderText('Search by name or email...')).toBeInTheDocument()
       })
 
-      await user.type(screen.getByPlaceholderText('Search team members...'), 'Alice')
+      await user.type(screen.getByPlaceholderText('Search by name or email...'), 'Alice')
 
       await waitFor(() => {
         expect(screen.getByText('Alice Producer')).toBeInTheDocument()
       })
-      expect(screen.queryByText('Bob Director')).not.toBeInTheDocument()
+      expect(screen.queryByText('Bob Editor')).not.toBeInTheDocument()
     })
 
-    it('filters members by email', async () => {
+    it('filters collaborators by email', async () => {
       const user = userEvent.setup()
       renderComponent()
 
       await waitFor(() => {
-        expect(screen.getByPlaceholderText('Search team members...')).toBeInTheDocument()
+        expect(screen.getByPlaceholderText('Search by name or email...')).toBeInTheDocument()
       })
 
-      await user.type(screen.getByPlaceholderText('Search team members...'), 'bob@')
+      await user.type(screen.getByPlaceholderText('Search by name or email...'), 'bob@')
 
       await waitFor(() => {
-        expect(screen.getByText('Bob Director')).toBeInTheDocument()
+        expect(screen.getByText('Bob Editor')).toBeInTheDocument()
       })
       expect(screen.queryByText('Alice Producer')).not.toBeInTheDocument()
     })
   })
 
   describe('Invite modal', () => {
-    it('opens invite modal when Invite Member is clicked', async () => {
+    it('opens invite modal when Invite Collaborator is clicked', async () => {
       const user = userEvent.setup()
       renderComponent()
 
       await waitFor(() => {
-        expect(screen.getByText('Invite Member')).toBeInTheDocument()
+        expect(screen.getByText('Invite Collaborator')).toBeInTheDocument()
       })
 
-      await user.click(screen.getByText('Invite Member'))
+      await user.click(screen.getByText('Invite Collaborator'))
 
       await waitFor(() => {
-        expect(screen.getByText('Invite Team Member')).toBeInTheDocument()
-      })
-      expect(screen.getByPlaceholderText('colleague@company.com')).toBeInTheDocument()
-    })
-
-    it('renders role select in invite modal', async () => {
-      const user = userEvent.setup()
-      renderComponent()
-
-      await waitFor(() => {
-        expect(screen.getByText('Invite Member')).toBeInTheDocument()
-      })
-
-      await user.click(screen.getByText('Invite Member'))
-
-      await waitFor(() => {
-        expect(screen.getByDisplayValue('Member')).toBeInTheDocument()
+        expect(screen.getByTestId('invite-modal')).toBeInTheDocument()
       })
     })
 
-    it('renders optional message field in invite modal', async () => {
+    it('closes invite modal', async () => {
       const user = userEvent.setup()
       renderComponent()
 
       await waitFor(() => {
-        expect(screen.getByText('Invite Member')).toBeInTheDocument()
+        expect(screen.getByText('Invite Collaborator')).toBeInTheDocument()
       })
 
-      await user.click(screen.getByText('Invite Member'))
+      await user.click(screen.getByText('Invite Collaborator'))
 
       await waitFor(() => {
-        expect(screen.getByText('Message (Optional)')).toBeInTheDocument()
+        expect(screen.getByTestId('invite-modal')).toBeInTheDocument()
       })
-    })
 
-    it('closes invite modal when Cancel is clicked', async () => {
-      const user = userEvent.setup()
-      renderComponent()
+      await user.click(screen.getByText('Close Invite Modal'))
 
       await waitFor(() => {
-        expect(screen.getByText('Invite Member')).toBeInTheDocument()
+        expect(screen.queryByTestId('invite-modal')).not.toBeInTheDocument()
       })
-
-      await user.click(screen.getByText('Invite Member'))
-
-      await waitFor(() => {
-        expect(screen.getByText('Invite Team Member')).toBeInTheDocument()
-      })
-
-      // Find the Cancel button inside the modal
-      const cancelBtn = screen.getAllByText('Cancel').find(el => el.tagName === 'BUTTON')
-      await user.click(cancelBtn!)
-
-      await waitFor(() => {
-        expect(screen.queryByText('Invite Team Member')).not.toBeInTheDocument()
-      })
-    })
-
-    it('calls inviteToTeam when form is submitted with email', async () => {
-      const user = userEvent.setup()
-      renderComponent()
-
-      await waitFor(() => {
-        expect(screen.getByText('Invite Member')).toBeInTheDocument()
-      })
-
-      await user.click(screen.getByText('Invite Member'))
-
-      await waitFor(() => {
-        expect(screen.getByPlaceholderText('colleague@company.com')).toBeInTheDocument()
-      })
-
-      await user.type(screen.getByPlaceholderText('colleague@company.com'), 'newmember@studio.com')
-
-      await user.click(screen.getByText('Send Invitation'))
-
-      await waitFor(() => {
-        expect(mockInviteToTeam).toHaveBeenCalledWith(
-          'team-1',
-          expect.objectContaining({
-            email: 'newmember@studio.com',
-            role: 'member',
-          })
-        )
-      })
-    })
-
-    it('shows success toast after sending invitation', async () => {
-      const user = userEvent.setup()
-      renderComponent()
-
-      await waitFor(() => {
-        expect(screen.getByText('Invite Member')).toBeInTheDocument()
-      })
-
-      await user.click(screen.getByText('Invite Member'))
-
-      await waitFor(() => {
-        expect(screen.getByPlaceholderText('colleague@company.com')).toBeInTheDocument()
-      })
-
-      await user.type(screen.getByPlaceholderText('colleague@company.com'), 'newmember@studio.com')
-      await user.click(screen.getByText('Send Invitation'))
-
-      await waitFor(() => {
-        expect(mockToastSuccess).toHaveBeenCalledWith('Invitation sent to newmember@studio.com')
-      })
-    })
-
-    it('Send Invitation button is disabled when email is empty', async () => {
-      const user = userEvent.setup()
-      renderComponent()
-
-      await waitFor(() => {
-        expect(screen.getByText('Invite Member')).toBeInTheDocument()
-      })
-
-      await user.click(screen.getByText('Invite Member'))
-
-      await waitFor(() => {
-        expect(screen.getByText('Send Invitation')).toBeInTheDocument()
-      })
-
-      const sendBtn = screen.getByText('Send Invitation').closest('button')
-      expect(sendBtn).toBeDisabled()
     })
   })
 
-  describe('Remove member', () => {
-    it('calls removeMember when trash icon is clicked and confirmed', async () => {
+  describe('Remove collaborator', () => {
+    it('calls removeCollaborator when trash icon is clicked and confirmed', async () => {
       const user = userEvent.setup()
       renderComponent()
 
@@ -497,15 +373,15 @@ describe('TeamManagement', () => {
         expect(screen.getByText('Alice Producer')).toBeInTheDocument()
       })
 
-      const removeButtons = screen.getAllByTitle('Remove member')
+      const removeButtons = screen.getAllByTitle('Remove collaborator')
       await user.click(removeButtons[0])
 
       await waitFor(() => {
-        expect(mockRemoveMember).toHaveBeenCalledWith('team-1', 'member-1')
+        expect(mockRemoveCollaborator).toHaveBeenCalledWith(10, 1)
       })
     })
 
-    it('shows success toast after removing member', async () => {
+    it('shows success toast after removing collaborator', async () => {
       const user = userEvent.setup()
       renderComponent()
 
@@ -513,15 +389,15 @@ describe('TeamManagement', () => {
         expect(screen.getByText('Alice Producer')).toBeInTheDocument()
       })
 
-      const removeButtons = screen.getAllByTitle('Remove member')
+      const removeButtons = screen.getAllByTitle('Remove collaborator')
       await user.click(removeButtons[0])
 
       await waitFor(() => {
-        expect(mockToastSuccess).toHaveBeenCalledWith('Member removed')
+        expect(mockToastSuccess).toHaveBeenCalledWith('Collaborator removed')
       })
     })
 
-    it('does not call removeMember when confirm is cancelled', async () => {
+    it('does not call removeCollaborator when confirm is cancelled', async () => {
       vi.spyOn(window, 'confirm').mockReturnValue(false)
       const user = userEvent.setup()
       renderComponent()
@@ -530,25 +406,35 @@ describe('TeamManagement', () => {
         expect(screen.getByText('Alice Producer')).toBeInTheDocument()
       })
 
-      const removeButtons = screen.getAllByTitle('Remove member')
+      const removeButtons = screen.getAllByTitle('Remove collaborator')
       await user.click(removeButtons[0])
 
-      expect(mockRemoveMember).not.toHaveBeenCalled()
+      expect(mockRemoveCollaborator).not.toHaveBeenCalled()
     })
   })
 
-  describe('Manage Roles navigation', () => {
-    it('navigates to roles page when Manage Roles is clicked', async () => {
+  describe('Resend invite', () => {
+    it('shows resend button for pending collaborators', async () => {
+      renderComponent()
+
+      await waitFor(() => {
+        expect(screen.getByTitle('Resend invitation')).toBeInTheDocument()
+      })
+    })
+
+    it('calls resendInvite when resend button is clicked', async () => {
       const user = userEvent.setup()
       renderComponent()
 
       await waitFor(() => {
-        expect(screen.getByText('Manage Roles')).toBeInTheDocument()
+        expect(screen.getByTitle('Resend invitation')).toBeInTheDocument()
       })
 
-      await user.click(screen.getByText('Manage Roles'))
+      await user.click(screen.getByTitle('Resend invitation'))
 
-      expect(mockNavigate).toHaveBeenCalledWith('/production/team/roles')
+      await waitFor(() => {
+        expect(mockResendInvite).toHaveBeenCalledWith(11, 3)
+      })
     })
   })
 })

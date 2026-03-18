@@ -78,7 +78,7 @@ const WorksGrid: React.FC<WorksGridProps> = ({ works, userType, isOwnProfile = f
       case 'investor':
         return '/investor/add-investment';
       default:
-        return '/creator/create-pitch';
+        return '/creator/pitch/new';
     }
   };
 

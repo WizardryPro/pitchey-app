@@ -19,6 +19,7 @@ import { toast } from 'react-hot-toast';
 import { ProductionService } from '../services/production.service';
 import type { ProductionNoteResponse, ProductionTeamMember } from '../services/production.service';
 import StartProjectModal from '../components/StartProjectModal';
+import { CollaboratorService } from '@/services/collaborator.service';
 
 interface Pitch {
   id: string;
@@ -69,6 +70,7 @@ interface FeasibilityAssessment {
   scheduleViability: number;
   locationViability: number;
   castingViability: number;
+  productionReadiness: number;
   overallScore: number;
 }
 
@@ -117,6 +119,7 @@ const ProductionPitchView: React.FC = () => {
 
   const isOwner = !!(pitch?.userId && authUser?.id && String(pitch.userId) === String(authUser.id));
   const [hasExistingProject, setHasExistingProject] = useState(false);
+  const [linkedProjectId, setLinkedProjectId] = useState<number | null>(null);
   const [autoFillLoading, setAutoFillLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -126,21 +129,32 @@ const ProductionPitchView: React.FC = () => {
       loadProductionData();
       // Check if a pipeline project already exists for this pitch
       void apiClient.get<{ projects: Array<{ id: number }> }>(`/api/production/projects?pitchId=${id}`)
-        .then(res => {
+        .then(async (res) => {
           if (res.success && res.data?.projects && res.data.projects.length > 0) {
             setHasExistingProject(true);
+            const projectId = res.data.projects[0].id;
+            setLinkedProjectId(projectId);
+            // Fetch accepted collaborators and merge into team
+            try {
+              const collabRes = await CollaboratorService.listCollaborators(projectId);
+              if (collabRes.success && collabRes.data?.collaborators) {
+                mergeCollaboratorsIntoTeam(collabRes.data.collaborators);
+              }
+            } catch {
+              // Non-critical — team tab still works with manual entries
+            }
           }
         })
         .catch(() => {});
     }
   }, [id]);
 
-  // Recalculate feasibility when pitch data is loaded
+  // Recalculate feasibility when pitch data or checklist changes
   useEffect(() => {
     if (pitch) {
       calculateFeasibility();
     }
-  }, [pitch]);
+  }, [pitch, productionChecklist]);
 
   const fetchPitchData = async () => {
     try {
@@ -227,6 +241,47 @@ const ProductionPitchView: React.FC = () => {
     }
   };
 
+  const COLLAB_ROLE_MAP: Record<string, string> = {
+    director: 'Director',
+    line_producer: 'Producer',
+    dp: 'Cinematographer',
+    production_designer: 'Production Designer',
+    editor: 'Editor',
+    sound_designer: 'Sound Designer',
+  };
+
+  const mergeCollaboratorsIntoTeam = (collaborators: Array<{ status: string; role: string; custom_role_name?: string | null; user?: { name: string } | null; invited_email: string }>) => {
+    const accepted = collaborators.filter(c => c.status === 'active');
+    if (accepted.length === 0) return;
+
+    setTeamMembers(prev => {
+      const updated = [...prev];
+      const addedRoles = new Set<string>();
+
+      for (const collab of accepted) {
+        const displayRole = collab.role === 'custom'
+          ? (collab.custom_role_name || 'Custom')
+          : (COLLAB_ROLE_MAP[collab.role] || collab.role);
+        const name = collab.user?.name || collab.invited_email || '';
+
+        // Try to match an existing team slot with empty name
+        const existingIdx = updated.findIndex(
+          m => m.role === displayRole && (!m.name || m.name === '')
+        );
+
+        if (existingIdx >= 0) {
+          updated[existingIdx] = { role: displayRole, name, status: 'confirmed' };
+          addedRoles.add(displayRole);
+        } else if (!addedRoles.has(displayRole)) {
+          updated.push({ role: displayRole, name, status: 'confirmed' });
+          addedRoles.add(displayRole);
+        }
+      }
+
+      return updated;
+    });
+  };
+
   const calculateFeasibility = () => {
     if (!pitch) return;
 
@@ -256,12 +311,18 @@ const ProductionPitchView: React.FC = () => {
       characterCount <= 4 ? 80 :
       characterCount <= 8 ? 65 : 50;
 
+    // Production readiness: derived from checklist completion
+    const completed = Object.values(productionChecklist).filter(Boolean).length;
+    const total = Object.keys(productionChecklist).length;
+    const readinessScore = total > 0 ? Math.round((completed / total) * 100) : 0;
+
     setFeasibility({
       budgetViability: budgetScore,
       scheduleViability: scheduleScore,
       locationViability: locationScore,
       castingViability: castingScore,
-      overallScore: Math.round((budgetScore + scheduleScore + locationScore + castingScore) / 4)
+      productionReadiness: readinessScore,
+      overallScore: Math.round((budgetScore + scheduleScore + locationScore + castingScore + readinessScore) / 5)
     });
   };
 
@@ -615,6 +676,22 @@ const ProductionPitchView: React.FC = () => {
                   )}
                 </div>
 
+                {/* Pitch Analytics */}
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                    <p className="text-2xl font-bold text-gray-900">{pitch.views ?? 0}</p>
+                    <p className="text-xs text-gray-500 flex items-center justify-center gap-1"><Eye className="w-3 h-3" /> Views</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                    <p className="text-2xl font-bold text-gray-900">{pitch.likes ?? 0}</p>
+                    <p className="text-xs text-gray-500 flex items-center justify-center gap-1"><Heart className="w-3 h-3" /> Likes</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                    <p className="text-2xl font-bold text-gray-900">{pitch.ndaCount ?? 0}</p>
+                    <p className="text-xs text-gray-500 flex items-center justify-center gap-1"><Shield className="w-3 h-3" /> NDAs</p>
+                  </div>
+                </div>
+
                 <p className="text-xl text-gray-700 mb-6 italic">"{pitch.logline}"</p>
                 
                 <div className="space-y-6">
@@ -749,6 +826,22 @@ const ProductionPitchView: React.FC = () => {
                       <div className="bg-pink-500 h-2 rounded-full" style={{ width: `${feasibility.castingViability}%` }} />
                     </div>
                   </div>
+
+                  <div className="p-4 bg-gray-50 rounded-lg col-span-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="flex items-center text-gray-700">
+                        <CheckSquare className="h-4 w-4 mr-2" />
+                        Production Readiness
+                      </span>
+                      <span className={`font-semibold ${getFeasibilityColor(feasibility.productionReadiness)}`}>
+                        {feasibility.productionReadiness.toFixed(0)}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="bg-orange-500 h-2 rounded-full transition-all duration-300" style={{ width: `${feasibility.productionReadiness}%` }} />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Based on checklist completion — check off tasks below to increase</p>
+                  </div>
                 </div>
 
                 {/* Production Checklist */}
@@ -782,15 +875,25 @@ const ProductionPitchView: React.FC = () => {
 
             {activeTab === 'team' && (
               <div className="bg-white rounded-xl shadow-lg p-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Team Assembly</h2>
-                
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Team Assembly</h2>
+                    {linkedProjectId && (
+                      <p className="text-sm text-gray-500 mt-1">Accepted collaborators auto-populate from the linked project</p>
+                    )}
+                  </div>
+                </div>
+
                 <div className="space-y-4">
                   {teamMembers.map((member, index) => (
-                    <div key={index} className="p-4 bg-gray-50 rounded-lg">
+                    <div key={index} className={`p-4 rounded-lg ${member.status === 'confirmed' && member.name ? 'bg-green-50 border border-green-200' : 'bg-gray-50'}`}>
                       <div className="flex items-center space-x-4">
                         <div className="flex-1">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
                             {member.role}
+                            {member.status === 'confirmed' && member.name && (
+                              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Confirmed</span>
+                            )}
                           </label>
                           <input
                             type="text"

@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, Activity, Film, FolderOpen, Upload,
   Bookmark, Users, GitBranch, DollarSign,
-  MessageSquare, Calendar, Settings, Shield, UserPlus
+  MessageSquare, Calendar, Settings, Shield
 } from 'lucide-react';
 import { PRODUCTION_ROUTES } from '@/config/navigation.routes';
 
@@ -52,7 +52,6 @@ export const productionNavigationSections: NavigationSection[] = [
     title: 'Team',
     items: [
       { label: 'Members', path: PRODUCTION_ROUTES.teamManagement, icon: Users },
-      { label: 'Invite', path: PRODUCTION_ROUTES.teamInvite, icon: UserPlus },
     ],
   },
   {

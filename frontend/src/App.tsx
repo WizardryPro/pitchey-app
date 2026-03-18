@@ -175,8 +175,7 @@ const ProductionAnalytics = lazyRetry(() => import('@portals/production/pages/Pr
 const ProductionActivity = lazyRetry(() => import('@portals/production/pages/ProductionActivity'));
 const ProductionStats = lazyRetry(() => import('@portals/production/pages/ProductionStats'));
 const TeamManagement = lazyRetry(() => import('./pages/TeamManagement'));
-const TeamMembers = lazyRetry(() => import('./pages/team/TeamMembers'));
-const TeamInvite = lazyRetry(() => import('./pages/team/TeamInvite'));
+// TeamMembers and TeamInvite routes now redirect to /team (TeamManagement)
 const TeamRoles = lazyRetry(() => import('@portals/production/pages/TeamRoles'));
 const ProductionCollaborations = lazyRetry(() => import('@portals/production/pages/ProductionCollaborations'));
 const ProductionRevenue = lazyRetry(() => import('@portals/production/pages/ProductionRevenue'));
@@ -607,8 +606,8 @@ function App() {
           
           {/* Generic Team Routes - Available to all authenticated users */}
           <Route path="/team" element={isAuthenticated ? <TeamManagement /> : <Navigate to="/portals" />} />
-          <Route path="/team/members" element={isAuthenticated ? <TeamMembers /> : <Navigate to="/portals" />} />
-          <Route path="/team/invite" element={isAuthenticated ? <TeamInvite /> : <Navigate to="/portals" />} />
+          <Route path="/team/members" element={<Navigate to="/team" replace />} />
+          <Route path="/team/invite" element={<Navigate to="/team" replace />} />
           
           {/* Legal Document Automation Routes - Available to all authenticated users, wrapped in PortalLayout */}
           <Route path="/legal" element={isAuthenticated ? <LegalLayoutWrapper /> : <Navigate to="/portals" />}>

@@ -92,6 +92,7 @@ function ProductionDashboard() {
   const [showMediaModal, setShowMediaModal] = useState(false);
   const [selectedPitchForMedia, setSelectedPitchForMedia] = useState<Pitch | null>(null);
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [analytics, setAnalytics] = useState<Analytics>({
     totalViews: 0,
@@ -330,6 +331,7 @@ function ProductionDashboard() {
             title: safeString(p.title || 'Untitled Project'),
             budget: safeNumber(p.budget || p.budget_range || 0),
             status: safeString(p.status || 'draft'),
+            titleImage: p.title_image ?? p.titleImage ?? '',
             creator: {
               id: userIdNum,
               username: safeString(user?.username || 'production'),
@@ -602,20 +604,28 @@ function ProductionDashboard() {
   };
 
   const handleUploadMedia = async () => {
-    if (!selectedPitchForMedia || mediaFiles.length === 0) return;
+    if (!selectedPitchForMedia || mediaFiles.length === 0) {
+      toast.error('No pitch selected or no files to upload');
+      return;
+    }
 
+    setUploadingMedia(true);
     const toastId = toast.loading(`Uploading ${mediaFiles.length} file${mediaFiles.length > 1 ? 's' : ''}...`);
 
     try {
       const pitchId = selectedPitchForMedia.id;
       const uploadedTypes: { type: string; count: number; uploaded: boolean }[] = [];
+      let firstImageUrl = '';
 
       for (const file of mediaFiles) {
         const mediaType = file.type.startsWith('video/') ? 'video' as const
           : file.type.startsWith('image/') ? 'image' as const
           : 'document' as const;
 
-        await uploadService.uploadPitchMedia(pitchId, file, mediaType);
+        const result = await uploadService.uploadPitchMedia(pitchId, file, mediaType);
+        if (mediaType === 'image' && !firstImageUrl && result.url) {
+          firstImageUrl = result.url;
+        }
         uploadedTypes.push({
           type: detectFileType(file.name),
           count: 1,
@@ -628,6 +638,7 @@ function ProductionDashboard() {
         if (pitch.id === pitchId) {
           return {
             ...pitch,
+            titleImage: pitch.titleImage || firstImageUrl || pitch.titleImage,
             mediaFiles: [
               ...(pitch.mediaFiles || []),
               ...uploadedTypes
@@ -645,6 +656,8 @@ function ProductionDashboard() {
       const e = err instanceof Error ? err : new Error(String(err));
       console.error('Error uploading media:', e);
       toast.error(`Upload failed: ${e.message}`, { id: toastId });
+    } finally {
+      setUploadingMedia(false);
     }
   };
 
@@ -955,7 +968,7 @@ function ProductionDashboard() {
             {/* Primary CTA - Create New Pitch */}
             <div>
               <button
-                onClick={() => navigate('/create-pitch')}
+                onClick={() => navigate('/production/pitch/new')}
                 className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 bg-purple-600 text-white text-lg font-bold rounded-xl hover:bg-purple-700 shadow-lg hover:shadow-xl transition-all"
               >
                 <Plus className="w-6 h-6" />
@@ -1077,7 +1090,7 @@ function ProductionDashboard() {
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold text-gray-900">Your Production Pitches</h2>
               <Link
-                to="/create-pitch"
+                to="/production/pitch/new"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
               >
                 <Plus className="w-4 h-4" />
@@ -1096,7 +1109,7 @@ function ProductionDashboard() {
                     </p>
                   </div>
                   <Link
-                    to="/create-pitch?mode=continue"
+                    to="/production/pitch/new?mode=continue"
                     className="inline-flex items-center gap-2 px-3 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm"
                   >
                     <Upload className="w-4 h-4" />
@@ -2155,12 +2168,21 @@ function ProductionDashboard() {
                 Cancel
               </button>
               <button
-                onClick={handleUploadMedia}
-                disabled={mediaFiles.length === 0}
+                onClick={() => { void handleUploadMedia(); }}
+                disabled={mediaFiles.length === 0 || uploadingMedia}
                 className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                <Upload className="w-4 h-4" />
-                Upload {mediaFiles.length} File{mediaFiles.length !== 1 ? 's' : ''}
+                {uploadingMedia ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4" />
+                    Upload {mediaFiles.length} File{mediaFiles.length !== 1 ? 's' : ''}
+                  </>
+                )}
               </button>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import {
   ArrowLeft, Eye, Heart, Shield, Users,
   Download, Play, Share2,
@@ -461,11 +462,20 @@ export default function ProductionPitchDetail() {
               <div className="bg-white rounded-xl shadow-sm p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
                 <div className="space-y-2">
-                  <button className="w-full py-2 px-4 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 text-left flex items-center gap-2">
+                  <button
+                    onClick={() => toast('Bulk download coming soon', { icon: 'ℹ️' })}
+                    className="w-full py-2 px-4 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 text-left flex items-center gap-2"
+                  >
                     <Download className="w-4 h-4" />
                     Download All Materials
                   </button>
-                  <button className="w-full py-2 px-4 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 text-left flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      void navigator.clipboard.writeText(window.location.href);
+                      toast.success('Link copied to clipboard!');
+                    }}
+                    className="w-full py-2 px-4 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 text-left flex items-center gap-2"
+                  >
                     <Share2 className="w-4 h-4" />
                     Generate Share Link
                   </button>

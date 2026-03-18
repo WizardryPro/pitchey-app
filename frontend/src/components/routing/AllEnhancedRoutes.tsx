@@ -76,11 +76,11 @@ const ProductionSubmissionsArchive = lazy(() => import('@portals/production/page
 const ProductionRevenue = lazy(() => import('@portals/production/pages/ProductionRevenue'));
 const ProductionSaved = lazy(() => import('@portals/production/pages/ProductionSaved'));
 const ProductionCollaborations = lazy(() => import('@portals/production/pages/ProductionCollaborations'));
-const TeamInvite = lazy(() => import('@portals/production/pages/TeamInvite'));
+// TeamInvite route now redirects to /production/team (TeamManagement)
 const TeamRoles = lazy(() => import('@portals/production/pages/TeamRoles'));
 const ProductionPitchCreate = lazy(() => import('../../pages/ProductionPitchCreate'));
 const TeamManagement = lazy(() => import('../../pages/TeamManagement'));
-const TeamMembers = lazy(() => import('../../pages/team/TeamMembers'));
+// TeamMembers route now redirects to /production/team (TeamManagement)
 const ProductionSettingsProfile = lazy(() => import('@portals/production/pages/ProductionSettingsProfile'));
 const ProductionSettingsBilling = lazy(() => import('@portals/production/pages/ProductionSettingsBilling'));
 const ProductionSettingsNotifications = lazy(() => import('@portals/production/pages/ProductionSettingsNotifications'));
@@ -355,10 +355,10 @@ export function AllProductionRoutes({ isAuthenticated, userType }: RoutesProps) 
         isProduction ? <TeamManagement /> : <Navigate to="/login/production" />
       } />
       <Route path={getRelativePath(PRODUCTION_ROUTES.teamMembers, '/production')} element={
-        isProduction ? <TeamMembers /> : <Navigate to="/login/production" />
+        <Navigate to="/production/team" replace />
       } />
       <Route path={getRelativePath(PRODUCTION_ROUTES.teamInvite, '/production')} element={
-        isProduction ? <TeamInvite /> : <Navigate to="/login/production" />
+        <Navigate to="/production/team" replace />
       } />
       <Route path={getRelativePath(PRODUCTION_ROUTES.teamRoles, '/production')} element={
         isProduction ? <TeamRoles /> : <Navigate to="/login/production" />

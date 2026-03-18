@@ -287,10 +287,11 @@ export async function productionSubmissionsHandler(
           LEFT JOIN saved_pitches sp ON sp.pitch_id = p.id AND sp.user_id = ${userId}
           WHERE p.status = 'published'
             AND sp.id IS NULL
+            AND p.user_id != ${userId}
+            AND (p.creator_id IS NULL OR p.creator_id != ${userId})
             AND (
               EXISTS (SELECT 1 FROM ndas n WHERE n.pitch_id = p.id AND COALESCE(n.signer_id, n.user_id) = ${userId} AND n.status = 'signed')
               OR EXISTS (SELECT 1 FROM nda_requests nr WHERE nr.pitch_id = p.id AND nr.requester_id = ${userId} AND nr.status = 'approved')
-              OR p.user_id = ${userId} OR p.creator_id = ${userId}
             )
           ORDER BY p.created_at DESC
           LIMIT ${limit} OFFSET ${offset}
@@ -301,10 +302,11 @@ export async function productionSubmissionsHandler(
           LEFT JOIN saved_pitches sp ON sp.pitch_id = p.id AND sp.user_id = ${userId}
           WHERE p.status = 'published'
             AND sp.id IS NULL
+            AND p.user_id != ${userId}
+            AND (p.creator_id IS NULL OR p.creator_id != ${userId})
             AND (
               EXISTS (SELECT 1 FROM ndas n WHERE n.pitch_id = p.id AND COALESCE(n.signer_id, n.user_id) = ${userId} AND n.status = 'signed')
               OR EXISTS (SELECT 1 FROM nda_requests nr WHERE nr.pitch_id = p.id AND nr.requester_id = ${userId} AND nr.status = 'approved')
-              OR p.user_id = ${userId} OR p.creator_id = ${userId}
             )
         `.catch(() => [{ total: 0 }]),
       ]);
@@ -331,13 +333,18 @@ export async function productionSubmissionsHandler(
         JOIN pitches p ON p.id = sp.pitch_id
         JOIN users u ON p.user_id = u.id
         WHERE sp.user_id = ${userId} AND sp.review_status = ${statusFilter}
+          AND p.user_id != ${userId}
+          AND (p.creator_id IS NULL OR p.creator_id != ${userId})
         ORDER BY COALESCE(sp.reviewed_at, sp.saved_at) DESC
         LIMIT ${limit} OFFSET ${offset}
       `.catch(() => []),
       sql`
         SELECT COUNT(*)::int AS total
-        FROM saved_pitches
-        WHERE user_id = ${userId} AND review_status = ${statusFilter}
+        FROM saved_pitches sp
+        JOIN pitches p ON p.id = sp.pitch_id
+        WHERE sp.user_id = ${userId} AND sp.review_status = ${statusFilter}
+          AND p.user_id != ${userId}
+          AND (p.creator_id IS NULL OR p.creator_id != ${userId})
       `.catch(() => [{ total: 0 }]),
     ]);
 

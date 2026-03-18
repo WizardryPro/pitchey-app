@@ -170,9 +170,8 @@ export function EnhancedNavigationShadcn({
       { label: 'Connected Creators', href: `${portalPrefix}/creators`, icon: Shield },
     ],
     production: [
-      { label: 'Team Members', href: `${portalPrefix}/team/members`, icon: Users },
+      { label: 'Team Members', href: `${portalPrefix}/team`, icon: Users },
       { label: 'Roles', href: `${portalPrefix}/team/roles`, icon: Shield },
-      { label: 'Invite Members', href: `${portalPrefix}/team/invite`, icon: UserPlus },
     ]
   };
 

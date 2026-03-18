@@ -561,7 +561,7 @@ export default function MarketplaceEnhanced() {
           </h3>
           <p className="text-sm text-gray-600 mb-2">{pitch.creator?.name || pitch.creator?.username || ((pitch as unknown as Record<string, unknown>).creator_username as string | undefined) || ((pitch as unknown as Record<string, unknown>).creator_name as string | undefined) || 'Unknown'}</p>
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex gap-2">
               {pitch.genre && (
                 <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
@@ -574,6 +574,16 @@ export default function MarketplaceEnhanced() {
                 {pitch.estimatedBudget || pitch.budgetBracket}
               </span>
             )}
+          </div>
+          <div className="flex items-center gap-3 text-xs text-gray-500 pt-2 border-t">
+            <span className="flex items-center gap-1">
+              <Eye className="w-3 h-3" />
+              {pitch.viewCount || 0}
+            </span>
+            <span className="flex items-center gap-1">
+              <Heart className="w-3 h-3" />
+              {pitch.likeCount || 0}
+            </span>
           </div>
         </div>
       </motion.div>

@@ -418,7 +418,7 @@ describe('ProductionDashboard', () => {
         expect(getByText('Create New Pitch')).toBeInTheDocument()
       })
       getByText('Create New Pitch').closest('button')?.click()
-      expect(mockNavigate).toHaveBeenCalledWith('/create-pitch')
+      expect(mockNavigate).toHaveBeenCalledWith('/production/pitch/new')
     })
   })
 })

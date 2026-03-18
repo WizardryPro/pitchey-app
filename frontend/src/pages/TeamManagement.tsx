@@ -1,157 +1,112 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Users, UserPlus, Shield, Mail, Calendar,
-  MoreVertical, Edit2, Trash2, CheckCircle, XCircle,
-  Briefcase, Star, AlertCircle, RefreshCw
+  Users, UserPlus, Mail, Calendar,
+  CheckCircle, Clock, Briefcase, AlertCircle,
+  RefreshCw, Trash2, Send, Search, Filter, X
 } from 'lucide-react';
-import { useBetterAuthStore } from '../store/betterAuthStore';
-import { TeamService, Team, TeamMember as ServiceTeamMember } from '../services/team.service';
+import { CollaboratorService, Collaborator } from '../services/collaborator.service';
 import { toast } from 'react-hot-toast';
+import InviteCollaboratorWithProjectPicker from '../portals/production/components/InviteCollaboratorWithProjectPicker';
 
-interface DisplayMember {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  status: 'active' | 'pending' | 'inactive';
-  joinedDate: string;
-  teamId: string;
-}
+const ROLE_LABELS: Record<string, string> = {
+  director: 'Director',
+  line_producer: 'Line Producer',
+  dp: 'Director of Photography',
+  production_designer: 'Production Designer',
+  editor: 'Editor',
+  sound_designer: 'Sound Designer',
+  custom: 'Custom',
+};
 
 export default function TeamManagement() {
   const navigate = useNavigate();
-  const { user } = useBetterAuthStore();
-  const userType = user?.userType || 'production';
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [members, setMembers] = useState<DisplayMember[]>([]);
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
+  const [stats, setStats] = useState({ total: 0, active: 0, pending: 0, projects: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterProject, setFilterProject] = useState<string>('all');
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState('member');
-  const [inviteMessage, setInviteMessage] = useState('');
-  const [inviting, setInviting] = useState(false);
 
-  const loadTeamData = useCallback(async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-
-      const fetchedTeams = await TeamService.getTeams();
-      setTeams(fetchedTeams);
-
-      // Gather members from all teams
-      const allMembers: DisplayMember[] = [];
-      for (const team of fetchedTeams) {
-        if (team.members) {
-          for (const m of team.members) {
-            allMembers.push({
-              id: m.id,
-              name: m.name || m.email,
-              email: m.email,
-              role: m.role,
-              status: m.status,
-              joinedDate: m.joinedDate,
-              teamId: team.id,
-            });
-          }
-        } else {
-          try {
-            const teamMembers = await TeamService.getTeamMembers(team.id);
-            for (const m of teamMembers) {
-              allMembers.push({
-                id: m.id,
-                name: m.name || m.email,
-                email: m.email,
-                role: m.role,
-                status: m.status,
-                joinedDate: m.joinedDate,
-                teamId: team.id,
-              });
-            }
-          } catch {
-            // Team may not have members endpoint
-          }
-        }
+      const response = await CollaboratorService.getAllTeamCollaborators();
+      if (response.success && response.data) {
+        setCollaborators(response.data.collaborators);
+        setStats(response.data.stats);
+      } else {
+        setError(response.error || 'Failed to load team data');
       }
-      setMembers(allMembers);
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
-      console.error('Failed to load team data:', e.message);
       setError(e.message);
-      setMembers([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadTeamData();
-  }, [loadTeamData]);
+    loadData();
+  }, [loadData]);
 
-  const ensureTeamExists = async (): Promise<string> => {
-    if (teams.length > 0) return teams[0].id;
-    // Auto-create a default team for this production company
-    const companyName = user?.companyName || user?.username || 'My Company';
-    const newTeam = await TeamService.createTeam({
-      name: `${companyName} Team`,
-      description: `Default team for ${companyName}`
-    });
-    setTeams([newTeam]);
-    return newTeam.id;
-  };
-
-  const handleInvite = async () => {
-    if (!inviteEmail) return;
-    setInviting(true);
+  const handleRemove = async (collaborator: Collaborator) => {
+    if (!collaborator.project_id) return;
+    if (!confirm(`Remove ${collaborator.user?.name || collaborator.invited_email} from this project?`)) return;
     try {
-      const teamId = await ensureTeamExists();
-      await TeamService.inviteToTeam(teamId, {
-        email: inviteEmail,
-        role: inviteRole,
-        message: inviteMessage || undefined,
-      });
-      toast.success(`Invitation sent to ${inviteEmail}`);
-      setShowInviteModal(false);
-      setInviteEmail('');
-      setInviteRole('member');
-      setInviteMessage('');
-      loadTeamData();
+      const response = await CollaboratorService.removeCollaborator(collaborator.project_id, collaborator.id);
+      if (response.success) {
+        toast.success('Collaborator removed');
+        setCollaborators(prev => prev.filter(c => c.id !== collaborator.id));
+        setStats(prev => ({
+          ...prev,
+          total: prev.total - 1,
+          active: collaborator.status === 'active' ? prev.active - 1 : prev.active,
+          pending: collaborator.status === 'pending' ? prev.pending - 1 : prev.pending,
+        }));
+      } else {
+        toast.error(response.error || 'Failed to remove');
+      }
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
-      toast.error(e.message || 'Failed to send invitation');
-    } finally {
-      setInviting(false);
+      toast.error(e.message);
     }
   };
 
-  const handleRemoveMember = async (teamId: string, memberId: string) => {
-    if (!confirm('Remove this team member?')) return;
+  const handleResend = async (collaborator: Collaborator) => {
+    if (!collaborator.project_id) return;
     try {
-      await TeamService.removeMember(teamId, memberId);
-      toast.success('Member removed');
-      setMembers(prev => prev.filter(m => m.id !== memberId));
+      const response = await CollaboratorService.resendInvite(collaborator.project_id, collaborator.id);
+      if (response.success) {
+        toast.success('Invitation resent');
+      } else {
+        toast.error(response.error || 'Failed to resend');
+      }
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
-      toast.error(e.message || 'Failed to remove member');
+      toast.error(e.message);
     }
   };
 
-  const filteredMembers = members.filter(member => {
-    const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          member.role.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
+  // Derive unique project names for filter dropdown
+  const projectNames = Array.from(new Set(collaborators.map(c => c.project_title).filter(Boolean))) as string[];
+
+  const filtered = collaborators.filter(c => {
+    const name = c.user?.name || c.invited_email;
+    const email = c.user?.email || c.invited_email;
+    const matchesSearch = !searchTerm ||
+      name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === 'all' || c.status === filterStatus;
+    const matchesProject = filterProject === 'all' || c.project_title === filterProject;
+    return matchesSearch && matchesStatus && matchesProject;
   });
 
-  const stats = {
-    total: members.length,
-    active: members.filter(m => m.status === 'active').length,
-    pending: members.filter(m => m.status === 'pending').length,
-    teams: teams.length,
-  };
+  const getRoleLabel = (c: Collaborator) =>
+    c.role === 'custom' ? (c.custom_role_name || 'Custom') : (ROLE_LABELS[c.role] || c.role);
 
   return (
     <div>
@@ -160,7 +115,7 @@ export default function TeamManagement() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Team Management</h1>
-            <p className="text-gray-600">Manage your production team, roles, and permissions</p>
+            <p className="text-gray-600">Manage collaborators across your production projects</p>
           </div>
           <div className="flex gap-3 mt-4 md:mt-0">
             <button
@@ -168,11 +123,12 @@ export default function TeamManagement() {
               className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center gap-2"
             >
               <UserPlus className="w-5 h-5" />
-              Invite Member
+              Invite Collaborator
             </button>
             <button
-              onClick={loadTeamData}
+              onClick={loadData}
               className="px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-white transition"
+              title="Refresh"
             >
               <RefreshCw className="w-5 h-5" />
             </button>
@@ -184,7 +140,7 @@ export default function TeamManagement() {
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
             <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
             <p className="text-red-700">{error}</p>
-            <button onClick={loadTeamData} className="ml-auto text-red-600 hover:text-red-800 text-sm font-medium">
+            <button onClick={loadData} className="ml-auto text-red-600 hover:text-red-800 text-sm font-medium">
               Retry
             </button>
           </div>
@@ -195,13 +151,12 @@ export default function TeamManagement() {
           <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Members</p>
+                <p className="text-sm text-gray-600">Total Collaborators</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
               </div>
               <Users className="w-8 h-8 text-indigo-400" />
             </div>
           </div>
-
           <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
@@ -211,188 +166,179 @@ export default function TeamManagement() {
               <CheckCircle className="w-8 h-8 text-green-500" />
             </div>
           </div>
-
           <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Pending</p>
                 <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
               </div>
-              <Star className="w-8 h-8 text-yellow-500" />
+              <Clock className="w-8 h-8 text-yellow-500" />
             </div>
           </div>
-
           <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Teams</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.teams}</p>
+                <p className="text-sm text-gray-600">Projects</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.projects}</p>
               </div>
               <Briefcase className="w-8 h-8 text-blue-500" />
             </div>
           </div>
         </div>
 
-        {/* Search */}
+        {/* Search & Filters */}
         <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6 shadow-sm">
           <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search team members..."
+                placeholder="Search by name or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900 placeholder-gray-500"
+                className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900 placeholder-gray-500"
               />
+              {searchTerm && (
+                <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+                </button>
+              )}
             </div>
-
-            <button
-              onClick={() => navigate(`/${userType}/team/roles`)}
-              className="px-4 py-2 border border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 transition flex items-center gap-2"
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900"
             >
-              <Shield className="w-5 h-5" />
-              Manage Roles
-            </button>
+              <option value="all">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="pending">Pending</option>
+            </select>
+            {projectNames.length > 1 && (
+              <select
+                value={filterProject}
+                onChange={(e) => setFilterProject(e.target.value)}
+                className="px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900"
+              >
+                <option value="all">All Projects</option>
+                {projectNames.map(name => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
 
-        {/* Team Members Grid */}
+        {/* Collaborators Table */}
         {loading ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredMembers.map((member) => (
-              <div key={member.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:border-indigo-300 transition shadow-sm">
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                        {member.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-gray-900">{member.name}</h3>
-                        <p className="text-sm text-gray-600 capitalize">{member.role}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Mail className="w-4 h-4" />
-                      {member.email}
-                    </div>
-                    {member.joinedDate && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Calendar className="w-4 h-4" />
-                        Joined {new Date(member.joinedDate).toLocaleDateString()}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between mb-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      member.status === 'active' ? 'bg-green-100 text-green-800' :
-                      member.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {member.status}
-                    </span>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleRemoveMember(member.teamId, member.id)}
-                      className="p-2 text-red-500 hover:bg-gray-50 rounded-lg transition"
-                      title="Remove member"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+        ) : filtered.length > 0 ? (
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200 bg-gray-50">
+                    <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Name / Email</th>
+                    <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
+                    <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Project</th>
+                    <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Invited</th>
+                    <th className="text-right px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filtered.map((c) => (
+                    <tr key={c.id} className="hover:bg-gray-50 transition">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                            {(c.user?.name || c.invited_email).charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">{c.user?.name || c.invited_email.split('@')[0]}</p>
+                            <p className="text-sm text-gray-500">{c.user?.email || c.invited_email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm text-gray-700">{getRoleLabel(c)}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm text-gray-700">{c.project_title || '-'}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          c.status === 'active' ? 'bg-green-100 text-green-800' :
+                          c.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-700'
+                        }`}>
+                          {c.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm text-gray-500">
+                          {c.invited_at ? new Date(c.invited_at).toLocaleDateString() : '-'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {c.status === 'pending' && (
+                            <button
+                              onClick={() => handleResend(c)}
+                              className="p-1.5 text-indigo-500 hover:bg-indigo-50 rounded transition"
+                              title="Resend invitation"
+                            >
+                              <Send className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleRemove(c)}
+                            className="p-1.5 text-red-500 hover:bg-red-50 rounded transition"
+                            title="Remove collaborator"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        )}
-
-        {filteredMembers.length === 0 && !loading && !error && (
+        ) : (
           <div className="text-center py-12 bg-white rounded-lg border border-gray-200 shadow-sm">
             <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">No team members yet</p>
-            <p className="text-sm text-gray-500 mt-2">Invite members to start building your team</p>
-            <button
-              onClick={() => setShowInviteModal(true)}
-              className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-            >
-              <UserPlus className="w-4 h-4" />
-              Invite Member
-            </button>
+            <p className="text-gray-600 font-medium">
+              {searchTerm || filterStatus !== 'all' || filterProject !== 'all'
+                ? 'No collaborators match your filters'
+                : 'No collaborators yet'}
+            </p>
+            <p className="text-sm text-gray-500 mt-2">
+              {searchTerm || filterStatus !== 'all' || filterProject !== 'all'
+                ? 'Try adjusting your search or filters'
+                : 'Invite team members to your production projects'}
+            </p>
+            {!searchTerm && filterStatus === 'all' && filterProject === 'all' && (
+              <button
+                onClick={() => setShowInviteModal(true)}
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+              >
+                <UserPlus className="w-4 h-4" />
+                Invite Collaborator
+              </button>
+            )}
           </div>
         )}
       </div>
 
-      {/* Invite Modal */}
+      {/* Invite Modal with Project Picker */}
       {showInviteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white border border-gray-200 rounded-lg p-6 w-full max-w-md shadow-lg">
-            <h3 className="text-xl font-bold mb-4 text-gray-900">Invite Team Member</h3>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                <input
-                  type="email"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900 placeholder-gray-500"
-                  placeholder="colleague@company.com"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                <select
-                  value={inviteRole}
-                  onChange={(e) => setInviteRole(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900"
-                >
-                  <option value="member">Member</option>
-                  <option value="admin">Admin</option>
-                  <option value="collaborator">Collaborator</option>
-                  <option value="viewer">Viewer</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Message (Optional)</label>
-                <textarea
-                  value={inviteMessage}
-                  onChange={(e) => setInviteMessage(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900 placeholder-gray-500"
-                  rows={3}
-                  placeholder="Add a personal message to the invitation..."
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowInviteModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleInvite}
-                disabled={!inviteEmail || inviting}
-                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
-              >
-                {inviting ? 'Sending...' : 'Send Invitation'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <InviteCollaboratorWithProjectPicker
+          onClose={() => setShowInviteModal(false)}
+          onInvited={loadData}
+        />
       )}
     </div>
   );

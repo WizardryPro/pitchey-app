@@ -8,6 +8,7 @@ import { useBetterAuthStore } from '../store/betterAuthStore';
 import BackButton from '../components/BackButton';
 import EnhancedNDARequest from '@features/ndas/components/NDA/EnhancedNDARequest';
 import FormatDisplay from '../components/FormatDisplay';
+import FollowButton from '@features/browse/components/FollowButton';
 
 export default function PitchDetail() {
   const navigate = useNavigate();
@@ -354,6 +355,9 @@ export default function PitchDetail() {
                   >
                     {pitch.creator?.name || pitch.creator?.username || 'Unknown Creator'}
                   </span>
+                  {isAuthenticated && !isOwner && pitch.creator?.id && (
+                    <FollowButton creatorId={pitch.creator.id} variant="small" />
+                  )}
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Tag className="w-4 h-4 text-gray-400" />
@@ -398,6 +402,18 @@ export default function PitchDetail() {
                       NDA Signed
                     </span>
                   )}
+                  <button
+                    onClick={handleLike}
+                    disabled={isLiking}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition font-medium ${
+                      isLiked
+                        ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    } ${isLiking ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
+                    {isLiked ? 'Liked' : 'Like'}
+                  </button>
                   <button className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium">
                     <Share2 className="w-4 h-4" />
                     Share

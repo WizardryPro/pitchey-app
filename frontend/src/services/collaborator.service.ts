@@ -32,10 +32,17 @@ export interface Collaborator {
   role: string;
   custom_role_name: string | null;
   status: 'pending' | 'active' | 'removed';
-  user: { name: string; avatar_url: string | null } | null;
+  user: { name: string; avatar_url: string | null; email?: string } | null;
   invited_at: string;
   accepted_at: string | null;
   invite_token?: string;
+  project_id?: number;
+  project_title?: string;
+}
+
+export interface TeamCollaboratorsResponse {
+  collaborators: Collaborator[];
+  stats: { total: number; active: number; pending: number; projects: number };
 }
 
 export interface Collaboration {
@@ -92,6 +99,12 @@ export interface ActivityEntry {
 // ---------------------------------------------------------------------------
 
 export class CollaboratorService {
+  // --- Production company (aggregate team view) ---
+
+  static async getAllTeamCollaborators(): Promise<ApiResponse<TeamCollaboratorsResponse>> {
+    return request('/api/production/team/collaborators');
+  }
+
   // --- Production company (invitation management) ---
 
   static async inviteCollaborator(
