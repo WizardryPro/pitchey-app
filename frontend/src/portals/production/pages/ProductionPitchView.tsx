@@ -20,6 +20,8 @@ import { ProductionService } from '../services/production.service';
 import type { ProductionNoteResponse, ProductionTeamMember } from '../services/production.service';
 import StartProjectModal from '../components/StartProjectModal';
 import { CollaboratorService } from '@/services/collaborator.service';
+import FollowButton from '@features/browse/components/FollowButton';
+import { pitchService } from '@features/pitches/services/pitch.service';
 
 interface Pitch {
   id: string;
@@ -118,6 +120,8 @@ const ProductionPitchView: React.FC = () => {
   ]);
 
   const isOwner = !!(pitch?.userId && authUser?.id && String(pitch.userId) === String(authUser.id));
+  const [isLiked, setIsLiked] = useState(false);
+  const [isLiking, setIsLiking] = useState(false);
   const [hasExistingProject, setHasExistingProject] = useState(false);
   const [linkedProjectId, setLinkedProjectId] = useState<number | null>(null);
   const [autoFillLoading, setAutoFillLoading] = useState(false);
@@ -355,6 +359,29 @@ const ProductionPitchView: React.FC = () => {
     navigate(`/production/messages?recipient=${pitch?.userId}&pitch=${id}`);
   };
 
+  const handleLike = async () => {
+    if (!pitch || isLiking) return;
+    setIsLiking(true);
+    const originalLiked = isLiked;
+    const originalLikes = pitch.likes;
+    try {
+      if (isLiked) {
+        setPitch(prev => prev ? { ...prev, likes: prev.likes - 1 } : null);
+        setIsLiked(false);
+        await pitchService.unlikePitch(parseInt(pitch.id));
+      } else {
+        setPitch(prev => prev ? { ...prev, likes: prev.likes + 1 } : null);
+        setIsLiked(true);
+        await pitchService.likePitch(parseInt(pitch.id));
+      }
+    } catch {
+      setIsLiked(originalLiked);
+      setPitch(prev => prev ? { ...prev, likes: originalLikes } : null);
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
   const handleSharePitch = () => {
     navigator.clipboard.writeText(window.location.href).then(() => {
       toast.success('Link copied to clipboard');
@@ -590,6 +617,19 @@ const ProductionPitchView: React.FC = () => {
             <span className="hidden sm:inline">{isShortlisted ? 'Shortlisted' : 'Shortlist'}</span>
           </button>
 
+          <button
+            onClick={handleLike}
+            disabled={isLiking}
+            className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${
+              isLiked
+                ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            } ${isLiking ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <Heart className={`h-4 w-4 sm:mr-1.5 ${isLiked ? 'fill-current' : ''}`} />
+            <span className="hidden sm:inline">{isLiked ? 'Liked' : 'Like'}</span>
+          </button>
+
           {!isOwner && (
             <button
               onClick={handleContactCreator}
@@ -648,10 +688,18 @@ const ProductionPitchView: React.FC = () => {
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">{pitch.title}</h1>
                 
                 {pitch.creatorName && (
-                  <p className="text-gray-600 mb-4">
-                    by {pitch.creatorName} 
-                    {pitch.creatorCompany && ` • ${pitch.creatorCompany}`}
-                  </p>
+                  <div className="flex items-center gap-3 text-gray-600 mb-4">
+                    <p>
+                      by <span
+                        className="hover:text-purple-600 cursor-pointer font-medium text-gray-900"
+                        onClick={() => navigate(`/creator/${pitch.userId}`)}
+                      >{pitch.creatorName}</span>
+                      {pitch.creatorCompany && ` • ${pitch.creatorCompany}`}
+                    </p>
+                    {!isOwner && pitch.userId && (
+                      <FollowButton creatorId={parseInt(pitch.userId)} variant="small" />
+                    )}
+                  </div>
                 )}
                 
                 <div className="flex flex-wrap gap-2 mb-6">
