@@ -730,10 +730,21 @@ const ProductionPitchView: React.FC = () => {
                     <p className="text-2xl font-bold text-gray-900">{pitch.views ?? 0}</p>
                     <p className="text-xs text-gray-500 flex items-center justify-center gap-1"><Eye className="w-3 h-3" /> Views</p>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                  <button
+                    onClick={handleLike}
+                    disabled={isLiking}
+                    className={`rounded-lg p-3 text-center transition-colors cursor-pointer ${
+                      isLiked
+                        ? 'bg-red-50 ring-2 ring-red-200'
+                        : 'bg-gray-50 hover:bg-red-50'
+                    } ${isLiking ? 'opacity-50' : ''}`}
+                  >
                     <p className="text-2xl font-bold text-gray-900">{pitch.likes ?? 0}</p>
-                    <p className="text-xs text-gray-500 flex items-center justify-center gap-1"><Heart className="w-3 h-3" /> Likes</p>
-                  </div>
+                    <p className={`text-xs flex items-center justify-center gap-1 ${isLiked ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
+                      <Heart className={`w-3 h-3 ${isLiked ? 'fill-current text-red-500' : ''}`} />
+                      {isLiked ? 'Liked' : 'Like'}
+                    </p>
+                  </button>
                   <div className="bg-gray-50 rounded-lg p-3 text-center">
                     <p className="text-2xl font-bold text-gray-900">{pitch.ndaCount ?? 0}</p>
                     <p className="text-xs text-gray-500 flex items-center justify-center gap-1"><Shield className="w-3 h-3" /> NDAs</p>
