@@ -26,7 +26,10 @@ export default function Billing() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, logout } = useBetterAuthStore();
-  const [activeTab, setActiveTab] = useState('overview');
+  const validTabs = ['overview', 'subscription', 'credits', 'history', 'invoices', 'payment-methods'];
+  const tabParam = searchParams.get('tab');
+  const activeTab = tabParam && validTabs.includes(tabParam) ? tabParam : 'overview';
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,14 +43,8 @@ export default function Billing() {
   const userType = (user?.userType || 'creator') as 'creator' | 'investor' | 'production';
 
   useEffect(() => {
-    // Set active tab from URL params
-    const tab = searchParams.get('tab');
-    if (tab && ['overview', 'subscription', 'credits', 'history', 'invoices', 'payment-methods'].includes(tab)) {
-      setActiveTab(tab);
-    }
-
     fetchBillingData();
-  }, [searchParams]);
+  }, []);
 
   const fetchBillingData = async () => {
     try {
@@ -204,7 +201,6 @@ export default function Billing() {
                   <button
                     key={tab.id}
                     onClick={() => {
-                      setActiveTab(tab.id);
                       const params = new URLSearchParams(searchParams);
                       params.set('tab', tab.id);
                       navigate(`?${params.toString()}`, { replace: true });

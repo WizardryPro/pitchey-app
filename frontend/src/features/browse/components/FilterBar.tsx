@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import SavedFilters from './SavedFilters';
 import EmailAlerts from './EmailAlerts';
@@ -90,8 +90,11 @@ export default function FilterBar({
   const [sortField, setSortField] = useState<SortOption['field']>('date');
   const [sortOrder, setSortOrder] = useState<SortOption['order']>('desc');
 
-  // Budget slider state
-  const [budgetSliderValue, setBudgetSliderValue] = useState([0, 100]);
+  // Derive budget slider value from budgetRange
+  const budgetSliderValue = useMemo(
+    () => [(budgetRange.min / 100000000) * 100, Math.min((budgetRange.max / 100000000) * 100, 100)],
+    [budgetRange]
+  );
 
   // Initialize from URL params
   useEffect(() => {
@@ -108,14 +111,10 @@ export default function FilterBar({
     if (formatsParam) setSelectedFormats(formatsParam.split(','));
     if (stagesParam) setSelectedStages(stagesParam.split(','));
     if (budgetMinParam && budgetMaxParam) {
-      setBudgetRange({ 
-        min: parseInt(budgetMinParam), 
-        max: parseInt(budgetMaxParam) 
+      setBudgetRange({
+        min: parseInt(budgetMinParam),
+        max: parseInt(budgetMaxParam)
       });
-      // Convert to slider values (0-100 scale)
-      const minPercent = (parseInt(budgetMinParam) / 100000000) * 100;
-      const maxPercent = (parseInt(budgetMaxParam) / 100000000) * 100;
-      setBudgetSliderValue([minPercent, maxPercent]);
     }
     if (searchParam) setSearchQuery(searchParam);
     if (sortParam) setSortField(sortParam as SortOption['field']);
@@ -210,7 +209,6 @@ export default function FilterBar({
   }, []);
 
   const handleBudgetChange = useCallback((values: number[]) => {
-    setBudgetSliderValue(values);
     // Convert percentage to actual budget values
     const min = Math.floor((values[0] / 100) * 100000000);
     const max = Math.floor((values[1] / 100) * 100000000);
@@ -232,7 +230,6 @@ export default function FilterBar({
     setSelectedFormats([]);
     setSelectedStages([]);
     setBudgetRange({ min: 0, max: 999999999 });
-    setBudgetSliderValue([0, 100]);
     setSearchQuery('');
     setSelectedCreatorTypes([]);
     setHasNDA(undefined);
@@ -475,13 +472,10 @@ export default function FilterBar({
                 setSelectedStages(filters.developmentStages || []);
                 setSelectedCreatorTypes(filters.creatorTypes || []);
                 if (filters.budgetMin !== undefined || filters.budgetMax !== undefined) {
-                  setBudgetRange({ 
-                    min: filters.budgetMin || 0, 
-                    max: filters.budgetMax || 999999999 
+                  setBudgetRange({
+                    min: filters.budgetMin || 0,
+                    max: filters.budgetMax || 999999999
                   });
-                  const minPercent = ((filters.budgetMin || 0) / 100000000) * 100;
-                  const maxPercent = ((filters.budgetMax || 999999999) / 100000000) * 100;
-                  setBudgetSliderValue([minPercent, Math.min(maxPercent, 100)]);
                 }
                 setSearchQuery(filters.searchQuery || '');
                 setHasNDA(filters.hasNDA);
@@ -588,7 +582,6 @@ export default function FilterBar({
                 <button
                   onClick={() => {
                     setBudgetRange({ min: 0, max: 999999999 });
-                    setBudgetSliderValue([0, 100]);
                   }}
                   className="hover:bg-yellow-200 rounded p-0.5"
                 >
@@ -655,9 +648,6 @@ export default function FilterBar({
                       key={range.value}
                       onClick={() => {
                         setBudgetRange({ min: range.min, max: range.max });
-                        const minPercent = (range.min / 100000000) * 100;
-                        const maxPercent = (range.max / 100000000) * 100;
-                        setBudgetSliderValue([minPercent, Math.min(maxPercent, 100)]);
                       }}
                       className="px-2 py-1 text-xs bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors"
                     >

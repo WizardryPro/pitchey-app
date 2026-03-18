@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useNavigate } from 'react-router-dom';
 import {
   DollarSign,
@@ -124,7 +125,7 @@ function InvestorDashboard() {
   });
 
   const initialLoading = !sectionStatus.portfolio.loaded && !sectionStatus.portfolio.error;
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const isOnline = useOnlineStatus();
 
   // Check session on mount and redirect if not authenticated
   useEffect(() => {
@@ -139,17 +140,6 @@ function InvestorDashboard() {
     void validateSession();
   }, [checkSession]);
 
-  // Track online/offline status
-  useEffect(() => {
-    const goOnline = () => setIsOnline(true);
-    const goOffline = () => setIsOnline(false);
-    window.addEventListener('online', goOnline);
-    window.addEventListener('offline', goOffline);
-    return () => {
-      window.removeEventListener('online', goOnline);
-      window.removeEventListener('offline', goOffline);
-    };
-  }, []);
 
   // Redirect to login if not authenticated after session check
   useEffect(() => {

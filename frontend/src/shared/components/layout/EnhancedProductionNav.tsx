@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, Activity, Film, FolderOpen, Upload,
   Bookmark, Users, GitBranch, DollarSign,
-  MessageSquare, Calendar, Settings, Shield
+  MessageSquare, Calendar, Settings
 } from 'lucide-react';
 import { PRODUCTION_ROUTES } from '@/config/navigation.routes';
 
@@ -60,7 +60,6 @@ export const productionNavigationSections: NavigationSection[] = [
       { label: 'Revenue', path: PRODUCTION_ROUTES.revenue, icon: DollarSign },
       { label: 'Collaborations', path: PRODUCTION_ROUTES.collaborations, icon: GitBranch },
       { label: 'My Collaborations', path: PRODUCTION_ROUTES.myCollaborations, icon: GitBranch },
-      { label: 'NDAs', path: '/production/dashboard', icon: Shield },
     ],
   },
   {

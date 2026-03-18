@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FileText, Edit3, Trash2, Save, Clock, AlertCircle,
@@ -98,7 +98,6 @@ export default function CreatorPitchesDrafts() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [drafts, setDrafts] = useState<DraftPitch[]>([]);
-  const [filteredDrafts, setFilteredDrafts] = useState<DraftPitch[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<DraftFilters>({
     status: 'all',
@@ -112,32 +111,7 @@ export default function CreatorPitchesDrafts() {
     loadDrafts();
   }, []);
 
-  useEffect(() => {
-    applyFilters();
-  }, [drafts, filters, searchQuery]);
-
-  const loadDrafts = async () => {
-    try {
-      setLoading(true);
-
-      const myPitches = await PitchService.getMyPitches();
-
-      // Filter to only draft and under_review pitches
-      const draftPitches = myPitches
-        .filter((p: Pitch) => p.status === 'draft' || p.status === 'under_review')
-        .map(transformToDraft);
-
-      setDrafts(draftPitches);
-    } catch (error) {
-      console.error('Failed to load drafts:', error);
-      // Keep empty array on error
-      setDrafts([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const applyFilters = () => {
+  const filteredDrafts = useMemo(() => {
     let filtered = [...drafts];
 
     // Apply search query
@@ -184,7 +158,28 @@ export default function CreatorPitchesDrafts() {
       }
     }
 
-    setFilteredDrafts(filtered);
+    return filtered;
+  }, [drafts, filters, searchQuery]);
+
+  const loadDrafts = async () => {
+    try {
+      setLoading(true);
+
+      const myPitches = await PitchService.getMyPitches();
+
+      // Filter to only draft and under_review pitches
+      const draftPitches = myPitches
+        .filter((p: Pitch) => p.status === 'draft' || p.status === 'under_review')
+        .map(transformToDraft);
+
+      setDrafts(draftPitches);
+    } catch (error) {
+      console.error('Failed to load drafts:', error);
+      // Keep empty array on error
+      setDrafts([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSelectDraft = (draftId: string) => {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Save, X, Upload, FileText, Video, Image as ImageIcon, Shield, WifiOff } from 'lucide-react';
 import { pitchService } from '@features/pitches/services/pitch.service';
@@ -42,19 +43,8 @@ export default function PitchEdit() {
   const [error, setError] = useState<string | null>(null);
   const [genres] = useState<readonly string[] | string[]>(getGenresSync());
   const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const isOnline = useOnlineStatus();
 
-  // Online/offline detection
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
 
   const [formData, setFormData] = useState<PitchFormData>({
     title: '',

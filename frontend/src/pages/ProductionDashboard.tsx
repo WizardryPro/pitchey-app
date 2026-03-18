@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Building2, Eye, Heart, Users, Film, Plus,
@@ -120,7 +121,7 @@ function ProductionDashboard() {
   });
 
   const initialLoading = !sectionStatus.analytics.loaded && !sectionStatus.analytics.error;
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const isOnline = useOnlineStatus();
 
   // Handle logout
   const handleLogout = async () => {
@@ -160,17 +161,6 @@ function ProductionDashboard() {
     }
   }, [sessionChecked, isAuthenticated, navigate]);
 
-  // Track online/offline status
-  useEffect(() => {
-    const goOnline = () => setIsOnline(true);
-    const goOffline = () => setIsOnline(false);
-    window.addEventListener('online', goOnline);
-    window.addEventListener('offline', goOffline);
-    return () => {
-      window.removeEventListener('online', goOnline);
-      window.removeEventListener('offline', goOffline);
-    };
-  }, []);
 
   // Close user menu when clicking outside
   useEffect(() => {

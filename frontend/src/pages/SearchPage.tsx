@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Search, Filter, Film, Users, Briefcase, DollarSign,
@@ -51,19 +52,8 @@ export default function SearchPage() {
   const [selectedBudget, setSelectedBudget] = useState('Any Budget');
   const [selectedTimeframe, setSelectedTimeframe] = useState('All Time');
   const [sortBy, setSortBy] = useState('relevance');
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const isOnline = useOnlineStatus();
 
-  // Online/offline detection
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
 
   useEffect(() => {
     if (searchQuery) {

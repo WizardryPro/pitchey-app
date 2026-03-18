@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useNavigate } from 'react-router-dom';
 import { TrendingUp, Eye, MessageSquare, Upload, BarChart3, Calendar, Plus, Shield, CreditCard, Wifi, WifiOff, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
@@ -66,7 +67,7 @@ function CreatorDashboard() {
   });
 
   const initialLoading = !sectionStatus.dashboard.loaded && !sectionStatus.dashboard.error;
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const isOnline = useOnlineStatus();
 
   // Check session on mount and redirect if not authenticated
   useEffect(() => {
@@ -81,17 +82,6 @@ function CreatorDashboard() {
     void validateSession();
   }, [checkSession]);
 
-  // Track online/offline status
-  useEffect(() => {
-    const goOnline = () => setIsOnline(true);
-    const goOffline = () => setIsOnline(false);
-    window.addEventListener('online', goOnline);
-    window.addEventListener('offline', goOffline);
-    return () => {
-      window.removeEventListener('online', goOnline);
-      window.removeEventListener('offline', goOffline);
-    };
-  }, []);
 
   // Redirect to login if not authenticated after session check
   useEffect(() => {

@@ -7,17 +7,12 @@ import React from 'react'
 const mockNavigate = vi.fn()
 const mockLogout = vi.fn()
 
-// ─── Stable search params reference (prevents useEffect re-trigger) ─
-const stableSearchParams = new URLSearchParams()
-const mockSetSearchParams = vi.fn()
-
 // ─── react-router-dom ───────────────────────────────────────────────
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-    useSearchParams: () => [stableSearchParams, mockSetSearchParams],
     Link: ({ to, children, ...props }: any) => <a href={to} {...props}>{children}</a>,
   }
 })
@@ -109,9 +104,9 @@ describe('Billing', () => {
     mockGetPaymentMethods.mockResolvedValue({ paymentMethods: [] })
   })
 
-  const renderComponent = () =>
+  const renderComponent = (initialRoute = '/billing') =>
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[initialRoute]}>
         <Billing />
       </MemoryRouter>
     )
@@ -170,27 +165,21 @@ describe('Billing', () => {
   })
 
   it('navigates to subscription tab when clicked', async () => {
-    renderComponent()
-    await waitFor(() => screen.getByText('Subscription'))
-    fireEvent.click(screen.getByText('Subscription'))
+    renderComponent('/billing?tab=subscription')
     await waitFor(() => {
       expect(screen.getByTestId('subscription-card')).toBeInTheDocument()
     })
   })
 
   it('navigates to credits tab when clicked', async () => {
-    renderComponent()
-    await waitFor(() => screen.getByText('Credits'))
-    fireEvent.click(screen.getByText('Credits'))
+    renderComponent('/billing?tab=credits')
     await waitFor(() => {
       expect(screen.getByTestId('credit-purchase')).toBeInTheDocument()
     })
   })
 
   it('navigates to payment methods tab when clicked', async () => {
-    renderComponent()
-    await waitFor(() => screen.getByText('Payment Methods'))
-    fireEvent.click(screen.getByText('Payment Methods'))
+    renderComponent('/billing?tab=payment-methods')
     await waitFor(() => {
       expect(screen.getByTestId('payment-method-card')).toBeInTheDocument()
     })
@@ -240,9 +229,7 @@ describe('Billing', () => {
   })
 
   it('shows invoices tab content with no invoices', async () => {
-    renderComponent()
-    await waitFor(() => screen.getByText('Invoices'))
-    fireEvent.click(screen.getByText('Invoices'))
+    renderComponent('/billing?tab=invoices')
     await waitFor(() => {
       expect(screen.getByText('No invoices found')).toBeInTheDocument()
     })

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Upload, X, FileText, Video, Image as ImageIcon, Shield, AlertCircle, WifiOff } from 'lucide-react';
 import { useToast } from '@shared/components/feedback/ToastProvider';
@@ -42,21 +43,10 @@ export default function CreatePitch() {
   const isProduction = user?.userType === 'production';
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState<'form' | 'creating' | 'uploading' | 'complete'>('form');
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const isOnline = useOnlineStatus();
   const [aiExtracting, setAiExtracting] = useState(false);
   const aiFileInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Track online/offline status
-  useEffect(() => {
-    const goOnline = () => setIsOnline(true);
-    const goOffline = () => setIsOnline(false);
-    window.addEventListener('online', goOnline);
-    window.addEventListener('offline', goOffline);
-    return () => {
-      window.removeEventListener('online', goOnline);
-      window.removeEventListener('offline', goOffline);
-    };
-  }, []);
   const [genres, setGenres] = useState<string[]>([...(getGenresSync() || [])]);
   const [formats, setFormats] = useState<string[]>([...(getFormatsSync() || [])]);
 

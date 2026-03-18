@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { pitchAPI } from '../lib/api';
 import type { Pitch } from '../lib/api';
@@ -8,6 +8,7 @@ import EmptyState from '../components/EmptyState';
 import { useToast } from '@shared/components/feedback/ToastProvider';
 import Pagination from '../components/Pagination';
 import { useDebounce } from '@/shared/hooks/useDebounce';
+import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useResponsive } from '@/shared/hooks/useResponsive';
 import { configService } from '../services/config.service';
 
@@ -103,19 +104,7 @@ export default function MarketplaceEnhanced() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(16);
   const fetchRequestIdRef = useRef(0);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-
-  // Track online/offline status
-  useEffect(() => {
-    const goOnline = () => setIsOnline(true);
-    const goOffline = () => setIsOnline(false);
-    window.addEventListener('online', goOnline);
-    window.addEventListener('offline', goOffline);
-    return () => {
-      window.removeEventListener('online', goOnline);
-      window.removeEventListener('offline', goOffline);
-    };
-  }, []);
+  const isOnline = useOnlineStatus();
 
   // Enhanced filter state
   const [filters, setFilters] = useState<FilterState>({
@@ -177,11 +166,10 @@ export default function MarketplaceEnhanced() {
     setSearchParams(params, { replace: true });
   }, [searchQuery, sortBy, filters]);
 
-  // Apply filters and sorting whenever pitches or filter criteria change
-  const [filteredPitches, setFilteredPitches] = useState<Pitch[]>([]);
+  // Reset to page 1 when filter criteria change
   useEffect(() => {
-    applyFiltersAndSort();
-  }, [pitches, debouncedSearch, sortBy, filters]);
+    setCurrentPage(1);
+  }, [debouncedSearch, sortBy, filters]);
 
   const fetchPitchesForTab = async (tab: string) => {
     const requestId = ++fetchRequestIdRef.current;
@@ -254,14 +242,12 @@ export default function MarketplaceEnhanced() {
     });
   };
 
-  const applyFiltersAndSort = useCallback(() => {
+  const filteredPitches = useMemo(() => {
     // Ensure pitches is an array before spreading
     if (!Array.isArray(pitches)) {
-      console.warn('pitches is not an array:', pitches);
-      setFilteredPitches([]);
-      return;
+      return [];
     }
-    
+
     let filtered = [...pitches];
 
     // Search filter
@@ -277,14 +263,14 @@ export default function MarketplaceEnhanced() {
 
     // Genre filter
     if (filters.genres.length > 0) {
-      filtered = filtered.filter(pitch => 
+      filtered = filtered.filter(pitch =>
         filters.genres.includes(pitch.genre || '')
       );
     }
 
     // Format filter
     if (filters.formats.length > 0) {
-      filtered = filtered.filter(pitch => 
+      filtered = filtered.filter(pitch =>
         filters.formats.includes(pitch.format || '')
       );
     }
@@ -310,7 +296,7 @@ export default function MarketplaceEnhanced() {
 
     // Status filter
     if (filters.status.length > 0) {
-      filtered = filtered.filter(pitch => 
+      filtered = filtered.filter(pitch =>
         filters.status.includes(pitch.status || 'active')
       );
     }
@@ -384,8 +370,7 @@ export default function MarketplaceEnhanced() {
       }
     });
 
-    setFilteredPitches(filtered);
-    setCurrentPage(1);
+    return filtered;
   }, [pitches, debouncedSearch, sortBy, filters]);
 
   // Pagination

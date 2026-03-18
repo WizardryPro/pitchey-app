@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Share2, Eye, Calendar, User, Clock, Tag, Film, Heart, LogIn, FileText, Lock, Shield, Briefcase, DollarSign, WifiOff, RefreshCw } from 'lucide-react';
 import { pitchService } from '@features/pitches/services/pitch.service';
@@ -21,7 +22,7 @@ export default function PitchDetail() {
   const [isLiking, setIsLiking] = useState(false);
   const [showEnhancedNDARequest, setShowEnhancedNDARequest] = useState(false);
   const [hasSignedNDA, setHasSignedNDA] = useState(false);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const isOnline = useOnlineStatus();
 
   // Check if current user owns this pitch
   // First check the isOwner flag from backend, then fallback to comparing IDs
@@ -79,17 +80,6 @@ export default function PitchDetail() {
     }
   }, [id, isAuthenticated]);
 
-  // Track online/offline status
-  useEffect(() => {
-    const goOnline = () => setIsOnline(true);
-    const goOffline = () => setIsOnline(false);
-    window.addEventListener('online', goOnline);
-    window.addEventListener('offline', goOffline);
-    return () => {
-      window.removeEventListener('online', goOnline);
-      window.removeEventListener('offline', goOffline);
-    };
-  }, []);
 
   const hasValidSession = (): boolean => {
     const validAuth = isAuthenticated && user && (user.id || (user as any).data?.id || (user as any).user?.id);

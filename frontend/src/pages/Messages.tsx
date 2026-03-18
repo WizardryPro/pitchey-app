@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, type ChangeEvent, type KeyboardEvent } from 'react';
+import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useSearchParams } from 'react-router-dom';
 import {
   Send, Search, Filter, MessageSquare, Paperclip, MoreVertical,
@@ -67,23 +68,12 @@ export default function Messages() {
   const [isEncryptionEnabled, setIsEncryptionEnabled] = useState(false);
   const [conversations, setConversations] = useState<EnhancedConversation[]>([]);
   const [currentMessages, setCurrentMessages] = useState<EnhancedMessage[]>([]);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const isOnline = useOnlineStatus();
   const [showNewConversation, setShowNewConversation] = useState(false);
   const [ndaContacts, setNdaContacts] = useState<Array<{ id: number; name: string; type: string; pitchTitle?: string; signedAt?: string }>>([]);
   const [contactsLoading, setContactsLoading] = useState(false);
   const [contactSearch, setContactSearch] = useState('');
 
-  // Online/offline detection
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);

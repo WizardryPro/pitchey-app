@@ -21,28 +21,27 @@ const FollowButton: React.FC<FollowButtonProps> = ({
   onFollowChange,
 }) => {
   const [isFollowing, setIsFollowing] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [checking, setChecking] = useState(true);
+  const [loading, setLoading] = useState(true);
   const { isAuthenticated } = useBetterAuthStore();
   const navigate = useNavigate();
 
   const checkFollowStatus = useCallback(async () => {
     if (!creatorId && !pitchId) {
-      setChecking(false);
+      setLoading(false);
       return;
     }
 
-    setChecking(true);
+    setLoading(true);
 
     try {
       if (!isAuthenticated) {
-        setChecking(false);
+        setLoading(false);
         return;
       }
 
       let targetId: number;
       let type: 'user' | 'pitch';
-      
+
       if (pitchId) {
         targetId = pitchId;
         type = 'pitch';
@@ -51,7 +50,7 @@ const FollowButton: React.FC<FollowButtonProps> = ({
         type = 'user';
       } else {
         setIsFollowing(false);
-        setChecking(false);
+        setLoading(false);
         return;
       }
 
@@ -61,7 +60,7 @@ const FollowButton: React.FC<FollowButtonProps> = ({
       console.error('Error checking follow status:', error);
       setIsFollowing(false);
     } finally {
-      setChecking(false);
+      setLoading(false);
     }
   }, [creatorId, pitchId, isAuthenticated]);
 
@@ -118,24 +117,23 @@ const FollowButton: React.FC<FollowButtonProps> = ({
       ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
       : 'bg-blue-600 text-white hover:bg-blue-700 border border-blue-600';
 
-    const disabledClasses = (loading || checking) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer';
+    const disabledClasses = loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer';
 
     return `${baseClasses} ${variantClasses[variant]} ${stateClasses} ${disabledClasses} ${className}`;
-  }, [isFollowing, loading, checking, variant, className]);
+  }, [isFollowing, loading, variant, className]);
 
   const getButtonText = useCallback(() => {
     if (loading) return 'Loading...';
-    if (checking) return 'Loading...';
     
     if (isFollowing) {
       return showFollowingText ? 'Following' : 'Unfollow';
     }
     
     return 'Follow';
-  }, [loading, checking, isFollowing, showFollowingText]);
+  }, [loading, isFollowing, showFollowingText]);
 
   const getIcon = useCallback(() => {
-    if (loading || checking) {
+    if (loading) {
       return (
         <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -157,10 +155,10 @@ const FollowButton: React.FC<FollowButtonProps> = ({
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
       </svg>
     );
-  }, [loading, checking, isFollowing]);
+  }, [loading, isFollowing]);
 
-  // Don't render if we're still checking and not authenticated
-  if (checking && !isAuthenticated) {
+  // Don't render if we're still loading and not authenticated
+  if (loading && !isAuthenticated) {
     return null;
   }
   
@@ -177,7 +175,7 @@ const FollowButton: React.FC<FollowButtonProps> = ({
   return (
     <button
       onClick={handleFollow}
-      disabled={loading || checking}
+      disabled={loading}
       className={getButtonClasses()}
       title={isFollowing ? `Unfollow ${pitchId ? 'pitch' : 'creator'}` : `Follow ${pitchId ? 'pitch' : 'creator'}`}
     >

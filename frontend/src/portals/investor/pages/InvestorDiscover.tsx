@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useSearchParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { TrendingUp, Star, Film, Search, Filter, Grid, List, ArrowLeft, Home, RefreshCw, AlertCircle, WifiOff } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
@@ -41,19 +42,8 @@ const InvestorDiscover = () => {
   // Derive pitches from per-tab state
   const pitches = tabStates[currentTab]?.pitches ?? [];
 
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const isOnline = useOnlineStatus();
 
-  // Track online/offline status
-  useEffect(() => {
-    const goOnline = () => setIsOnline(true);
-    const goOffline = () => setIsOnline(false);
-    window.addEventListener('online', goOnline);
-    window.addEventListener('offline', goOffline);
-    return () => {
-      window.removeEventListener('online', goOnline);
-      window.removeEventListener('offline', goOffline);
-    };
-  }, []);
 
   // Check if we're on the genres page
   const isGenresPage = location.pathname.includes('/genres');
