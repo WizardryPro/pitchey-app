@@ -687,15 +687,17 @@ const ProductionPitchView: React.FC = () => {
                 
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">{pitch.title}</h1>
                 
-                {pitch.creatorName && (
+                {(pitch.creatorName || pitch.userId) && (
                   <div className="flex items-center gap-3 text-gray-600 mb-4">
-                    <p>
-                      by <span
-                        className="hover:text-purple-600 cursor-pointer font-medium text-gray-900"
-                        onClick={() => navigate(`/creator/${pitch.userId}`)}
-                      >{pitch.creatorName}</span>
-                      {pitch.creatorCompany && ` • ${pitch.creatorCompany}`}
-                    </p>
+                    {pitch.creatorName && (
+                      <p>
+                        by <span
+                          className="hover:text-purple-600 cursor-pointer font-medium text-gray-900"
+                          onClick={() => navigate(`/creator/${pitch.userId}`)}
+                        >{pitch.creatorName}</span>
+                        {pitch.creatorCompany && ` • ${pitch.creatorCompany}`}
+                      </p>
+                    )}
                     {!isOwner && pitch.userId && (
                       <FollowButton creatorId={parseInt(pitch.userId)} variant="small" />
                     )}

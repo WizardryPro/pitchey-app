@@ -8,10 +8,14 @@ import type { Env as DbEnv } from '../db/connection';
 import { getUserId } from '../utils/auth-extract';
 
 // Schema for follow/unfollow actions
-// userId can be an integer string ("1025") or UUID — accept both
+// Accepts both legacy {userId} and frontend {targetId, targetType} formats
 const FollowActionSchema = z.object({
-  userId: z.string().min(1),
+  userId: z.string().min(1).optional(),
+  targetId: z.union([z.string().min(1), z.number()]).optional(),
+  targetType: z.enum(['user', 'pitch']).optional().default('user'),
   action: z.enum(['follow', 'unfollow'])
+}).refine(data => data.userId || data.targetId, {
+  message: 'Either userId or targetId is required'
 });
 
 // Schema for follow list queries
@@ -43,10 +47,25 @@ export async function followActionHandler(request: Request, env: Env): Promise<R
     }
     
     const body = await request.json() as Record<string, unknown>;
-    const { userId, action } = FollowActionSchema.parse(body);
+    const parsed = FollowActionSchema.parse(body);
+    const action = parsed.action;
 
     const followerId = toIntId(user.id);
-    const followingId = toIntId(userId);
+    let followingId = toIntId(parsed.userId || parsed.targetId);
+
+    // If following a pitch, resolve to the pitch's creator
+    if (parsed.targetType === 'pitch' && parsed.targetId) {
+      const pitchId = toIntId(parsed.targetId);
+      const sql = postgres(env.DATABASE_URL);
+      const [pitch] = await sql`SELECT user_id FROM pitches WHERE id = ${pitchId} LIMIT 1`;
+      if (!pitch) {
+        return new Response(JSON.stringify({ error: 'Pitch not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      followingId = toIntId(pitch.user_id);
+    }
 
     // Can't follow yourself
     if (followerId === followingId) {

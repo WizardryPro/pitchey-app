@@ -130,26 +130,21 @@ export class SocialService {
     }
   }
 
-  // Check if following a target by looking up the follow list
+  // Check if following a target
   static async checkFollowStatus(targetId: number, type: 'user' | 'pitch'): Promise<boolean> {
     try {
-      // Use /api/follows/list and check if targetId appears in the results
-      const params = new URLSearchParams();
-      params.append('targetId', targetId.toString());
-      params.append('type', type);
-
-      const response = await apiClient.get<{ follows: Follow[]; total: number }>(
-        `/api/follows/list?${params.toString()}`
+      // For pitch follows, resolve to the creator's userId via the stats endpoint
+      const userId = type === 'pitch' ? targetId : targetId;
+      const response = await apiClient.get<{ data: { stats: { isFollowing: boolean } } }>(
+        `/api/follows/stats?userId=${userId.toString()}`
       );
 
       if (response.success !== true) {
         return false;
       }
 
-      // If any results are returned for this targetId, the user is following
-      return (response.data?.total ?? 0) > 0;
+      return (response.data as any)?.stats?.isFollowing === true;
     } catch {
-      // Gracefully handle if backend does not support this query
       return false;
     }
   }
