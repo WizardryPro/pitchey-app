@@ -185,6 +185,34 @@ export async function sendMessageHandler(request: Request, env: Env): Promise<Re
   }
 
   try {
+    // Check for signed NDA between sender and recipient
+    const ndaCheck = await sql`
+      SELECT 1 FROM ndas n
+      JOIN pitches p ON p.id = n.pitch_id
+      WHERE n.signed_at IS NOT NULL AND n.revoked_at IS NULL
+        AND (
+          (COALESCE(n.signer_id, n.user_id) = ${userId} AND p.user_id = ${recipientId})
+          OR
+          (COALESCE(n.signer_id, n.user_id) = ${recipientId} AND p.user_id = ${userId})
+        )
+      LIMIT 1
+    `;
+
+    // Grandfather existing conversations so we don't break ongoing threads
+    const existingThread = await sql`
+      SELECT 1 FROM messages
+      WHERE (sender_id = ${userId} AND recipient_id = ${recipientId})
+         OR (sender_id = ${recipientId} AND recipient_id = ${userId})
+      LIMIT 1
+    `;
+
+    if (ndaCheck.length === 0 && existingThread.length === 0) {
+      return jsonResponse({
+        success: false,
+        error: 'A signed NDA is required to message this user'
+      }, 403, origin);
+    }
+
     const result = await sql`
       INSERT INTO messages (sender_id, recipient_id, content)
       VALUES (${userId}, ${recipientId}, ${content.trim()})

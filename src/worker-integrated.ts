@@ -17357,9 +17357,10 @@ Signatures: [To be completed upon signing]
       const result = await handler.findOrCreateConversation(authCheck.user.id, recipientId, pitchId);
 
       const origin = request.headers.get('Origin');
+      const httpStatus = result.success ? 200 : (typeof result.error === 'string' && result.error.includes('NDA') ? 403 : 400);
       return new Response(JSON.stringify(result), {
         headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) },
-        status: result.success ? 200 : 400
+        status: httpStatus
       });
     } catch (error) {
       return errorHandler(error, request);

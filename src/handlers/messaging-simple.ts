@@ -5,6 +5,27 @@
 export class SimpleMessagingHandler {
   constructor(private db: any) {}
 
+  // Check if two users share a signed NDA (either direction)
+  private async hasSignedNDA(userId1: number, userId2: number): Promise<boolean> {
+    try {
+      const result = await this.db.query(
+        `SELECT 1 FROM ndas n
+         JOIN pitches p ON p.id = n.pitch_id
+         WHERE n.signed_at IS NOT NULL AND n.revoked_at IS NULL
+           AND (
+             (COALESCE(n.signer_id, n.user_id) = $1 AND p.user_id = $2)
+             OR
+             (COALESCE(n.signer_id, n.user_id) = $2 AND p.user_id = $1)
+           )
+         LIMIT 1`,
+        [userId1, userId2]
+      );
+      return result.length > 0;
+    } catch {
+      return false;
+    }
+  }
+
   // Get all messages for a user
   async getMessages(userId: number, limit: number = 50, offset: number = 0) {
     try {
@@ -74,6 +95,12 @@ export class SimpleMessagingHandler {
         if (existing.length > 0) {
           convId = existing[0].id;
         } else {
+          // NDA required to start a new conversation
+          const hasNDA = await this.hasSignedNDA(userId, recipient_id);
+          if (!hasNDA) {
+            return { success: false, error: 'A signed NDA is required to message this user' };
+          }
+
           // Create new direct conversation
           const newConv = await this.db.query(
             `INSERT INTO conversations (is_group, created_by_id) VALUES (FALSE, $1) RETURNING id`,
@@ -192,6 +219,12 @@ export class SimpleMessagingHandler {
       if (existing.length > 0) {
         conversationId = existing[0].id;
       } else {
+        // NDA required to start a new conversation
+        const hasNDA = await this.hasSignedNDA(userId, recipientId);
+        if (!hasNDA) {
+          return { success: false, error: 'A signed NDA is required to start a conversation with this user' };
+        }
+
         // Create new direct conversation
         const newConv = await this.db.query(
           `INSERT INTO conversations (is_group, created_by_id, pitch_id) VALUES (FALSE, $1, $2) RETURNING id`,

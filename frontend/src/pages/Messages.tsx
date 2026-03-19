@@ -235,11 +235,11 @@ export default function Messages() {
         }
       } else {
         const errMsg = typeof (res as any).error === 'string' ? (res as any).error : (res as any).error?.message || 'Failed to start conversation';
-        console.error('Start conversation failed:', errMsg);
+        addNotification(errMsg, 'error');
       }
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
-      console.error('Start conversation error:', e.message);
+      addNotification(e.message || 'Failed to start conversation', 'error');
     }
   }, [joinConversation, hookMarkConversationAsRead, fetchConversationMessages, refreshConversations]);
 
@@ -271,8 +271,9 @@ export default function Messages() {
           hookMarkConversationAsRead(convId);
           void fetchConversationMessages(convId);
         }
-      } catch {
-        // Non-critical — user can still manually select
+      } catch (err) {
+        const e = err instanceof Error ? err : new Error(String(err));
+        addNotification(e.message || 'Could not start conversation — a signed NDA may be required', 'error');
       }
       // Clear params to prevent re-triggering
       setSearchParams({}, { replace: true });
