@@ -126,7 +126,7 @@ const Following: React.FC = () => {
           }));
           setData(activities);
         } else if (activeTab === 'followers') {
-          const raw = result.data?.followers || result.followers || result.data || [];
+          const raw = result.data?.followers || result.data?.users || result.followers || result.data || [];
           setData(raw.map((f: any) => ({
             ...f,
             profileImage: f.profileImage || f.profile_image,
@@ -139,7 +139,7 @@ const Following: React.FC = () => {
             createdAt: f.createdAt || f.created_at || '',
           })));
         } else if (activeTab === 'following') {
-          const raw = result.data?.following || result.following || result.data || [];
+          const raw = result.data?.following || result.data?.users || result.following || result.data || [];
           setData(raw.map((f: any) => ({
             ...f,
             profileImage: f.profileImage || f.profile_image,
@@ -157,6 +157,9 @@ const Following: React.FC = () => {
         }
         if (result.summary) {
           setSummary(result.summary);
+        } else if (activeTab === 'following') {
+          const total = result.data?.total ?? (result.data?.users?.length || result.data?.following?.length || 0);
+          setSummary(prev => ({ ...prev, activeCreators: total }));
         }
       } else {
         throw new Error(result.error || 'Failed to load data');
