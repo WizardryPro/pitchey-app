@@ -154,15 +154,13 @@ export const EnhancedProductionAnalytics: React.FC<ProductionAnalyticsProps> = (
   }, [timeRange, autoRefresh, fetchAnalyticsData]);
 
   // Transform API response to component data structure
-  const transformApiResponse = (apiData: any, range: string): ProductionAnalyticsData => {
+  const transformApiResponse = (apiData: any, _range: string): ProductionAnalyticsData => {
     const metrics = apiData.productionMetrics || {};
     const genreData = apiData.genrePerformance || [];
     const timelineData = apiData.timelineAdherence || [];
     const crewData = apiData.crewUtilization || [];
     const successData = apiData.successMetrics || {};
-
-    // Calculate time-based multipliers for realistic variation
-    const multiplier = range === '7d' ? 0.25 : range === '30d' ? 1 : range === '90d' ? 3 : 12;
+    const trendsData = apiData.monthlyTrends || [];
 
     const totalProjects = Number(metrics.total_projects) || 0;
     const totalBudget = Number(metrics.total_budget) || 0;
@@ -206,9 +204,18 @@ export const EnhancedProductionAnalytics: React.FC<ProductionAnalyticsProps> = (
               budget: 0
             }))
           : [],
-        budgetUtilization: generateTimeSeriesData(range, 70, 95),
-        partnershipGrowth: generateTimeSeriesData(range, 15, 40),
-        revenueProjections: generateTimeSeriesData(range, 600000, 1000000),
+        budgetUtilization: trendsData.map((t: any) => ({
+          date: t.month || '',
+          value: totalBudget > 0 ? Math.round((Number(t.costs) / totalBudget) * 100) : 0
+        })),
+        partnershipGrowth: trendsData.map((t: any) => ({
+          date: t.month || '',
+          value: Number(t.projects_created) || 0
+        })),
+        revenueProjections: trendsData.map((t: any) => ({
+          date: t.month || '',
+          value: Number(t.revenue) || 0
+        })),
         genreDistribution: genreData.length > 0
           ? genreData.map((g: any) => ({
               genre: g.genre || 'Unknown',
@@ -216,7 +223,12 @@ export const EnhancedProductionAnalytics: React.FC<ProductionAnalyticsProps> = (
               budget: Number(g.total_investment) || 0
             }))
           : [],
-        monthlyMetrics: generateMonthlyMetrics(range),
+        monthlyMetrics: trendsData.map((t: any) => ({
+          month: t.month || '',
+          projects: Number(t.projects_created) || 0,
+          revenue: Number(t.revenue) || 0,
+          costs: Number(t.costs) || 0
+        })),
         projectTimelines: apiData.projectTimelines?.map((t: any) => ({
           project: t.project || t.title || 'Unknown',
           planned: Number(t.planned) || 0,
@@ -234,10 +246,7 @@ export const EnhancedProductionAnalytics: React.FC<ProductionAnalyticsProps> = (
     };
   };
 
-  // Empty chart data generators (no fake data — charts show "no data" state)
-  const generateTimeSeriesData = (_range: string, _min: number, _max: number): { date: string; value: number }[] => [];
-
-  const generateMonthlyMetrics = (_range: string): { month: string; projects: number; revenue: number; costs: number }[] => [];
+  // Stub generators removed — all charts now use real API data from monthlyTrends
 
   if (loading) {
     return (

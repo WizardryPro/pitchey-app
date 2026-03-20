@@ -322,27 +322,9 @@ export default function PrivacySettings() {
 
                     {twoFactorAuth.enabled && (
                       <div className="border-t border-gray-200 pt-4">
-                        <h5 className="font-medium text-gray-900 mb-3">Authentication Method</h5>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          {[
-                            { value: 'app' as const, label: 'Authenticator App', description: 'Use Google Authenticator or similar' },
-                            { value: 'sms' as const, label: 'SMS', description: 'Receive codes via text message' },
-                            { value: 'email' as const, label: 'Email', description: 'Receive codes via email' }
-                          ].map((method) => (
-                            <button
-                              key={method.value}
-                              onClick={() => { setTwoFactorAuth(prev => ({ ...prev, method: method.value })); setHasChanges(true); }}
-                              className={`p-3 rounded-lg border text-left transition-colors ${
-                                twoFactorAuth.method === method.value
-                                  ? 'border-purple-500 bg-purple-50 text-purple-600'
-                                  : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                              }`}
-                            >
-                              <div className="font-medium">{method.label}</div>
-                              <div className="text-xs text-gray-600">{method.description}</div>
-                            </button>
-                          ))}
-                        </div>
+                        <p className="text-sm text-gray-600">
+                          When enabled, a verification code will be sent to your email each time you sign in.
+                        </p>
                       </div>
                     )}
                   </div>

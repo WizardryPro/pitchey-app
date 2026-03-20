@@ -365,21 +365,35 @@ Availability calendars, rate cards, crew project dashboards. Competes with Studi
 
 ### Stage 11: Security & Upload Hardening (Post-Launch)
 
-#### 11A. 2FA/MFA Runtime — DEFERRED
+#### 11A. Email OTP 2FA — DONE
 
-Backend MFA service exists (`src/services/mfa.service.ts`, 395 lines) with TOTP generation, QR codes, backup codes. Database tables defined in `mfa-schema.sql`. What's missing:
+When enabled, password login triggers a 6-digit email code (via Resend) before granting access. No authenticator app or QR codes — just email.
 
-| Component | Description | Complexity |
-|-----------|-------------|------------|
-| Login flow integration | Check 2FA on login, return `requiresMFA` challenge | High |
-| `POST /api/user/two-factor/setup` | Generate secret + QR code + backup codes | Medium |
-| `POST /api/user/two-factor/verify` | Verify TOTP code, enable 2FA | Medium |
-| `POST /api/auth/mfa/verify` | Verify challenge during login, create session | High |
-| TwoFactorSetupModal (frontend) | QR scan + code entry + backup codes display | Medium |
-| MFAChallengePage (frontend) | Login challenge page for TOTP/backup code entry | Medium |
-| Bug fix | `mfa.service.ts` `generateTOTP` is sync but calls async `hotp()` | Small |
+| Component | Description | Files | Status |
+|-----------|-------------|-------|--------|
+| Login flow MFA check | After password verify, sends email OTP + returns `requiresMFA` | `src/worker-integrated.ts` (handlePortalLogin, handleLoginSimple) | DONE |
+| MFA login verification | `POST /api/auth/mfa/verify` — verifies email OTP, creates session | `src/worker-integrated.ts` (handleMFALoginVerify) | DONE |
+| MFAChallengePage | "Check your email" page with 6-digit input, auto-submit | `frontend/src/pages/MFAChallengePage.tsx` | DONE |
+| Enable/disable 2FA | `POST /api/mfa/setup/enable` + `/disable` — simple toggle, no code needed | `src/worker-integrated.ts` (handleMFARequest) | DONE |
+| SettingsSecurity wired | One-click enable/disable, MFA status fetch | `ProductionSettingsSecurity.tsx` | DONE |
+| Login pages MFA redirect | All 4 login pages catch `MFARequiredError` → `/mfa/challenge` | CreatorLogin, InvestorLogin, ProductionLogin, Login | DONE |
+| Auth store MFA handling | `MFARequiredError` class, thrown on `requiresMFA` response | `frontend/src/store/betterAuthStore.ts` | DONE |
 
-**Blocker**: `generateQRCode` uses external API (`api.qrserver.com`) — consider client-side QR library.
+2FA flow: Password login → backend sends 6-digit code to email → redirect to `/mfa/challenge` → enter code → session created.
+
+#### 11C. Passwordless Email OTP — DONE
+
+Users can sign in without a password using a 6-digit email code via Resend.
+
+| Component | Description | Files | Status |
+|-----------|-------------|-------|--------|
+| Email OTP send | `POST /api/auth/email-otp/send` — generates OTP, stores in `mfa_challenges`, sends via Resend | `src/worker-integrated.ts` (handleEmailOTPSend) | DONE |
+| Email OTP verify | `POST /api/auth/email-otp/verify` — verifies OTP, creates session | `src/worker-integrated.ts` (handleEmailOTPVerify) | DONE |
+| EmailOTPLogin page | 2-step flow: enter email → enter 6-digit code → signed in | `frontend/src/pages/EmailOTPLogin.tsx` | DONE |
+| Route at `/login/email` | Accessible from all portal login pages | `frontend/src/App.tsx` | DONE |
+| Login page links | "Sign in with email code" button on all 3 portal login pages | CreatorLogin, InvestorLogin, ProductionLogin | DONE |
+
+Passwordless flow: Login page → "Sign in with email code" → enter email → receive 6-digit code via Resend → enter code → session created → redirect to portal dashboard.
 
 #### 11B. Malware Scanning on Uploads — DEFERRED
 

@@ -132,7 +132,7 @@ export async function generateQRCode(uri: string): Promise<string> {
 /**
  * Generate TOTP token for a given time
  */
-function generateTOTP(secret: string, time: number = Date.now()): string {
+async function generateTOTP(secret: string, time: number = Date.now()): Promise<string> {
   const timeStep = Math.floor(time / 1000 / TOTP_CONFIG.period);
   const secretBytes = base32.decode(secret);
   
@@ -145,7 +145,7 @@ function generateTOTP(secret: string, time: number = Date.now()): string {
   const key = new Uint8Array(secretBytes);
   const message = new Uint8Array(timeBuffer);
   
-  return hotp(key, message);
+  return await hotp(key, message);
 }
 
 /**

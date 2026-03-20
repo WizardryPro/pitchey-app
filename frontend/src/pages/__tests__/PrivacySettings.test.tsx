@@ -253,10 +253,8 @@ describe('PrivacySettings', () => {
       if (toggleBtn) {
         await user.click(toggleBtn)
         await waitFor(() => {
-          expect(screen.getByText('Authentication Method')).toBeInTheDocument()
+          expect(screen.getByText(/verification code/i)).toBeInTheDocument()
         })
-        expect(screen.getByText('Authenticator App')).toBeInTheDocument()
-        expect(screen.getByText('SMS')).toBeInTheDocument()
       }
     })
   })

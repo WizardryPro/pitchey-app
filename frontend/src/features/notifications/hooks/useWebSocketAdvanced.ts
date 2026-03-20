@@ -197,6 +197,16 @@ export function useWebSocketAdvanced(options: UseWebSocketAdvancedOptions = {}) 
   });
   const reconnectAttemptRef = useRef<number>(0);
   const lastReconnectTimeRef = useRef<number>(0);
+
+  // Reset circuit breaker when user authenticates — prevents stale breaker from blocking
+  // reconnection after login (breaker may have opened during unauthenticated page load)
+  const prevAuthRef = useRef(isAuthenticated);
+  if (isAuthenticated && !prevAuthRef.current) {
+    circuitBreakerRef.current = { failureCount: 0, lastFailureTime: 0, state: 'closed', nextAttemptTime: 0 };
+    reconnectAttemptRef.current = 0;
+    try { localStorage.removeItem(STORAGE_KEYS.CIRCUIT_BREAKER); } catch {}
+  }
+  prevAuthRef.current = isAuthenticated;
   const pingIntervalRef = useRef<number | undefined>();
   
   // Update queue status - moved up to fix initialization order

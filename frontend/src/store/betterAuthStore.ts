@@ -10,6 +10,26 @@ import { portalAuth } from '../lib/better-auth-client';
 import { sessionCache } from './sessionCache';
 import { sessionManager } from '../lib/session-manager';
 
+/**
+ * Thrown when login succeeds but MFA verification is required.
+ * Catch this in login pages to redirect to /mfa/challenge.
+ */
+export class MFARequiredError extends Error {
+  challengeId: string;
+  methods: string[];
+  expiresAt: string;
+  user: { id: string; email: string; name: string; userType: string };
+
+  constructor(data: { challengeId: string; methods: string[]; expiresAt: string; user: { id: string; email: string; name: string; userType: string } }) {
+    super('MFA verification required');
+    this.name = 'MFARequiredError';
+    this.challengeId = data.challengeId;
+    this.methods = data.methods;
+    this.expiresAt = data.expiresAt;
+    this.user = data.user;
+  }
+}
+
 interface BetterAuthState {
   user: User | null;
   isAuthenticated: boolean;
@@ -68,27 +88,20 @@ export const useBetterAuthStore = create<BetterAuthState>((set) => ({
     set({ loading: true, error: null });
     try {
       const response = await portalAuth.signInCreator(email, password);
-      // Handle both response.user and response.data.user formats
-      const user = response.user || response.data?.user;
-      const token = response.token || response.data?.token;
-      
-      if (!user) {
-        throw new Error('User data not received from server');
+      // Check if MFA is required
+      const raw = response as any;
+      if (raw.requiresMFA) {
+        set({ loading: false });
+        throw new MFARequiredError(raw);
       }
-      
-      // NOTE: We no longer store JWT tokens in localStorage
-      // Session cookies are the only auth mechanism (managed by Better Auth)
-      // This prevents auth mixing bugs when switching portals
-
-      sessionCache.set(user); // Cache the user session
-      sessionManager.updateCache(user); // Update session manager cache
-
+      const user = response.user || response.data?.user;
+      if (!user) throw new Error('User data not received from server');
+      sessionCache.set(user);
+      sessionManager.updateCache(user);
       set({ user: user as User, isAuthenticated: true, loading: false });
     } catch (error: any) {
-      set({
-        error: error.message || 'Login failed',
-        loading: false
-      });
+      if (error instanceof MFARequiredError) throw error;
+      set({ error: error.message || 'Login failed', loading: false });
       throw error;
     }
   },
@@ -97,25 +110,19 @@ export const useBetterAuthStore = create<BetterAuthState>((set) => ({
     set({ loading: true, error: null });
     try {
       const response = await portalAuth.signInInvestor(email, password);
-      // Handle both response.user and response.data.user formats
-      const user = response.user || response.data?.user;
-
-      if (!user) {
-        throw new Error('User data not received from server');
+      const raw = response as any;
+      if (raw.requiresMFA) {
+        set({ loading: false });
+        throw new MFARequiredError(raw);
       }
-
-      // NOTE: We no longer store JWT tokens in localStorage
-      // Session cookies are the only auth mechanism (managed by Better Auth)
-
-      sessionCache.set(user); // Cache the user session
-      sessionManager.updateCache(user); // Update session manager cache
-
+      const user = response.user || response.data?.user;
+      if (!user) throw new Error('User data not received from server');
+      sessionCache.set(user);
+      sessionManager.updateCache(user);
       set({ user: user as User, isAuthenticated: true, loading: false });
     } catch (error: any) {
-      set({
-        error: error.message || 'Login failed',
-        loading: false
-      });
+      if (error instanceof MFARequiredError) throw error;
+      set({ error: error.message || 'Login failed', loading: false });
       throw error;
     }
   },
@@ -124,25 +131,19 @@ export const useBetterAuthStore = create<BetterAuthState>((set) => ({
     set({ loading: true, error: null });
     try {
       const response = await portalAuth.signInProduction(email, password);
-      // Handle both response.user and response.data.user formats
-      const user = response.user || response.data?.user;
-
-      if (!user) {
-        throw new Error('User data not received from server');
+      const raw = response as any;
+      if (raw.requiresMFA) {
+        set({ loading: false });
+        throw new MFARequiredError(raw);
       }
-
-      // NOTE: We no longer store JWT tokens in localStorage
-      // Session cookies are the only auth mechanism (managed by Better Auth)
-
-      sessionCache.set(user); // Cache the user session
-      sessionManager.updateCache(user); // Update session manager cache
-
+      const user = response.user || response.data?.user;
+      if (!user) throw new Error('User data not received from server');
+      sessionCache.set(user);
+      sessionManager.updateCache(user);
       set({ user: user as User, isAuthenticated: true, loading: false });
     } catch (error: any) {
-      set({
-        error: error.message || 'Login failed',
-        loading: false
-      });
+      if (error instanceof MFARequiredError) throw error;
+      set({ error: error.message || 'Login failed', loading: false });
       throw error;
     }
   },
@@ -163,21 +164,21 @@ export const useBetterAuthStore = create<BetterAuthState>((set) => ({
       }
 
       const data = await response.json();
-      const user = data.user;
-      
-      if (!user) {
-        throw new Error('User data not received from server');
-      }
-      
-      sessionCache.set(user); // Cache the user session
-      sessionManager.updateCache(user); // Update session manager cache
 
+      // Check MFA requirement
+      if (data.requiresMFA) {
+        set({ loading: false });
+        throw new MFARequiredError({ challengeId: data.challengeId, methods: data.methods, expiresAt: data.expiresAt, user: data.user });
+      }
+
+      const user = data.user;
+      if (!user) throw new Error('User data not received from server');
+      sessionCache.set(user);
+      sessionManager.updateCache(user);
       set({ user, isAuthenticated: true, loading: false });
     } catch (error: any) {
-      set({
-        error: error.message || 'Login failed',
-        loading: false 
-      });
+      if (error instanceof MFARequiredError) throw error;
+      set({ error: error.message || 'Login failed', loading: false });
       throw error;
     }
   },

@@ -137,6 +137,12 @@ const AdminDashboard = lazyRetry(() => import('@portals/admin/pages/AdminDashboa
 const UserManagement = lazyRetry(() => import('@portals/admin/pages/UserManagement'));
 const ContentModeration = lazyRetry(() => import('@portals/admin/pages/ContentModeration'));
 
+// MFA Challenge Page
+const MFAChallengePage = lazyRetry(() => import('./pages/MFAChallengePage'));
+
+// Passwordless Email OTP Login
+const EmailOTPLogin = lazyRetry(() => import('./pages/EmailOTPLogin'));
+
 // Coming Soon Page for unimplemented routes
 const ComingSoon = lazyRetry(() => import('./pages/ComingSoon'));
 const NDARequests = lazyRetry(() => import('@portals/investor/pages/NDARequests'));
@@ -416,6 +422,15 @@ function App() {
             <Navigate to={userType ? `/${userType}/dashboard` : '/'} />
           } />
           
+          {/* MFA Challenge (during login) */}
+          <Route path="/mfa/challenge" element={<MFAChallengePage />} />
+
+          {/* Passwordless Email OTP Login */}
+          <Route path="/login/email" element={
+            !isAuthenticated ? <EmailOTPLogin /> :
+            <Navigate to={userType ? `/${userType}/dashboard` : '/'} replace />
+          } />
+
           {/* Collaborator Invite Acceptance */}
           <Route path="/collaborate/accept" element={<AcceptInvitePage />} />
 
@@ -489,6 +504,7 @@ function App() {
             <Route path="profile" element={<Profile />} />
             <Route path="messages/*" element={<Messages />} />
             <Route path="calendar" element={<Calendar />} />
+            <Route path="ndas" element={<CreatorNDAManagement />} />
 
             {/* Enhanced Production Routes */}
             {AllProductionRoutes({ isAuthenticated: true, userType: 'production' })}

@@ -12,16 +12,16 @@ import { multiSession } from 'better-auth/plugins/multi-session';
 interface CloudflareEnv {
   // Database
   DATABASE_URL: string;
-  
+
   // Better Auth
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL?: string;
-  
+
   // Storage & Cache
   SESSIONS_KV?: KVNamespace;
   RATE_LIMIT_KV?: KVNamespace;
   KV?: KVNamespace;
-  
+
   // Environment
   ENVIRONMENT?: string;
   FRONTEND_URL?: string;

@@ -1015,7 +1015,7 @@ function ProductionDashboard() {
                 </button>
 
                 <button
-                  onClick={() => navigate('/production/search')}
+                  onClick={() => navigate('/search/advanced')}
                   className="flex items-center gap-3 p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition"
                 >
                   <Search className="w-6 h-6 text-gray-600" />

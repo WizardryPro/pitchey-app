@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useBetterAuthStore } from '../store/betterAuthStore';
+import { useBetterAuthStore, MFARequiredError } from '../store/betterAuthStore';
 import { Briefcase, LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
 import BackButton from '../components/BackButton';
 
@@ -17,8 +17,12 @@ export default function ProductionLogin() {
     try {
       await loginProduction(formData.email, formData.password);
       void navigate('/production/dashboard');
-    } catch (error) {
-      console.error('Production login failed:', error);
+    } catch (err) {
+      if (err instanceof MFARequiredError) {
+        void navigate(`/mfa/challenge?challengeId=${err.challengeId}&userType=${err.user.userType}&name=${encodeURIComponent(err.user.name)}&email=${encodeURIComponent(err.user.email)}`);
+        return;
+      }
+      console.error('Production login failed:', err);
     }
   };
 
@@ -136,6 +140,20 @@ export default function ProductionLogin() {
                 )}
               </button>
             </div>
+
+            {/* Passwordless option */}
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200" /></div>
+              <div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-400">or</span></div>
+            </div>
+
+            <Link
+              to="/login/email"
+              className="w-full flex justify-center items-center py-2 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition gap-2"
+            >
+              <Mail className="h-4 w-4" />
+              Sign in with email code
+            </Link>
 
             {/* Demo Account Button */}
             <div className="mt-4 p-4 bg-orange-50 rounded-lg border border-orange-200">

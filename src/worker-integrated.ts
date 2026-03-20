@@ -1413,6 +1413,56 @@ class RouteRegistry {
         }
       }
 
+      // Check if user has MFA enabled — if so, send email OTP and return challenge
+      try {
+        const [mfaRow] = await this.db.query(
+          `SELECT enabled FROM user_mfa WHERE user_id = $1`,
+          [result.id]
+        );
+        if (mfaRow && mfaRow.enabled) {
+          const challengeId = crypto.randomUUID();
+          const mfaExpires = new Date(Date.now() + 5 * 60 * 1000);
+          const otp = String(Math.floor(100000 + Math.random() * 900000));
+          await this.db.query(
+            `INSERT INTO mfa_challenges (id, user_id, challenge_type, challenge_data, expires_at, attempts, max_attempts, ip_address, user_agent)
+             VALUES ($1, $2, 'email_otp', $3, $4, 0, 5, $5, $6)`,
+            [challengeId, result.id, JSON.stringify({ otp, email: result.email }), mfaExpires, request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || '', request.headers.get('User-Agent') || '']
+          );
+          // Send OTP via Resend
+          const resendKey = this.env.RESEND_API_KEY;
+          if (resendKey) {
+            fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                from: 'Pitchey <noreply@pitchey.com>', to: [result.email],
+                subject: `Your Pitchey verification code: ${otp}`,
+                html: `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:480px;margin:0 auto;padding:24px;"><h2 style="color:#7c3aed;margin-bottom:16px;">Pitchey</h2><p style="color:#374151;font-size:16px;">Your verification code is:</p><div style="background:#f3f4f6;border-radius:8px;padding:24px;text-align:center;margin:24px 0;"><span style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#111827;font-family:monospace;">${otp}</span></div><p style="color:#6b7280;font-size:14px;">This code expires in 5 minutes.</p></div>`,
+              }),
+            }).catch(err => console.error('[MFA] Failed to send email OTP:', err));
+          }
+          console.log(`[Auth] MFA email OTP sent for user ${result.id}, challengeId=${challengeId}`);
+          return new Response(JSON.stringify({
+            success: false,
+            requiresMFA: true,
+            challengeId,
+            methods: ['email_otp'],
+            expiresAt: mfaExpires.toISOString(),
+            user: {
+              id: result.id.toString(),
+              email: result.email,
+              name: result.username || result.name || email.split('@')[0],
+              userType: result.user_type
+            }
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) }
+          });
+        }
+      } catch (mfaCheckErr) {
+        console.warn('[Auth] MFA check skipped (non-fatal):', mfaCheckErr);
+      }
+
       // IMPORTANT: Invalidate any existing sessions for this user before creating new one
       // This prevents auth mixing when switching portals
       try {
@@ -2533,6 +2583,16 @@ class RouteRegistry {
     // 2FA aliases (frontend uses /api/auth/2fa/* namespace)
     this.register('POST', '/api/auth/2fa/setup', (req) => this.handleMFARequest(req, 'setup/start'));
     this.register('POST', '/api/auth/2fa/verify', (req) => this.handleMFARequest(req, 'setup/verify'));
+    this.register('POST', '/api/mfa/setup/enable', (req) => this.handleMFARequest(req, 'setup/enable'));
+    this.register('POST', '/api/mfa/setup/disable', (req) => this.handleMFARequest(req, 'setup/disable'));
+
+    // MFA login verification (no auth required — creates session after TOTP verification)
+    this.register('POST', '/api/auth/mfa/verify', (req) => this.handleMFALoginVerify(req));
+
+    // Email OTP — passwordless sign-in (no auth required)
+    this.register('POST', '/api/auth/email-otp/send', (req) => this.handleEmailOTPSend(req));
+    this.register('POST', '/api/auth/email-otp/verify', (req) => this.handleEmailOTPVerify(req));
+
     this.register('DELETE', '/api/mfa/trusted-device/:id', (req) => this.handleMFARequest(req, 'trusted-device/delete'));
     this.register('POST', '/api/user/session/log', (req) => logSessionHandler(req, this.env));
     this.register('GET', '/api/teams/:id', (req) => getTeamByIdHandler(req, this.env));
@@ -3559,6 +3619,9 @@ class RouteRegistry {
       '/api/auth/creator/login',
       '/api/auth/investor/login',
       '/api/auth/production/login',
+      '/api/auth/mfa/verify',
+      '/api/auth/email-otp/send',
+      '/api/auth/email-otp/verify',
       '/api/auth/logout',
       '/api/search',
       '/api/search/autocomplete',
@@ -3985,6 +4048,62 @@ class RouteRegistry {
               }
             );
           }
+        }
+
+        // Check if user has MFA enabled — if so, send email OTP and return challenge
+        try {
+          const [mfaRow] = await this.db!.query(
+            `SELECT enabled FROM user_mfa WHERE user_id = $1`,
+            [user.id]
+          );
+          if (mfaRow && mfaRow.enabled) {
+            const challengeId = crypto.randomUUID();
+            const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+            const otp = String(Math.floor(100000 + Math.random() * 900000));
+            await this.db!.query(
+              `INSERT INTO mfa_challenges (id, user_id, challenge_type, challenge_data, expires_at, attempts, max_attempts, ip_address, user_agent)
+               VALUES ($1, $2, 'email_otp', $3, $4, 0, 5, $5, $6)`,
+              [challengeId, user.id, JSON.stringify({ otp, email: user.email }), expiresAt, request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || '', request.headers.get('User-Agent') || '']
+            );
+            // Send OTP via Resend
+            const resendKey = this.env.RESEND_API_KEY;
+            if (resendKey) {
+              fetch('https://api.resend.com/emails', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  from: 'Pitchey <noreply@pitchey.com>', to: [user.email],
+                  subject: `Your Pitchey verification code: ${otp}`,
+                  html: `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:480px;margin:0 auto;padding:24px;"><h2 style="color:#7c3aed;margin-bottom:16px;">Pitchey</h2><p style="color:#374151;font-size:16px;">Your verification code is:</p><div style="background:#f3f4f6;border-radius:8px;padding:24px;text-align:center;margin:24px 0;"><span style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#111827;font-family:monospace;">${otp}</span></div><p style="color:#6b7280;font-size:14px;">This code expires in 5 minutes.</p></div>`,
+                }),
+              }).catch(err => console.error('[MFA] Failed to send email OTP:', err));
+            }
+            console.log(`[Auth] MFA email OTP sent for user ${user.id}, challengeId=${challengeId}`);
+            return new Response(
+              JSON.stringify({
+                success: false,
+                requiresMFA: true,
+                challengeId,
+                methods: ['email_otp'],
+                expiresAt: expiresAt.toISOString(),
+                user: {
+                  id: user.id.toString(),
+                  email: user.email,
+                  name: user.name || user.username || user.email.split('@')[0],
+                  userType: portal
+                }
+              }),
+              {
+                status: 200,
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...getCorsHeaders(request.headers.get('Origin'))
+                }
+              }
+            );
+          }
+        } catch (mfaCheckErr) {
+          console.warn('[Auth] MFA check skipped (non-fatal):', mfaCheckErr);
         }
 
         // IMPORTANT: Invalidate any existing sessions for this user before creating new one
@@ -13042,12 +13161,442 @@ pitchey_analytics_datapoints_per_minute 1250
           });
         }
 
+        case 'setup/enable': {
+          // Simple enable — creates user_mfa row if needed, sets enabled = true
+          await this.db.query(`
+            INSERT INTO user_mfa (user_id, enabled, method)
+            VALUES ($1, true, 'email')
+            ON CONFLICT (user_id) DO UPDATE SET enabled = true, method = 'email', enrolled_at = CURRENT_TIMESTAMP
+          `, [authResult.user.id]);
+          await this.db.query(
+            `UPDATE users SET mfa_enabled = true, mfa_method = 'email' WHERE id = $1`,
+            [authResult.user.id]
+          );
+          return builder.success({ success: true, message: 'Email 2FA enabled' });
+        }
+
+        case 'setup/disable': {
+          // Simple disable — no code required (user is already authenticated)
+          await this.db.query(
+            `UPDATE user_mfa SET enabled = false WHERE user_id = $1`,
+            [authResult.user.id]
+          );
+          await this.db.query(
+            `UPDATE users SET mfa_enabled = false, mfa_method = NULL WHERE id = $1`,
+            [authResult.user.id]
+          );
+          return builder.success({ success: true, message: 'Email 2FA disabled' });
+        }
+
         default:
           return builder.error(ErrorCode.NOT_FOUND, 'MFA endpoint not found');
       }
     } catch (error) {
       console.error('MFA error:', error);
       return errorHandler(error, request);
+    }
+  }
+
+  /**
+   * Handle MFA login verification — no auth required
+   * Verifies TOTP/backup code against a challenge, then creates a session
+   */
+  private async handleMFALoginVerify(request: Request): Promise<Response> {
+    const origin = request.headers.get('Origin');
+    const corsHeaders = getCorsHeaders(origin);
+    try {
+      const body = await request.json() as { challengeId?: string; code?: string; method?: string };
+      const { challengeId, code, method = 'totp' } = body;
+
+      if (!challengeId || !code) {
+        return new Response(JSON.stringify({ success: false, error: 'challengeId and code are required' }), {
+          status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      // Look up the challenge
+      const [challenge] = await this.db.query(
+        `SELECT c.id, c.user_id, c.expires_at, c.attempts, c.max_attempts, c.completed_at
+         FROM mfa_challenges c
+         WHERE c.id = $1`,
+        [challengeId]
+      );
+
+      if (!challenge) {
+        return new Response(JSON.stringify({ success: false, error: 'Invalid or expired challenge' }), {
+          status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      if (challenge.completed_at) {
+        return new Response(JSON.stringify({ success: false, error: 'Challenge already used' }), {
+          status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      if (new Date(challenge.expires_at) < new Date()) {
+        return new Response(JSON.stringify({ success: false, error: 'Challenge expired' }), {
+          status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      if (challenge.attempts >= challenge.max_attempts) {
+        return new Response(JSON.stringify({ success: false, error: 'Too many attempts' }), {
+          status: 429, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      // Increment attempts
+      await this.db.query(
+        `UPDATE mfa_challenges SET attempts = attempts + 1 WHERE id = $1`,
+        [challengeId]
+      );
+
+      // Verify OTP from challenge data
+      const [challengeRow] = await this.db.query(
+        `SELECT challenge_data FROM mfa_challenges WHERE id = $1`,
+        [challengeId]
+      );
+      const challengeData = typeof challengeRow?.challenge_data === 'string'
+        ? JSON.parse(challengeRow.challenge_data)
+        : challengeRow?.challenge_data;
+
+      if (!challengeData?.otp || code.trim() !== challengeData.otp) {
+        return new Response(JSON.stringify({ success: false, error: 'Invalid code' }), {
+          status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      // Mark challenge as completed
+      await this.db.query(
+        `UPDATE mfa_challenges SET completed_at = CURRENT_TIMESTAMP WHERE id = $1`,
+        [challengeId]
+      );
+
+      // Update last_used_at
+      await this.db.query(
+        `UPDATE user_mfa SET last_used_at = CURRENT_TIMESTAMP WHERE user_id = $1`,
+        [challenge.user_id]
+      );
+
+      // Now create the session (same flow as handleLoginSimple)
+      const [user] = await this.db.query(
+        `SELECT id, email, username, name, user_type, first_name, last_name,
+                bio, company_name, profile_image, subscription_tier
+         FROM users WHERE id = $1`,
+        [challenge.user_id]
+      ) as UserRecord[];
+
+      if (!user) {
+        return new Response(JSON.stringify({ success: false, error: 'User not found' }), {
+          status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      // Invalidate old sessions
+      await this.db.query(`DELETE FROM sessions WHERE user_id = $1`, [user.id]).catch(() => {});
+
+      // Create session
+      const sessionId = crypto.randomUUID();
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      await this.db.query(
+        `INSERT INTO sessions (id, user_id, token, expires_at, created_at)
+         VALUES ($1, $2, $3, $4, NOW())`,
+        [sessionId, user.id, sessionId, expiresAt]
+      );
+
+      // Cache in KV
+      const kvStore = this.env.SESSION_STORE || this.env.SESSIONS_KV || this.env.KV || this.env.CACHE;
+      if (kvStore) {
+        await kvStore.put(
+          `session:${sessionId}`,
+          JSON.stringify({
+            id: sessionId,
+            userId: user.id,
+            userEmail: user.email,
+            userName: user.username || user.name || user.email?.split('@')[0],
+            userType: user.user_type,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            bio: user.bio,
+            companyName: user.company_name,
+            profileImage: user.profile_image,
+            expiresAt
+          }),
+          { expirationTtl: 604800 }
+        );
+      }
+
+      console.log(`[Auth] MFA verified, session created: userId=${user.id}, sessionId=${sessionId}`);
+
+      return new Response(JSON.stringify({
+        success: true,
+        user: {
+          id: user.id.toString(),
+          email: user.email,
+          name: user.name || user.username || user.email?.split('@')[0],
+          username: user.username,
+          userType: user.user_type,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          bio: user.bio,
+          companyName: user.company_name,
+          profileImage: user.profile_image,
+          subscriptionTier: user.subscription_tier
+        },
+        session: {
+          id: sessionId,
+          expiresAt: expiresAt.toISOString()
+        }
+      }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Set-Cookie': (await import('./config/session.config')).createSessionCookie(sessionId),
+          ...corsHeaders
+        }
+      });
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      console.error('[Auth] MFA login verify error:', e);
+      return new Response(JSON.stringify({ success: false, error: 'MFA verification failed' }), {
+        status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+  }
+
+  /**
+   * Handle email OTP send — passwordless sign-in step 1
+   * Sends a 6-digit code to the user's email via Resend
+   */
+  private async handleEmailOTPSend(request: Request): Promise<Response> {
+    const origin = request.headers.get('Origin');
+    const corsHeaders = getCorsHeaders(origin);
+    try {
+      const body = await request.json() as { email?: string };
+      const email = body.email?.trim().toLowerCase();
+
+      if (!email) {
+        return new Response(JSON.stringify({ success: false, error: 'Email is required' }), {
+          status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      // Look up user
+      const [user] = await this.db.query(
+        `SELECT id, email, user_type, username, name, first_name, last_name FROM users WHERE email = $1 LIMIT 1`,
+        [email]
+      ) as UserRecord[];
+
+      if (!user) {
+        // Don't reveal if email exists — return success either way
+        return new Response(JSON.stringify({ success: true }), {
+          status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      // Generate 6-digit OTP
+      const otp = String(Math.floor(100000 + Math.random() * 900000));
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+      // Store OTP in mfa_challenges table
+      const challengeId = crypto.randomUUID();
+      await this.db.query(
+        `INSERT INTO mfa_challenges (id, user_id, challenge_type, challenge_data, expires_at, attempts, max_attempts, ip_address, user_agent)
+         VALUES ($1, $2, 'email_otp', $3, $4, 0, 5, $5, $6)`,
+        [
+          challengeId,
+          user.id,
+          JSON.stringify({ otp, email }),
+          expiresAt,
+          request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || '',
+          request.headers.get('User-Agent') || ''
+        ]
+      );
+
+      // Send email via Resend
+      const resendKey = this.env.RESEND_API_KEY;
+      if (resendKey) {
+        try {
+          await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${resendKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              from: 'Pitchey <noreply@pitchey.com>',
+              to: [email],
+              subject: `Your Pitchey sign-in code: ${otp}`,
+              html: `
+                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
+                  <h2 style="color: #7c3aed; margin-bottom: 16px;">Pitchey</h2>
+                  <p style="color: #374151; font-size: 16px;">Your sign-in code is:</p>
+                  <div style="background: #f3f4f6; border-radius: 8px; padding: 24px; text-align: center; margin: 24px 0;">
+                    <span style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #111827; font-family: monospace;">${otp}</span>
+                  </div>
+                  <p style="color: #6b7280; font-size: 14px;">This code expires in 5 minutes. If you didn't request this, you can safely ignore this email.</p>
+                </div>
+              `,
+            }),
+          });
+          console.log(`[Email OTP] Sent sign-in code to ${email}`);
+        } catch (emailErr) {
+          console.error('[Email OTP] Failed to send email:', emailErr);
+        }
+      } else {
+        console.warn('[Email OTP] RESEND_API_KEY not configured — OTP not sent');
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        challengeId,
+        expiresAt: expiresAt.toISOString()
+      }), {
+        status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      console.error('[Email OTP] Send error:', e);
+      return new Response(JSON.stringify({ success: false, error: 'Failed to send code' }), {
+        status: 500, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) }
+      });
+    }
+  }
+
+  /**
+   * Handle email OTP verify — passwordless sign-in step 2
+   * Verifies the code and creates a session
+   */
+  private async handleEmailOTPVerify(request: Request): Promise<Response> {
+    const origin = request.headers.get('Origin');
+    const corsHeaders = getCorsHeaders(origin);
+    try {
+      const body = await request.json() as { challengeId?: string; code?: string };
+      const { challengeId, code } = body;
+
+      if (!challengeId || !code) {
+        return new Response(JSON.stringify({ success: false, error: 'challengeId and code are required' }), {
+          status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      // Look up challenge
+      const [challenge] = await this.db.query(
+        `SELECT id, user_id, challenge_data, expires_at, attempts, max_attempts, completed_at
+         FROM mfa_challenges WHERE id = $1 AND challenge_type = 'email_otp'`,
+        [challengeId]
+      );
+
+      if (!challenge) {
+        return new Response(JSON.stringify({ success: false, error: 'Invalid or expired code' }), {
+          status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      if (challenge.completed_at) {
+        return new Response(JSON.stringify({ success: false, error: 'Code already used' }), {
+          status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      if (new Date(challenge.expires_at) < new Date()) {
+        return new Response(JSON.stringify({ success: false, error: 'Code expired' }), {
+          status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      if (challenge.attempts >= challenge.max_attempts) {
+        return new Response(JSON.stringify({ success: false, error: 'Too many attempts' }), {
+          status: 429, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      // Increment attempts
+      await this.db.query(`UPDATE mfa_challenges SET attempts = attempts + 1 WHERE id = $1`, [challengeId]);
+
+      // Verify OTP
+      const challengeData = typeof challenge.challenge_data === 'string'
+        ? JSON.parse(challenge.challenge_data)
+        : challenge.challenge_data;
+
+      if (code.trim() !== challengeData.otp) {
+        return new Response(JSON.stringify({ success: false, error: 'Invalid code' }), {
+          status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      // Mark challenge as completed
+      await this.db.query(`UPDATE mfa_challenges SET completed_at = CURRENT_TIMESTAMP WHERE id = $1`, [challengeId]);
+
+      // Get user and create session
+      const [user] = await this.db.query(
+        `SELECT id, email, username, name, user_type, first_name, last_name,
+                bio, company_name, profile_image, subscription_tier
+         FROM users WHERE id = $1`,
+        [challenge.user_id]
+      ) as UserRecord[];
+
+      if (!user) {
+        return new Response(JSON.stringify({ success: false, error: 'User not found' }), {
+          status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      // Invalidate old sessions
+      await this.db.query(`DELETE FROM sessions WHERE user_id = $1`, [user.id]).catch(() => {});
+
+      // Create session
+      const sessionId = crypto.randomUUID();
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      await this.db.query(
+        `INSERT INTO sessions (id, user_id, token, expires_at, created_at) VALUES ($1, $2, $3, $4, NOW())`,
+        [sessionId, user.id, sessionId, expiresAt]
+      );
+
+      // Cache in KV
+      const kvStore = this.env.SESSION_STORE || this.env.SESSIONS_KV || this.env.KV || this.env.CACHE;
+      if (kvStore) {
+        await kvStore.put(
+          `session:${sessionId}`,
+          JSON.stringify({
+            id: sessionId, userId: user.id, userEmail: user.email,
+            userName: user.username || user.name || user.email?.split('@')[0],
+            userType: user.user_type, firstName: user.first_name, lastName: user.last_name,
+            bio: user.bio, companyName: user.company_name, profileImage: user.profile_image,
+            expiresAt
+          }),
+          { expirationTtl: 604800 }
+        );
+      }
+
+      console.log(`[Email OTP] Passwordless login: userId=${user.id}, sessionId=${sessionId}`);
+
+      return new Response(JSON.stringify({
+        success: true,
+        user: {
+          id: user.id.toString(), email: user.email,
+          name: user.name || user.username || user.email?.split('@')[0],
+          username: user.username, userType: user.user_type,
+          firstName: user.first_name, lastName: user.last_name,
+          bio: user.bio, companyName: user.company_name,
+          profileImage: user.profile_image, subscriptionTier: user.subscription_tier
+        },
+        session: { id: sessionId, expiresAt: expiresAt.toISOString() }
+      }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Set-Cookie': (await import('./config/session.config')).createSessionCookie(sessionId),
+          ...corsHeaders
+        }
+      });
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      console.error('[Email OTP] Verify error:', e);
+      return new Response(JSON.stringify({ success: false, error: 'Verification failed' }), {
+        status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
     }
   }
 
@@ -16929,18 +17478,19 @@ Signatures: [To be completed upon signing]
       // Production analytics: based on saved pitches + own production_projects
       // (Production companies evaluate creator pitches, they don't own them)
 
-      // Metrics from production_projects table — filtered by timeframe
+      // Metrics from production_pipeline table — filtered by timeframe
       const metricsQuery = `
         SELECT
           COUNT(DISTINCT pp.id) as total_projects,
           SUM(CASE WHEN pp.status IN ('active', 'in_production', 'production') THEN 1 ELSE 0 END) as active_projects,
           SUM(CASE WHEN pp.status = 'completed' THEN 1 ELSE 0 END) as completed_projects,
-          COALESCE(SUM(pp.budget), 0) as total_budget,
-          COALESCE(AVG(pp.budget), 0) as avg_budget,
+          COALESCE(SUM(pp.budget_allocated), 0) as total_budget,
+          COALESCE(AVG(pp.budget_allocated), 0) as avg_budget,
+          COALESCE(SUM(pp.budget_spent), 0) as total_spent,
           (SELECT COUNT(*) FROM saved_pitches WHERE user_id = $1 AND created_at >= NOW() - INTERVAL '${days} days') as pitches_evaluated,
           (SELECT COUNT(*) FROM saved_pitches WHERE user_id = $1 AND created_at >= NOW() - INTERVAL '${days} days') as recent_evaluations,
-          CASE WHEN COUNT(*) > 0 THEN COUNT(CASE WHEN pp.status = 'completed' THEN 1 END)::float / COUNT(*) * 100 ELSE 0 END as avg_completion_rate
-        FROM production_projects pp
+          CASE WHEN COUNT(*) > 0 THEN AVG(pp.completion_percentage) ELSE 0 END as avg_completion_rate
+        FROM production_pipeline pp
         WHERE pp.production_company_id = $1
           AND pp.created_at >= NOW() - INTERVAL '${days} days'
       `;
@@ -16979,25 +17529,26 @@ Signatures: [To be completed upon signing]
         // Keep empty if query fails
       }
 
-      // Project pipeline from production_projects
+      // Project pipeline from production_pipeline
       const pipelineQuery = `
         SELECT
           stage,
           COUNT(*) as projects,
-          COALESCE(SUM(budget), 0) as budget,
-          100.0 as on_time_percentage
+          COALESCE(SUM(budget_allocated), 0) as budget,
+          CASE WHEN COUNT(*) > 0 THEN AVG(completion_percentage) ELSE 0 END as on_time_percentage
         FROM (
           SELECT
             CASE
-              WHEN pp.status = 'development' THEN 'Development'
-              WHEN pp.status = 'pre_production' THEN 'Pre-Production'
-              WHEN pp.status IN ('active', 'production', 'in_production') THEN 'Production'
-              WHEN pp.status = 'post_production' THEN 'Post-Production'
-              WHEN pp.status = 'completed' THEN 'Distribution'
+              WHEN pp.stage = 'development' THEN 'Development'
+              WHEN pp.stage = 'pre-production' THEN 'Pre-Production'
+              WHEN pp.stage IN ('active', 'production', 'in_production') THEN 'Production'
+              WHEN pp.stage = 'post-production' THEN 'Post-Production'
+              WHEN pp.stage IN ('delivery', 'release', 'completed') THEN 'Distribution'
               ELSE 'Development'
             END as stage,
-            COALESCE(pp.budget, 0) as budget
-          FROM production_projects pp
+            COALESCE(pp.budget_allocated, 0) as budget_allocated,
+            COALESCE(pp.completion_percentage, 0) as completion_percentage
+          FROM production_pipeline pp
           WHERE pp.production_company_id = $1
             AND pp.created_at >= NOW() - INTERVAL '${days} days'
         ) sub
@@ -17018,13 +17569,13 @@ Signatures: [To be completed upon signing]
         // Keep empty if query fails
       }
 
-      // Revenue from production_projects + related investments
+      // Revenue from production_pipeline + related investments
       const revenueQuery = `
         SELECT
           COALESCE(SUM(i.amount), 0) as total_revenue,
           COUNT(DISTINCT i.investor_id) as total_investors
         FROM investments i
-        JOIN production_projects pp ON pp.related_pitch_id = i.pitch_id
+        JOIN production_pipeline pp ON pp.pitch_id = i.pitch_id
         WHERE pp.production_company_id = $1
           AND i.status = 'active'
       `;
@@ -17055,7 +17606,7 @@ Signatures: [To be completed upon signing]
         // Keep empty if query fails
       }
 
-      // Monthly trends from production_projects
+      // Monthly trends from production_pipeline
       const trendsQuery = `
         SELECT
           m.month,
@@ -17069,9 +17620,9 @@ Signatures: [To be completed upon signing]
             TO_CHAR(pp.created_at, 'Mon') as month,
             DATE_TRUNC('month', pp.created_at) as month_trunc,
             COUNT(*) as projects_created,
-            COALESCE(SUM(pp.budget), 0) as revenue,
-            COALESCE(SUM(pp.budget) * 0.7, 0) as costs
-          FROM production_projects pp
+            COALESCE(SUM(pp.budget_allocated), 0) as revenue,
+            COALESCE(SUM(pp.budget_spent), 0) as costs
+          FROM production_pipeline pp
           WHERE pp.production_company_id = $1
             AND pp.created_at >= NOW() - INTERVAL '${days} days'
           GROUP BY TO_CHAR(pp.created_at, 'Mon'), DATE_TRUNC('month', pp.created_at)
@@ -17086,17 +17637,73 @@ Signatures: [To be completed upon signing]
         // Keep empty if query fails
       }
 
+      // Project timelines — planned vs actual days for each project
+      const timelinesQuery = `
+        SELECT
+          pp.title as project,
+          CASE WHEN pp.start_date IS NOT NULL AND pp.target_completion_date IS NOT NULL
+            THEN (pp.target_completion_date - pp.start_date)
+            ELSE 0
+          END as planned,
+          CASE
+            WHEN pp.status = 'completed' AND pp.start_date IS NOT NULL AND pp.updated_at IS NOT NULL
+              THEN EXTRACT(DAY FROM (pp.updated_at - pp.start_date::timestamp))::int
+            WHEN pp.start_date IS NOT NULL
+              THEN EXTRACT(DAY FROM (NOW() - pp.start_date::timestamp))::int
+            ELSE 0
+          END as actual,
+          CASE
+            WHEN pp.status = 'completed' THEN 'Completed'
+            WHEN pp.stage = 'post-production' THEN 'Post-Production'
+            WHEN pp.stage IN ('active', 'production', 'in_production') THEN 'In Progress'
+            WHEN pp.stage = 'pre-production' THEN 'Pre-Production'
+            ELSE 'Development'
+          END as status
+        FROM production_pipeline pp
+        WHERE pp.production_company_id = $1
+        ORDER BY pp.created_at DESC
+        LIMIT 10
+      `;
+      let projectTimelines: any[] = [];
+      try {
+        projectTimelines = await this.db.query(timelinesQuery, [authCheck.user.id]) || [];
+      } catch {
+        // Keep empty if query fails
+      }
+
+      // Crew/resource utilization from team assignments
+      const crewQuery = `
+        SELECT
+          role_obj->>'role' as department,
+          COUNT(*) as total_crew,
+          ROUND(
+            (COUNT(*) FILTER (WHERE role_obj->>'name' IS NOT NULL AND role_obj->>'name' != '')::numeric
+            / GREATEST(COUNT(*), 1)) * 100
+          ) as utilization_rate
+        FROM production_team_assignments pta,
+          jsonb_array_elements(pta.team) as role_obj
+        WHERE pta.user_id = $1
+        GROUP BY role_obj->>'role'
+        ORDER BY total_crew DESC
+      `;
+      let crewUtilization: any[] = [];
+      try {
+        crewUtilization = await this.db.query(crewQuery, [authCheck.user.id]) || [];
+      } catch {
+        // Keep empty if query fails
+      }
+
       // Per-project performance (ROI, revenue, views)
       const projectPerfQuery = `
-        SELECT pp.id::text, pp.title, COALESCE(pp.genre,'Other') as genre, pp.status,
-          COALESCE(pp.budget,0) as budget, COALESCE(SUM(i.amount),0) as revenue,
-          CASE WHEN pp.budget > 0 THEN ROUND(((COALESCE(SUM(i.amount),0) - pp.budget) / pp.budget) * 100, 1) ELSE 0 END as roi,
+        SELECT pp.id::text, pp.title, COALESCE(p.genre,'Other') as genre, pp.status,
+          COALESCE(pp.budget_allocated,0) as budget, COALESCE(SUM(i.amount),0) as revenue,
+          CASE WHEN pp.budget_allocated > 0 THEN ROUND(((COALESCE(SUM(i.amount),0) - pp.budget_allocated) / pp.budget_allocated) * 100, 1) ELSE 0 END as roi,
           COALESCE(p.view_count,0) as views
-        FROM production_projects pp
-        LEFT JOIN investments i ON i.pitch_id = pp.related_pitch_id AND i.status = 'active'
-        LEFT JOIN pitches p ON p.id = pp.related_pitch_id
+        FROM production_pipeline pp
+        LEFT JOIN investments i ON i.pitch_id = pp.pitch_id AND i.status = 'active'
+        LEFT JOIN pitches p ON p.id = pp.pitch_id
         WHERE pp.production_company_id = $1
-        GROUP BY pp.id, pp.title, pp.genre, pp.status, pp.budget, p.view_count
+        GROUP BY pp.id, pp.title, p.genre, pp.status, pp.budget_allocated, p.view_count
         ORDER BY revenue DESC LIMIT 10
       `;
       let projectPerformance: any[] = [];
@@ -17119,11 +17726,11 @@ Signatures: [To be completed upon signing]
             total_budget: parseFloat(metrics.total_budget) || 0,
             avg_budget: parseFloat(metrics.avg_budget) || 0,
             avg_completion_rate: parseFloat(metrics.avg_completion_rate) || 0,
-            total_spent: parseFloat(metrics.total_budget) * 0.85 || 0
+            total_spent: parseFloat(metrics.total_spent) || 0
           },
           genrePerformance: genrePerformance || [],
           timelineAdherence: timelineAdherence || [],
-          crewUtilization: [],
+          crewUtilization: crewUtilization || [],
           successMetrics: {
             total_revenue: parseFloat(successMetrics.total_revenue) || 0,
             total_investors: parseInt(successMetrics.total_investors) || 0
@@ -17131,6 +17738,7 @@ Signatures: [To be completed upon signing]
           recentActivity: recentActivity || [],
           monthlyTrends: monthlyTrends || [],
           projectPerformance: projectPerformance || [],
+          projectTimelines: projectTimelines || [],
           timeframe
         }
       }), {

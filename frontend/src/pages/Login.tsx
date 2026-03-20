@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { useBetterAuthStore } from '../store/betterAuthStore';
+import { useBetterAuthStore, MFARequiredError } from '../store/betterAuthStore';
 import { Film, Briefcase, DollarSign, LogIn, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
 
 
@@ -33,8 +33,12 @@ export default function Login() {
         await loginProduction(formData.email, formData.password);
         void navigate('/production/dashboard');
       }
-    } catch (error) {
-      console.error('Login failed:', error);
+    } catch (err) {
+      if (err instanceof MFARequiredError) {
+        void navigate(`/mfa/challenge?challengeId=${err.challengeId}&userType=${err.user.userType}&name=${encodeURIComponent(err.user.name)}&email=${encodeURIComponent(err.user.email)}`);
+        return;
+      }
+      console.error('Login failed:', err);
     }
   };
 

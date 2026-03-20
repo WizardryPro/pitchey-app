@@ -221,25 +221,34 @@ class ApiClient {
         // Handle 401 specifically — clear all auth state and redirect to login
         if (response?.status === 401) {
           try {
-            sessionCache.clear();
-            sessionManager.clearCache();
+            // Verify the session is truly expired by checking the session endpoint directly.
+            // This prevents false 401 redirects from individual API calls that race with login.
+            const sessionCheck = await fetch(`${this.baseURL}/api/auth/session`, {
+              credentials: 'include'
+            }).catch(() => null);
+            const sessionOk = sessionCheck && sessionCheck.ok;
 
-            // Lazily import the store to avoid circular deps, then clear auth state.
-            import('../store/betterAuthStore').then(({ useBetterAuthStore }) => {
-              const store = useBetterAuthStore.getState();
-              // Only redirect if user was previously authenticated (avoids redirect loops)
-              const wasAuthenticated = !!store.user;
-              store.setUser(null);
-              if (wasAuthenticated && typeof window !== 'undefined') {
-                // Determine login path based on current URL
-                const path = window.location.pathname;
-                const portal = path.startsWith('/investor') ? 'investor' :
-                               path.startsWith('/production') ? 'production' :
-                               path.startsWith('/creator') ? 'creator' : null;
-                const loginPath = portal ? `/login/${portal}` : '/portals';
-                window.location.href = loginPath;
-              }
-            }).catch(() => {});
+            if (!sessionOk) {
+              sessionCache.clear();
+              sessionManager.clearCache();
+
+              // Lazily import the store to avoid circular deps, then clear auth state.
+              import('../store/betterAuthStore').then(({ useBetterAuthStore }) => {
+                const store = useBetterAuthStore.getState();
+                const wasAuthenticated = !!store.user;
+                store.setUser(null);
+                if (wasAuthenticated && typeof window !== 'undefined') {
+                  const path = window.location.pathname;
+                  const portal = path.startsWith('/investor') ? 'investor' :
+                                 path.startsWith('/production') ? 'production' :
+                                 path.startsWith('/creator') ? 'creator' : null;
+                  const loginPath = portal ? `/login/${portal}` : '/portals';
+                  window.location.href = loginPath;
+                }
+              }).catch(() => {});
+            } else {
+              console.warn('[api-client] 401 on API call but session is still valid — skipping redirect');
+            }
           } catch (error) {
             console.warn('Failed to handle auth error:', error);
           }

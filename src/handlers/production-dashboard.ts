@@ -280,12 +280,12 @@ export async function productionTalentHandler(request: Request, env: Env) {
   try {
     const user = await verifyAuth(request, env);
     if (!user || user.user_type !== 'production') {
-      return new Response('Unauthorized', { status: 401, headers: getCorsHeaders(request) });
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { status: 401, headers: { ...getCorsHeaders(request), 'Content-Type': 'application/json' } });
     }
 
     const url = new URL(request.url);
     const sql = neon(env.DATABASE_URL);
-    
+
     // Search parameters
     const searchTerm = url.searchParams.get('search') || '';
     const role = url.searchParams.get('role');
@@ -421,12 +421,12 @@ export async function productionPipelineHandler(request: Request, env: Env) {
   try {
     const user = await verifyAuth(request, env);
     if (!user || user.user_type !== 'production') {
-      return new Response('Unauthorized', { status: 401, headers: getCorsHeaders(request) });
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { status: 401, headers: { ...getCorsHeaders(request), 'Content-Type': 'application/json' } });
     }
 
     const url = new URL(request.url);
     const sql = neon(env.DATABASE_URL);
-    
+
     if (request.method === 'GET') {
       // Get production pipeline projects for this user
       try {
@@ -621,7 +621,7 @@ export async function productionPipelineHandler(request: Request, env: Env) {
       });
     }
     
-    return new Response('Method not allowed', { status: 405, headers: getCorsHeaders(request) });
+    return new Response(JSON.stringify({ success: false, error: 'Method not allowed' }), { status: 405, headers: { ...getCorsHeaders(request), 'Content-Type': 'application/json' } });
   } catch (error) {
     console.error('Pipeline management error:', error);
     return new Response(JSON.stringify({ 
@@ -639,7 +639,7 @@ export async function productionBudgetHandler(request: Request, env: Env) {
   try {
     const user = await verifyAuth(request, env);
     if (!user || user.user_type !== 'production') {
-      return new Response('Unauthorized', { status: 401, headers: getCorsHeaders(request) });
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { status: 401, headers: { ...getCorsHeaders(request), 'Content-Type': 'application/json' } });
     }
 
     const url = new URL(request.url);
@@ -647,7 +647,7 @@ export async function productionBudgetHandler(request: Request, env: Env) {
     const projectId = url.searchParams.get('project_id');
     
     if (!projectId) {
-      return new Response('Project ID required', { status: 400, headers: getCorsHeaders(request) });
+      return new Response(JSON.stringify({ success: false, error: 'Project ID required' }), { status: 400, headers: { ...getCorsHeaders(request), 'Content-Type': 'application/json' } });
     }
     
     // Verify project ownership
@@ -657,7 +657,7 @@ export async function productionBudgetHandler(request: Request, env: Env) {
     `;
     
     if (projectCheck.length === 0) {
-      return new Response('Project not found', { status: 404, headers: getCorsHeaders(request) });
+      return new Response(JSON.stringify({ success: false, error: 'Project not found' }), { status: 404, headers: { ...getCorsHeaders(request), 'Content-Type': 'application/json' } });
     }
     
     if (request.method === 'GET') {
@@ -799,7 +799,7 @@ export async function productionBudgetHandler(request: Request, env: Env) {
       });
     }
     
-    return new Response('Method not allowed', { status: 405, headers: getCorsHeaders(request) });
+    return new Response(JSON.stringify({ success: false, error: 'Method not allowed' }), { status: 405, headers: { ...getCorsHeaders(request), 'Content-Type': 'application/json' } });
   } catch (error) {
     console.error('Budget management error:', error);
     return new Response(JSON.stringify({ 
@@ -817,7 +817,7 @@ export async function productionScheduleHandler(request: Request, env: Env) {
   try {
     const user = await verifyAuth(request, env);
     if (!user || user.user_type !== 'production') {
-      return new Response('Unauthorized', { status: 401, headers: getCorsHeaders(request) });
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { status: 401, headers: { ...getCorsHeaders(request), 'Content-Type': 'application/json' } });
     }
 
     const url = new URL(request.url);
@@ -825,7 +825,7 @@ export async function productionScheduleHandler(request: Request, env: Env) {
     const projectId = url.searchParams.get('project_id');
     
     if (!projectId) {
-      return new Response('Project ID required', { status: 400, headers: getCorsHeaders(request) });
+      return new Response(JSON.stringify({ success: false, error: 'Project ID required' }), { status: 400, headers: { ...getCorsHeaders(request), 'Content-Type': 'application/json' } });
     }
     
     if (request.method === 'GET') {
@@ -969,7 +969,7 @@ export async function productionScheduleHandler(request: Request, env: Env) {
       });
     }
     
-    return new Response('Method not allowed', { status: 405, headers: getCorsHeaders(request) });
+    return new Response(JSON.stringify({ success: false, error: 'Method not allowed' }), { status: 405, headers: { ...getCorsHeaders(request), 'Content-Type': 'application/json' } });
   } catch (error) {
     console.error('Schedule management error:', error);
     return new Response(JSON.stringify({ 
@@ -987,7 +987,7 @@ export async function productionLocationsHandler(request: Request, env: Env) {
   try {
     const user = await verifyAuth(request, env);
     if (!user || user.user_type !== 'production') {
-      return new Response('Unauthorized', { status: 401, headers: getCorsHeaders(request) });
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { status: 401, headers: { ...getCorsHeaders(request), 'Content-Type': 'application/json' } });
     }
 
     const url = new URL(request.url);
@@ -1121,7 +1121,7 @@ export async function productionLocationsHandler(request: Request, env: Env) {
       });
     }
     
-    return new Response('Method not allowed', { status: 405, headers: getCorsHeaders(request) });
+    return new Response(JSON.stringify({ success: false, error: 'Method not allowed' }), { status: 405, headers: { ...getCorsHeaders(request), 'Content-Type': 'application/json' } });
   } catch (error) {
     console.error('Location scouting error:', error);
     return new Response(JSON.stringify({ 
@@ -1139,7 +1139,7 @@ export async function productionCrewHandler(request: Request, env: Env) {
   try {
     const user = await verifyAuth(request, env);
     if (!user || user.user_type !== 'production') {
-      return new Response('Unauthorized', { status: 401, headers: getCorsHeaders(request) });
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { status: 401, headers: { ...getCorsHeaders(request), 'Content-Type': 'application/json' } });
     }
 
     const url = new URL(request.url);
@@ -1296,7 +1296,7 @@ export async function productionCrewHandler(request: Request, env: Env) {
       });
     }
     
-    return new Response('Method not allowed', { status: 405, headers: getCorsHeaders(request) });
+    return new Response(JSON.stringify({ success: false, error: 'Method not allowed' }), { status: 405, headers: { ...getCorsHeaders(request), 'Content-Type': 'application/json' } });
   } catch (error) {
     console.error('Crew management error:', error);
     return new Response(JSON.stringify({ 
@@ -1314,7 +1314,7 @@ export async function productionAnalyticsHandler(request: Request, env: Env) {
   try {
     const user = await verifyAuth(request, env);
     if (!user || user.user_type !== 'production') {
-      return new Response('Unauthorized', { status: 401, headers: getCorsHeaders(request) });
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { status: 401, headers: { ...getCorsHeaders(request), 'Content-Type': 'application/json' } });
     }
 
     const sql = neon(env.DATABASE_URL);

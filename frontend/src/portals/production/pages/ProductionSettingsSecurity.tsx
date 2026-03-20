@@ -1,16 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Shield, Key, Eye, EyeOff, Smartphone, 
+import {
+  Shield, Key, Eye, EyeOff, Smartphone,
   AlertTriangle, CheckCircle, Lock, Unlock,
-  Calendar, MapPin, Monitor, Save, X, 
-  RefreshCw, Download, Trash2, Plus, QrCode
+  Calendar, MapPin, Monitor, Save, X,
+  RefreshCw, Download, Trash2, Plus
 } from 'lucide-react';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { getDashboardRoute } from '@/utils/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
 import { Badge } from '@shared/components/ui/badge';
 import { toast } from 'react-hot-toast';
+import { API_URL } from '@/config';
 
 interface SecuritySettings {
   twoFactorEnabled: boolean;
@@ -148,23 +149,80 @@ export default function ProductionSettingsSecurity() {
     }
   };
 
+  const [toggling2FA, setToggling2FA] = useState(false);
+
+  // Fetch MFA status on mount
+  const fetchMFAStatus = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/mfa/status`, { credentials: 'include' });
+      if (response.ok) {
+        const data = await response.json();
+        const result = data.data || data;
+        setSettings(prev => ({ ...prev, twoFactorEnabled: result.enabled === true }));
+      }
+    } catch {
+      // non-fatal
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchMFAStatus();
+  }, [fetchMFAStatus]);
+
   const revokeSession = (_sessionId: string) => {
-    // TODO: DELETE /api/auth/sessions/:id when session management is implemented
     toast('Session management is coming soon', { icon: 'ℹ️' });
   };
 
-  const enable2FA = () => {
-    // TODO: POST /api/auth/2fa/enable when 2FA is implemented
-    toast('Two-factor authentication is coming soon', { icon: 'ℹ️' });
+  const enable2FA = async () => {
+    setToggling2FA(true);
+    try {
+      // Start setup — this creates the user_mfa row
+      const startRes = await fetch(`${API_URL}/api/mfa/setup/start`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+      });
+      if (!startRes.ok) {
+        const d = await startRes.json();
+        throw new Error(d.error?.message || d.error || 'Failed to start setup');
+      }
+      // Auto-verify to enable (no TOTP code needed — email OTP is sent at login time)
+      const enableRes = await fetch(`${API_URL}/api/mfa/setup/enable`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+      });
+      if (!enableRes.ok) {
+        const d = await enableRes.json();
+        throw new Error(d.error?.message || d.error || 'Failed to enable');
+      }
+      toast.success('Two-factor authentication enabled! You\'ll receive a code by email each time you sign in.');
+      setSettings(prev => ({ ...prev, twoFactorEnabled: true }));
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      toast.error(e.message);
+    } finally {
+      setToggling2FA(false);
+    }
   };
 
-  const disable2FA = () => {
-    // TODO: POST /api/auth/2fa/disable when 2FA is implemented
-    toast('Two-factor authentication is coming soon', { icon: 'ℹ️' });
+  const disable2FA = async () => {
+    setToggling2FA(true);
+    try {
+      const response = await fetch(`${API_URL}/api/mfa/setup/disable`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+      });
+      if (!response.ok) {
+        const d = await response.json();
+        throw new Error(d.error?.message || d.error || 'Failed to disable');
+      }
+      toast.success('Two-factor authentication disabled');
+      setSettings(prev => ({ ...prev, twoFactorEnabled: false }));
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      toast.error(e.message);
+    } finally {
+      setToggling2FA(false);
+    }
   };
 
   const downloadSecurityReport = () => {
-    // TODO: GET /api/security/report/download
     toast('Security report downloads are coming soon', { icon: 'ℹ️' });
   };
 
@@ -449,23 +507,24 @@ export default function ProductionSettingsSecurity() {
                         Two-Factor Authentication is {settings.twoFactorEnabled ? 'Enabled' : 'Disabled'}
                       </h3>
                       <p className="text-sm text-gray-500">
-                        {settings.twoFactorEnabled 
-                          ? 'Your account is protected with 2FA' 
-                          : 'Secure your account with an additional verification step'
+                        {settings.twoFactorEnabled
+                          ? 'A verification code is sent to your email each time you sign in'
+                          : 'Add an extra verification step when signing in'
                         }
                       </p>
                     </div>
                   </div>
-                  
+
                   <button
                     onClick={settings.twoFactorEnabled ? disable2FA : enable2FA}
-                    className={`px-4 py-2 rounded-lg transition ${
+                    disabled={toggling2FA}
+                    className={`px-4 py-2 rounded-lg transition disabled:opacity-50 ${
                       settings.twoFactorEnabled
                         ? 'bg-red-600 text-white hover:bg-red-700'
                         : 'bg-purple-600 text-white hover:bg-purple-700'
                     }`}
                   >
-                    {settings.twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA'}
+                    {toggling2FA ? 'Updating...' : settings.twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA'}
                   </button>
                 </div>
 
@@ -473,20 +532,11 @@ export default function ProductionSettingsSecurity() {
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <CheckCircle className="w-5 h-5 text-green-600" />
-                      <h4 className="font-medium text-green-900">2FA is Active</h4>
+                      <h4 className="font-medium text-green-900">Email verification active</h4>
                     </div>
-                    <p className="text-sm text-green-700 mb-4">
-                      You're using an authenticator app for two-factor authentication. 
-                      Backup codes are available if you lose access to your device.
+                    <p className="text-sm text-green-700">
+                      Each time you sign in with your password, we'll send a 6-digit code to your email address for verification.
                     </p>
-                    <div className="flex gap-3">
-                      <button className="px-3 py-1.5 bg-white border border-green-300 text-green-700 rounded text-sm hover:bg-green-50 transition">
-                        View Backup Codes
-                      </button>
-                      <button className="px-3 py-1.5 bg-white border border-green-300 text-green-700 rounded text-sm hover:bg-green-50 transition">
-                        Regenerate Codes
-                      </button>
-                    </div>
                   </div>
                 )}
 
@@ -496,19 +546,10 @@ export default function ProductionSettingsSecurity() {
                       <AlertTriangle className="w-5 h-5 text-yellow-600" />
                       <h4 className="font-medium text-yellow-900">Enhance Your Security</h4>
                     </div>
-                    <p className="text-sm text-yellow-700 mb-4">
-                      Enable two-factor authentication to add an extra layer of security. 
-                      You'll need an authenticator app like Google Authenticator or Authy.
+                    <p className="text-sm text-yellow-700">
+                      When enabled, you'll receive a verification code by email each time you sign in.
+                      This prevents unauthorized access even if your password is compromised.
                     </p>
-                    <div className="flex gap-3">
-                      <button 
-                        onClick={enable2FA}
-                        className="px-3 py-1.5 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 transition flex items-center gap-2"
-                      >
-                        <QrCode className="w-4 h-4" />
-                        Setup 2FA
-                      </button>
-                    </div>
                   </div>
                 )}
               </CardContent>
@@ -669,6 +710,7 @@ export default function ProductionSettingsSecurity() {
           </div>
         )}
       </div>
+
     </div>
   );
 }
