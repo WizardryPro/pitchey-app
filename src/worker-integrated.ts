@@ -11613,9 +11613,13 @@ pitchey_analytics_datapoints_per_minute 1250
         LIMIT $2 OFFSET $3
       `, [authResult.user.id, limit, offset]);
 
-      // Enrich pitches with nested creator object for frontend compatibility
+      // Enrich pitches with nested creator object and camelCase fields for frontend
       const enriched = pitches.map((p: any) => ({
         ...p,
+        viewCount: p.view_count ?? p.viewCount ?? 0,
+        likeCount: p.like_count ?? p.likeCount ?? 0,
+        createdAt: p.created_at ?? p.createdAt,
+        userId: p.user_id ?? p.userId,
         creator: {
           id: p.creator_id || p.user_id,
           name: p.creator_name,

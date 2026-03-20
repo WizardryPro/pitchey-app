@@ -454,15 +454,13 @@ function ProductionDashboard() {
       const isLiked = likedPitches.includes(pitchId);
       if (isLiked) {
         setLikedPitches(prev => prev.filter(id => id !== pitchId));
-        // Update pitch like count
-        setFollowingPitches(prev => prev.map(p => 
-          p.id === pitchId ? { ...p, likeCount: p.likeCount - 1 } : p
+        setFollowingPitches(prev => prev.map(p =>
+          p.id === pitchId ? { ...p, likeCount: (p.likeCount || 0) - 1 } : p
         ));
       } else {
         setLikedPitches(prev => [...prev, pitchId]);
-        // Update pitch like count
-        setFollowingPitches(prev => prev.map(p => 
-          p.id === pitchId ? { ...p, likeCount: p.likeCount + 1 } : p
+        setFollowingPitches(prev => prev.map(p =>
+          p.id === pitchId ? { ...p, likeCount: (p.likeCount || 0) + 1 } : p
         ));
       }
       try {
