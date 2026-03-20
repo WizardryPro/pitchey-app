@@ -79,6 +79,8 @@ export default function AdvancedSearch() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [totalResults, setTotalResults] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
+  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
+  const [followedIds, setFollowedIds] = useState<Set<string>>(new Set());
   const resultsPerPage = 12;
 
   // Available filter options
@@ -148,26 +150,70 @@ export default function AdvancedSearch() {
 
       const result = await response.json();
 
-      // Map backend results to SearchResult interface
-      // Backend may return pitches, users, or mixed results
-      const rawResults = result.data?.results || result.results || result.pitches || result.data || [];
-      const mapped: SearchResult[] = (Array.isArray(rawResults) ? rawResults : []).map((r: any) => ({
+      // Backend returns { data: { pitches: [], users: [], companies: [] } }
+      const data = result.data || {};
+      const rawPitches = Array.isArray(data.pitches) ? data.pitches : [];
+      const rawUsers = Array.isArray(data.users) ? data.users : [];
+      const rawCompanies = Array.isArray(data.companies) ? data.companies : [];
+      // Also handle flat array format: result.data?.results || result.results
+      const rawFlat = Array.isArray(data.results) ? data.results : (Array.isArray(result.results) ? result.results : []);
+
+      const mappedPitches: SearchResult[] = rawPitches.map((r: any) => ({
         id: String(r.id),
-        type: r.type || (r.user_type ? (r.user_type === 'production' ? 'production' : 'creator') : 'pitch'),
-        title: r.title || r.name || r.display_name || 'Untitled',
-        description: r.description || r.logline || r.bio || '',
-        image: r.thumbnail_url || r.avatar_url || r.image,
+        type: 'pitch' as const,
+        title: r.title || 'Untitled',
+        description: r.logline || r.description || '',
+        image: r.thumbnail_url || r.cover_image || undefined,
         rating: r.rating ? Number(r.rating) : undefined,
         genre: r.genre ? (Array.isArray(r.genre) ? r.genre : [r.genre]) : undefined,
         budget: r.budget ? Number(r.budget) : undefined,
         format: r.format,
         status: r.status,
         location: r.location,
-        createdAt: r.created_at || r.createdAt || new Date().toISOString(),
-        author: r.creator_name || r.author,
-        views: r.views ? Number(r.views) : undefined,
-        likes: r.likes ? Number(r.likes) : undefined,
+        createdAt: r.created_at || new Date().toISOString(),
+        author: r.creator_name,
+        views: Number(r.view_count) || undefined,
+        likes: Number(r.like_count) || undefined,
       }));
+
+      const mappedUsers: SearchResult[] = rawUsers.map((r: any) => ({
+        id: String(r.id),
+        type: r.role === 'production' ? 'production' as const : 'creator' as const,
+        title: r.name || r.email?.split('@')[0] || 'User',
+        description: r.bio || '',
+        image: r.avatar_url || r.profile_image_url || undefined,
+        createdAt: r.created_at || new Date().toISOString(),
+        views: Number(r.pitch_count) || undefined,
+        likes: Number(r.follower_count) || undefined,
+      }));
+
+      const mappedCompanies: SearchResult[] = rawCompanies.map((r: any) => ({
+        id: String(r.id),
+        type: 'production' as const,
+        title: r.name || 'Company',
+        description: r.description || '',
+        image: r.logo_url || r.avatar_url || undefined,
+        createdAt: r.created_at || new Date().toISOString(),
+      }));
+
+      const mappedFlat: SearchResult[] = rawFlat.map((r: any) => ({
+        id: String(r.id),
+        type: (r.type || (r.user_type ? (r.user_type === 'production' ? 'production' : 'creator') : 'pitch')) as 'pitch' | 'creator' | 'production',
+        title: r.title || r.name || 'Untitled',
+        description: r.description || r.logline || r.bio || '',
+        image: r.thumbnail_url || r.avatar_url || undefined,
+        genre: r.genre ? (Array.isArray(r.genre) ? r.genre : [r.genre]) : undefined,
+        budget: r.budget ? Number(r.budget) : undefined,
+        format: r.format,
+        status: r.status,
+        location: r.location,
+        createdAt: r.created_at || new Date().toISOString(),
+        author: r.creator_name,
+        views: Number(r.view_count || r.views) || undefined,
+        likes: Number(r.like_count || r.likes) || undefined,
+      }));
+
+      const mapped = [...mappedPitches, ...mappedUsers, ...mappedCompanies, ...mappedFlat];
 
       setResults(mapped);
       setTotalResults(result.total || result.data?.total || mapped.length);
@@ -211,6 +257,63 @@ export default function AdvancedSearch() {
       sortBy: 'relevance',
       sortOrder: 'desc'
     });
+  };
+
+  const handleResultClick = (result: SearchResult) => {
+    if (result.type === 'pitch') {
+      navigate(`/pitch/${result.id}`);
+    } else if (result.type === 'creator') {
+      navigate(`/creator/${result.id}`);
+    } else if (result.type === 'production') {
+      navigate(`/production/company/${result.id}`);
+    }
+  };
+
+  const handleLike = async (e: React.MouseEvent, result: SearchResult) => {
+    e.stopPropagation();
+    if (result.type !== 'pitch') return;
+    try {
+      const isLiked = likedIds.has(result.id);
+      const response = await fetch(`${API_URL}/api/pitches/${result.id}/like`, {
+        method: isLiked ? 'DELETE' : 'POST',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        setLikedIds(prev => {
+          const next = new Set(prev);
+          if (isLiked) next.delete(result.id); else next.add(result.id);
+          return next;
+        });
+        toast.success(isLiked ? 'Removed like' : 'Liked!');
+      }
+    } catch {
+      toast.error('Failed to update like');
+    }
+  };
+
+  const handleFollow = async (e: React.MouseEvent, result: SearchResult) => {
+    e.stopPropagation();
+    // For pitches, follow the creator; for users, follow the user
+    const targetId = result.type === 'pitch' ? result.id : result.id;
+    const isFollowed = followedIds.has(result.id);
+    try {
+      const response = await fetch(`${API_URL}/api/follows`, {
+        method: isFollowed ? 'DELETE' : 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetId, targetType: result.type === 'pitch' ? 'pitch' : 'user' }),
+      });
+      if (response.ok) {
+        setFollowedIds(prev => {
+          const next = new Set(prev);
+          if (isFollowed) next.delete(result.id); else next.add(result.id);
+          return next;
+        });
+        toast.success(isFollowed ? 'Unfollowed' : 'Following!');
+      }
+    } catch {
+      toast.error('Failed to update follow');
+    }
   };
 
   const exportResults = () => {
@@ -504,7 +607,7 @@ export default function AdvancedSearch() {
                 {viewMode === 'grid' ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                     {paginatedResults.map(result => (
-                      <Card key={result.id} className="hover:shadow-md transition-shadow cursor-pointer">
+                      <Card key={result.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleResultClick(result)}>
                         <div className="aspect-video bg-gray-200 rounded-t-xl relative overflow-hidden">
                           {result.image ? (
                             <img src={result.image} alt={result.title} className="w-full h-full object-cover" />
@@ -529,8 +632,11 @@ export default function AdvancedSearch() {
                         </div>
                         <CardContent className="p-4">
                           <h3 className="font-semibold text-lg mb-2 line-clamp-1">{result.title}</h3>
+                          {result.author && (
+                            <p className="text-sm text-purple-600 mb-1">by {result.author}</p>
+                          )}
                           <p className="text-gray-600 text-sm mb-3 line-clamp-2">{result.description}</p>
-                          
+
                           <div className="space-y-2">
                             {result.genre && (
                               <div className="flex flex-wrap gap-1">
@@ -541,7 +647,7 @@ export default function AdvancedSearch() {
                                 ))}
                               </div>
                             )}
-                            
+
                             <div className="flex items-center justify-between text-sm text-gray-500">
                               <div className="flex items-center gap-3">
                                 {result.budget && (
@@ -563,22 +669,35 @@ export default function AdvancedSearch() {
                               </span>
                             </div>
 
-                            {(result.views || result.likes) && (
-                              <div className="flex items-center gap-3 text-sm text-gray-500 pt-2 border-t">
-                                {result.views && (
+                            {/* Action buttons + stats */}
+                            <div className="flex items-center justify-between pt-2 border-t">
+                              <div className="flex items-center gap-3 text-sm text-gray-500">
+                                {result.views != null && (
                                   <span className="flex items-center gap-1">
                                     <Eye className="w-3 h-3" />
                                     {result.views.toLocaleString()}
                                   </span>
                                 )}
-                                {result.likes && (
-                                  <span className="flex items-center gap-1">
-                                    <Heart className="w-3 h-3" />
-                                    {result.likes}
-                                  </span>
-                                )}
                               </div>
-                            )}
+                              <div className="flex items-center gap-1">
+                                {result.type === 'pitch' && (
+                                  <button
+                                    onClick={(e) => handleLike(e, result)}
+                                    className={`p-1.5 rounded-full hover:bg-red-50 transition ${likedIds.has(result.id) ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
+                                    title={likedIds.has(result.id) ? 'Unlike' : 'Like'}
+                                  >
+                                    <Heart className={`w-4 h-4 ${likedIds.has(result.id) ? 'fill-current' : ''}`} />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={(e) => handleFollow(e, result)}
+                                  className={`p-1.5 rounded-full hover:bg-purple-50 transition ${followedIds.has(result.id) ? 'text-purple-600' : 'text-gray-400 hover:text-purple-600'}`}
+                                  title={followedIds.has(result.id) ? 'Unfollow' : 'Follow'}
+                                >
+                                  <Users className={`w-4 h-4 ${followedIds.has(result.id) ? 'fill-current' : ''}`} />
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -587,7 +706,7 @@ export default function AdvancedSearch() {
                 ) : (
                   <div className="space-y-4 mb-8">
                     {paginatedResults.map(result => (
-                      <Card key={result.id} className="hover:shadow-md transition-shadow cursor-pointer">
+                      <Card key={result.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleResultClick(result)}>
                         <CardContent className="p-6">
                           <div className="flex gap-4">
                             <div className="w-24 h-24 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
@@ -601,7 +720,7 @@ export default function AdvancedSearch() {
                                 </div>
                               )}
                             </div>
-                            
+
                             <div className="flex-1">
                               <div className="flex items-start justify-between mb-2">
                                 <div className="flex items-center gap-3">
@@ -616,9 +735,12 @@ export default function AdvancedSearch() {
                                 </div>
                                 <span className="text-sm text-gray-500">{formatDate(result.createdAt)}</span>
                               </div>
-                              
+
+                              {result.author && (
+                                <p className="text-sm text-purple-600 mb-1">by {result.author}</p>
+                              )}
                               <p className="text-gray-600 mb-3 line-clamp-2">{result.description}</p>
-                              
+
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4 text-sm text-gray-500">
                                   {result.genre && (
@@ -643,23 +765,31 @@ export default function AdvancedSearch() {
                                     </span>
                                   )}
                                 </div>
-                                
-                                {(result.views || result.likes) && (
-                                  <div className="flex items-center gap-3 text-sm text-gray-500">
-                                    {result.views && (
-                                      <span className="flex items-center gap-1">
-                                        <Eye className="w-3 h-3" />
-                                        {result.views.toLocaleString()}
-                                      </span>
-                                    )}
-                                    {result.likes && (
-                                      <span className="flex items-center gap-1">
-                                        <Heart className="w-3 h-3" />
-                                        {result.likes}
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
+
+                                <div className="flex items-center gap-3">
+                                  {result.views != null && (
+                                    <span className="flex items-center gap-1 text-sm text-gray-500">
+                                      <Eye className="w-3 h-3" />
+                                      {result.views.toLocaleString()}
+                                    </span>
+                                  )}
+                                  {result.type === 'pitch' && (
+                                    <button
+                                      onClick={(e) => handleLike(e, result)}
+                                      className={`p-1.5 rounded-full hover:bg-red-50 transition ${likedIds.has(result.id) ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
+                                      title={likedIds.has(result.id) ? 'Unlike' : 'Like'}
+                                    >
+                                      <Heart className={`w-4 h-4 ${likedIds.has(result.id) ? 'fill-current' : ''}`} />
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={(e) => handleFollow(e, result)}
+                                    className={`p-1.5 rounded-full hover:bg-purple-50 transition ${followedIds.has(result.id) ? 'text-purple-600' : 'text-gray-400 hover:text-purple-600'}`}
+                                    title={followedIds.has(result.id) ? 'Unfollow' : 'Follow'}
+                                  >
+                                    <Users className={`w-4 h-4 ${followedIds.has(result.id) ? 'fill-current' : ''}`} />
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </div>
