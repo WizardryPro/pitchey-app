@@ -144,19 +144,33 @@ export default function AdvancedSearch() {
       const result = await response.json();
 
       // Backend returns { data: { pitches: [], users: [], companies: [] } }
-      const data = result.data || {};
-      const rawPitches = Array.isArray(data.pitches) ? data.pitches : [];
-      const rawUsers = Array.isArray(data.users) ? data.users : [];
-      const rawCompanies = Array.isArray(data.companies) ? data.companies : [];
-      // Also handle flat array format: result.data?.results || result.results
-      const rawFlat = Array.isArray(data.results) ? data.results : (Array.isArray(result.results) ? result.results : []);
+      // Handle multiple response formats:
+      // 1. searchPitches: { success, data: [...pitches], meta: { pagination } }
+      // 2. search (SearchFiltersHandler): { success, data: { pitches, users, companies } }
+      const data = result.data;
+      let rawItems: any[] = [];
 
-      const mappedPitches: SearchResult[] = rawPitches.map((r: any) => ({
+      if (Array.isArray(data)) {
+        // Format 1: flat array of pitches from searchPitches
+        rawItems = data;
+      } else if (data && typeof data === 'object') {
+        // Format 2: { pitches, users, companies } from SearchFiltersHandler
+        const pitches = Array.isArray(data.pitches) ? data.pitches : [];
+        const users = Array.isArray(data.users) ? data.users : [];
+        const companies = Array.isArray(data.companies) ? data.companies : [];
+        rawItems = [
+          ...pitches,
+          ...users.map((u: any) => ({ ...u, _type: u.role === 'production' ? 'production' : 'creator' })),
+          ...companies.map((c: any) => ({ ...c, _type: 'production' })),
+        ];
+      }
+
+      const mapped: SearchResult[] = rawItems.map((r: any) => ({
         id: String(r.id),
-        type: 'pitch' as const,
-        title: r.title || 'Untitled',
-        description: r.logline || r.description || '',
-        image: r.thumbnail_url || r.cover_image || undefined,
+        type: (r._type || r.type || (r.user_type ? (r.user_type === 'production' ? 'production' : 'creator') : 'pitch')) as 'pitch' | 'creator' | 'production',
+        title: r.title || r.name || r.display_name || 'Untitled',
+        description: r.logline || r.description || r.bio || '',
+        image: r.thumbnail_url || r.cover_image || r.avatar_url || undefined,
         rating: r.rating ? Number(r.rating) : undefined,
         genre: r.genre ? (Array.isArray(r.genre) ? r.genre : [r.genre]) : undefined,
         budget: r.budget ? Number(r.budget) : undefined,
@@ -165,51 +179,13 @@ export default function AdvancedSearch() {
         location: r.location,
         createdAt: r.created_at || new Date().toISOString(),
         author: r.creator_name,
-        views: Number(r.view_count) || undefined,
-        likes: Number(r.like_count) || undefined,
+        views: Number(r.view_count || r.views || r.pitch_count) || undefined,
+        likes: Number(r.like_count || r.likes || r.follower_count) || undefined,
       }));
-
-      const mappedUsers: SearchResult[] = rawUsers.map((r: any) => ({
-        id: String(r.id),
-        type: r.role === 'production' ? 'production' as const : 'creator' as const,
-        title: r.name || r.email?.split('@')[0] || 'User',
-        description: r.bio || '',
-        image: r.avatar_url || r.profile_image_url || undefined,
-        createdAt: r.created_at || new Date().toISOString(),
-        views: Number(r.pitch_count) || undefined,
-        likes: Number(r.follower_count) || undefined,
-      }));
-
-      const mappedCompanies: SearchResult[] = rawCompanies.map((r: any) => ({
-        id: String(r.id),
-        type: 'production' as const,
-        title: r.name || 'Company',
-        description: r.description || '',
-        image: r.logo_url || r.avatar_url || undefined,
-        createdAt: r.created_at || new Date().toISOString(),
-      }));
-
-      const mappedFlat: SearchResult[] = rawFlat.map((r: any) => ({
-        id: String(r.id),
-        type: (r.type || (r.user_type ? (r.user_type === 'production' ? 'production' : 'creator') : 'pitch')) as 'pitch' | 'creator' | 'production',
-        title: r.title || r.name || 'Untitled',
-        description: r.description || r.logline || r.bio || '',
-        image: r.thumbnail_url || r.avatar_url || undefined,
-        genre: r.genre ? (Array.isArray(r.genre) ? r.genre : [r.genre]) : undefined,
-        budget: r.budget ? Number(r.budget) : undefined,
-        format: r.format,
-        status: r.status,
-        location: r.location,
-        createdAt: r.created_at || new Date().toISOString(),
-        author: r.creator_name,
-        views: Number(r.view_count || r.views) || undefined,
-        likes: Number(r.like_count || r.likes) || undefined,
-      }));
-
-      const mapped = [...mappedPitches, ...mappedUsers, ...mappedCompanies, ...mappedFlat];
 
       setResults(mapped);
-      setTotalResults(result.total || result.data?.total || mapped.length);
+      const total = result.meta?.pagination?.total || result.total || mapped.length;
+      setTotalResults(total);
       setCurrentPage(1);
 
     } catch (err) {
