@@ -11594,8 +11594,13 @@ pitchey_analytics_datapoints_per_minute 1250
       const pitches = await this.db.query(`
         SELECT DISTINCT
           p.*,
-          u.name as creator_name,
+          u.id as creator_id,
+          COALESCE(u.name, u.first_name || ' ' || u.last_name) as creator_name,
+          u.username as creator_username,
           u.email as creator_email,
+          u.user_type as creator_user_type,
+          u.company_name as creator_company_name,
+          u.avatar_url as creator_avatar_url,
           COALESCE(p.view_count, 0) as view_count,
           COALESCE(s.save_count, 0) as save_count
         FROM pitches p
@@ -11608,7 +11613,21 @@ pitchey_analytics_datapoints_per_minute 1250
         LIMIT $2 OFFSET $3
       `, [authResult.user.id, limit, offset]);
 
-      return builder.success({ pitches });
+      // Enrich pitches with nested creator object for frontend compatibility
+      const enriched = pitches.map((p: any) => ({
+        ...p,
+        creator: {
+          id: p.creator_id || p.user_id,
+          name: p.creator_name,
+          username: p.creator_username || p.creator_email?.split('@')[0],
+          email: p.creator_email,
+          userType: p.creator_user_type,
+          companyName: p.creator_company_name,
+          avatarUrl: p.creator_avatar_url,
+        }
+      }));
+
+      return builder.success({ pitches: enriched });
     } catch (error) {
       console.error('Error fetching pitches from following:', error);
       // Return empty array on error

@@ -367,10 +367,11 @@ function ProductionDashboard() {
           setSavedPitches(savedResponse.data.map((sp: any) => sp.pitchId || sp.pitch_id));
         }
 
-        // Following creators count
+        // Following creators count — backend returns { data: { stats: { following: N } } }
         if (followStatsResponse.success && followStatsResponse.data) {
-          const stats = followStatsResponse.data as any;
-          setFollowingCreators(new Array(safeNumber(stats.following || stats.followingCount || 0)));
+          const raw = followStatsResponse.data as any;
+          const count = safeNumber(raw.stats?.following ?? raw.following ?? raw.followingCount ?? 0);
+          setFollowingCreators(new Array(count));
         }
 
         if (!cancelled) {
