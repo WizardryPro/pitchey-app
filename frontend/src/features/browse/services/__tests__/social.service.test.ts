@@ -113,17 +113,17 @@ describe('SocialService', () => {
 
   // ─── checkFollowStatus ───────────────────────────────────────────
   describe('checkFollowStatus', () => {
-    it('returns true when total > 0', async () => {
-      mockGet.mockResolvedValue({ success: true, data: { follows: [], total: 1 } });
+    it('returns true when isFollowing is true', async () => {
+      mockGet.mockResolvedValue({ success: true, data: { stats: { isFollowing: true } } });
 
       const result = await SocialService.checkFollowStatus(5, 'user');
 
-      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining('/api/follows/list'));
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining('/api/follows/stats'));
       expect(result).toBe(true);
     });
 
-    it('returns false when total is 0', async () => {
-      mockGet.mockResolvedValue({ success: true, data: { follows: [], total: 0 } });
+    it('returns false when isFollowing is false', async () => {
+      mockGet.mockResolvedValue({ success: true, data: { stats: { isFollowing: false } } });
 
       const result = await SocialService.checkFollowStatus(5, 'user');
 
@@ -146,14 +146,13 @@ describe('SocialService', () => {
       expect(result).toBe(false);
     });
 
-    it('includes targetId and type in query params', async () => {
-      mockGet.mockResolvedValue({ success: true, data: { total: 0 } });
+    it('includes userId in query params', async () => {
+      mockGet.mockResolvedValue({ success: true, data: { stats: { isFollowing: false } } });
 
       await SocialService.checkFollowStatus(10, 'pitch');
 
       const url = mockGet.mock.calls[0][0] as string;
-      expect(url).toContain('targetId=10');
-      expect(url).toContain('type=pitch');
+      expect(url).toContain('userId=10');
     });
   });
 

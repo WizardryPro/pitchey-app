@@ -53,11 +53,6 @@ vi.mock('react-hot-toast', () => ({
   toast: { success: mockToastSuccess, error: mockToastError, loading: vi.fn() },
 }))
 
-// ─── DashboardHeader ─────────────────────────────────────────────────
-vi.mock('../../components/DashboardHeader', () => ({
-  default: ({ title }: any) => <div data-testid="dashboard-header">{title}</div>,
-}))
-
 // ─── Dynamic import ──────────────────────────────────────────────────
 let NotificationSettings: React.ComponentType
 beforeAll(async () => {
@@ -110,10 +105,10 @@ describe('NotificationSettings', () => {
   })
 
   describe('Layout', () => {
-    it('renders dashboard header with "Notification Settings" title', async () => {
+    it('renders the Notification Preferences heading', async () => {
       renderComponent()
       await waitFor(() => {
-        expect(screen.getByTestId('dashboard-header')).toHaveTextContent('Notification Settings')
+        expect(screen.getByText('Notification Preferences')).toBeInTheDocument()
       })
     })
 

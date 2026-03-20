@@ -59,11 +59,6 @@ vi.mock('@/shared/hooks/useCurrentTeam', () => ({
   }),
 }))
 
-// ─── DashboardHeader ─────────────────────────────────────────────────
-vi.mock('../../components/DashboardHeader', () => ({
-  default: ({ title }: any) => <div data-testid="dashboard-header">{title}</div>,
-}))
-
 // ─── Sample data ─────────────────────────────────────────────────────
 const recentJoinDate = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
 
@@ -128,14 +123,14 @@ describe('TeamOverview', () => {
     mockGetInvitations.mockResolvedValue(sampleInvitations)
   })
 
-  it('renders the DashboardHeader', async () => {
+  it('renders the Team Dashboard heading', async () => {
     render(
       <MemoryRouter>
         <TeamOverview />
       </MemoryRouter>
     )
     await waitFor(() => {
-      expect(screen.getByTestId('dashboard-header')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: /Team Dashboard/i })).toBeInTheDocument()
     })
   })
 

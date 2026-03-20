@@ -36,11 +36,6 @@ vi.mock('../../store/betterAuthStore', () => ({
   }),
 }))
 
-// ─── DashboardHeader ────────────────────────────────────────────────
-vi.mock('../../components/DashboardHeader', () => ({
-  default: ({ title }: any) => <div data-testid="dashboard-header">{title}</div>,
-}))
-
 // ─── Card components ─────────────────────────────────────────────────
 vi.mock('@shared/components/ui/card', () => ({
   Card: ({ children, ...props }: any) => <div {...props}>{children}</div>,
@@ -124,11 +119,9 @@ describe('AdvancedSearch', () => {
 
   // ─── Header & Layout ─────────────────────────────────────────────
   describe('Header and Layout', () => {
-    it('renders the DashboardHeader with Advanced Search title', () => {
+    it('renders the page heading with Advanced Search title', () => {
       renderSearch()
-      expect(screen.getByTestId('dashboard-header')).toBeInTheDocument()
-      // Multiple "Advanced Search" texts exist (header + h1), use getAllByText
-      expect(screen.getAllByText('Advanced Search').length).toBeGreaterThan(0)
+      expect(screen.getByRole('heading', { name: /Advanced Search/i })).toBeInTheDocument()
     })
 
     it('renders the page description', () => {

@@ -80,11 +80,6 @@ vi.mock('@features/auth/hooks/usePermissions', () => ({
   }),
 }))
 
-// ─── DashboardHeader ─────────────────────────────────────────────────
-vi.mock('../../components/DashboardHeader', () => ({
-  default: ({ title }: any) => <div data-testid="dashboard-header">{title}</div>,
-}))
-
 // ─── Sample data ─────────────────────────────────────────────────────
 const sampleMembers = [
   {
@@ -137,14 +132,14 @@ describe('TeamMembers', () => {
     mockUpdateMemberRole.mockResolvedValue(undefined)
   })
 
-  it('renders the DashboardHeader with Team Members title', async () => {
+  it('renders the page heading with Team Management title', async () => {
     render(
       <MemoryRouter>
         <TeamMembers />
       </MemoryRouter>
     )
     await waitFor(() => {
-      expect(screen.getByTestId('dashboard-header')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: /Team Management/i })).toBeInTheDocument()
     })
   })
 
@@ -155,7 +150,7 @@ describe('TeamMembers', () => {
       </MemoryRouter>
     )
     await waitFor(() => {
-      expect(screen.getAllByText('Team Members').length).toBeGreaterThan(0)
+      expect(screen.getByText('Team Management')).toBeInTheDocument()
     })
   })
 
@@ -302,7 +297,7 @@ describe('TeamMembers', () => {
       </MemoryRouter>
     )
     await waitFor(() => {
-      expect(screen.getByText('No team members found')).toBeInTheDocument()
+      expect(screen.getByText('No team members yet')).toBeInTheDocument()
     })
   })
 
@@ -327,6 +322,6 @@ describe('TeamMembers', () => {
       expect(getByText('Invite Member')).toBeInTheDocument()
     })
     getByText('Invite Member').click()
-    expect(mockNavigate).toHaveBeenCalledWith('/team/invite')
+    expect(mockNavigate).toHaveBeenCalledWith('/production/team/invite')
   })
 })

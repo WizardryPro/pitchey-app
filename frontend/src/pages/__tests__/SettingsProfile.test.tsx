@@ -66,11 +66,6 @@ vi.mock('react-hot-toast', () => ({
   toast: { success: mockToastSuccess, error: mockToastError, loading: vi.fn() },
 }))
 
-// ─── DashboardHeader ─────────────────────────────────────────────────
-vi.mock('../../components/DashboardHeader', () => ({
-  default: ({ title }: any) => <div data-testid="dashboard-header">{title}</div>,
-}))
-
 // ─── Dynamic import ──────────────────────────────────────────────────
 let SettingsProfile: React.ComponentType
 beforeAll(async () => {
@@ -95,9 +90,9 @@ describe('SettingsProfile', () => {
   })
 
   describe('Layout', () => {
-    it('renders the dashboard header with "Profile Settings" title', () => {
+    it('renders the Personal Information heading', () => {
       renderComponent()
-      expect(screen.getByTestId('dashboard-header')).toHaveTextContent('Profile Settings')
+      expect(screen.getByText('Personal Information')).toBeInTheDocument()
     })
 
     it('renders section headings', () => {

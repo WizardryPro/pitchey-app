@@ -55,11 +55,6 @@ vi.mock('react-hot-toast', () => ({
   toast: { success: mockToastSuccess, error: mockToastError, loading: vi.fn() },
 }))
 
-// ─── DashboardHeader ─────────────────────────────────────────────────
-vi.mock('../../components/DashboardHeader', () => ({
-  default: ({ title }: any) => <div data-testid="dashboard-header">{title}</div>,
-}))
-
 // ─── Dynamic import ──────────────────────────────────────────────────
 let PrivacySettings: React.ComponentType
 beforeAll(async () => {
@@ -112,10 +107,10 @@ describe('PrivacySettings', () => {
   })
 
   describe('Layout', () => {
-    it('renders dashboard header with "Privacy & Security" title', async () => {
+    it('renders the Privacy & Security Settings heading', async () => {
       renderComponent()
       await waitFor(() => {
-        expect(screen.getByTestId('dashboard-header')).toHaveTextContent('Privacy & Security')
+        expect(screen.getByText('Privacy & Security Settings')).toBeInTheDocument()
       })
     })
 
