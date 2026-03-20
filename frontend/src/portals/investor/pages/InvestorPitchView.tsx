@@ -217,7 +217,8 @@ const InvestorPitchView: React.FC = () => {
   };
 
   const handleContactCreator = () => {
-    navigate(`/investor/messages?recipient=${pitch?.userId}&pitch=${id}`);
+    if (!pitch?.userId) return;
+    navigate(`/investor/messages?recipient=${pitch.userId}&pitch=${id}`);
   };
 
   const [ndaRequesting, setNdaRequesting] = useState(false);
@@ -583,10 +584,10 @@ const InvestorPitchView: React.FC = () => {
 
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">{pitch.title}</h1>
 
-                {pitch.creatorName && (
+                {(pitch.creatorName || pitch.creatorCompany) && (
                   <p className="text-gray-600 mb-4">
-                    by {pitch.creatorName}
-                    {pitch.creatorCompany && ` • ${pitch.creatorCompany}`}
+                    by {pitch.creatorName || pitch.creatorCompany}
+                    {pitch.creatorName && pitch.creatorCompany && ` • ${pitch.creatorCompany}`}
                   </p>
                 )}
 

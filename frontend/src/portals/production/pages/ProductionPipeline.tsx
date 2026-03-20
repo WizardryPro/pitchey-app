@@ -105,7 +105,7 @@ export default function ProductionPipeline() {
         id: p.id?.toString() || '',
         pitch_id: p.pitch_id || null,
         title: p.title || 'Untitled',
-        genre: p.genre || 'Unknown',
+        genre: p.genre || '',
         stage: p.stage || 'development',
         budget: Number(p.budget_allocated || p.estimated_budget) || 0,
         progress: Number(p.completion_percentage) || 0,
@@ -399,7 +399,7 @@ export default function ProductionPipeline() {
                           {project.priority.toUpperCase()}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-600 mb-2">{project.genre} • Budget: ${(project.budget / 1000000).toFixed(1)}M</p>
+                      <p className="text-sm text-gray-600 mb-2">{project.genre ? `${project.genre} • ` : ''}Budget: ${(project.budget / 1000000).toFixed(1)}M</p>
                       <p className="text-sm text-gray-700 font-medium">Next: {project.nextMilestone}</p>
                     </div>
                     

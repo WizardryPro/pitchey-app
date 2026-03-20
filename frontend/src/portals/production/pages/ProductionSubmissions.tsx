@@ -94,7 +94,7 @@ export default function ProductionSubmissions() {
         id: s.id?.toString() || '',
         userId: String(s.user_id || ''),
         title: s.title || 'Untitled',
-        creator: s.creator || 'Unknown Creator',
+        creator: s.creator || s.creator_name || (s.first_name && s.last_name ? `${s.first_name} ${s.last_name}`.trim() : '') || (s.creator_email ? s.creator_email.split('@')[0] : '') || 'Creator',
         creatorEmail: s.creator_email || '',
         submittedDate: s.created_at || new Date().toISOString(),
         genre: s.genre || 'Unspecified',

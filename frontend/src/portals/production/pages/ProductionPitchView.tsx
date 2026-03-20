@@ -1100,7 +1100,12 @@ const ProductionPitchView: React.FC = () => {
                 <div className="space-y-2">
                   <button
                     onClick={() => {
-                      navigate(`/production/messages?recipient=${pitch?.userId}&pitch=${id}&subject=${encodeURIComponent(`Script Request: ${pitch?.title}`)}&body=${encodeURIComponent(`Hi ${pitch?.creatorName || 'there'},\n\nI'm interested in your pitch "${pitch?.title}" and would like to request the full script for review.\n\nLooking forward to discussing this further.`)}`);
+                      if (!pitch?.userId) {
+                        toast.error('Cannot send message: creator information unavailable');
+                        return;
+                      }
+                      const greeting = pitch.creatorName || pitch.creatorCompany || 'Creator';
+                      navigate(`/production/messages?recipient=${pitch.userId}&pitch=${id}&subject=${encodeURIComponent(`Script Request: ${pitch?.title}`)}&body=${encodeURIComponent(`Hi ${greeting},\n\nI'm interested in your pitch "${pitch?.title}" and would like to request the full script for review.\n\nLooking forward to discussing this further.`)}`);
                     }}
                     className="w-full flex items-center justify-between px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
                   >
@@ -1302,7 +1307,7 @@ const ProductionPitchView: React.FC = () => {
         isOpen={showScheduleModal}
         onClose={() => setShowScheduleModal(false)}
         recipientId={pitch.userId || ''}
-        recipientName={pitch.creatorName || 'Creator'}
+        recipientName={pitch.creatorName || pitch.creatorCompany || 'Creator'}
         meetingType="production"
         defaultSubject={`Production Discussion: ${pitch.title}`}
       />

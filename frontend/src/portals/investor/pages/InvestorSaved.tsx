@@ -93,7 +93,7 @@ export default function InvestorSaved() {
           budget: Number(sp.budget_range ?? 0),
           creator: {
             id: String(sp.pitch?.creator?.id ?? ''),
-            name: (sp.creator_name as string) || (sp.pitch?.creator?.username as string) || (sp.pitch?.creator?.name as string) || 'Unknown',
+            name: (sp.creator_name as string) || (sp.pitch?.creator?.username as string) || (sp.pitch?.creator?.name as string) || ((sp.creator_email as string) ? (sp.creator_email as string).split('@')[0] : '') || 'Creator',
             verified: Boolean(sp.creator_verified ?? sp.pitch?.creator?.verified ?? false)
           },
           savedDate: (sp.saved_at as string) || (sp.savedAt as string) || new Date().toISOString(),

@@ -270,7 +270,9 @@ export default function InvestorBrowse() {
   };
 
   const handleScheduleMeeting = (pitch: Pitch) => {
-    navigate(`/investor/messages?recipient=${pitch.creator?.id || ''}&subject=${encodeURIComponent(pitch.title)}`);
+    const recipientId = pitch.creator?.id || (pitch as any).user_id || '';
+    if (!recipientId) return;
+    navigate(`/investor/messages?recipient=${recipientId}&subject=${encodeURIComponent(pitch.title)}`);
   };
 
   const handleMakeOffer = (pitch: Pitch) => {
@@ -556,12 +558,12 @@ export default function InvestorBrowse() {
                         {pitch.creator?.userType === 'production' ? (
                           <>
                             <Building2 className="w-4 h-4" />
-                            <span>{pitch.creator?.companyName || pitch.creator?.username || 'Unknown'}</span>
+                            <span>{pitch.creator?.companyName || pitch.creator?.username || (pitch as any).creator_name || 'Creator'}</span>
                           </>
                         ) : (
                           <>
                             <User className="w-4 h-4" />
-                            <span>@{pitch.creator?.username || 'unknown'}</span>
+                            <span>{pitch.creator?.username ? `@${pitch.creator.username}` : ((pitch as any).creator_name || 'Creator')}</span>
                           </>
                         )}
                       </div>

@@ -93,9 +93,9 @@ const AllInvestments = () => {
             exit_date: investment.exit_date,
             // Map to expected field names for UI
             pitchTitle: investment.pitch_title,
-            company: investment.company_name || 'Unknown Company',
-            creator: investment.creator_name || 'Unknown Creator',
-            genre: investment.pitch_genre || 'Unknown',
+            company: investment.company_name || '\u2014',
+            creator: investment.creator_name || '\u2014',
+            genre: investment.pitch_genre || '\u2014',
             investmentDate: investment.created_at,
             initialAmount: investment.amount,
             currentValue: investment.current_value || investment.amount,
@@ -445,10 +445,10 @@ const AllInvestments = () => {
                             {investment.pitchTitle || investment.pitch_title}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {investment.company || 'Unknown'}
+                            {investment.company || '\u2014'}
                           </div>
                           <div className="text-xs text-gray-400">
-                            {investment.genre || 'Unknown'} • {investment.creator || 'Unknown'}
+                            {investment.genre || '\u2014'} • {investment.creator || '\u2014'}
                           </div>
                         </div>
                       </td>

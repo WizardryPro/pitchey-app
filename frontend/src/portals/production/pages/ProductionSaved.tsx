@@ -94,7 +94,10 @@ export default function ProductionSaved() {
         const titleImage = (raw.title_image as string) || sp.pitch?.titleImage || '';
         const viewCount = Number(raw.view_count ?? 0);
         const likeCount = Number(raw.like_count ?? 0);
-        const creator = (raw.creator_username as string) || (raw.creator_email as string) || sp.pitch?.creator?.username || sp.pitch?.creator?.name || 'Unknown Creator';
+        const creatorName = (raw.creator_name as string) || (raw.creator_username as string);
+        const creatorFullName = (raw.first_name && raw.last_name) ? `${raw.first_name} ${raw.last_name}`.trim() : '';
+        const creatorEmailName = (raw.creator_email as string) ? (raw.creator_email as string).split('@')[0] : '';
+        const creator = creatorName || creatorFullName || creatorEmailName || sp.pitch?.creator?.username || sp.pitch?.creator?.name || 'Creator';
         const savedAt = (raw.saved_at as string) || sp.savedAt;
         const pitchId = Number(raw.pitch_id ?? sp.pitchId);
 

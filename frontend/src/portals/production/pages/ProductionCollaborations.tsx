@@ -84,7 +84,7 @@ export default function ProductionCollaborations() {
       const results = await CollaborationService.getCollaborations();
       const mapped: Collaboration[] = results.map((c: any) => ({
         id: String(c.id || ''),
-        partnerName: c.partner?.name || c.partnerName || c.title || 'Unknown',
+        partnerName: c.partner?.name || c.partnerName || c.title || c.partner?.email?.split('@')[0] || c.contactEmail?.split('@')[0] || 'Unnamed Partner',
         partnerType: (c.partner?.type || c.partnerType || c.type || 'vendor') as Collaboration['partnerType'],
         status: (c.status || 'pending') as Collaboration['status'],
         startDate: c.startDate || c.start_date || c.proposedDate || '',
