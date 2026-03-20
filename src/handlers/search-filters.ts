@@ -18,78 +18,96 @@ export class SearchFiltersHandler {
         offset = 0
       } = filters;
 
-      let results = { pitches: [], users: [], companies: [] };
+      const results: { pitches: any[]; users: any[]; companies: any[] } = { pitches: [], users: [], companies: [] };
+      const hasQuery = query && query.trim().length > 0;
 
       // Search pitches
       if (type === 'all' || type === 'pitches') {
+        const params: any[] = [];
+        let paramIdx = 1;
+        const conditions = [`p.status = 'published'`];
+
+        if (hasQuery) {
+          const tsq = query.trim().replace(/\s+/g, ' & ');
+          params.push(tsq, `%${query}%`);
+          conditions.push(`(
+            to_tsvector('english', p.title || ' ' || COALESCE(p.logline, ''))
+            @@ to_tsquery('english', $${paramIdx})
+            OR p.title ILIKE $${paramIdx + 1}
+            OR p.logline ILIKE $${paramIdx + 1}
+          )`);
+          paramIdx += 2;
+        }
+
+        if (genre) {
+          params.push(genre);
+          conditions.push(`p.genre = $${paramIdx++}`);
+        }
+        if (minBudget) {
+          params.push(minBudget);
+          conditions.push(`p.budget >= $${paramIdx++}`);
+        }
+        if (maxBudget) {
+          params.push(maxBudget);
+          conditions.push(`p.budget <= $${paramIdx++}`);
+        }
+        if (status) {
+          params.push(status);
+          conditions.push(`p.status = $${paramIdx++}`);
+        }
+
+        params.push(limit, offset);
+        const orderClause = hasQuery && sortBy === 'relevance' ? 'p.created_at DESC' : this.getSortClause(sortBy);
+
         const pitchQuery = `
           SELECT p.*, u.name as creator_name, u.avatar_url,
-            ts_rank(to_tsvector('english', p.title || ' ' || COALESCE(p.logline, '')), 
-                    to_tsquery('english', $1)) as relevance,
             COUNT(DISTINCT s.id) as save_count,
             COUNT(DISTINCT v.id) as view_count
           FROM pitches p
           LEFT JOIN users u ON u.id = p.user_id
           LEFT JOIN saved_pitches s ON s.pitch_id = p.id
           LEFT JOIN pitch_views v ON v.pitch_id = p.id
-          WHERE p.status = 'published'
-            AND (
-              to_tsvector('english', p.title || ' ' || COALESCE(p.logline, '')) 
-              @@ to_tsquery('english', $1)
-              OR p.title ILIKE $2
-              OR p.logline ILIKE $2
-            )
-            ${genre ? 'AND p.genre = $' + (results.pitches.length + 3) : ''}
-            ${minBudget ? 'AND p.budget >= $' + (results.pitches.length + 4) : ''}
-            ${maxBudget ? 'AND p.budget <= $' + (results.pitches.length + 5) : ''}
-            ${status ? 'AND p.status = $' + (results.pitches.length + 6) : ''}
+          WHERE ${conditions.join(' AND ')}
           GROUP BY p.id, u.name, u.avatar_url
-          ORDER BY ${this.getSortClause(sortBy)}
-          LIMIT $${results.pitches.length + 7} OFFSET $${results.pitches.length + 8}`;
-
-        const params = [
-          query.replace(/\s+/g, ' & '), // Convert to tsquery format
-          `%${query}%`
-        ];
-        
-        if (genre) params.push(genre);
-        if (minBudget) params.push(minBudget);
-        if (maxBudget) params.push(maxBudget);
-        if (status) params.push(status);
-        params.push(limit, offset);
+          ORDER BY ${orderClause}
+          LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
 
         results.pitches = await this.db.query(pitchQuery, params);
       }
 
       // Search users
       if (type === 'all' || type === 'users') {
-        const userQuery = `
-          SELECT u.id, u.name, u.email, u.role, u.avatar_url,
-            COUNT(DISTINCT p.id) as pitch_count,
-            COUNT(DISTINCT f.id) as follower_count
-          FROM users u
-          LEFT JOIN pitches p ON p.user_id = u.id
-          LEFT JOIN follows f ON f.following_id = u.id
-          WHERE u.name ILIKE $1 OR u.email ILIKE $1
-          GROUP BY u.id
-          ORDER BY follower_count DESC, u.created_at DESC
-          LIMIT $2 OFFSET $3`;
+        if (hasQuery) {
+          const userQuery = `
+            SELECT u.id, u.name, u.email, u.role, u.avatar_url,
+              COUNT(DISTINCT p.id) as pitch_count,
+              COUNT(DISTINCT f.id) as follower_count
+            FROM users u
+            LEFT JOIN pitches p ON p.user_id = u.id
+            LEFT JOIN follows f ON f.following_id = u.id
+            WHERE u.name ILIKE $1 OR u.email ILIKE $1
+            GROUP BY u.id
+            ORDER BY follower_count DESC, u.created_at DESC
+            LIMIT $2 OFFSET $3`;
 
-        results.users = await this.db.query(userQuery, [`%${query}%`, limit, offset]);
+          results.users = await this.db.query(userQuery, [`%${query}%`, limit, offset]);
+        }
       }
 
       // Search companies
       if (type === 'all' || type === 'companies') {
-        const companyQuery = `
-          SELECT c.*, COUNT(DISTINCT u.id) as member_count
-          FROM companies c
-          LEFT JOIN users u ON u.company_id = c.id
-          WHERE c.name ILIKE $1 OR c.description ILIKE $1
-          GROUP BY c.id
-          ORDER BY member_count DESC, c.created_at DESC
-          LIMIT $2 OFFSET $3`;
+        if (hasQuery) {
+          const companyQuery = `
+            SELECT c.*, COUNT(DISTINCT u.id) as member_count
+            FROM companies c
+            LEFT JOIN users u ON u.company_id = c.id
+            WHERE c.name ILIKE $1 OR c.description ILIKE $1
+            GROUP BY c.id
+            ORDER BY member_count DESC, c.created_at DESC
+            LIMIT $2 OFFSET $3`;
 
-        results.companies = await this.db.query(companyQuery, [`%${query}%`, limit, offset]);
+          results.companies = await this.db.query(companyQuery, [`%${query}%`, limit, offset]);
+        }
       }
 
       // Track search

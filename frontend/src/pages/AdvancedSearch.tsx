@@ -108,17 +108,10 @@ export default function AdvancedSearch() {
     }
   }, [location.search]);
 
-  // Debounced search
+  // Debounced search — runs on any filter change, including initial load
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (filters.query || Object.values(filters).some(v =>
-        Array.isArray(v) ? v.length > 0 : v !== '' && v !== 0 && v !== 'all' && v !== 'relevance' && v !== 'desc'
-      )) {
-        performSearch();
-      } else {
-        setResults([]);
-        setTotalResults(0);
-      }
+      performSearch();
     }, 300);
 
     return () => clearTimeout(timeoutId);
