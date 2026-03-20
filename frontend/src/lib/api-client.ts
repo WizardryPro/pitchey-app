@@ -218,17 +218,27 @@ class ApiClient {
 
       // Handle HTTP errors
       if (!response.ok) {
-        // Handle 401 specifically — clear all auth state so UI stops showing "logged in"
+        // Handle 401 specifically — clear all auth state and redirect to login
         if (response?.status === 401) {
           try {
             sessionCache.clear();
             sessionManager.clearCache();
 
             // Lazily import the store to avoid circular deps, then clear auth state.
-            // This ensures Zustand's isAuthenticated flips to false, which triggers
-            // route guards to redirect to login on the next render cycle.
             import('../store/betterAuthStore').then(({ useBetterAuthStore }) => {
-              useBetterAuthStore.getState().setUser(null);
+              const store = useBetterAuthStore.getState();
+              // Only redirect if user was previously authenticated (avoids redirect loops)
+              const wasAuthenticated = !!store.user;
+              store.setUser(null);
+              if (wasAuthenticated && typeof window !== 'undefined') {
+                // Determine login path based on current URL
+                const path = window.location.pathname;
+                const portal = path.startsWith('/investor') ? 'investor' :
+                               path.startsWith('/production') ? 'production' :
+                               path.startsWith('/creator') ? 'creator' : null;
+                const loginPath = portal ? `/login/${portal}` : '/portals';
+                window.location.href = loginPath;
+              }
             }).catch(() => {});
           } catch (error) {
             console.warn('Failed to handle auth error:', error);
