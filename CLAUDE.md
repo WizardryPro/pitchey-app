@@ -332,7 +332,9 @@ Availability calendars, rate cards, crew project dashboards. Competes with Studi
 - Legal: Terms of Service + Privacy Policy (production-ready)
 - Onboarding: terms acceptance required for all portals
 - NDA required for messaging (backend-enforced, Mar 2026)
-- Follow system: user-to-user follows, pitch follow → follows creator
+- Follow system: user-to-user follows + pitch-specific follows (`pitch_follows` table)
+- Email notifications: new follower + pitch publish to followers (Resend)
+- WebSocket push: `pitch_published` event to followers in real-time
 - 13 CI/CD workflows, 7 R2 buckets, 5 KV namespaces, 2 Durable Objects
 
 ### Stage 9: Data Quality & Follow System (Mar 2026) — DONE
@@ -350,6 +352,47 @@ Availability calendars, rate cards, crew project dashboards. Competes with Studi
 | useEffect cleanup | `useOnlineStatus()` hook extracted (10 files), redundant state→useMemo (4 files) | DONE |
 | NDAs sidebar removed | Was duplicate of dashboard tab, auto-highlighted on dashboard | DONE |
 
+### Stage 10: Platform Notifications & Pitch Follows (Mar 2026) — DONE
+
+| Feature | Details | Status |
+|---------|---------|--------|
+| Pitch-specific follows | `pitch_follows` table (migration 046), `GET /api/follows/pitch-status` | DONE |
+| Email: new follower | `newFollower` template sent when someone follows a creator | DONE |
+| Email: pitch publish | `newPitchFromFollowed` template sent to followers (capped 50) | DONE |
+| WebSocket: pitch publish | `pitch_published` event pushed to all followers + browser notification | DONE |
+| Test fixes | 7 test files updated to match current structure, 184 files 3450 tests 0 failures | DONE |
+| 401 auto-redirect | Expired sessions redirect to portal-specific login page | DONE |
+
+### Stage 11: Security & Upload Hardening (Post-Launch)
+
+#### 11A. 2FA/MFA Runtime — DEFERRED
+
+Backend MFA service exists (`src/services/mfa.service.ts`, 395 lines) with TOTP generation, QR codes, backup codes. Database tables defined in `mfa-schema.sql`. What's missing:
+
+| Component | Description | Complexity |
+|-----------|-------------|------------|
+| Login flow integration | Check 2FA on login, return `requiresMFA` challenge | High |
+| `POST /api/user/two-factor/setup` | Generate secret + QR code + backup codes | Medium |
+| `POST /api/user/two-factor/verify` | Verify TOTP code, enable 2FA | Medium |
+| `POST /api/auth/mfa/verify` | Verify challenge during login, create session | High |
+| TwoFactorSetupModal (frontend) | QR scan + code entry + backup codes display | Medium |
+| MFAChallengePage (frontend) | Login challenge page for TOTP/backup code entry | Medium |
+| Bug fix | `mfa.service.ts` `generateTOTP` is sync but calls async `hotp()` | Small |
+
+**Blocker**: `generateQRCode` uses external API (`api.qrserver.com`) — consider client-side QR library.
+
+#### 11B. Malware Scanning on Uploads — DEFERRED
+
+| Component | Description | Complexity |
+|-----------|-------------|------------|
+| VirusTotal integration | `scanWithVirusTotal()` in `file-validation.service.ts` | Medium |
+| Quarantine pattern | Upload to `quarantine/` R2 prefix, move on clean scan | Medium |
+| `scan_status` column | `ALTER TABLE file_storage ADD COLUMN scan_status` | Small |
+| Async processing | `ctx.waitUntil()` or Cloudflare Queue for scan results | Medium |
+| Frontend scan status | "Scanning..." badge on recent uploads | Small |
+
+**Blocker**: Requires `VIRUSTOTAL_API_KEY` secret. Free tier: 4 req/min, 500/day.
+
 ## Test Coverage Campaign — COMPLETE
 
 All 6 batches completed. Use `test-writer` subagent for new test files as needed.
@@ -363,7 +406,7 @@ All 6 batches completed. Use `test-writer` subagent for new test files as needed
 | 5 | Investor Portal (18 pages) | DONE |
 | 6 | Services (24 services) | DONE |
 
-Final: 165 test files, 3140 tests, zero failures.
+Final: 184 test files, 3450+ tests, zero failures.
 
 ### Untested Pages (24 remaining — mostly low-priority)
 - Debug/test pages: TestNavigation, ChunkedUploadTest, InvestorDashboardDebug, PitchValidationDemo
