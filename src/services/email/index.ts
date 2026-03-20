@@ -111,3 +111,37 @@ export async function sendCollaboratorAcceptedEmail(to: string, data: {
     subject: `${data.collaboratorName} joined "${data.projectTitle}" on Pitchey`
   });
 }
+
+/**
+ * Send New Follower Email
+ * @param apiKey - Pass env.RESEND_API_KEY from Worker env
+ */
+export async function sendNewFollowerEmail(to: string, data: {
+  followerName: string;
+  followerType: string;
+  profileUrl: string;
+}, apiKey?: string) {
+  const service = getEmailService(apiKey);
+  return await service.sendTemplate(to, 'newFollower', {
+    ...data,
+    subject: 'You have a new follower on Pitchey'
+  });
+}
+
+/**
+ * Send New Pitch From Followed Creator Email
+ * @param apiKey - Pass env.RESEND_API_KEY from Worker env
+ */
+export async function sendNewPitchFromFollowedEmail(to: string, data: {
+  creatorName: string;
+  pitchTitle: string;
+  pitchGenre?: string;
+  pitchLogline?: string;
+  pitchUrl: string;
+}, apiKey?: string) {
+  const service = getEmailService(apiKey);
+  return await service.sendTemplate(to, 'newPitchFromFollowed', {
+    ...data,
+    subject: `${data.creatorName} published a new pitch: ${data.pitchTitle}`
+  });
+}

@@ -208,6 +208,24 @@ export class WorkerEmailService {
         <p><strong>${data.collaboratorName}</strong> has accepted your invitation to "<strong>${data.projectTitle}</strong>" as <strong>${data.role}</strong>.</p>
         <p><a href="${data.projectUrl}">View Project</a></p>
       `,
+
+      newFollower: (data) => `
+        <h2>You have a new follower on Pitchey</h2>
+        <p><strong>${data.followerName}</strong> (${data.followerType}) started following you on Pitchey. View their profile to learn more.</p>
+        <p style="margin: 24px 0;">
+          <a href="${data.profileUrl}" style="background-color: #7c3aed; color: #fff; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block;">View Profile</a>
+        </p>
+      `,
+
+      newPitchFromFollowed: (data) => `
+        <h2>${data.creatorName} published a new pitch: ${data.pitchTitle}</h2>
+        <p>A creator you follow just published a new pitch. Check it out!</p>
+        ${data.pitchGenre ? `<p><strong>Genre:</strong> ${data.pitchGenre}</p>` : ''}
+        ${data.pitchLogline ? `<p><strong>Logline:</strong> ${data.pitchLogline}</p>` : ''}
+        <p style="margin: 24px 0;">
+          <a href="${data.pitchUrl}" style="background-color: #7c3aed; color: #fff; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block;">View Pitch</a>
+        </p>
+      `,
     };
 
     const renderFn = templates[template];

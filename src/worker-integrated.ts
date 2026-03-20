@@ -42,11 +42,12 @@ import { followsHandler, followersHandler, followingHandler } from './handlers/f
 import { ndaHandler, ndaStatsHandler } from './handlers/nda';
 
 // Import follow and view tracking handlers
-import { 
-  followActionHandler, 
-  getFollowListHandler, 
-  getFollowStatsHandler, 
-  getFollowSuggestionsHandler 
+import {
+  followActionHandler,
+  getFollowListHandler,
+  getFollowStatsHandler,
+  getFollowSuggestionsHandler,
+  checkPitchFollowStatusHandler
 } from './handlers/follows-enhanced';
 import { 
   trackViewHandler, 
@@ -2439,6 +2440,37 @@ class RouteRegistry {
       // Invalidate browse cache after publish so new pitch appears immediately
       if (response.status === 200) {
         try { await this.invalidateBrowseCache(); } catch (_) { /* non-blocking */ }
+
+        // Notify followers of newly published pitch
+        try {
+          const cloned = response.clone();
+          const body = await cloned.json() as { data?: { pitch?: { id: number; title: string } } };
+          const pitch = body?.data?.pitch;
+          if (pitch) {
+            const authResult = await this.validateAuth(req);
+            const userId = authResult.valid && authResult.user ? String(authResult.user.id) : null;
+            if (userId) {
+              const [creator] = await this.db.query(
+                'SELECT name, email FROM users WHERE id = $1', [userId]
+              ) as { name?: string; email?: string }[];
+              const creatorName = creator?.name || creator?.email || 'A creator';
+
+              const followers = await this.db.query(
+                'SELECT follower_id FROM follows WHERE following_id = $1',
+                [userId]
+              ) as { follower_id: number }[];
+
+              for (const f of followers) {
+                this.pushRealtimeEvent(String(f.follower_id), {
+                  type: 'pitch_published',
+                  data: { pitchId: pitch.id, title: pitch.title, creatorId: userId, creatorName }
+                });
+              }
+            }
+          }
+        } catch (e) {
+          console.debug('Failed to notify followers of published pitch:', e);
+        }
       }
       return response;
     });
@@ -2577,6 +2609,7 @@ class RouteRegistry {
     this.register('GET', '/api/follows/list', (req) => getFollowListHandler(req, this.env));
     this.register('GET', '/api/follows/stats', (req) => getFollowStatsHandler(req, this.env));
     this.register('GET', '/api/follows/suggestions', (req) => getFollowSuggestionsHandler(req, this.env));
+    this.register('GET', '/api/follows/pitch-status', (req) => checkPitchFollowStatusHandler(req, this.env));
 
     // === MISC ENDPOINTS (frontend compatibility) ===
     this.register('POST', '/api/meetings/schedule', this.handleMeetingSchedule.bind(this));

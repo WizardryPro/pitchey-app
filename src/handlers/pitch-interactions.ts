@@ -7,6 +7,7 @@ import { getDb } from '../db/connection';
 import type { Env } from '../db/connection';
 import { getCorsHeaders } from '../utils/response';
 import { getUserId } from '../utils/auth-extract';
+import { sendNewPitchFromFollowedEmail } from '../services/email/index';
 
 function jsonResponse(data: unknown, status: number, origin: string | null): Response {
   return new Response(JSON.stringify(data), {
@@ -224,6 +225,43 @@ export async function pitchPublishHandler(request: Request, env: Env): Promise<R
 
     if (!pitch) {
       return jsonResponse({ success: false, error: { code: 'NOT_FOUND', message: 'Pitch not found or not owned by you' } }, 404, origin);
+    }
+
+    // Send email notifications to followers (fire-and-forget, separate try/catch)
+    try {
+      const pitchDetails = await sql`
+        SELECT p.title, p.genre, p.logline, u.name, u.first_name, u.last_name
+        FROM pitches p JOIN users u ON u.id = p.user_id
+        WHERE p.id = ${pitchId} LIMIT 1
+      `;
+      if (pitchDetails.length > 0) {
+        const pd = pitchDetails[0];
+        const creatorName = pd.name || `${pd.first_name || ''} ${pd.last_name || ''}`.trim() || 'A creator';
+        const followers = await sql`
+          SELECT f.follower_id, u.email, u.first_name
+          FROM follows f JOIN users u ON u.id = f.follower_id
+          WHERE f.following_id = ${userId}
+          LIMIT 50
+        `;
+        const resendKey = (env as Record<string, unknown>).RESEND_API_KEY as string;
+        for (const follower of followers) {
+          if (follower.email) {
+            sendNewPitchFromFollowedEmail(follower.email, {
+              creatorName,
+              pitchTitle: pd.title || 'Untitled Pitch',
+              pitchGenre: pd.genre || undefined,
+              pitchLogline: pd.logline || undefined,
+              pitchUrl: `https://pitchey.com/pitches/${pitchId}`,
+            }, resendKey).catch((err: unknown) => {
+              const e = err instanceof Error ? err : new Error(String(err));
+              console.error('Failed to send new pitch email to follower:', e.message);
+            });
+          }
+        }
+      }
+    } catch (emailErr) {
+      // Non-blocking — don't fail the publish if email notifications fail
+      console.error('Follower email notification error:', emailErr);
     }
 
     return jsonResponse({ success: true, data: { pitch } }, 200, origin);

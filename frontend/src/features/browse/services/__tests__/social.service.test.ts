@@ -146,13 +146,24 @@ describe('SocialService', () => {
       expect(result).toBe(false);
     });
 
-    it('includes userId in query params', async () => {
-      mockGet.mockResolvedValue({ success: true, data: { stats: { isFollowing: false } } });
+    it('includes pitchId in query params for pitch type', async () => {
+      mockGet.mockResolvedValue({ success: true, data: { isFollowing: false } });
 
       await SocialService.checkFollowStatus(10, 'pitch');
 
       const url = mockGet.mock.calls[0][0] as string;
+      expect(url).toContain('pitchId=10');
+      expect(url).toContain('/api/follows/pitch-status');
+    });
+
+    it('includes userId in query params for user type', async () => {
+      mockGet.mockResolvedValue({ success: true, data: { stats: { isFollowing: false } } });
+
+      await SocialService.checkFollowStatus(10, 'user');
+
+      const url = mockGet.mock.calls[0][0] as string;
       expect(url).toContain('userId=10');
+      expect(url).toContain('/api/follows/stats');
     });
   });
 

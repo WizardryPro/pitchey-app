@@ -133,10 +133,20 @@ export class SocialService {
   // Check if following a target
   static async checkFollowStatus(targetId: number, type: 'user' | 'pitch'): Promise<boolean> {
     try {
-      // For pitch follows, resolve to the creator's userId via the stats endpoint
-      const userId = type === 'pitch' ? targetId : targetId;
+      if (type === 'pitch') {
+        // Use pitch-specific follow status endpoint
+        const response = await apiClient.get<{ data: { isFollowing: boolean; followerCount: number } }>(
+          `/api/follows/pitch-status?pitchId=${targetId.toString()}`
+        );
+        if (response.success !== true) {
+          return false;
+        }
+        return (response.data as Record<string, unknown>)?.isFollowing === true;
+      }
+
+      // For user follows, use the stats endpoint
       const response = await apiClient.get<{ data: { stats: { isFollowing: boolean } } }>(
-        `/api/follows/stats?userId=${userId.toString()}`
+        `/api/follows/stats?userId=${targetId.toString()}`
       );
 
       if (response.success !== true) {

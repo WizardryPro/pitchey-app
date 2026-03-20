@@ -323,7 +323,7 @@ Availability calendars, rate cards, crew project dashboards. Competes with Studi
 
 ### Current Numbers
 - 612+ API routes, 135 pages, 166 components, 26 services, 4 stores
-- 166 test files, 3109 tests (82% page coverage)
+- 184 test files, 3450+ tests (82% page coverage)
 - 114 backend service files, 57 handlers, 67 migrations
 - TypeScript: zero errors (CI-enforced)
 - 3 portals (Creator, Investor, Production) + Admin shell
@@ -331,7 +331,24 @@ Availability calendars, rate cards, crew project dashboards. Competes with Studi
 - Email: `noreply@pitchey.com` via Resend (live)
 - Legal: Terms of Service + Privacy Policy (production-ready)
 - Onboarding: terms acceptance required for all portals
+- NDA required for messaging (backend-enforced, Mar 2026)
+- Follow system: user-to-user follows, pitch follow → follows creator
 - 13 CI/CD workflows, 7 R2 buckets, 5 KV namespaces, 2 Durable Objects
+
+### Stage 9: Data Quality & Follow System (Mar 2026) — DONE
+
+| Fix | Details | Status |
+|-----|---------|--------|
+| Follow API contract | Backend accepts both `{userId}` and `{targetId, targetType}` | DONE |
+| Pitch follow → creator | Following a pitch resolves to following the pitch's creator | DONE |
+| Following feed enrichment | `/api/pitches/following` returns nested creator object + camelCase counts | DONE |
+| Follow stats reading | Dashboard reads `data.stats.following` correctly | DONE |
+| NDA messaging gate | Signed NDA required for new conversations (3 enforcement points) | DONE |
+| "Unknown Creator" sweep | 9 files fixed across all portals — improved fallback chains | DONE |
+| "undefined" URL guards | ProductionPitchView + InvestorPitchView message navigation guarded | DONE |
+| NaN like counts | snake_case → camelCase normalization + undefined guards | DONE |
+| useEffect cleanup | `useOnlineStatus()` hook extracted (10 files), redundant state→useMemo (4 files) | DONE |
+| NDAs sidebar removed | Was duplicate of dashboard tab, auto-highlighted on dashboard | DONE |
 
 ## Test Coverage Campaign — COMPLETE
 

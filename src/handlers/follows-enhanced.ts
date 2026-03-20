@@ -6,6 +6,7 @@ import { corsHeaders, getCorsHeaders } from '../utils/response';
 import { getDb } from '../db/connection';
 import type { Env as DbEnv } from '../db/connection';
 import { getUserId } from '../utils/auth-extract';
+import { sendNewFollowerEmail } from '../services/email/index';
 
 // Schema for follow/unfollow actions
 // Accepts both legacy {userId} and frontend {targetId, targetType} formats
@@ -94,12 +95,43 @@ export async function followActionHandler(request: Request, env: Env): Promise<R
         });
       }
       
-      // Create follow relationship
+      // Create follow relationship (user-to-user)
       await sql`
         INSERT INTO follows (follower_id, following_id)
         VALUES (${followerId}, ${followingId})
         ON CONFLICT (follower_id, following_id) DO NOTHING
       `;
+
+      // Also insert pitch-specific follow if target is a pitch
+      if (parsed.targetType === 'pitch' && parsed.targetId) {
+        const pitchId = toIntId(parsed.targetId);
+        await sql`
+          INSERT INTO pitch_follows (follower_id, pitch_id)
+          VALUES (${followerId}, ${pitchId})
+          ON CONFLICT (follower_id, pitch_id) DO NOTHING
+        `;
+      }
+
+      // Send new follower email (fire-and-forget)
+      try {
+        const followerInfo = await sql`SELECT name, first_name, last_name, user_type FROM users WHERE id = ${followerId} LIMIT 1`;
+        const followedInfo = await sql`SELECT email FROM users WHERE id = ${followingId} LIMIT 1`;
+        if (followerInfo.length > 0 && followedInfo.length > 0 && followedInfo[0].email) {
+          const followerName = followerInfo[0].name || `${followerInfo[0].first_name || ''} ${followerInfo[0].last_name || ''}`.trim() || 'Someone';
+          const followerType = followerInfo[0].user_type || 'user';
+          sendNewFollowerEmail(followedInfo[0].email, {
+            followerName,
+            followerType,
+            profileUrl: `https://pitchey.com/profile/${followerId}`,
+          }, (env as Record<string, unknown>).RESEND_API_KEY as string).catch((err: unknown) => {
+            const e = err instanceof Error ? err : new Error(String(err));
+            console.error('Failed to send new follower email:', e.message);
+          });
+        }
+      } catch (emailErr) {
+        // Non-blocking — don't fail the follow action if email fails
+        console.error('New follower email lookup error:', emailErr);
+      }
 
       // Get updated counts
       const [counts] = await sql`
@@ -107,7 +139,7 @@ export async function followActionHandler(request: Request, env: Env): Promise<R
           (SELECT COUNT(*) FROM follows WHERE following_id = ${followingId}) as followers,
           (SELECT COUNT(*) FROM follows WHERE follower_id = ${followerId}) as following
       `;
-      
+
       return new Response(JSON.stringify({
         success: true,
         message: 'Successfully followed',
@@ -119,8 +151,18 @@ export async function followActionHandler(request: Request, env: Env): Promise<R
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
-      
+
     } else { // unfollow
+      // Delete pitch-specific follow if target is a pitch
+      if (parsed.targetType === 'pitch' && parsed.targetId) {
+        const pitchId = toIntId(parsed.targetId);
+        await sql`
+          DELETE FROM pitch_follows
+          WHERE follower_id = ${followerId}
+          AND pitch_id = ${pitchId}
+        `;
+      }
+
       await sql`
         DELETE FROM follows
         WHERE follower_id = ${followerId}
@@ -542,5 +584,62 @@ export async function mutualFollowersHandler(request: Request, env: DbEnv): Prom
   } catch (error) {
     console.error('Mutual followers query error:', error);
     return defaultResponse;
+  }
+}
+
+/**
+ * GET /api/follows/pitch-status?pitchId=123
+ * Check if the authenticated user follows a specific pitch.
+ */
+export async function checkPitchFollowStatusHandler(request: Request, env: Env): Promise<Response> {
+  try {
+    const user = await getAuthUser(request, env);
+    if (!user) {
+      return new Response(JSON.stringify({ success: true, data: { isFollowing: false, followerCount: 0 } }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const url = new URL(request.url);
+    const pitchIdParam = url.searchParams.get('pitchId');
+    if (!pitchIdParam) {
+      return new Response(JSON.stringify({ error: 'pitchId is required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const pitchId = toIntId(pitchIdParam);
+    const followerId = toIntId(user.id);
+    const sql = postgres(env.DATABASE_URL);
+
+    const [result] = await sql`
+      SELECT
+        EXISTS (
+          SELECT 1 FROM pitch_follows
+          WHERE follower_id = ${followerId}
+          AND pitch_id = ${pitchId}
+        ) as is_following,
+        (SELECT COUNT(*) FROM pitch_follows WHERE pitch_id = ${pitchId}) as follower_count
+    `;
+
+    return new Response(JSON.stringify({
+      success: true,
+      data: {
+        isFollowing: result.is_following === true,
+        followerCount: parseInt(result.follower_count)
+      }
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  } catch (error: unknown) {
+    const e = error instanceof Error ? error : new Error(String(error));
+    console.error('Check pitch follow status error:', e);
+    return new Response(JSON.stringify({
+      error: e.message || 'Failed to check pitch follow status'
+    }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
 }

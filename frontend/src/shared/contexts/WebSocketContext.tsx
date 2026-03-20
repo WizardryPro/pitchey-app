@@ -359,6 +359,9 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       case 'error':
         // These are handled by the lower-level WebSocket hooks
         break;
+      case 'pitch_published':
+        handlePitchPublished(message);
+        break;
       case 'initial_data':
         // Handle initial data from server
         // Store notifications if present
@@ -683,7 +686,43 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     // Emit general message for chat-specific hooks
     subscriptions.messages.forEach(callback => callback(message));
   }
-  
+
+  function handlePitchPublished(message: WebSocketMessage) {
+    const publishData = (message as any).payload || message.data;
+
+    if (publishData?.pitchId && publishData?.title) {
+      const notification: NotificationData = {
+        id: `pitch_published_${Date.now()}_${publishData.pitchId}`,
+        type: 'info',
+        title: 'New Pitch Published',
+        message: `${publishData.creatorName || 'A creator you follow'} published "${publishData.title}"`,
+        timestamp: new Date(),
+        read: false,
+        actions: [{
+          label: 'View Pitch',
+          action: () => {
+            window.location.href = `/pitch/${publishData.pitchId}`;
+          },
+          type: 'primary'
+        }]
+      };
+
+      setNotifications(prev => [notification, ...prev.slice(0, 49)]);
+
+      // Notify notification subscribers
+      subscriptions.notifications.forEach(callback => callback(notification));
+
+      // Show browser notification if permitted
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(notification.title, {
+          body: notification.message,
+          icon: '/favicon.ico',
+          tag: `pitch_published_${publishData.pitchId}`
+        });
+      }
+    }
+  }
+
   function handleConnect() {
     setUsingFallback(false); // We're now using WebSocket successfully
 
