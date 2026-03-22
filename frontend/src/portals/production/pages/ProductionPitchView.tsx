@@ -68,13 +68,11 @@ interface ProductionNote {
   author?: string;
 }
 
-interface FeasibilityAssessment {
-  budgetViability: number;
-  scheduleViability: number;
-  locationViability: number;
-  castingViability: number;
+interface PitchCompleteness {
+  score: number;
+  total: number;
+  fields: Array<{ label: string; present: boolean; hint: string }>;
   productionReadiness: number;
-  overallScore: number;
 }
 
 interface TeamMember {
@@ -96,7 +94,7 @@ const ProductionPitchView: React.FC = () => {
   const [notes, setNotes] = useState<ProductionNote[]>([]);
   const [newNote, setNewNote] = useState('');
   const [noteCategory, setNoteCategory] = useState<ProductionNote['category']>('general');
-  const [feasibility, setFeasibility] = useState<FeasibilityAssessment | null>(null);
+  const [completeness, setCompleteness] = useState<PitchCompleteness | null>(null);
   const [productionChecklist, setProductionChecklist] = useState({
     scriptAnalysis: false,
     budgetBreakdown: false,
@@ -154,10 +152,10 @@ const ProductionPitchView: React.FC = () => {
     }
   }, [id]);
 
-  // Recalculate feasibility when pitch data or checklist changes
+  // Calculate pitch completeness when pitch data or checklist changes
   useEffect(() => {
     if (pitch) {
-      calculateFeasibility();
+      calculateCompleteness();
     }
   }, [pitch, productionChecklist]);
 
@@ -287,47 +285,32 @@ const ProductionPitchView: React.FC = () => {
     });
   };
 
-  const calculateFeasibility = () => {
+  const calculateCompleteness = () => {
     if (!pitch) return;
 
-    // Deterministic heuristics based on available pitch data
-    // Budget: lower budgets are more viable for independent productions
-    const budgetMap: Record<string, number> = {
-      'micro': 90, 'low': 80, 'medium': 65, 'high': 50, 'blockbuster': 35
-    };
-    const budgetKey = (pitch.budget || '').toLowerCase();
-    const budgetScore = budgetMap[budgetKey] ?? 60;
+    const fields = [
+      { label: 'Logline', present: !!(pitch.logline), hint: 'Add a one-line pitch summary' },
+      { label: 'Synopsis', present: !!(pitch.longSynopsis || pitch.shortSynopsis), hint: 'Write a detailed synopsis to attract interest' },
+      { label: 'Script', present: !!(pitch.script), hint: 'Upload a script — pitches with scripts get more NDA requests' },
+      { label: 'Pitch Deck', present: !!(pitch.pitchDeck), hint: 'A pitch deck helps investors assess viability' },
+      { label: 'Trailer / Sizzle', present: !!(pitch.trailer), hint: 'Video content dramatically increases engagement' },
+      { label: 'Budget', present: !!(pitch.budget || pitch.estimatedBudget), hint: 'Include budget range for production assessment' },
+      { label: 'Characters', present: !!(pitch.characters && pitch.characters.length > 0), hint: 'Define key characters for casting assessment' },
+      { label: 'Target Audience', present: !!(pitch.targetAudience), hint: 'Specify who this is for — helps with distribution planning' },
+    ];
 
-    // Schedule: shorter formats are easier to schedule
-    const formatLower = (pitch.format || '').toLowerCase();
-    const scheduleScore = formatLower.includes('short') ? 85 :
-      formatLower.includes('series') ? 55 :
-      formatLower.includes('feature') ? 65 : 60;
+    const presentCount = fields.filter(f => f.present).length;
 
-    // Location: fewer locations = higher viability
-    const locationCount = pitch.locations?.length ?? 0;
-    const locationScore = locationCount === 0 ? 50 :
-      locationCount <= 3 ? 80 :
-      locationCount <= 6 ? 65 : 45;
-
-    // Casting: based on character count
-    const characterCount = pitch.characters?.length ?? 0;
-    const castingScore = characterCount === 0 ? 50 :
-      characterCount <= 4 ? 80 :
-      characterCount <= 8 ? 65 : 50;
-
-    // Production readiness: derived from checklist completion
+    // Production readiness from checklist
     const completed = Object.values(productionChecklist).filter(Boolean).length;
     const total = Object.keys(productionChecklist).length;
     const readinessScore = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-    setFeasibility({
-      budgetViability: budgetScore,
-      scheduleViability: scheduleScore,
-      locationViability: locationScore,
-      castingViability: castingScore,
+    setCompleteness({
+      score: presentCount,
+      total: fields.length,
+      fields,
       productionReadiness: readinessScore,
-      overallScore: Math.round((budgetScore + scheduleScore + locationScore + castingScore + readinessScore) / 5)
     });
   };
 
@@ -547,7 +530,7 @@ const ProductionPitchView: React.FC = () => {
     return (completed / total) * 100;
   };
 
-  const getFeasibilityColor = (score: number) => {
+  const getScoreColor = (score: number) => {
     if (score >= 70) return 'text-green-600';
     if (score >= 40) return 'text-yellow-600';
     return 'text-red-600';
@@ -804,118 +787,78 @@ const ProductionPitchView: React.FC = () => {
               </div>
             )}
 
-            {activeTab === 'production' && feasibility && (
-              <div className="bg-white rounded-xl shadow-lg p-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">Production Feasibility Assessment</h2>
-                <p className="text-sm text-gray-500 mb-6">Estimated scores based on pitch metadata</p>
-                
-                {/* Overall Score */}
-                <div className="mb-8 p-6 bg-gradient-to-r from-orange-50 to-red-50 rounded-lg">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Overall Feasibility Score</h3>
-                  <div className="flex items-center">
-                    <div className="text-4xl font-bold mr-4">
-                      <span className={getFeasibilityColor(feasibility.overallScore)}>
-                        {feasibility.overallScore.toFixed(0)}%
+            {activeTab === 'production' && completeness && (
+              <div className="space-y-6">
+                {/* Pitch Completeness */}
+                <div className="bg-white rounded-xl shadow-lg p-8">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-1">Pitch Package Assessment</h2>
+                  <p className="text-sm text-gray-500 mb-6">What the creator has provided — gaps indicate areas to request more information</p>
+
+                  {/* Completeness Score */}
+                  <div className="mb-6 p-5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Package Completeness</h3>
+                      <span className={`text-2xl font-bold ${getScoreColor(Math.round((completeness.score / completeness.total) * 100))}`}>
+                        {completeness.score}/{completeness.total}
                       </span>
                     </div>
-                    <div className="flex-1">
-                      <div className="w-full bg-gray-200 rounded-full h-4">
-                        <div 
-                          className={`h-4 rounded-full ${
-                            feasibility.overallScore >= 70 ? 'bg-green-500' :
-                            feasibility.overallScore >= 40 ? 'bg-yellow-500' : 'bg-red-500'
-                          }`}
-                          style={{ width: `${feasibility.overallScore}%` }}
-                        />
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div
+                        className={`h-3 rounded-full transition-all duration-300 ${
+                          completeness.score >= 6 ? 'bg-green-500' :
+                          completeness.score >= 4 ? 'bg-yellow-500' : 'bg-red-500'
+                        }`}
+                        style={{ width: `${(completeness.score / completeness.total) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Field-by-field breakdown */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {completeness.fields.map((field) => (
+                      <div
+                        key={field.label}
+                        className={`flex items-start gap-3 p-3 rounded-lg ${
+                          field.present ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
+                        }`}
+                      >
+                        {field.present ? (
+                          <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <AlertCircle className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                        )}
+                        <div>
+                          <span className={`text-sm font-medium ${field.present ? 'text-green-800' : 'text-gray-700'}`}>
+                            {field.label}
+                          </span>
+                          {!field.present && (
+                            <p className="text-xs text-gray-500 mt-0.5">{field.hint}</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
 
-                {/* Individual Metrics */}
-                <div className="grid grid-cols-2 gap-4 mb-8">
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="flex items-center text-gray-700">
-                        <DollarSign className="h-4 w-4 mr-2" />
-                        Budget Viability
-                      </span>
-                      <span className={`font-semibold ${getFeasibilityColor(feasibility.budgetViability)}`}>
-                        {feasibility.budgetViability.toFixed(0)}%
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${feasibility.budgetViability}%` }} />
-                    </div>
+                {/* Production Readiness */}
+                <div className="bg-white rounded-xl shadow-lg p-8">
+                  <div className="flex items-center justify-between mb-2">
+                    <h2 className="text-lg font-bold text-gray-900">Production Readiness</h2>
+                    <span className={`text-lg font-bold ${getScoreColor(completeness.productionReadiness)}`}>
+                      {completeness.productionReadiness}%
+                    </span>
                   </div>
-                  
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="flex items-center text-gray-700">
-                        <Calendar className="h-4 w-4 mr-2" />
-                        Schedule Viability
-                      </span>
-                      <span className={`font-semibold ${getFeasibilityColor(feasibility.scheduleViability)}`}>
-                        {feasibility.scheduleViability.toFixed(0)}%
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-green-500 h-2 rounded-full" style={{ width: `${feasibility.scheduleViability}%` }} />
-                    </div>
-                  </div>
-                  
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="flex items-center text-gray-700">
-                        <MapPin className="h-4 w-4 mr-2" />
-                        Location Viability
-                      </span>
-                      <span className={`font-semibold ${getFeasibilityColor(feasibility.locationViability)}`}>
-                        {feasibility.locationViability.toFixed(0)}%
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-purple-500 h-2 rounded-full" style={{ width: `${feasibility.locationViability}%` }} />
-                    </div>
-                  </div>
-                  
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="flex items-center text-gray-700">
-                        <Users className="h-4 w-4 mr-2" />
-                        Casting Viability
-                      </span>
-                      <span className={`font-semibold ${getFeasibilityColor(feasibility.castingViability)}`}>
-                        {feasibility.castingViability.toFixed(0)}%
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-pink-500 h-2 rounded-full" style={{ width: `${feasibility.castingViability}%` }} />
-                    </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
+                    <div
+                      className="bg-orange-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${completeness.productionReadiness}%` }}
+                    />
                   </div>
 
-                  <div className="p-4 bg-gray-50 rounded-lg col-span-2">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="flex items-center text-gray-700">
-                        <CheckSquare className="h-4 w-4 mr-2" />
-                        Production Readiness
-                      </span>
-                      <span className={`font-semibold ${getFeasibilityColor(feasibility.productionReadiness)}`}>
-                        {feasibility.productionReadiness.toFixed(0)}%
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-orange-500 h-2 rounded-full transition-all duration-300" style={{ width: `${feasibility.productionReadiness}%` }} />
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">Based on checklist completion — check off tasks below to increase</p>
-                  </div>
-                </div>
-
-                {/* Production Checklist */}
-                <div>
+                  {/* Production Checklist */}
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Production Checklist</h3>
-                    <span className="text-sm text-gray-600">{getChecklistProgress().toFixed(0)}% Complete</span>
+                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Production Checklist</h3>
+                    <span className="text-sm text-gray-500">{getChecklistProgress().toFixed(0)}% Complete</span>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     {Object.entries(productionChecklist).map(([key, value]) => (
