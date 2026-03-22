@@ -303,6 +303,43 @@ export default function Homepage() {
       </section>
 
 
+      {/* How It Works */}
+      <section className="py-16 bg-white border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-section-title text-center mb-4">How Pitchey Works</h2>
+          <p className="text-body text-center mb-12 max-w-2xl mx-auto">Three portals, one marketplace. Each role gets tools built for how they actually work.</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="text-center p-6 rounded-xl bg-purple-50">
+              <div className="w-14 h-14 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Film className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Creators</h3>
+              <p className="text-sm text-gray-600">
+                Publish your pitch with logline, synopsis, and media. See exactly which investors and production companies are engaging. Get structured feedback from industry professionals.
+              </p>
+            </div>
+            <div className="text-center p-6 rounded-xl bg-green-50">
+              <div className="w-14 h-14 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Wallet className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Investors</h3>
+              <p className="text-sm text-gray-600">
+                Browse pitches by genre, format, and budget. Sign NDAs for protected content. Track your deal flow from discovery to investment — all in one place.
+              </p>
+            </div>
+            <div className="text-center p-6 rounded-xl bg-orange-50">
+              <div className="w-14 h-14 bg-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Building2 className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Production Companies</h3>
+              <p className="text-sm text-gray-600">
+                Assess pitch completeness, assemble teams, share production feedback with creators, and convert pitches into tracked projects with one click.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Trending Pitches */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -467,12 +504,12 @@ export default function Homepage() {
       </section>
 
 
-      {/* Call to Action */}
+      {/* Value Prop */}
       <section className="py-20 bg-gradient-to-r from-purple-50 to-pink-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-section-title mb-6">Ready For Your Close Up?</h2>
+          <h2 className="text-section-title mb-6">The data no other platform has</h2>
           <p className="text-body mb-8 mx-auto">
-            Join thousands of creators, investors, and production companies shaping the future of entertainment.
+            Pitchey shows creators exactly who is engaging with their pitch — named investors, production companies, and the feedback they share. No black box, no anonymous metrics.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
@@ -500,7 +537,7 @@ export default function Homepage() {
                 Ready to Explore More?
               </h2>
               <p className="text-xl text-white/90 mb-8">
-                Join thousands of creators, investors, and production companies discovering amazing projects on Pitchey.
+                See who's viewing your pitch, get production feedback, and connect directly with decision-makers.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <button
@@ -570,7 +607,7 @@ export default function Homepage() {
             </div>
           </div>
           <div className="mt-8 pt-8 border-t border-gray-200 text-center">
-            <p className="text-metadata">© 2025 Pitchey Ltd. All rights reserved.</p>
+            <p className="text-metadata">© 2026 Pitchey Ltd. All rights reserved.</p>
           </div>
         </div>
       </footer>
