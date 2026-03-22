@@ -22,7 +22,8 @@ interface RecentLiker {
 
 interface RecentViewer {
   name: string;
-  role: string;
+  userType: string;
+  companyName?: string;
   viewedAt: string;
 }
 
@@ -162,8 +163,7 @@ export default function SocialProofBadge({
   const viewerText =
     engagement?.viewerBreakdown ? buildViewerBreakdownText(engagement.viewerBreakdown) : '';
   const likerText = engagement?.recentLikers ? buildLikerText(engagement.recentLikers) : '';
-  const recentViewers =
-    isOwner && engagement?.recentViewers ? engagement.recentViewers : [];
+  const recentViewers = engagement?.recentViewers ?? [];
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-5">
@@ -206,15 +206,15 @@ export default function SocialProofBadge({
           <ul className="space-y-2">
             {recentViewers.map((viewer, idx) => (
               <li key={idx} className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-700 font-medium">{viewer.name}</span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-gray-700 font-medium truncate">{viewer.name}</span>
                   <span
-                    className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${roleBadgeColor(viewer.role)}`}
+                    className={`text-xs px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ${roleBadgeColor(viewer.userType)}`}
                   >
-                    {formatUserTypeLabel(viewer.role)}
+                    {viewer.companyName || formatUserTypeLabel(viewer.userType)}
                   </span>
                 </div>
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-gray-400 whitespace-nowrap ml-2">
                   {formatRelativeTime(viewer.viewedAt)}
                 </span>
               </li>

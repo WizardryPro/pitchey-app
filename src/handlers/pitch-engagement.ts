@@ -78,92 +78,52 @@ export async function getPitchEngagementHandler(request: Request, env: Env): Pro
     }
     response.viewerBreakdown = viewerBreakdown;
 
-    if (isOwner) {
-      // Owner: full visibility — all likers with details
-      const likers = await sql`
-        SELECT u.id, CONCAT(u.first_name, ' ', u.last_name) as name,
-               u.user_type, u.company_name, l.created_at as liked_at
-        FROM likes l
-        JOIN users u ON u.id = l.user_id
-        WHERE l.pitch_id = ${pitchId}
-        ORDER BY l.created_at DESC
-        LIMIT 20
-      `;
+    // All authenticated users see named likers and viewers
+    // This is a B2B platform — knowing who's engaging is the core value
+    const likers = await sql`
+      SELECT u.id, CONCAT(u.first_name, ' ', u.last_name) as name,
+             u.user_type, u.company_name, l.created_at as liked_at
+      FROM likes l
+      JOIN users u ON u.id = l.user_id
+      WHERE l.pitch_id = ${pitchId}
+      ORDER BY l.created_at DESC
+      LIMIT 20
+    `;
 
-      response.recentLikers = likers.map((l: Record<string, unknown>) => ({
-        id: l.id,
-        name: l.name,
-        userType: l.user_type,
-        companyName: l.company_name,
-        likedAt: l.liked_at,
-      }));
+    response.recentLikers = likers.map((l: Record<string, unknown>) => ({
+      id: l.id,
+      name: l.name,
+      userType: l.user_type,
+      companyName: l.company_name,
+      likedAt: l.liked_at,
+    }));
 
-      // Recent viewers with names
-      const viewers = await sql`
-        SELECT DISTINCT ON (v.viewer_id)
-          u.id, CONCAT(u.first_name, ' ', u.last_name) as name,
-          u.user_type, u.company_name, v.viewed_at
-        FROM views v
-        JOIN users u ON u.id = v.viewer_id
-        WHERE v.pitch_id = ${pitchId} AND v.viewer_id IS NOT NULL
-          AND v.viewer_id != ${pitch.user_id}
-        ORDER BY v.viewer_id, v.viewed_at DESC
-      `;
+    // Recent viewers with names
+    const viewers = await sql`
+      SELECT DISTINCT ON (v.viewer_id)
+        u.id, CONCAT(u.first_name, ' ', u.last_name) as name,
+        u.user_type, u.company_name, v.viewed_at
+      FROM views v
+      JOIN users u ON u.id = v.viewer_id
+      WHERE v.pitch_id = ${pitchId} AND v.viewer_id IS NOT NULL
+        AND v.viewer_id != ${pitch.user_id}
+      ORDER BY v.viewer_id, v.viewed_at DESC
+    `;
 
-      // Sort by most recent view after dedup
-      const sortedViewers = viewers
-        .map((v: Record<string, unknown>) => ({
-          id: v.id,
-          name: v.name,
-          userType: v.user_type,
-          companyName: v.company_name,
-          viewedAt: v.viewed_at,
-        }))
-        .sort((a: { viewedAt: unknown }, b: { viewedAt: unknown }) =>
-          new Date(String(b.viewedAt)).getTime() - new Date(String(a.viewedAt)).getTime()
-        )
-        .slice(0, 20);
+    const sortedViewers = viewers
+      .map((v: Record<string, unknown>) => ({
+        id: v.id,
+        name: v.name,
+        userType: v.user_type,
+        companyName: v.company_name,
+        viewedAt: v.viewed_at,
+      }))
+      .sort((a: { viewedAt: unknown }, b: { viewedAt: unknown }) =>
+        new Date(String(b.viewedAt)).getTime() - new Date(String(a.viewedAt)).getTime()
+      )
+      .slice(0, 20);
 
-      response.recentViewers = sortedViewers;
-
-    } else {
-      // Check NDA status
-      const ndaResult = await sql`
-        SELECT 1 FROM ndas
-        WHERE pitch_id = ${pitchId} AND signer_id = ${userId}
-          AND status IN ('approved', 'signed')
-        LIMIT 1
-      `;
-
-      const hasNDA = ndaResult.length > 0;
-
-      if (hasNDA) {
-        // NDA-signed: see other NDA signers who liked
-        const likers = await sql`
-          SELECT u.id, CONCAT(u.first_name, ' ', u.last_name) as name,
-                 u.user_type, u.company_name, l.created_at as liked_at
-          FROM likes l
-          JOIN users u ON u.id = l.user_id
-          WHERE l.pitch_id = ${pitchId}
-            AND EXISTS (
-              SELECT 1 FROM ndas
-              WHERE pitch_id = ${pitchId} AND signer_id = l.user_id
-                AND status IN ('approved', 'signed')
-            )
-          ORDER BY l.created_at DESC
-          LIMIT 10
-        `;
-
-        response.recentLikers = likers.map((l: Record<string, unknown>) => ({
-          id: l.id,
-          name: l.name,
-          userType: l.user_type,
-          companyName: l.company_name,
-          likedAt: l.liked_at,
-        }));
-      }
-      // else: authenticated but no NDA — gets breakdown but no named likers
-    }
+    response.recentViewers = sortedViewers;
 
     return new Response(JSON.stringify(response), { headers });
 
