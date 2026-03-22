@@ -27,7 +27,7 @@ interface RecentViewer {
 }
 
 interface EngagementData {
-  viewerBreakdown?: ViewerBreakdownEntry[];
+  viewerBreakdown?: Record<string, number> | ViewerBreakdownEntry[];
   recentLikers?: RecentLiker[];
   recentViewers?: RecentViewer[];
 }
@@ -59,10 +59,15 @@ function formatRelativeTime(dateStr: string): string {
   return `${days}d ago`;
 }
 
-function buildViewerBreakdownText(breakdown: ViewerBreakdownEntry[]): string {
-  const parts = breakdown
+function buildViewerBreakdownText(breakdown: Record<string, number> | ViewerBreakdownEntry[]): string {
+  // Handle both object {investor: 3} and array [{user_type: 'investor', count: 3}] formats
+  const entries: Array<{ type: string; count: number }> = Array.isArray(breakdown)
+    ? breakdown.map((b) => ({ type: b.user_type, count: b.count }))
+    : Object.entries(breakdown).map(([type, count]) => ({ type, count }));
+
+  const parts = entries
     .filter((b) => b.count > 0)
-    .map((b) => `${b.count} ${formatUserTypeLabel(b.user_type).toLowerCase()}`);
+    .map((b) => `${b.count} ${formatUserTypeLabel(b.type).toLowerCase()}`);
   return parts.length > 0 ? `Viewed by ${parts.join(', ')}` : '';
 }
 
