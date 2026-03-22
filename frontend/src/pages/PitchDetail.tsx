@@ -10,6 +10,7 @@ import BackButton from '../components/BackButton';
 import EnhancedNDARequest from '@features/ndas/components/NDA/EnhancedNDARequest';
 import FormatDisplay from '../components/FormatDisplay';
 import FollowButton from '@features/browse/components/FollowButton';
+import SocialProofBadge from '@shared/components/SocialProofBadge';
 
 export default function PitchDetail() {
   const navigate = useNavigate();
@@ -770,50 +771,39 @@ export default function PitchDetail() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Stats */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <Eye className="w-4 h-4" />
-                    Views
-                  </div>
-                  <span className="font-semibold">{pitch.viewCount}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <Heart className="w-4 h-4" />
-                    Likes
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">{pitch.likeCount}</span>
-                    {isAuthenticated ? (
-                      <button
-                        onClick={handleLike}
-                        disabled={isLiking}
-                        className={`p-1 rounded-full transition ${
-                          isLiked 
-                            ? 'text-red-500 hover:text-red-600' 
-                            : 'text-gray-400 hover:text-red-500'
-                        } ${isLiking ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      >
-                        <Heart 
-                          className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} 
-                        />
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => navigate('/portals')}
-                        className="p-1 rounded-full text-gray-300 hover:text-purple-500 transition"
-                        title="Sign in to like"
-                      >
-                        <Heart className="w-5 h-5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
+            {/* Engagement & Social Proof */}
+            <SocialProofBadge
+              pitchId={pitch.id}
+              viewCount={pitch.viewCount || 0}
+              likeCount={pitch.likeCount || 0}
+              isOwner={isOwner}
+              isAuthenticated={isAuthenticated}
+            />
+
+            {/* Like Button */}
+            <div className="bg-white rounded-xl shadow-sm p-4 flex items-center justify-center gap-2">
+              {isAuthenticated ? (
+                <button
+                  onClick={handleLike}
+                  disabled={isLiking}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${
+                    isLiked
+                      ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                  } ${isLiking ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
+                  {isLiked ? 'Liked' : 'Like this pitch'}
+                </button>
+              ) : (
+                <button
+                  onClick={() => navigate('/portals')}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-gray-50 text-gray-400 hover:text-purple-500 transition"
+                >
+                  <Heart className="w-5 h-5" />
+                  Sign in to like
+                </button>
+              )}
             </div>
 
             {/* Project Info */}

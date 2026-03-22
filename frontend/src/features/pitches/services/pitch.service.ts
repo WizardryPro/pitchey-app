@@ -146,6 +146,30 @@ export interface Pitch {
   production_timeline?: string;
 }
 
+export interface PitchEngagementLiker {
+  id?: number;
+  name?: string;
+  userType: string;
+  companyName?: string;
+  likedAt?: string;
+}
+
+export interface PitchEngagementViewer {
+  id: number;
+  name: string;
+  userType: string;
+  companyName?: string;
+  viewedAt: string;
+}
+
+export interface PitchEngagement {
+  viewCount: number;
+  likeCount: number;
+  recentLikers: PitchEngagementLiker[];
+  viewerBreakdown?: Record<string, number>;
+  recentViewers?: PitchEngagementViewer[];
+}
+
 // Raw pitch data from API (snake_case)
 interface RawPitchData {
   id?: number;
@@ -880,6 +904,19 @@ export class PitchService {
       const errorMessage = typeof response.error === 'object' && response.error !== null ? response.error.message : response.error;
       throw new Error(errorMessage ?? 'Failed to unlike pitch');
     }
+  }
+
+  // Get engagement data for a pitch
+  static async getEngagement(pitchId: number): Promise<PitchEngagement> {
+    const response = await apiClient.get(`/api/pitches/${pitchId}/engagement`);
+    const data = (response.data || response) as Record<string, unknown>;
+    return {
+      viewCount: (data.viewCount as number) || 0,
+      likeCount: (data.likeCount as number) || 0,
+      recentLikers: (data.recentLikers as PitchEngagementLiker[]) || [],
+      viewerBreakdown: data.viewerBreakdown as Record<string, number> | undefined,
+      recentViewers: data.recentViewers as PitchEngagementViewer[] | undefined,
+    };
   }
 
   // Request NDA for a pitch

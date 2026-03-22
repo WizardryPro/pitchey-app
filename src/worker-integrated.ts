@@ -49,11 +49,12 @@ import {
   getFollowSuggestionsHandler,
   checkPitchFollowStatusHandler
 } from './handlers/follows-enhanced';
-import { 
-  trackViewHandler, 
-  getViewAnalyticsHandler, 
-  getPitchViewersHandler 
+import {
+  trackViewHandler,
+  getViewAnalyticsHandler,
+  getPitchViewersHandler
 } from './handlers/views';
+import { getPitchEngagementHandler } from './handlers/pitch-engagement';
 
 // Import extended dashboard handlers
 import {
@@ -2687,6 +2688,9 @@ class RouteRegistry {
     this.register('POST', '/api/views/track', (req) => this.trackViewWithRealtimePush(req));
     this.register('GET', '/api/views/analytics', (req) => getViewAnalyticsHandler(req, this.env));
     this.register('GET', '/api/views/pitch/*', (req) => getPitchViewersHandler(req, this.env));
+
+    // Pitch engagement (social proof)
+    this.register('GET', '/api/pitches/*/engagement', (req) => getPitchEngagementHandler(req, this.env));
 
     // === CREATOR PORTAL ROUTES (Phase 3) ===
     // Revenue Dashboard - Uses basic auth check (RBAC permissions are checked internally)
@@ -5325,6 +5329,24 @@ pitchey_analytics_datapoints_per_minute 1250
           requiresNDA: pitch.require_nda || false
         };
 
+        // Lightweight social proof for authenticated users
+        if (userId) {
+          try {
+            const topLikers = await this.db.query(`
+              SELECT u.id, CONCAT(u.first_name, ' ', u.last_name) as name, u.user_type, u.company_name
+              FROM likes l JOIN users u ON u.id = l.user_id
+              WHERE l.pitch_id = $1
+              ORDER BY l.created_at DESC LIMIT 3
+            `, [pitchId]);
+
+            response.socialProof = {
+              topLikers: hasNDAAccess || String(pitch.user_id) === String(userId)
+                ? topLikers.map((l: any) => ({ id: l.id, name: l.name, userType: l.user_type, companyName: l.company_name }))
+                : topLikers.map((l: any) => ({ userType: l.user_type })),
+            };
+          } catch (_) { /* non-critical */ }
+        }
+
         // Include protected content if user has NDA access
         if (hasNDAAccess) {
           response.protectedContent = {
@@ -7869,12 +7891,12 @@ pitchey_analytics_datapoints_per_minute 1250
       // Base SELECT with all required fields and joins
       // Using fallback values if columns don't exist
       const baseSelect = `
-        SELECT 
+        SELECT
           p.*,
           CONCAT(u.first_name, ' ', u.last_name) as creator_name,
-          0 as view_count,
-          0 as like_count,
-          0 as investment_count
+          COALESCE(p.view_count, 0) as view_count,
+          COALESCE(p.like_count, 0) as like_count,
+          (SELECT COUNT(*) FROM investments i WHERE i.pitch_id = p.id) as investment_count
         FROM pitches p
         LEFT JOIN users u ON p.user_id = u.id
       `;
@@ -7888,10 +7910,8 @@ pitchey_analytics_datapoints_per_minute 1250
             AND COALESCE(p.published_at, p.created_at) >= NOW() - INTERVAL '90 days'
           `;
           orderClause = `ORDER BY
-            (SELECT COUNT(*) FROM ndas n WHERE n.pitch_id = p.id) DESC,
-            LENGTH(COALESCE(p.description, '')) DESC,
+            COALESCE(p.view_count, 0) + COALESCE(p.like_count, 0) * 3 DESC,
             CASE WHEN p.updated_at >= NOW() - INTERVAL '24 hours' THEN 1 ELSE 0 END DESC,
-            p.updated_at DESC,
             COALESCE(p.published_at, p.created_at) DESC`;
           break;
 
@@ -7906,14 +7926,13 @@ pitchey_analytics_datapoints_per_minute 1250
           break;
 
         case 'popular':
-          // Popular: All-time best content based on NDA count and description richness
+          // Popular: All-time best content by views and likes
           whereClause = `
             WHERE p.status = 'published'
             AND p.visibility IN ('public', 'investors_only')
           `;
           orderClause = `ORDER BY
-            (SELECT COUNT(*) FROM ndas n WHERE n.pitch_id = p.id) DESC,
-            LENGTH(COALESCE(p.description, '')) DESC,
+            COALESCE(p.view_count, 0) + COALESCE(p.like_count, 0) * 3 DESC,
             p.id DESC`;
           break;
 
@@ -12432,8 +12451,8 @@ pitchey_analytics_datapoints_per_minute 1250
         this.db.query(`
           SELECT p.id, p.title, p.genre, p.logline, p.title_image, p.created_at,
                  COALESCE(u.name, u.first_name || ' ' || u.last_name) as creator_name,
-                 (SELECT COUNT(*) FROM views WHERE pitch_id = p.id) as view_count,
-                 (SELECT COUNT(*) FROM pitch_likes WHERE pitch_id = p.id) as like_count
+                 COALESCE(p.view_count, 0) as view_count,
+                 COALESCE(p.like_count, 0) as like_count
           FROM pitches p
           LEFT JOIN users u ON p.user_id = u.id
           ${whereClause}
@@ -12467,7 +12486,7 @@ pitchey_analytics_datapoints_per_minute 1250
         this.db.query(`
           SELECT
             COUNT(*) as total_rated,
-            COALESCE(AVG((SELECT COUNT(*) FROM pitch_likes WHERE pitch_id = p.id)), 0) as avg_rating,
+            COALESCE(AVG(p.like_count), 0) as avg_rating,
             COUNT(DISTINCT genre) as genre_count
           FROM pitches p WHERE status = 'published'
         `).catch(() => [{ total_rated: 0, avg_rating: 0, genre_count: 0 }])

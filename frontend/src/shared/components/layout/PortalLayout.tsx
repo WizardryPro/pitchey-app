@@ -1,4 +1,4 @@
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { MinimalHeader } from './MinimalHeader';
 import { PageErrorBoundary } from '@shared/components/feedback/ConsoleErrorBoundary';
@@ -15,6 +15,11 @@ export function PortalLayout({ userType }: PortalLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Closed by default on mobile
   const [isDesktopSidebarCollapsed, _setIsDesktopSidebarCollapsed] = useState(false);
   const location = useLocation();
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [location.pathname]);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
