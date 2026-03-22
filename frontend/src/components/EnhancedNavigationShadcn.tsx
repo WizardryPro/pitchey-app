@@ -178,7 +178,7 @@ export function EnhancedNavigationShadcn({
   const searchMenuItems = [
     { label: 'Search Pitches', href: '/search?type=pitches', icon: Film },
     { label: 'Search Creators', href: '/search?type=creators', icon: Users },
-    { label: 'Advanced Search', href: '/search/advanced', icon: Target },
+    { label: 'Marketplace', href: '/marketplace', icon: Target },
   ];
 
   const settingsMenuItems = {

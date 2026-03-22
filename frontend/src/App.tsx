@@ -607,7 +607,7 @@ function App() {
           <Route path="/browse/genres" element={<BrowseGenres />} />
           <Route path="/browse/top-rated" element={<BrowseTopRated />} />
           <Route path="/search" element={isAuthenticated ? <SearchPage /> : <Navigate to="/portals" />} />
-          <Route path="/search/advanced" element={isAuthenticated ? <AdvancedSearch /> : <Navigate to="/portals" />} />
+          <Route path="/search/advanced" element={<Navigate to="/marketplace" replace />} />
           <Route path="/search/genre" element={isAuthenticated ? <SearchPage /> : <Navigate to="/portals" />} />
           <Route path="/search/budget" element={isAuthenticated ? <SearchPage /> : <Navigate to="/portals" />} />
           <Route path="/search/creators" element={isAuthenticated ? <SearchPage /> : <Navigate to="/portals" />} />

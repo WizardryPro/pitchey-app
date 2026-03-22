@@ -39,8 +39,13 @@ import {
   RefreshCw,
   AlertTriangle,
   LogOut,
-  LayoutDashboard
+  LayoutDashboard,
+  MapPin,
+  Calendar as CalendarIcon,
+  UserPlus,
+  Building2
 } from 'lucide-react';
+import { API_URL } from '../config';
 
 // Get the best available image URL from a pitch (handles snake_case API + camelCase)
 function getPitchImageUrl(pitch: Pitch): string | undefined {
@@ -82,6 +87,8 @@ interface FilterState {
   hasNDA: boolean | null;
   hasInvestment: boolean | null;
   dateRange: { start: Date | null; end: Date | null };
+  location: string;
+  searchType: 'all' | 'pitches' | 'creators' | 'production';
 }
 
 export default function MarketplaceEnhanced() {
@@ -119,7 +126,9 @@ export default function MarketplaceEnhanced() {
     status: searchParams.get('status')?.split(',').filter(Boolean) || [],
     hasNDA: searchParams.get('hasNDA') === 'true' ? true : searchParams.get('hasNDA') === 'false' ? false : null,
     hasInvestment: searchParams.get('hasInvestment') === 'true' ? true : searchParams.get('hasInvestment') === 'false' ? false : null,
-    dateRange: { start: null, end: null }
+    dateRange: { start: null, end: null },
+    location: '',
+    searchType: 'all',
   });
 
   // Statistics
@@ -134,6 +143,12 @@ export default function MarketplaceEnhanced() {
   const [config, setConfig] = useState<{ genres?: string[]; formats?: string[] } | null>(null);
   
   const debouncedSearch = useDebounce(searchQuery, 300);
+
+  const [likedPitchIds, setLikedPitchIds] = useState<Set<number>>(new Set());
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+
+  const isSearchMode = debouncedSearch.length > 0;
 
   // Load config
   useEffect(() => {
@@ -205,6 +220,91 @@ export default function MarketplaceEnhanced() {
         [tab]: { pitches: [], loading: false, error: 'Failed to load pitches', loaded: true }
       }));
       calculateStats([]);
+    }
+  };
+
+  const performServerSearch = async () => {
+    setSearchLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (debouncedSearch) params.set('q', debouncedSearch);
+      if (filters.searchType !== 'all') params.set('type', filters.searchType);
+      if (filters.genres.length > 0) params.set('genres', filters.genres.join(','));
+      if (filters.budgetRange.max < 500000000) params.set('maxBudget', String(filters.budgetRange.max));
+      if (filters.budgetRange.min > 0) params.set('minBudget', String(filters.budgetRange.min));
+      if (filters.location) params.set('location', filters.location);
+      params.set('limit', '50');
+
+      const response = await fetch(`${API_URL}/api/search?${params.toString()}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Search failed');
+
+      const result = await response.json();
+      const data = result.data;
+      let items: any[] = [];
+
+      if (Array.isArray(data)) {
+        items = data;
+      } else if (data && typeof data === 'object') {
+        const pitches = Array.isArray(data.pitches) ? data.pitches : [];
+        const users = Array.isArray(data.users) ? data.users : [];
+        const companies = Array.isArray(data.companies) ? data.companies : [];
+        items = [
+          ...pitches,
+          ...users.map((u: any) => ({ ...u, _type: u.role === 'production' ? 'production' : 'creator' })),
+          ...companies.map((c: any) => ({ ...c, _type: 'production' })),
+        ];
+      }
+
+      setSearchResults(items.map((r: any) => ({
+        id: r.id,
+        type: r._type || r.type || (r.user_type ? (r.user_type === 'production' ? 'production' : 'creator') : 'pitch'),
+        title: r.title || r.name || r.display_name || 'Untitled',
+        description: r.logline || r.description || r.bio || '',
+        image: r.title_image || r.titleImage || r.thumbnail_url || r.avatar_url,
+        genre: r.genre,
+        budget: r.budget || r.estimated_budget,
+        views: Number(r.view_count || r.views || 0),
+        likes: Number(r.like_count || r.likes || 0),
+        createdAt: r.created_at || new Date().toISOString(),
+        author: r.creator_name || r.company_name,
+      })));
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      console.error('Search failed:', e.message);
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isSearchMode) {
+      performServerSearch();
+    } else {
+      setSearchResults([]);
+    }
+  }, [debouncedSearch, filters.searchType, filters.location, filters.genres]);
+
+  const handleLikePitch = async (e: React.MouseEvent, pitchId: number) => {
+    e.stopPropagation();
+    if (!isAuthenticated) return;
+    const isLiked = likedPitchIds.has(pitchId);
+    try {
+      const response = await fetch(`${API_URL}/api/pitches/${pitchId}/like`, {
+        method: isLiked ? 'DELETE' : 'POST',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        setLikedPitchIds(prev => {
+          const next = new Set(prev);
+          if (isLiked) next.delete(pitchId); else next.add(pitchId);
+          return next;
+        });
+      }
+    } catch {
+      // silent fail
     }
   };
 
@@ -405,7 +505,9 @@ export default function MarketplaceEnhanced() {
       status: [],
       hasNDA: null,
       hasInvestment: null,
-      dateRange: { start: null, end: null }
+      dateRange: { start: null, end: null },
+      location: '',
+      searchType: 'all',
     });
     setSearchQuery('');
     setSortBy('trending');
@@ -471,6 +573,14 @@ export default function MarketplaceEnhanced() {
                     <Heart className="w-3 h-3 sm:w-4 sm:h-4" />
                     {pitch.likeCount || 0}
                   </span>
+                  {isAuthenticated && (
+                    <button
+                      onClick={(e) => handleLikePitch(e, pitch.id)}
+                      className="flex items-center gap-1"
+                    >
+                      <Heart className={`w-3 h-3 ${likedPitchIds.has(pitch.id) ? 'fill-current text-red-400' : ''}`} />
+                    </button>
+                  )}
                   <span className="hidden sm:flex items-center gap-1">
                     <MessageCircle className="w-4 h-4" />
                     {((pitch as unknown as Record<string, unknown>).commentCount as number | undefined) || 0}
@@ -523,6 +633,14 @@ export default function MarketplaceEnhanced() {
                   <Heart className="w-3 h-3" />
                   {pitch.likeCount || 0}
                 </span>
+                {isAuthenticated && (
+                  <button
+                    onClick={(e) => handleLikePitch(e, pitch.id)}
+                    className="flex items-center gap-1"
+                  >
+                    <Heart className={`w-3 h-3 ${likedPitchIds.has(pitch.id) ? 'fill-current text-red-400' : ''}`} />
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -982,6 +1100,38 @@ export default function MarketplaceEnhanced() {
                       <span className="text-sm">Has Investment</span>
                     </label>
                   </div>
+
+                  {/* Location */}
+                  <div className="mb-4">
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">Location</label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="City, country..."
+                        value={filters.location}
+                        onChange={(e) => setFilters(prev => ({ ...prev, location: e.target.value }))}
+                        className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Search Type (only in search mode) */}
+                  {isSearchMode && (
+                    <div className="mb-4">
+                      <label className="text-sm font-medium text-gray-700 mb-2 block">Search In</label>
+                      <select
+                        value={filters.searchType}
+                        onChange={(e) => setFilters(prev => ({ ...prev, searchType: e.target.value as any }))}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                      >
+                        <option value="all">All Results</option>
+                        <option value="pitches">Pitches Only</option>
+                        <option value="creators">Creators Only</option>
+                        <option value="production">Production Companies</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
               </motion.aside>
             )}
@@ -1030,6 +1180,35 @@ export default function MarketplaceEnhanced() {
                   onClick: clearFilters
                 }}
               />
+            )}
+
+            {/* Search Results (non-pitch) */}
+            {isSearchMode && searchResults.filter(r => r.type !== 'pitch').length > 0 && (
+              <div className="mt-8">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Creators & Companies</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {searchResults.filter(r => r.type !== 'pitch').map((result) => (
+                    <div
+                      key={`${result.type}-${result.id}`}
+                      onClick={() => navigate(result.type === 'creator' ? `/creator/${result.id}` : `/production/company/${result.id}`)}
+                      className="bg-white rounded-lg shadow-sm hover:shadow-md transition p-4 cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          {result.type === 'creator' ? <User className="w-5 h-5 text-purple-500" /> : <Building2 className="w-5 h-5 text-orange-500" />}
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="font-semibold text-gray-900 truncate">{result.title}</h3>
+                          <p className="text-xs text-gray-500 capitalize">{result.type}</p>
+                        </div>
+                      </div>
+                      {result.description && (
+                        <p className="text-sm text-gray-600 mt-2 line-clamp-2">{result.description}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         </div>

@@ -132,7 +132,7 @@ function EnhancedNavigation({
       icon: Search,
       dropdown: [
         { label: 'Quick Search', href: '/search', icon: Search },
-        { label: 'Advanced Search', href: '/search/advanced', icon: Target },
+        { label: 'Marketplace', href: '/marketplace', icon: Target },
         { label: 'Search by Genre', href: '/search/genre', icon: Layers },
         { label: 'Search by Budget', href: '/search/budget', icon: DollarSign },
         { label: 'Search Creators', href: '/search/creators', icon: Users },
