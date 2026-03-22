@@ -102,7 +102,7 @@ export default function MarketplaceEnhanced() {
   const [viewMode, setViewMode] = useState<keyof typeof VIEW_MODES>('grid');
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
-  const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'trending');
+  const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'popular');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(16);
   const fetchRequestIdRef = useRef(0);
@@ -156,7 +156,7 @@ export default function MarketplaceEnhanced() {
   useEffect(() => {
     const params = new URLSearchParams();
     if (searchQuery) params.set('search', searchQuery);
-    if (sortBy !== 'trending') params.set('sort', sortBy);
+    if (sortBy !== 'popular') params.set('sort', sortBy);
     if (filters.genres.length) params.set('genres', filters.genres.join(','));
     if (filters.formats.length) params.set('formats', filters.formats.join(','));
     if (filters.status.length) params.set('status', filters.status.join(','));

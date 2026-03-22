@@ -7915,11 +7915,10 @@ pitchey_analytics_datapoints_per_minute 1250
 
       switch (tab) {
         case 'trending':
-          // Trending: Content weighted by engagement within 90 days of publishing
+          // Trending: Content weighted by engagement (no time filter until platform scales)
           whereClause = `
             WHERE p.status = 'published'
             AND p.visibility IN ('public', 'investors_only')
-            AND COALESCE(p.published_at, p.created_at) >= NOW() - INTERVAL '90 days'
           `;
           orderClause = `ORDER BY
             COALESCE(p.view_count, 0) + COALESCE(p.like_count, 0) * 3 DESC,
@@ -7928,11 +7927,10 @@ pitchey_analytics_datapoints_per_minute 1250
           break;
 
         case 'new':
-          // New: Recently published pitches (last 30 days)
+          // New: Recently published pitches (no time filter until platform scales)
           whereClause = `
             WHERE p.status = 'published'
             AND p.visibility IN ('public', 'investors_only')
-            AND COALESCE(p.published_at, p.created_at) >= NOW() - INTERVAL '30 days'
           `;
           orderClause = `ORDER BY COALESCE(p.published_at, p.created_at) DESC`;
           break;
