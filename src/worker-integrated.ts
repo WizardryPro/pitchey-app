@@ -2209,6 +2209,7 @@ class RouteRegistry {
     this.register('GET', '/api/pitches/featured', this.getPublicFeaturedPitches.bind(this));  // Alias for /api/pitches/public/featured
     this.register('GET', '/api/pitches/saved', this.getSavedPitches.bind(this));  // Alias for /api/saved-pitches
     this.register('GET', '/api/pitches/:id/like-status', (req) => pitchLikeStatusHandler(req, this.env));
+    this.register('GET', '/api/pitches/:id/engagement', (req) => getPitchEngagementHandler(req, this.env));
     this.register('GET', '/api/pitches/:id', this.getPitch.bind(this));
     this.register('GET', '/api/pitches/:id/attachments/:filename', this.getPitchAttachment.bind(this));
     this.register('GET', '/api/trending', this.getTrending.bind(this));
@@ -2689,8 +2690,7 @@ class RouteRegistry {
     this.register('GET', '/api/views/analytics', (req) => getViewAnalyticsHandler(req, this.env));
     this.register('GET', '/api/views/pitch/*', (req) => getPitchViewersHandler(req, this.env));
 
-    // Pitch engagement (social proof)
-    this.register('GET', '/api/pitches/*/engagement', (req) => getPitchEngagementHandler(req, this.env));
+    // Pitch engagement (social proof) — registered with view routes, but needs to be before /api/pitches/:id catch-all
 
     // === CREATOR PORTAL ROUTES (Phase 3) ===
     // Revenue Dashboard - Uses basic auth check (RBAC permissions are checked internally)

@@ -17,9 +17,8 @@ export async function getPitchEngagementHandler(request: Request, env: Env): Pro
 
   try {
     const url = new URL(request.url);
-    const pathParts = url.pathname.split('/');
-    // /api/pitches/:id/engagement
-    const pitchId = parseInt(pathParts[3], 10);
+    // Router attaches params, fallback to path split
+    const pitchId = parseInt((request as any).params?.id || url.pathname.split('/')[3], 10);
 
     if (!pitchId || isNaN(pitchId)) {
       return new Response(JSON.stringify({ success: false, error: 'Invalid pitch ID' }), {
