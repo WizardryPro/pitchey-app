@@ -150,9 +150,9 @@ function EnhancedNavigation({
     }
   };
 
-  // Filter out null items
+  // Filter out null/undefined items
   const navItems = Object.entries(navigationStructure)
-    .filter(([_, item]) => item !== null)
+    .filter(([_, item]) => item != null && item.icon)
     .map(([key, item]) => ({ key, ...item }));
 
   const toggleDropdown = (key: string) => {
