@@ -73,6 +73,8 @@ interface PitchCompleteness {
   total: number;
   fields: Array<{ label: string; present: boolean; hint: string }>;
   productionReadiness: number;
+  teamFilled: number;
+  teamTotal: number;
 }
 
 interface TeamMember {
@@ -152,12 +154,12 @@ const ProductionPitchView: React.FC = () => {
     }
   }, [id]);
 
-  // Calculate pitch completeness when pitch data or checklist changes
+  // Calculate pitch completeness when pitch data, checklist, or team changes
   useEffect(() => {
     if (pitch) {
       calculateCompleteness();
     }
-  }, [pitch, productionChecklist]);
+  }, [pitch, productionChecklist, teamMembers]);
 
   const fetchPitchData = async () => {
     try {
@@ -299,6 +301,15 @@ const ProductionPitchView: React.FC = () => {
       { label: 'Target Audience', present: !!(pitch.targetAudience), hint: 'Specify who this is for — helps with distribution planning' },
     ];
 
+    // Team assembly progress
+    const filledRoles = teamMembers.filter(m => m.name && m.name.trim() !== '').length;
+    const hasTeam = filledRoles > 0;
+    fields.push({
+      label: `Team (${filledRoles}/${teamMembers.length} roles)`,
+      present: hasTeam,
+      hint: 'Assign key crew — pitches with attached talent signal production readiness',
+    });
+
     const presentCount = fields.filter(f => f.present).length;
 
     // Production readiness from checklist
@@ -311,6 +322,8 @@ const ProductionPitchView: React.FC = () => {
       total: fields.length,
       fields,
       productionReadiness: readinessScore,
+      teamFilled: filledRoles,
+      teamTotal: teamMembers.length,
     });
   };
 
