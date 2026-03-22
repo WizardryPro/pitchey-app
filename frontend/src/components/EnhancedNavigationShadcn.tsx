@@ -176,9 +176,9 @@ export function EnhancedNavigationShadcn({
   };
 
   const searchMenuItems = [
-    { label: 'Search Pitches', href: '/search?type=pitches', icon: Film },
-    { label: 'Search Creators', href: '/search?type=creators', icon: Users },
-    { label: 'Marketplace', href: '/marketplace', icon: Target },
+    { label: 'Marketplace', href: '/marketplace', icon: Film },
+    { label: 'By Genre', href: '/browse/genres', icon: Target },
+    { label: 'Top Rated', href: '/browse/top-rated', icon: Star },
   ];
 
   const settingsMenuItems = {

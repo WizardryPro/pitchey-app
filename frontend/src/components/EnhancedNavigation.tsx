@@ -131,12 +131,9 @@ function EnhancedNavigation({
       label: 'Search',
       icon: Search,
       dropdown: [
-        { label: 'Quick Search', href: '/search', icon: Search },
-        { label: 'Marketplace', href: '/marketplace', icon: Target },
-        { label: 'Search by Genre', href: '/search/genre', icon: Layers },
-        { label: 'Search by Budget', href: '/search/budget', icon: DollarSign },
-        { label: 'Search Creators', href: '/search/creators', icon: Users },
-        { label: 'Search Companies', href: '/search/companies', icon: Briefcase },
+        { label: 'Marketplace', href: '/marketplace', icon: Film },
+        { label: 'By Genre', href: '/browse/genres', icon: Layers },
+        { label: 'Top Rated', href: '/browse/top-rated', icon: Award },
       ]
     },
     settings: {
