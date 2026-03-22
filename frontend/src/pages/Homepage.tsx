@@ -7,6 +7,7 @@ import { pitchAPI } from '../lib/api';
 import type { Pitch } from '@features/pitches/services/pitch.service';
 import { getGenresSync, getFormatsSync } from '@config/pitchConstants';
 import FormatDisplay from '../components/FormatDisplay';
+import GenrePlaceholder from '@shared/components/GenrePlaceholder';
 
 
 
@@ -338,9 +339,7 @@ export default function Homepage() {
                     {((pitch as any).title_image || (pitch as any).thumbnail_url || pitch.titleImage || pitch.thumbnailUrl) ? (
                       <img src={(pitch as any).title_image || (pitch as any).thumbnail_url || pitch.titleImage || pitch.thumbnailUrl} alt={pitch.title} className="w-full h-full object-cover" />
                     ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Film className="w-16 h-16 text-purple-200" />
-                      </div>
+                      <GenrePlaceholder genre={pitch.genre} />
                     )}
                     <div className="absolute top-2 right-2 bg-purple-600 px-2 py-1 rounded text-xs text-white">
                       <FormatDisplay
@@ -420,9 +419,7 @@ export default function Homepage() {
                     {((pitch as any).title_image || (pitch as any).thumbnail_url || pitch.titleImage || pitch.thumbnailUrl) ? (
                       <img src={(pitch as any).title_image || (pitch as any).thumbnail_url || pitch.titleImage || pitch.thumbnailUrl} alt={pitch.title} className="w-full h-full object-cover" />
                     ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Film className="w-16 h-16 text-purple-200" />
-                      </div>
+                      <GenrePlaceholder genre={pitch.genre} />
                     )}
                     <div className="absolute top-2 left-2 bg-yellow-500/90 backdrop-blur-sm px-2 py-1 rounded text-xs text-white font-medium">
                       NEW

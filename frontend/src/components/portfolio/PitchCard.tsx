@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import GenrePlaceholder from '@shared/components/GenrePlaceholder';
 
 interface Pitch {
   id: string;
@@ -32,11 +33,15 @@ const PitchCard: React.FC<PitchCardProps> = ({ pitch }) => {
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all group">
       <div className="relative h-48 overflow-hidden">
-        <img 
-          src={pitch.thumbnail} 
-          alt={pitch.title}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-        />
+        {pitch.thumbnail ? (
+          <img
+            src={pitch.thumbnail}
+            alt={pitch.title}
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+          />
+        ) : (
+          <GenrePlaceholder genre={pitch.genre} />
+        )}
         <div className="absolute top-2 right-2 px-2 py-1 bg-black bg-opacity-70 text-white text-xs rounded z-10">
           {pitch.genre}
         </div>

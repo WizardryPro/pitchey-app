@@ -13,6 +13,7 @@ import { useResponsive } from '@/shared/hooks/useResponsive';
 import { configService } from '../services/config.service';
 
 import FormatDisplay from '../components/FormatDisplay';
+import GenrePlaceholder from '@shared/components/GenrePlaceholder';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -441,9 +442,7 @@ export default function MarketplaceEnhanced() {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
-                  <Film className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
-                </div>
+                <GenrePlaceholder genre={pitch.genre} />
               )}
             </div>
             <div className="flex-1 min-w-0">
@@ -508,9 +507,7 @@ export default function MarketplaceEnhanced() {
               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <Film className="w-12 h-12 text-gray-400" />
-            </div>
+            <GenrePlaceholder genre={pitch.genre} />
           )}
 
           {/* Overlay with quick info — always visible on mobile (no hover), hover on desktop */}
