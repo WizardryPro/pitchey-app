@@ -157,9 +157,15 @@ export default function NDAManagementPanel({
     );
   };
 
+  const isExpired = (expiresAt?: string) => {
+    if (!expiresAt) return false;
+    return new Date(expiresAt) <= new Date();
+  };
+
   const isExpiringSoon = (expiresAt?: string) => {
     if (!expiresAt) return false;
     const expiryDate = new Date(expiresAt);
+    if (expiryDate <= new Date()) return false; // already expired, not "soon"
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
     return expiryDate <= thirtyDaysFromNow;
@@ -227,11 +233,19 @@ export default function NDAManagementPanel({
         </div>
         
         {items.length > 0 && (
-          <div className="flex gap-2 text-sm">
-            {category.includes('signed') && (
+          <div className="flex gap-3 text-sm">
+            {category.includes('signed') && items.filter(item => isExpired(item.expiresAt)).length > 0 && (
               <div className="text-center">
-                <div className="font-semibold text-gray-900">
-                  {items.filter(item => isExpiringSoon(item.expiresAt)).length}
+                <div className="font-semibold text-red-600">
+                  {items.filter(item => isExpired(item.expiresAt)).length}
+                </div>
+                <div className="text-gray-600">Expired</div>
+              </div>
+            )}
+            {category.includes('signed') && items.filter(item => !isExpired(item.expiresAt) && isExpiringSoon(item.expiresAt)).length > 0 && (
+              <div className="text-center">
+                <div className="font-semibold text-orange-600">
+                  {items.filter(item => !isExpired(item.expiresAt) && isExpiringSoon(item.expiresAt)).length}
                 </div>
                 <div className="text-gray-600">Expiring Soon</div>
               </div>
@@ -324,7 +338,13 @@ export default function NDAManagementPanel({
                     </h4>
                     {getStatusBadge(item.status)}
                     {getTypeBadge(item.ndaType)}
-                    {item.status === 'signed' && isExpiringSoon(item.expiresAt) && (
+                    {item.status === 'signed' && isExpired(item.expiresAt) && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">
+                        <AlertTriangle className="w-3 h-3" />
+                        Expired
+                      </span>
+                    )}
+                    {item.status === 'signed' && !isExpired(item.expiresAt) && isExpiringSoon(item.expiresAt) && (
                       <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs">
                         <AlertTriangle className="w-3 h-3" />
                         Expiring Soon

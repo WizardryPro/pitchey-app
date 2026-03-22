@@ -1033,9 +1033,9 @@ export class NDAService {
       `);
 
       for (const nda of expiredNDAs.rows) {
-        // Revoke access
+        // Revoke access and mark as expired
         await db.execute(
-          'UPDATE ndas SET access_granted = false, access_revoked_at = NOW() WHERE id = $1',
+          `UPDATE ndas SET access_granted = false, access_revoked_at = NOW(), status = 'expired', updated_at = NOW() WHERE id = $1`,
           [nda.id]
         );
 
