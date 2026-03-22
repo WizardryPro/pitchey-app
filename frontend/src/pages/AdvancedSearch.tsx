@@ -4,7 +4,8 @@ import {
   Search, Filter, SlidersHorizontal, Grid, List,
   Star, Clock, DollarSign, Calendar, Users,
   MapPin, Film, Award, Eye, Heart, ChevronDown,
-  X, RefreshCw, Download, ArrowUpDown, User
+  X, RefreshCw, Download, ArrowUpDown, User,
+  ArrowLeft, Home, ShoppingBag, LogOut
 } from 'lucide-react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
@@ -57,10 +58,10 @@ interface SearchResult {
 export default function AdvancedSearch() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useBetterAuthStore();
+  const { user, logout } = useBetterAuthStore();
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
   
   const [filters, setFilters] = useState<SearchFilters>({
     query: '',
@@ -170,7 +171,7 @@ export default function AdvancedSearch() {
         type: (r._type || r.type || (r.user_type ? (r.user_type === 'production' ? 'production' : 'creator') : 'pitch')) as 'pitch' | 'creator' | 'production',
         title: r.title || r.name || r.display_name || 'Untitled',
         description: r.logline || r.description || r.bio || '',
-        image: r.thumbnail_url || r.cover_image || r.avatar_url || undefined,
+        image: r.title_image || r.titleImage || r.thumbnail_url || r.cover_image || r.avatar_url || undefined,
         rating: r.rating ? Number(r.rating) : undefined,
         genre: r.genre ? (Array.isArray(r.genre) ? r.genre : [r.genre]) : undefined,
         budget: r.budget ? Number(r.budget) : undefined,
@@ -313,32 +314,116 @@ export default function AdvancedSearch() {
 
   const totalPages = Math.ceil(totalResults / resultsPerPage);
 
+  const dashboardPath = user?.userType ? `/${user.userType}/dashboard` : '/dashboard';
+
   return (
-    <div>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Advanced Search</h1>
-          <p className="mt-2 text-gray-600">Find pitches, creators, and production companies with powerful filters</p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Navigation Header */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14 sm:h-16">
+            <div className="flex items-center gap-3 sm:gap-6">
+              <button
+                onClick={() => navigate('/')}
+                className="text-xl sm:text-2xl font-bold text-purple-600"
+              >
+                Pitchey
+              </button>
+              <nav className="hidden sm:flex items-center gap-4">
+                <button
+                  onClick={() => navigate('/marketplace')}
+                  className="text-sm text-gray-600 hover:text-purple-600 transition"
+                >
+                  Marketplace
+                </button>
+                <span className="text-sm text-purple-600 font-medium">
+                  Advanced Search
+                </span>
+              </nav>
+            </div>
+
+            <div className="flex items-center gap-2 sm:gap-3">
+              {user && (
+                <>
+                  <span className="hidden md:block text-sm text-gray-600">
+                    {user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user.email}
+                  </span>
+                  <button
+                    onClick={() => navigate(dashboardPath)}
+                    className="px-3 py-1.5 sm:px-4 sm:py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition"
+                  >
+                    Dashboard
+                  </button>
+                  <button
+                    onClick={async () => { await logout(); navigate('/'); }}
+                    className="p-2 text-gray-400 hover:text-red-600 transition"
+                    title="Sign Out"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                </>
+              )}
+              {!user && (
+                <button
+                  onClick={() => navigate('/portals')}
+                  className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition"
+                >
+                  Sign In
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        {/* Page title — mobile gets a back button */}
+        <div className="mb-6 sm:mb-8 flex items-start gap-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="sm:hidden mt-1 p-1 text-gray-500 hover:text-gray-700"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Advanced Search</h1>
+            <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600">Find pitches, creators, and production companies</p>
+          </div>
         </div>
 
-        <div className="flex gap-8">
-          {/* Filters Sidebar */}
+        <div className="flex gap-8 relative">
+          {/* Mobile filter overlay backdrop */}
           {showFilters && (
-            <div className="w-80 flex-shrink-0">
-              <Card className="sticky top-4">
+            <div
+              className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+              onClick={() => setShowFilters(false)}
+            />
+          )}
+
+          {/* Filters Sidebar — slide-over on mobile, sticky sidebar on desktop */}
+          {showFilters && (
+            <div className="fixed inset-y-0 left-0 z-50 w-80 max-w-[85vw] overflow-y-auto bg-white shadow-xl lg:shadow-none lg:static lg:z-auto lg:w-80 lg:flex-shrink-0">
+              <Card className="lg:sticky lg:top-4 border-0 lg:border rounded-none lg:rounded-lg h-full lg:h-auto">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2">
                       <Filter className="w-5 h-5" />
                       Filters
                     </CardTitle>
-                    <button
-                      onClick={clearFilters}
-                      className="text-sm text-purple-600 hover:text-purple-800"
-                    >
-                      Clear All
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={clearFilters}
+                        className="text-sm text-purple-600 hover:text-purple-800"
+                      >
+                        Clear All
+                      </button>
+                      <button
+                        onClick={() => setShowFilters(false)}
+                        className="lg:hidden p-1 hover:bg-gray-100 rounded"
+                      >
+                        <X className="w-5 h-5 text-gray-500" />
+                      </button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -477,52 +562,53 @@ export default function AdvancedSearch() {
           )}
 
           {/* Main Content */}
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             {/* Search Bar and Controls */}
             <Card className="mb-6">
-              <CardContent className="pt-6">
-                <div className="flex gap-4 mb-4">
+              <CardContent className="pt-4 sm:pt-6">
+                <div className="flex gap-2 sm:gap-4 mb-4">
                   <div className="flex-1 relative">
                     <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                     <input
                       type="text"
                       value={filters.query}
                       onChange={(e) => handleFilterChange('query', e.target.value)}
-                      placeholder="Search for pitches, creators, or production companies..."
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="Search pitches, creators..."
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm sm:text-base"
                     />
                   </div>
                   <button
                     onClick={() => setShowFilters(!showFilters)}
-                    className={`px-4 py-3 border border-gray-300 rounded-lg transition flex items-center gap-2 ${
+                    className={`px-3 sm:px-4 py-3 border border-gray-300 rounded-lg transition flex items-center gap-2 flex-shrink-0 ${
                       showFilters ? 'bg-purple-50 border-purple-300 text-purple-700' : 'hover:bg-gray-50'
                     }`}
                   >
                     <SlidersHorizontal className="w-4 h-4" />
-                    Filters
+                    <span className="hidden sm:inline">Filters</span>
                   </button>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm text-gray-600">
-                      {loading ? 'Searching...' : `${totalResults} results found`}
+                {/* Controls — stacks on mobile */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+                    <span className="text-sm text-gray-600 whitespace-nowrap">
+                      {loading ? 'Searching...' : `${totalResults} results`}
                     </span>
-                    
+
                     <div className="flex items-center gap-2">
-                      <label className="text-sm text-gray-600">Sort by:</label>
+                      <label className="text-sm text-gray-600 hidden sm:inline">Sort by:</label>
                       <select
                         value={filters.sortBy}
                         onChange={(e) => handleFilterChange('sortBy', e.target.value)}
-                        className="px-3 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="px-2 sm:px-3 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       >
                         <option value="relevance">Relevance</option>
-                        <option value="date">Date Created</option>
+                        <option value="date">Date</option>
                         <option value="rating">Rating</option>
                         <option value="budget">Budget</option>
-                        <option value="popularity">Popularity</option>
+                        <option value="popularity">Popular</option>
                       </select>
-                      
+
                       <button
                         onClick={() => handleFilterChange('sortOrder', filters.sortOrder === 'asc' ? 'desc' : 'asc')}
                         className="p-1 hover:bg-gray-100 rounded"
@@ -535,12 +621,12 @@ export default function AdvancedSearch() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={exportResults}
-                      className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition flex items-center gap-2"
+                      className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition flex items-center gap-2 text-sm"
                     >
                       <Download className="w-4 h-4" />
-                      Export
+                      <span className="hidden sm:inline">Export</span>
                     </button>
-                    
+
                     <div className="flex border border-gray-300 rounded-lg overflow-hidden">
                       <button
                         onClick={() => setViewMode('grid')}
@@ -574,7 +660,7 @@ export default function AdvancedSearch() {
             {!loading && (
               <>
                 {viewMode === 'grid' ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
                     {paginatedResults.map(result => (
                       <Card key={result.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleResultClick(result)}>
                         <div className="aspect-video bg-gray-200 rounded-t-xl relative overflow-hidden">
@@ -588,16 +674,17 @@ export default function AdvancedSearch() {
                             </div>
                           )}
                           <div className="absolute top-2 left-2">
-                            <Badge variant="secondary">
+                            <Badge className="bg-black/60 text-white border-transparent backdrop-blur-sm">
                               {result.type}
                             </Badge>
                           </div>
                           {result.rating && (
-                            <div className="absolute top-2 right-2 bg-white/90 backdrop-blur rounded-lg px-2 py-1 flex items-center gap-1">
+                            <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1 flex items-center gap-1">
                               <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                              <span className="text-sm font-medium">{result.rating}</span>
+                              <span className="text-sm font-medium text-white">{result.rating}</span>
                             </div>
                           )}
+                          <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/30 to-transparent" />
                         </div>
                         <CardContent className="p-4">
                           <h3 className="font-semibold text-lg mb-2 line-clamp-1">{result.title}</h3>
@@ -673,48 +760,48 @@ export default function AdvancedSearch() {
                     ))}
                   </div>
                 ) : (
-                  <div className="space-y-4 mb-8">
+                  <div className="space-y-3 sm:space-y-4 mb-8">
                     {paginatedResults.map(result => (
                       <Card key={result.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleResultClick(result)}>
-                        <CardContent className="p-6">
-                          <div className="flex gap-4">
-                            <div className="w-24 h-24 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
+                        <CardContent className="p-4 sm:p-6">
+                          <div className="flex gap-3 sm:gap-4">
+                            <div className="w-16 h-16 sm:w-24 sm:h-24 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
                               {result.image ? (
                                 <img src={result.image} alt={result.title} className="w-full h-full object-cover" />
                               ) : (
                                 <div className="w-full h-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
-                                  {result.type === 'pitch' && <Film className="w-8 h-8 text-white" />}
-                                  {result.type === 'creator' && <User className="w-8 h-8 text-white" />}
-                                  {result.type === 'production' && <Award className="w-8 h-8 text-white" />}
+                                  {result.type === 'pitch' && <Film className="w-6 h-6 sm:w-8 sm:h-8 text-white" />}
+                                  {result.type === 'creator' && <User className="w-6 h-6 sm:w-8 sm:h-8 text-white" />}
+                                  {result.type === 'production' && <Award className="w-6 h-6 sm:w-8 sm:h-8 text-white" />}
                                 </div>
                               )}
                             </div>
 
-                            <div className="flex-1">
-                              <div className="flex items-start justify-between mb-2">
-                                <div className="flex items-center gap-3">
-                                  <h3 className="font-semibold text-lg">{result.title}</h3>
-                                  <Badge variant="secondary">{result.type}</Badge>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2 mb-1 sm:mb-2">
+                                <div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0">
+                                  <h3 className="font-semibold text-base sm:text-lg truncate">{result.title}</h3>
+                                  <Badge variant="secondary" className="text-xs flex-shrink-0">{result.type}</Badge>
                                   {result.rating && (
-                                    <div className="flex items-center gap-1">
-                                      <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                                      <span className="text-sm font-medium">{result.rating}</span>
+                                    <div className="flex items-center gap-1 flex-shrink-0">
+                                      <Star className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500 fill-current" />
+                                      <span className="text-xs sm:text-sm font-medium">{result.rating}</span>
                                     </div>
                                   )}
                                 </div>
-                                <span className="text-sm text-gray-500">{formatDate(result.createdAt)}</span>
+                                <span className="text-xs sm:text-sm text-gray-500 flex-shrink-0 hidden sm:block">{formatDate(result.createdAt)}</span>
                               </div>
 
                               {result.author && (
-                                <p className="text-sm text-purple-600 mb-1">by {result.author}</p>
+                                <p className="text-xs sm:text-sm text-purple-600 mb-1">by {result.author}</p>
                               )}
-                              <p className="text-gray-600 mb-3 line-clamp-2">{result.description}</p>
+                              <p className="text-gray-600 text-sm mb-2 sm:mb-3 line-clamp-1 sm:line-clamp-2">{result.description}</p>
 
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4 text-sm text-gray-500">
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-500 flex-wrap">
                                   {result.genre && (
                                     <div className="flex gap-1">
-                                      {result.genre.slice(0, 3).map(genre => (
+                                      {result.genre.slice(0, 2).map(genre => (
                                         <Badge key={genre} variant="outline" className="text-xs">
                                           {genre}
                                         </Badge>
@@ -728,16 +815,16 @@ export default function AdvancedSearch() {
                                     </span>
                                   )}
                                   {result.location && (
-                                    <span className="flex items-center gap-1">
+                                    <span className="flex items-center gap-1 hidden sm:flex">
                                       <MapPin className="w-3 h-3" />
-                                      {result.location}
+                                      {result.location.split(',')[0]}
                                     </span>
                                   )}
                                 </div>
 
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2 sm:gap-3">
                                   {result.views != null && (
-                                    <span className="flex items-center gap-1 text-sm text-gray-500">
+                                    <span className="flex items-center gap-1 text-xs sm:text-sm text-gray-500">
                                       <Eye className="w-3 h-3" />
                                       {result.views.toLocaleString()}
                                     </span>
@@ -770,22 +857,24 @@ export default function AdvancedSearch() {
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2">
+                  <div className="flex items-center justify-center gap-1 sm:gap-2 flex-wrap">
                     <button
                       onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                       disabled={currentPage === 1}
-                      className="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      className="px-2 sm:px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm"
                     >
-                      Previous
+                      <span className="hidden sm:inline">Previous</span>
+                      <span className="sm:hidden">&lsaquo;</span>
                     </button>
-                    
+
                     {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                       const page = i + Math.max(1, currentPage - 2);
+                      if (page > totalPages) return null;
                       return (
                         <button
                           key={page}
                           onClick={() => setCurrentPage(page)}
-                          className={`px-3 py-2 border rounded-lg ${
+                          className={`px-2.5 sm:px-3 py-2 border rounded-lg text-sm ${
                             page === currentPage
                               ? 'bg-purple-600 text-white border-purple-600'
                               : 'border-gray-300 hover:bg-gray-50'
@@ -795,13 +884,14 @@ export default function AdvancedSearch() {
                         </button>
                       );
                     })}
-                    
+
                     <button
                       onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                       disabled={currentPage === totalPages}
-                      className="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      className="px-2 sm:px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm"
                     >
-                      Next
+                      <span className="hidden sm:inline">Next</span>
+                      <span className="sm:hidden">&rsaquo;</span>
                     </button>
                   </div>
                 )}

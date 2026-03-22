@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronDown, CircleUser, Coins, Menu, X, LogOut, Home, Store } from 'lucide-react';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
@@ -17,6 +17,19 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
   const navigate = useNavigate();
   const { user, logout } = useBetterAuthStore();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!isProfileOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setIsProfileOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isProfileOpen]);
 
   const [creditBalance, setCreditBalance] = useState<number>(0);
 
@@ -99,7 +112,7 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
         <NotificationBell size="sm" />
 
         {/* Profile Menu */}
-        <div className="relative">
+        <div className="relative" ref={profileRef}>
           <button
             onClick={() => setIsProfileOpen(!isProfileOpen)}
             className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"

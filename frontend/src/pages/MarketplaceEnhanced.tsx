@@ -37,7 +37,8 @@ import {
   WifiOff,
   RefreshCw,
   AlertTriangle,
-  LogOut
+  LogOut,
+  LayoutDashboard
 } from 'lucide-react';
 
 // Get the best available image URL from a pitch (handles snake_case API + camelCase)
@@ -67,9 +68,9 @@ const SORT_OPTIONS = [
 ];
 
 const VIEW_MODES = {
-  grid: { icon: Grid, label: 'Grid View', cols: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' },
+  grid: { icon: Grid, label: 'Grid View', cols: 'grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4' },
   list: { icon: List, label: 'List View', cols: 'grid-cols-1' },
-  compact: { icon: BarChart3, label: 'Compact View', cols: 'grid-cols-1 md:grid-cols-2' }
+  compact: { icon: BarChart3, label: 'Compact View', cols: 'grid-cols-1 sm:grid-cols-2' }
 };
 
 interface FilterState {
@@ -428,50 +429,56 @@ export default function MarketplaceEnhanced() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
           whileHover={{ x: 4 }}
-          className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all p-4 cursor-pointer"
+          className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all p-3 sm:p-4 cursor-pointer"
           onClick={() => handlePitchClick(pitch)}
         >
-          <div className="flex gap-4">
-            {getPitchImageUrl(pitch) && (
-              <img
-                src={getPitchImageUrl(pitch)}
-                alt={pitch.title}
-                className="w-24 h-36 object-cover rounded"
-              />
-            )}
-            <div className="flex-1">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h3 className="text-lg font-semibold">{pitch.title}</h3>
-                  <p className="text-sm text-gray-600">{pitch.creator?.name || pitch.creator?.username || ((pitch as unknown as Record<string, unknown>).creator_username as string | undefined) || ((pitch as unknown as Record<string, unknown>).creator_name as string | undefined) || 'Unknown'}</p>
+          <div className="flex gap-3 sm:gap-4">
+            <div className="w-16 h-24 sm:w-24 sm:h-36 bg-gray-200 rounded flex-shrink-0 overflow-hidden">
+              {getPitchImageUrl(pitch) ? (
+                <img
+                  src={getPitchImageUrl(pitch)}
+                  alt={pitch.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
+                  <Film className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                 </div>
-                <div className="flex gap-2">
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between items-start gap-2 mb-1 sm:mb-2">
+                <div className="min-w-0">
+                  <h3 className="text-base sm:text-lg font-semibold truncate">{pitch.title}</h3>
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">{pitch.creator?.name || pitch.creator?.username || ((pitch as unknown as Record<string, unknown>).creator_username as string | undefined) || ((pitch as unknown as Record<string, unknown>).creator_name as string | undefined) || 'Unknown'}</p>
+                </div>
+                <div className="flex gap-1 sm:gap-2 flex-shrink-0">
                   {pitch.genre && (
-                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                    <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-purple-100 text-purple-800 text-[10px] sm:text-xs rounded-full">
                       {pitch.genre}
                     </span>
                   )}
-                  {pitch.format && <FormatDisplay format={pitch.format} />}
+                  <span className="hidden sm:block">{pitch.format && <FormatDisplay format={pitch.format} />}</span>
                 </div>
               </div>
-              <p className="text-gray-700 mb-3 line-clamp-2">{pitch.logline}</p>
+              <p className="text-sm text-gray-700 mb-2 sm:mb-3 line-clamp-1 sm:line-clamp-2">{pitch.logline}</p>
               <div className="flex items-center justify-between">
-                <div className="flex gap-4 text-sm text-gray-600">
+                <div className="flex gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600">
                   <span className="flex items-center gap-1">
-                    <Eye className="w-4 h-4" />
+                    <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
                     {pitch.viewCount || 0}
                   </span>
                   <span className="flex items-center gap-1">
-                    <Heart className="w-4 h-4" />
+                    <Heart className="w-3 h-3 sm:w-4 sm:h-4" />
                     {pitch.likeCount || 0}
                   </span>
-                  <span className="flex items-center gap-1">
+                  <span className="hidden sm:flex items-center gap-1">
                     <MessageCircle className="w-4 h-4" />
                     {((pitch as unknown as Record<string, unknown>).commentCount as number | undefined) || 0}
                   </span>
                 </div>
                 {(pitch.estimatedBudget || pitch.budgetBracket) && (
-                  <span className="text-sm font-medium text-green-600">
+                  <span className="text-xs sm:text-sm font-medium text-green-600">
                     {pitch.estimatedBudget || pitch.budgetBracket}
                   </span>
                 )}
@@ -493,7 +500,7 @@ export default function MarketplaceEnhanced() {
         className="group bg-white rounded-lg shadow-sm hover:shadow-xl transition-all overflow-hidden cursor-pointer"
         onClick={() => handlePitchClick(pitch)}
       >
-        <div className="aspect-[3/4] relative overflow-hidden bg-gray-100">
+        <div className="aspect-[4/5] sm:aspect-[3/4] relative overflow-hidden bg-gray-100">
           {getPitchImageUrl(pitch) ? (
             <img
               src={getPitchImageUrl(pitch)}
@@ -506,11 +513,11 @@ export default function MarketplaceEnhanced() {
             </div>
           )}
 
-          {/* Overlay with quick info */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-              <p className="text-sm line-clamp-3 mb-2">{pitch.logline}</p>
-              <div className="flex gap-2 text-xs">
+          {/* Overlay with quick info — always visible on mobile (no hover), hover on desktop */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent sm:from-black/80 sm:via-black/20 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+            <div className="absolute bottom-0 left-0 right-0 p-2.5 sm:p-4 text-white">
+              <p className="text-xs sm:text-sm line-clamp-2 sm:line-clamp-3 mb-1 sm:mb-2">{pitch.logline}</p>
+              <div className="flex gap-2 text-[10px] sm:text-xs">
                 <span className="flex items-center gap-1">
                   <Eye className="w-3 h-3" />
                   {pitch.viewCount || 0}
@@ -526,13 +533,13 @@ export default function MarketplaceEnhanced() {
           {/* Badges */}
           <div className="absolute top-2 right-2 flex flex-col gap-1">
             {(pitch.hasNDA || pitch.requireNDA) && (
-              <span className="bg-purple-600 text-white px-2 py-1 text-xs rounded flex items-center gap-1">
+              <span className="bg-black/60 backdrop-blur-sm text-white px-2 py-1 text-xs rounded flex items-center gap-1">
                 <Shield className="w-3 h-3" />
                 NDA
               </span>
             )}
             {((pitch as unknown as Record<string, unknown>).isFeatured as boolean | undefined) && (
-              <span className="bg-yellow-500 text-white px-2 py-1 text-xs rounded flex items-center gap-1">
+              <span className="bg-yellow-500/90 backdrop-blur-sm text-white px-2 py-1 text-xs rounded flex items-center gap-1">
                 <Star className="w-3 h-3" />
                 Featured
               </span>
@@ -540,27 +547,27 @@ export default function MarketplaceEnhanced() {
           </div>
         </div>
 
-        <div className="p-4">
-          <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1">
+        <div className="p-3 sm:p-4">
+          <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1 text-sm sm:text-base">
             {pitch.title}
           </h3>
-          <p className="text-sm text-gray-600 mb-2">{pitch.creator?.name || pitch.creator?.username || ((pitch as unknown as Record<string, unknown>).creator_username as string | undefined) || ((pitch as unknown as Record<string, unknown>).creator_name as string | undefined) || 'Unknown'}</p>
+          <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2 truncate">{pitch.creator?.name || pitch.creator?.username || ((pitch as unknown as Record<string, unknown>).creator_username as string | undefined) || ((pitch as unknown as Record<string, unknown>).creator_name as string | undefined) || 'Unknown'}</p>
 
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex gap-2">
+          <div className="flex items-center justify-between mb-1 sm:mb-2">
+            <div className="flex gap-1 sm:gap-2">
               {pitch.genre && (
-                <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-100 text-gray-700 text-[10px] sm:text-xs rounded">
                   {pitch.genre}
                 </span>
               )}
             </div>
             {(pitch.estimatedBudget || pitch.budgetBracket) && (
-              <span className="text-sm font-medium text-green-600">
+              <span className="text-xs sm:text-sm font-medium text-green-600">
                 {pitch.estimatedBudget || pitch.budgetBracket}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-3 text-xs text-gray-500 pt-2 border-t">
+          <div className="flex items-center gap-3 text-[10px] sm:text-xs text-gray-500 pt-1.5 sm:pt-2 border-t">
             <span className="flex items-center gap-1">
               <Eye className="w-3 h-3" />
               {pitch.viewCount || 0}
@@ -576,15 +583,15 @@ export default function MarketplaceEnhanced() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
       {/* Navigation Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-50 overflow-hidden">
+        <div className="container mx-auto px-3 sm:px-4">
+          <div className="flex items-center justify-between h-14 sm:h-16">
             {/* Logo and main nav */}
-            <div className="flex items-center gap-8">
-              <a href="/" className="flex items-center">
-                <span className="text-2xl font-bold text-purple-600">Pitchey</span>
+            <div className="flex items-center gap-3 sm:gap-8 min-w-0">
+              <a href="/" className="flex items-center flex-shrink-0">
+                <span className="text-xl sm:text-2xl font-bold text-purple-600">Pitchey</span>
               </a>
               <nav className="hidden md:flex items-center gap-6">
                 <button
@@ -594,10 +601,10 @@ export default function MarketplaceEnhanced() {
                   Browse Pitches
                 </button>
                 <button
-                  onClick={() => { void navigate('/how-it-works'); }}
+                  onClick={() => { void navigate('/search/advanced'); }}
                   className="text-gray-700 hover:text-purple-600 transition"
                 >
-                  How It Works
+                  Advanced Search
                 </button>
                 <button
                   onClick={() => { void navigate('/about'); }}
@@ -609,31 +616,32 @@ export default function MarketplaceEnhanced() {
             </div>
 
             {/* Auth buttons */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-3">
               {isAuthenticated ? (
                 <>
-                  {/* User info */}
-                  <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-lg">
+                  {/* User info — desktop only */}
+                  <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-lg">
                     <User className="w-4 h-4 text-gray-600" />
                     <span className="text-sm text-gray-700">
                       {user?.userType === 'production' && user?.companyName ? user.companyName : user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.username || user?.email}
                     </span>
                   </div>
 
-                  {/* Dashboard button */}
+                  {/* Dashboard button — icon on mobile, text on sm+ */}
                   <button
                     onClick={() => {
                       void navigate(user?.userType ? `/${user.userType}/dashboard` : '/dashboard');
                     }}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                    className="p-2 sm:px-4 sm:py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition flex items-center gap-1.5"
                   >
-                    Dashboard
+                    <LayoutDashboard className="w-4 h-4" />
+                    <span className="hidden sm:inline">Dashboard</span>
                   </button>
 
                   {/* Sign Out button */}
                   <button
                     onClick={async () => { await logout(); navigate('/'); }}
-                    className="px-3 py-2 text-gray-500 hover:text-red-600 transition"
+                    className="p-2 text-gray-500 hover:text-red-600 transition flex-shrink-0"
                     title="Sign Out"
                   >
                     <LogOut className="w-4 h-4" />
@@ -643,13 +651,13 @@ export default function MarketplaceEnhanced() {
                 <>
                   <button
                     onClick={() => { void navigate('/portals'); }}
-                    className="px-4 py-2 text-purple-600 hover:text-purple-700 transition font-medium"
+                    className="px-2.5 py-1.5 sm:px-4 sm:py-2 text-purple-600 hover:text-purple-700 transition font-medium text-xs sm:text-sm"
                   >
                     Sign In
                   </button>
                   <button
                     onClick={() => { void navigate('/portals'); }}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                    className="px-2.5 py-1.5 sm:px-4 sm:py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-xs sm:text-sm flex-shrink-0"
                   >
                     Get Started
                   </button>
@@ -661,39 +669,39 @@ export default function MarketplaceEnhanced() {
       </header>
 
       {/* Header with stats */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-        <div className="container mx-auto px-4 py-8">
+      <div className="bg-gradient-to-r from-purple-700 to-indigo-600 text-white">
+        <div className="container mx-auto px-4 py-5 sm:py-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h1 className="text-3xl font-bold mb-2">Marketplace Enhanced</h1>
-              <p className="text-blue-100">Discover and invest in the next big hit</p>
+              <h1 className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">Marketplace</h1>
+              <p className="text-sm sm:text-base text-purple-200">Discover and invest in the next big hit</p>
             </div>
-            
-            {/* Quick stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-white/10 backdrop-blur rounded-lg p-3">
-                <div className="text-2xl font-bold">{filteredPitches.length}</div>
-                <div className="text-xs text-blue-100">Active Pitches</div>
+
+            {/* Quick stats — 2x2 on mobile, 4 across on tablet+ */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 md:gap-4 w-full md:w-auto">
+              <div className="bg-white/10 backdrop-blur rounded-lg px-3 py-2 sm:p-3">
+                <div className="text-xl sm:text-2xl font-bold">{filteredPitches.length}</div>
+                <div className="text-[10px] sm:text-xs text-purple-200">Active Pitches</div>
               </div>
-              <div className="bg-white/10 backdrop-blur rounded-lg p-3">
-                <div className="text-2xl font-bold">{stats.activeCreators}</div>
-                <div className="text-xs text-blue-100">Creators</div>
+              <div className="bg-white/10 backdrop-blur rounded-lg px-3 py-2 sm:p-3">
+                <div className="text-xl sm:text-2xl font-bold">{stats.activeCreators}</div>
+                <div className="text-[10px] sm:text-xs text-purple-200">Creators</div>
               </div>
-              <div className="bg-white/10 backdrop-blur rounded-lg p-3">
-                <div className="text-2xl font-bold">
+              <div className="bg-white/10 backdrop-blur rounded-lg px-3 py-2 sm:p-3">
+                <div className="text-xl sm:text-2xl font-bold">
                   ${(stats.totalInvestment / 1000000).toFixed(1)}M
                 </div>
-                <div className="text-xs text-blue-100">Total Invested</div>
+                <div className="text-[10px] sm:text-xs text-purple-200">Total Invested</div>
               </div>
-              <div className="bg-white/10 backdrop-blur rounded-lg p-3">
-                <div className="text-2xl font-bold">
+              <div className="bg-white/10 backdrop-blur rounded-lg px-3 py-2 sm:p-3">
+                <div className="text-xl sm:text-2xl font-bold">
                   {stats.avgBudget >= 1000000
                     ? `$${(stats.avgBudget / 1000000).toFixed(1)}M`
                     : stats.avgBudget >= 1000
                       ? `$${(stats.avgBudget / 1000).toFixed(0)}K`
                       : `$${stats.avgBudget.toFixed(0)}`}
                 </div>
-                <div className="text-xs text-blue-100">Avg Budget</div>
+                <div className="text-[10px] sm:text-xs text-purple-200">Avg Budget</div>
               </div>
             </div>
           </div>
@@ -732,8 +740,8 @@ export default function MarketplaceEnhanced() {
 
       {/* Search and controls bar */}
       <div className="bg-white border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-col lg:flex-row gap-4">
+        <div className="container mx-auto px-4 py-3 sm:py-4">
+          <div className="flex gap-2 sm:gap-4 mb-3">
             {/* Search */}
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -741,70 +749,70 @@ export default function MarketplaceEnhanced() {
                 id="marketplace-search"
                 name="search"
                 type="text"
-                placeholder="Search pitches, creators, genres..."
+                placeholder="Search pitches..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm sm:text-base"
                 aria-label="Search pitches"
               />
             </div>
 
-            {/* Controls */}
-            <div className="flex gap-2">
-              {/* Sort dropdown */}
-              <select
-                id="marketplace-sort"
-                name="sortBy"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                aria-label="Sort pitches by"
-              >
-                {SORT_OPTIONS.map(option => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+            {/* Filter toggle */}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`px-3 sm:px-4 py-2 border rounded-lg flex items-center gap-2 flex-shrink-0 ${showFilters ? 'bg-purple-600 text-white' : 'hover:bg-gray-100'}`}
+            >
+              <SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Filters</span>
+              {hasActiveFilters && (
+                <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {filters.genres.length + filters.formats.length + filters.status.length + (searchQuery ? 1 : 0)}
+                </span>
+              )}
+            </button>
+          </div>
 
-              {/* View mode toggle */}
-              <div className="flex border rounded-lg">
-                {Object.entries(VIEW_MODES).map(([mode, config]) => {
-                  const Icon = config.icon;
-                  return (
-                    <button
-                      key={mode}
-                      onClick={() => setViewMode(mode as keyof typeof VIEW_MODES)}
-                      className={`p-2 ${viewMode === mode ? 'bg-blue-500 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-                      title={config.label}
-                    >
-                      <Icon className="w-5 h-5" />
-                    </button>
-                  );
-                })}
-              </div>
+          {/* Sort + View controls */}
+          <div className="flex items-center justify-between gap-2">
+            {/* Sort dropdown */}
+            <select
+              id="marketplace-sort"
+              name="sortBy"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="max-w-[150px] sm:max-w-none px-2 sm:px-4 py-1.5 sm:py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 text-xs sm:text-sm"
+              aria-label="Sort pitches by"
+            >
+              {SORT_OPTIONS.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
 
-              {/* Filter toggle */}
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`px-4 py-2 border rounded-lg flex items-center gap-2 ${showFilters ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}
-              >
-                <SlidersHorizontal className="w-5 h-5" />
-                Filters
-                {hasActiveFilters && (
-                  <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {filters.genres.length + filters.formats.length + filters.status.length + (searchQuery ? 1 : 0)}
-                  </span>
-                )}
-              </button>
+            {/* View mode toggle */}
+            <div className="flex border rounded-lg flex-shrink-0">
+              {Object.entries(VIEW_MODES).map(([mode, config]) => {
+                const Icon = config.icon;
+                return (
+                  <button
+                    key={mode}
+                    onClick={() => setViewMode(mode as keyof typeof VIEW_MODES)}
+                    className={`p-1.5 sm:p-2 ${viewMode === mode ? 'bg-purple-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                    title={config.label}
+                  >
+                    <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* Active filters display */}
           {hasActiveFilters && (
-            <div className="flex flex-wrap gap-2 mt-4">
+            <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-3 sm:mt-4">
               {searchQuery && (
-                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm flex items-center gap-1">
+                <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm flex items-center gap-1">
                   Search: {searchQuery}
                   <button onClick={() => setSearchQuery('')}>
                     <X className="w-3 h-3" />
@@ -838,19 +846,40 @@ export default function MarketplaceEnhanced() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex gap-6">
-          {/* Filters sidebar */}
+      <div className="container mx-auto px-4 py-4 sm:py-6">
+        {/* Mobile filter overlay backdrop */}
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+              onClick={() => setShowFilters(false)}
+            />
+          )}
+        </AnimatePresence>
+
+        <div className="flex gap-6 relative">
+          {/* Filters sidebar — slide-over on mobile, inline on desktop */}
           <AnimatePresence>
             {showFilters && (
               <motion.aside
                 initial={{ x: -300, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: -300, opacity: 0 }}
-                className="w-64 shrink-0"
+                className="fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] overflow-y-auto bg-white shadow-xl lg:shadow-none lg:static lg:z-auto lg:w-64 lg:shrink-0"
               >
-                <div className="bg-white rounded-lg shadow-sm p-6 sticky top-20">
-                  <h3 className="font-semibold text-gray-900 mb-4">Filters</h3>
+                <div className="bg-white lg:rounded-lg lg:shadow-sm p-6 lg:sticky lg:top-20 h-full lg:h-auto">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-gray-900">Filters</h3>
+                    <button
+                      onClick={() => setShowFilters(false)}
+                      className="lg:hidden p-1 hover:bg-gray-100 rounded"
+                    >
+                      <X className="w-5 h-5 text-gray-500" />
+                    </button>
+                  </div>
                   
                   {/* Genre filter */}
                   <div className="mb-6">
@@ -962,17 +991,17 @@ export default function MarketplaceEnhanced() {
           </AnimatePresence>
 
           {/* Main content */}
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             {/* Results info */}
-            <div className="mb-4 flex justify-between items-center">
-              <p className="text-gray-600">
-                Showing {paginatedPitches.length} of {filteredPitches.length} pitches
+            <div className="mb-3 sm:mb-4 flex justify-between items-center">
+              <p className="text-sm sm:text-base text-gray-600">
+                {paginatedPitches.length} of {filteredPitches.length} pitches
               </p>
             </div>
 
             {/* Pitches grid */}
             {loading ? (
-              <div className={`grid ${VIEW_MODES[viewMode].cols} gap-6`}>
+              <div className={`grid ${VIEW_MODES[viewMode].cols} gap-3 sm:gap-6`}>
                 {Array.from({ length: 8 }).map((_, i) => (
                   <PitchCardSkeleton key={i} />
                 ))}
@@ -980,7 +1009,7 @@ export default function MarketplaceEnhanced() {
             ) : paginatedPitches.length > 0 ? (
               <>
                 <AnimatePresence mode="popLayout">
-                  <div className={`grid ${VIEW_MODES[viewMode].cols} gap-6`}>
+                  <div className={`grid ${VIEW_MODES[viewMode].cols} gap-3 sm:gap-6`}>
                     {paginatedPitches.map(pitch => renderPitchCard(pitch))}
                   </div>
                 </AnimatePresence>
