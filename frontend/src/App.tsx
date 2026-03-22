@@ -73,6 +73,7 @@ const CreatorDashboard = lazyRetry(() => import('./pages/CreatorDashboard'));
 const InvestorDashboard = lazyRetry(() => import('./pages/InvestorDashboard'));
 const InvestorDashboardDebug = lazyRetry(() => import('./pages/InvestorDashboardDebug'));
 const ProductionDashboard = lazyRetry(() => import('./pages/ProductionDashboard'));
+const ProductionNDAManagement = lazyRetry(() => import('@portals/production/pages/ProductionNDAManagement'));
 const CreatorProfile = lazyRetry(() => import('./pages/CreatorProfile'));
 const OnboardingPage = lazyRetry(() => import('@portals/creator/pages/CreatorOnboardingPage'));
 
@@ -504,7 +505,7 @@ function App() {
             <Route path="profile" element={<Profile />} />
             <Route path="messages/*" element={<Messages />} />
             <Route path="calendar" element={<Calendar />} />
-            <Route path="ndas" element={<CreatorNDAManagement />} />
+            <Route path="ndas" element={<ProductionNDAManagement />} />
 
             {/* Enhanced Production Routes */}
             {AllProductionRoutes({ isAuthenticated: true, userType: 'production' })}
