@@ -66,6 +66,7 @@ interface ProductionNote {
   createdAt: string;
   category: 'casting' | 'location' | 'budget' | 'schedule' | 'team' | 'general';
   author?: string;
+  shared?: boolean;
 }
 
 interface PitchCompleteness {
@@ -217,6 +218,7 @@ const ProductionPitchView: React.FC = () => {
           createdAt: n.created_at,
           category: n.category,
           author: n.author,
+          shared: (n as any).shared ?? false,
         })));
       }
 
@@ -434,6 +436,28 @@ const ProductionPitchView: React.FC = () => {
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
       setNotes(previousNotes); // Roll back
+      toast.error(e.message);
+    }
+  };
+
+  const handleToggleShare = async (noteId: string) => {
+    const pitchId = parseInt(id!, 10);
+    const note = notes.find(n => n.id === noteId);
+    if (!note) return;
+
+    const newShared = !note.shared;
+    // Optimistic update
+    setNotes(prev => prev.map(n => n.id === noteId ? { ...n, shared: newShared } : n));
+
+    try {
+      await apiClient.patch(`/api/production/pitches/${pitchId}/notes/${noteId}/share`, {
+        shared: newShared,
+      });
+      toast.success(newShared ? 'Note shared with creator' : 'Note unshared');
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      // Roll back
+      setNotes(prev => prev.map(n => n.id === noteId ? { ...n, shared: !newShared } : n));
       toast.error(e.message);
     }
   };
@@ -1002,7 +1026,7 @@ const ProductionPitchView: React.FC = () => {
                 <div className="space-y-3">
                   {notes.length > 0 ? (
                     notes.map((note) => (
-                      <div key={note.id} className="p-4 bg-gray-50 rounded-lg">
+                      <div key={note.id} className={`p-4 rounded-lg ${note.shared ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'}`}>
                         <div className="flex items-start justify-between">
                           <div className="flex items-start space-x-2">
                             {getCategoryIcon(note.category)}
@@ -1013,12 +1037,26 @@ const ProductionPitchView: React.FC = () => {
                               </p>
                             </div>
                           </div>
-                          <button
-                            onClick={() => handleDeleteNote(note.id)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <XCircle className="h-4 w-4" />
-                          </button>
+                          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                            <button
+                              onClick={() => handleToggleShare(note.id)}
+                              className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition ${
+                                note.shared
+                                  ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                              }`}
+                              title={note.shared ? 'Shared with creator — click to unshare' : 'Share this note with the pitch creator'}
+                            >
+                              <Share2 className="h-3 w-3" />
+                              {note.shared ? 'Shared' : 'Share'}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteNote(note.id)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))

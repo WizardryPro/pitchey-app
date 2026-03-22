@@ -7,6 +7,7 @@ import {
   FileText, Download, Lock, Unlock
 } from 'lucide-react';
 import { pitchAPI } from '@/lib/api';
+import apiClient from '@/lib/api-client';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import FormatDisplay from '@/components/FormatDisplay';
 
@@ -62,6 +63,17 @@ interface NDARequest {
   message?: string;
 }
 
+interface ProductionFeedback {
+  id: number;
+  content: string;
+  category: string;
+  author: string;
+  created_at: string;
+  company_name?: string;
+  reviewer_name: string;
+  user_type: string;
+}
+
 const CreatorPitchView: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -73,6 +85,7 @@ const CreatorPitchView: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'ndas' | 'conversations' | 'feedback'>('overview');
   const [isOwner, setIsOwner] = useState(false);
+  const [feedback, setFeedback] = useState<ProductionFeedback[]>([]);
 
   useEffect(() => {
     if (id) {
@@ -128,6 +141,18 @@ const CreatorPitchView: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Fetch shared production feedback when tab is active
+  useEffect(() => {
+    if (activeTab === 'feedback' && isOwner && id) {
+      apiClient.get(`/api/creator/pitches/${id}/feedback`)
+        .then((res) => {
+          const data = (res.data || res) as Record<string, unknown>;
+          setFeedback((data.feedback as ProductionFeedback[]) || []);
+        })
+        .catch(() => setFeedback([]));
+    }
+  }, [activeTab, isOwner, id]);
 
   const checkOwnership = () => {
     setIsOwner(authUser?.id ? String(pitch?.userId) === String(authUser.id) : false);
@@ -488,12 +513,41 @@ const CreatorPitchView: React.FC = () => {
 
             {activeTab === 'feedback' && isOwner && (
               <div className="bg-white rounded-xl shadow-lg p-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Feedback & Comments</h2>
-                <div className="text-center py-8">
-                  <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 font-medium">No feedback yet</p>
-                  <p className="text-sm text-gray-400 mt-1">Investors who sign your NDA can leave feedback on your pitch.</p>
-                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Production Feedback</h2>
+                <p className="text-sm text-gray-500 mb-6">Notes shared by production companies reviewing your pitch</p>
+                {feedback.length > 0 ? (
+                  <div className="space-y-4">
+                    {feedback.map((fb) => (
+                      <div key={fb.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium capitalize">
+                              {fb.category}
+                            </span>
+                          </div>
+                          <span className="text-xs text-gray-400">
+                            {new Date(fb.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <p className="text-gray-700 mb-2">{fb.content}</p>
+                        <p className="text-xs text-gray-500">
+                          {fb.company_name || fb.reviewer_name}
+                          {fb.company_name && fb.reviewer_name && fb.reviewer_name !== fb.company_name
+                            ? ` — ${fb.reviewer_name}`
+                            : ''}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500 font-medium">No feedback yet</p>
+                    <p className="text-sm text-gray-400 mt-1">
+                      Production companies can share notes when reviewing your pitch.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>

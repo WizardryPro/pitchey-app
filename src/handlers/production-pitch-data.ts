@@ -47,7 +47,7 @@ export async function getProductionNotes(request: Request, env: Env): Promise<Re
 
   try {
     const notes = await sql`
-      SELECT id, content, category, author, created_at, updated_at
+      SELECT id, content, category, author, shared, created_at, updated_at
       FROM production_notes
       WHERE user_id = ${Number(userId)} AND pitch_id = ${pitchId}
       ORDER BY created_at ASC
@@ -88,10 +88,12 @@ export async function createProductionNote(request: Request, env: Env): Promise<
       return errorResponse(`Invalid category. Must be one of: ${validCategories.join(', ')}`, origin);
     }
 
+    const shared = body.shared === true;
+
     const result = await sql`
-      INSERT INTO production_notes (user_id, pitch_id, content, category, author)
-      VALUES (${Number(userId)}, ${pitchId}, ${content}, ${category}, ${author})
-      RETURNING id, content, category, author, created_at, updated_at
+      INSERT INTO production_notes (user_id, pitch_id, content, category, author, shared)
+      VALUES (${Number(userId)}, ${pitchId}, ${content}, ${category}, ${author}, ${shared})
+      RETURNING id, content, category, author, shared, created_at, updated_at
     `;
 
     return jsonResponse({ success: true, data: { note: result[0] } }, origin, 201);
@@ -277,5 +279,101 @@ export async function updateProductionTeam(request: Request, env: Env): Promise<
     const e = err instanceof Error ? err : new Error(String(err));
     console.error('updateProductionTeam error:', e.message);
     return errorResponse('Failed to update team', origin, 500);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Share toggle
+// ---------------------------------------------------------------------------
+
+/**
+ * PATCH /api/production/pitches/:pitchId/notes/:noteId/share
+ * Toggle the shared flag on a production note (owner only)
+ */
+export async function toggleNoteShared(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin');
+  const userId = await getUserId(request, env);
+  if (!userId) return errorResponse('Unauthorized', origin, 401);
+
+  const url = new URL(request.url);
+  const parts = url.pathname.split('/');
+  const noteId = parseInt(parts[6] || '0', 10);
+  if (!noteId) return errorResponse('Invalid note ID', origin);
+
+  const sql = getDb(env);
+  if (!sql) return errorResponse('Database unavailable', origin, 503);
+
+  try {
+    const body = await request.json() as Record<string, unknown>;
+    const shared = body.shared === true;
+
+    const result = await sql`
+      UPDATE production_notes
+      SET shared = ${shared}, updated_at = NOW()
+      WHERE id = ${noteId} AND user_id = ${Number(userId)}
+      RETURNING id, shared
+    `;
+
+    if (result.length === 0) {
+      return errorResponse('Note not found', origin, 404);
+    }
+
+    return jsonResponse({ success: true, data: { note: result[0] } }, origin);
+  } catch (err) {
+    const e = err instanceof Error ? err : new Error(String(err));
+    console.error('toggleNoteShared error:', e.message);
+    return errorResponse('Failed to update note', origin, 500);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Creator feedback (shared notes visible to pitch creator)
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /api/creator/pitches/:pitchId/feedback
+ * Returns all shared production notes for a pitch (visible to pitch creator only)
+ */
+export async function getCreatorPitchFeedback(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin');
+  const userId = await getUserId(request, env);
+  if (!userId) return errorResponse('Unauthorized', origin, 401);
+
+  const url = new URL(request.url);
+  const parts = url.pathname.split('/');
+  // /api/creator/pitches/:pitchId/feedback -> pitchId at index 4
+  const pitchId = parseInt(parts[4] || '0', 10);
+  if (!pitchId) return errorResponse('Invalid pitch ID', origin);
+
+  const sql = getDb(env);
+  if (!sql) return jsonResponse({ success: true, data: { feedback: [] } }, origin);
+
+  try {
+    // Verify the caller owns this pitch
+    const pitchCheck = await sql`
+      SELECT id FROM pitches WHERE id = ${pitchId} AND user_id = ${Number(userId)}
+    `;
+    if (pitchCheck.length === 0) {
+      return errorResponse('Not your pitch', origin, 403);
+    }
+
+    // Fetch all shared notes from any production user, with author info
+    const feedback = await sql`
+      SELECT
+        n.id, n.content, n.category, n.author, n.created_at,
+        u.company_name,
+        CONCAT(u.first_name, ' ', u.last_name) as reviewer_name,
+        u.user_type
+      FROM production_notes n
+      JOIN users u ON u.id = n.user_id
+      WHERE n.pitch_id = ${pitchId} AND n.shared = true
+      ORDER BY n.created_at DESC
+    `.catch(() => []);
+
+    return jsonResponse({ success: true, data: { feedback } }, origin);
+  } catch (err) {
+    const e = err instanceof Error ? err : new Error(String(err));
+    console.error('getCreatorPitchFeedback error:', e.message);
+    return jsonResponse({ success: true, data: { feedback: [] } }, origin);
   }
 }

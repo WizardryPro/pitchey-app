@@ -2918,6 +2918,18 @@ class RouteRegistry {
       return updateProductionTeam(req, this.env);
     });
 
+    // Share/unshare production note with creator
+    this.register('PATCH', '/api/production/pitches/:pitchId/notes/:noteId/share', async (req) => {
+      const { toggleNoteShared } = await import('./handlers/production-pitch-data');
+      return toggleNoteShared(req, this.env);
+    });
+
+    // Creator: view shared production feedback on own pitches
+    this.register('GET', '/api/creator/pitches/:pitchId/feedback', async (req) => {
+      const { getCreatorPitchFeedback } = await import('./handlers/production-pitch-data');
+      return getCreatorPitchFeedback(req, this.env);
+    });
+
     // Project Collaborators — aggregate team view + invitation management + scoped project access
     this.register('GET', '/api/production/team/collaborators', async (req) => {
       const { getAllTeamCollaborators } = await import('./handlers/collaborator');
