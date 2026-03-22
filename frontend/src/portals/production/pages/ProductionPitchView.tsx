@@ -22,6 +22,7 @@ import StartProjectModal from '../components/StartProjectModal';
 import { CollaboratorService } from '@/services/collaborator.service';
 import FollowButton from '@features/browse/components/FollowButton';
 import { pitchService } from '@features/pitches/services/pitch.service';
+import SocialProofBadge from '@shared/components/SocialProofBadge';
 
 interface Pitch {
   id: string;
@@ -726,30 +727,35 @@ const ProductionPitchView: React.FC = () => {
                   )}
                 </div>
 
-                {/* Pitch Analytics */}
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                  <div className="bg-gray-50 rounded-lg p-3 text-center">
-                    <p className="text-2xl font-bold text-gray-900">{pitch.views ?? 0}</p>
-                    <p className="text-xs text-gray-500 flex items-center justify-center gap-1"><Eye className="w-3 h-3" /> Views</p>
-                  </div>
-                  <button
-                    onClick={handleLike}
-                    disabled={isLiking}
-                    className={`rounded-lg p-3 text-center transition-colors cursor-pointer ${
-                      isLiked
-                        ? 'bg-red-50 ring-2 ring-red-200'
-                        : 'bg-gray-50 hover:bg-red-50'
-                    } ${isLiking ? 'opacity-50' : ''}`}
-                  >
-                    <p className="text-2xl font-bold text-gray-900">{pitch.likes ?? 0}</p>
-                    <p className={`text-xs flex items-center justify-center gap-1 ${isLiked ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
-                      <Heart className={`w-3 h-3 ${isLiked ? 'fill-current text-red-500' : ''}`} />
-                      {isLiked ? 'Liked' : 'Like'}
-                    </p>
-                  </button>
-                  <div className="bg-gray-50 rounded-lg p-3 text-center">
-                    <p className="text-2xl font-bold text-gray-900">{pitch.ndaCount ?? 0}</p>
-                    <p className="text-xs text-gray-500 flex items-center justify-center gap-1"><Shield className="w-3 h-3" /> NDAs</p>
+                {/* Engagement & Social Proof */}
+                <div className="mb-6">
+                  <SocialProofBadge
+                    pitchId={Number(pitch.id)}
+                    viewCount={pitch.views ?? 0}
+                    likeCount={pitch.likes ?? 0}
+                    isOwner={isOwner}
+                    isAuthenticated={isAuthenticated}
+                  />
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <button
+                      onClick={handleLike}
+                      disabled={isLiking}
+                      className={`rounded-lg p-3 text-center transition-colors cursor-pointer ${
+                        isLiked
+                          ? 'bg-red-50 ring-2 ring-red-200'
+                          : 'bg-gray-50 hover:bg-red-50'
+                      } ${isLiking ? 'opacity-50' : ''}`}
+                    >
+                      <p className="text-2xl font-bold text-gray-900">{pitch.likes ?? 0}</p>
+                      <p className={`text-xs flex items-center justify-center gap-1 ${isLiked ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
+                        <Heart className={`w-3 h-3 ${isLiked ? 'fill-current text-red-500' : ''}`} />
+                        {isLiked ? 'Liked' : 'Like'}
+                      </p>
+                    </button>
+                    <div className="bg-gray-50 rounded-lg p-3 text-center">
+                      <p className="text-2xl font-bold text-gray-900">{pitch.ndaCount ?? 0}</p>
+                      <p className="text-xs text-gray-500 flex items-center justify-center gap-1"><Shield className="w-3 h-3" /> NDAs</p>
+                    </div>
                   </div>
                 </div>
 
