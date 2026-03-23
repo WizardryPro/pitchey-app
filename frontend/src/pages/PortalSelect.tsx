@@ -1,18 +1,19 @@
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Film, DollarSign, Building } from 'lucide-react';
+import { ArrowLeft, Film, DollarSign, Building, Shield } from 'lucide-react';
 
-type PortalType = 'creator' | 'investor' | 'production';
+type PortalType = 'creator' | 'investor' | 'production' | 'admin';
 
 export default function PortalSelect() {
   const navigate = useNavigate();
-  
-  const portals: PortalType[] = ['creator', 'production', 'investor'];
+
+  const portals: PortalType[] = ['creator', 'production', 'investor', 'admin'];
 
   const handlePortalSelect = (portalType: PortalType) => {
     const routes: Record<PortalType, string> = {
       creator: '/login/creator',
       investor: '/login/investor',
       production: '/login/production',
+      admin: '/login/admin',
     };
     navigate(routes[portalType]);
   };
@@ -22,6 +23,7 @@ export default function PortalSelect() {
       case 'creator': return Film;
       case 'investor': return DollarSign;
       case 'production': return Building;
+      case 'admin': return Shield;
     }
   };
 
@@ -30,6 +32,7 @@ export default function PortalSelect() {
       case 'creator': return 'Creator Portal';
       case 'investor': return 'Investor Portal';
       case 'production': return 'Production Portal';
+      case 'admin': return 'Admin Portal';
     }
   };
 
@@ -38,6 +41,7 @@ export default function PortalSelect() {
       case 'creator': return 'Submit and manage your movie pitches';
       case 'investor': return 'Discover and invest in promising projects';
       case 'production': return 'Find and develop exciting content';
+      case 'admin': return 'Manage users, content, and platform settings';
     }
   };
 
@@ -66,23 +70,26 @@ export default function PortalSelect() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {portals.map((portal) => {
               const Icon = getPortalIcon(portal);
               const colors = {
                 creator: 'from-purple-400 to-purple-600 shadow-purple-500/30 hover:shadow-purple-500/50',
                 investor: 'from-green-400 to-green-600 shadow-green-500/30 hover:shadow-green-500/50',
-                production: 'from-orange-400 to-orange-600 shadow-orange-500/30 hover:shadow-orange-500/50'
+                production: 'from-orange-400 to-orange-600 shadow-orange-500/30 hover:shadow-orange-500/50',
+                admin: 'from-purple-700 to-indigo-900 shadow-purple-800/30 hover:shadow-purple-800/50'
               };
               const iconColors = {
                 creator: 'text-purple-600',
                 investor: 'text-green-600',
-                production: 'text-orange-600'
+                production: 'text-orange-600',
+                admin: 'text-purple-900'
               };
               const bgColors = {
                 creator: 'bg-purple-50',
                 investor: 'bg-green-50',
-                production: 'bg-orange-50'
+                production: 'bg-orange-50',
+                admin: 'bg-purple-100'
               };
               
               return (
@@ -92,8 +99,9 @@ export default function PortalSelect() {
                   className={`bg-white rounded-xl p-8 cursor-pointer transform hover:scale-105 transition-all duration-300 border border-gray-200 shadow-lg shadow-${colors[portal].split(' ')[1].split('-')[0]}-200/50 hover:shadow-2xl hover:shadow-${colors[portal].split(' ')[1].split('-')[0]}-300/50`}
                   style={{
                     boxShadow: `0 10px 30px -10px ${
-                      portal === 'creator' ? 'rgb(168 85 247 / 0.3)' : 
-                      portal === 'investor' ? 'rgb(34 197 94 / 0.3)' : 
+                      portal === 'creator' ? 'rgb(168 85 247 / 0.3)' :
+                      portal === 'investor' ? 'rgb(34 197 94 / 0.3)' :
+                      portal === 'admin' ? 'rgb(88 28 135 / 0.3)' :
                       'rgb(251 146 60 / 0.3)'
                     }`
                   }}
