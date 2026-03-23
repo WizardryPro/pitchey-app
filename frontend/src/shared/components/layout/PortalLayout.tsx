@@ -6,6 +6,7 @@ import { PageErrorBoundary } from '@shared/components/feedback/ConsoleErrorBound
 import { EnhancedCreatorNav } from './EnhancedCreatorNav';
 import { EnhancedInvestorNav } from './EnhancedInvestorNav';
 import { EnhancedProductionNav } from './EnhancedProductionNav';
+import { EnhancedAdminNav } from './EnhancedAdminNav';
 
 interface PortalLayoutProps {
   userType: string | null;
@@ -33,6 +34,8 @@ export function PortalLayout({ userType }: PortalLayoutProps) {
         return <EnhancedInvestorNav />;
       case 'production':
         return <EnhancedProductionNav />;
+      case 'admin':
+        return <EnhancedAdminNav />;
       default:
         return null;
     }

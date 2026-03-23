@@ -134,9 +134,16 @@ const Terms = lazyRetry(() => import('./pages/Terms'));
 const Privacy = lazyRetry(() => import('./pages/Privacy'));
 
 // Admin Pages
+const AdminLogin = lazyRetry(() => import('./pages/AdminLogin'));
 const AdminDashboard = lazyRetry(() => import('@portals/admin/pages/AdminDashboard'));
 const UserManagement = lazyRetry(() => import('@portals/admin/pages/UserManagement'));
 const ContentModeration = lazyRetry(() => import('@portals/admin/pages/ContentModeration'));
+const AdminAnalytics = lazyRetry(() => import('@portals/admin/pages/AdminAnalytics'));
+const AdminSystemHealth = lazyRetry(() => import('@portals/admin/pages/AdminSystemHealth'));
+const AdminAuditLog = lazyRetry(() => import('@portals/admin/pages/AdminAuditLog'));
+const AdminGDPR = lazyRetry(() => import('@portals/admin/pages/AdminGDPR'));
+const AdminReports = lazyRetry(() => import('@portals/admin/pages/AdminReports'));
+const AdminModerationLog = lazyRetry(() => import('@portals/admin/pages/AdminModerationLog'));
 
 // MFA Challenge Page
 const MFAChallengePage = lazyRetry(() => import('./pages/MFAChallengePage'));
@@ -408,7 +415,7 @@ function App() {
           <Route path="/auth/investor" element={<Navigate to="/login/investor" replace />} />
           <Route path="/auth/production" element={<Navigate to="/login/production" replace />} />
           <Route path="/login/admin" element={
-            !isAuthenticated ? <Login /> : 
+            !isAuthenticated ? <AdminLogin /> :
             userType === 'admin' ? <Navigate to="/admin/dashboard" /> :
             <Navigate to="/" />
           } />
@@ -511,32 +518,69 @@ function App() {
             {AllProductionRoutes({ isAuthenticated: true, userType: 'production' })}
           </Route>
           
-          {/* Admin Protected Routes — requires admin.access permission */}
-          <Route path="/admin/dashboard" element={
-            <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
-              <AdminDashboard />
-            </PermissionRoute>
-          } />
-          <Route path="/admin/users" element={
-            <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
-              <UserManagement />
-            </PermissionRoute>
-          } />
-          <Route path="/admin/content" element={
-            <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
-              <ContentModeration />
-            </PermissionRoute>
-          } />
-          <Route path="/admin/transactions" element={
-            <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
-              <Transactions />
-            </PermissionRoute>
-          } />
-          <Route path="/admin/settings" element={
-            <PermissionRoute requiresAll={[Permission.ADMIN_ACCESS, Permission.ADMIN_SETTINGS]} redirectTo="/portals">
-              <SystemSettings />
-            </PermissionRoute>
-          } />
+          {/* Admin Portal Routes — nested under PortalLayout with sidebar */}
+          <Route path="/admin/*" element={
+            isAuthenticated && userType === 'admin'
+              ? <PortalLayout userType="admin" />
+              : <Navigate to="/login/admin" />
+          }>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+                <AdminDashboard />
+              </PermissionRoute>
+            } />
+            <Route path="users" element={
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+                <UserManagement />
+              </PermissionRoute>
+            } />
+            <Route path="content" element={
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+                <ContentModeration />
+              </PermissionRoute>
+            } />
+            <Route path="transactions" element={
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+                <Transactions />
+              </PermissionRoute>
+            } />
+            <Route path="analytics" element={
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+                <AdminAnalytics />
+              </PermissionRoute>
+            } />
+            <Route path="system-health" element={
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+                <AdminSystemHealth />
+              </PermissionRoute>
+            } />
+            <Route path="audit-log" element={
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+                <AdminAuditLog />
+              </PermissionRoute>
+            } />
+            <Route path="gdpr" element={
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+                <AdminGDPR />
+              </PermissionRoute>
+            } />
+            <Route path="moderation-log" element={
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+                <AdminModerationLog />
+              </PermissionRoute>
+            } />
+            <Route path="reports" element={
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+                <AdminReports />
+              </PermissionRoute>
+            } />
+            <Route path="settings" element={
+              <PermissionRoute requiresAll={[Permission.ADMIN_ACCESS, Permission.ADMIN_SETTINGS]} redirectTo="/portals">
+                <SystemSettings />
+              </PermissionRoute>
+            } />
+          </Route>
           
           {/* Creator Profile Route - accessible to all authenticated users */}
           <Route path="/creator/:creatorId" element={
