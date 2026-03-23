@@ -183,8 +183,14 @@ export const PUBLIC_ROUTES = {
 
 export const ADMIN_ROUTES = {
   dashboard: '/admin/dashboard',
+  analytics: '/admin/analytics',
+  systemHealth: '/admin/system-health',
   users: '/admin/users',
   content: '/admin/content',
-  analytics: '/admin/analytics',
+  moderationLog: '/admin/moderation-log',
+  transactions: '/admin/transactions',
+  reports: '/admin/reports',
+  auditLog: '/admin/audit-log',
+  gdpr: '/admin/gdpr',
   settings: '/admin/settings',
 };

@@ -340,6 +340,114 @@ class AdminService {
     await handleResponse<void>(response);
   }
 
+  // Audit Log
+  async getAuditLog(filters: { action?: string; userId?: string; page?: number; limit?: number } = {}): Promise<{ data: any[]; total: number }> {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined) params.append(key, value.toString());
+    });
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const response = await fetch(`${API_BASE_URL}/api/audit-log${query}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include'
+    });
+    return handleResponse<{ data: any[]; total: number }>(response);
+  }
+
+  async getAuditLogStats(): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/api/audit-log/stats`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include'
+    });
+    return handleResponse<any>(response);
+  }
+
+  async exportAuditLog(): Promise<Blob> {
+    const response = await fetch(`${API_BASE_URL}/api/audit-log/export`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Failed to export audit log');
+    return response.blob();
+  }
+
+  // GDPR
+  async getGDPRMetrics(): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/api/gdpr/metrics`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include'
+    });
+    return handleResponse<any>(response);
+  }
+
+  async getGDPRRequests(): Promise<any[]> {
+    const response = await fetch(`${API_BASE_URL}/api/gdpr/requests`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include'
+    });
+    return handleResponse<any[]>(response);
+  }
+
+  async createGDPRRequest(data: { userId: string; type: string; details?: string }): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/api/gdpr/requests`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+      credentials: 'include'
+    });
+    return handleResponse<any>(response);
+  }
+
+  async getConsentMetrics(): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/api/gdpr/consent-metrics`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include'
+    });
+    return handleResponse<any>(response);
+  }
+
+  // Reports
+  async getReports(): Promise<any[]> {
+    const response = await fetch(`${API_BASE_URL}/api/admin/reports`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include'
+    });
+    return handleResponse<any[]>(response);
+  }
+
+  async generateReport(type: string, filters: Record<string, any> = {}): Promise<Blob> {
+    const response = await fetch(`${API_BASE_URL}/api/admin/reports/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, filters }),
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Failed to generate report');
+    return response.blob();
+  }
+
+  // Moderation Log
+  async getModerationLog(filters: { action?: string; page?: number; limit?: number } = {}): Promise<any[]> {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined) params.append(key, value.toString());
+    });
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const response = await fetch(`${API_BASE_URL}/api/admin/moderation-log${query}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include'
+    });
+    return handleResponse<any[]>(response);
+  }
+
   // Export Data
   async exportUsers(filters: UserFilters = {}): Promise<Blob> {
     const response = await fetch(`${API_BASE_URL}/api/admin/reports/generate`, {
