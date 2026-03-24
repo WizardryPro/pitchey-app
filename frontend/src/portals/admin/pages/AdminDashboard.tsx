@@ -47,22 +47,45 @@ const AdminDashboard: React.FC = () => {
       // Track admin dashboard data fetch
       trackEvent('admin.dashboard.load', { timestamp: new Date().toISOString() });
       
-      const [statsData, activityData] = await Promise.all([
+      const [statsRaw, activityRaw] = await Promise.all([
         adminService.getDashboardStats(),
         adminService.getRecentActivity()
       ]);
-      
-      if (statsData) {
+
+      if (statsRaw) {
+        // Normalize: API may return nested { dashboard: { stats: ... } } or flat DashboardStats
+        const raw = statsRaw as any;
+        const nested = raw.dashboard?.stats || raw.stats || raw;
+        const statsData: DashboardStats = {
+          totalUsers: nested.users?.total ?? nested.totalUsers ?? 0,
+          totalPitches: nested.content?.total_pitches ?? nested.totalPitches ?? 0,
+          totalRevenue: nested.financial?.total_investments ?? nested.totalRevenue ?? 0,
+          pendingNDAs: nested.financial?.pending_ndas ?? nested.pendingNDAs ?? 0,
+          activeUsers: nested.users?.active_24h ?? nested.activeUsers ?? 0,
+          recentSignups: nested.users?.new_today ?? nested.recentSignups ?? 0,
+          approvedPitches: nested.content?.published_today ?? nested.approvedPitches ?? 0,
+          rejectedPitches: nested.content?.flagged ?? nested.rejectedPitches ?? 0,
+        };
         setStats(statsData);
-        trackEvent('admin.stats.loaded', { 
+        trackEvent('admin.stats.loaded', {
           totalUsers: statsData.totalUsers,
-          totalPitches: statsData.totalPitches 
+          totalPitches: statsData.totalPitches
         });
       } else {
         trackApiError('/api/admin/stats', { success: false });
       }
-      
-      if (activityData) {
+
+      if (activityRaw) {
+        // Normalize: API may return { dashboard: { recent_activity: [...] } } or flat array
+        const raw = activityRaw as any;
+        const activityList = raw.dashboard?.recent_activity || raw.recent_activity || (Array.isArray(raw) ? raw : []);
+        const activityData: RecentActivity[] = activityList.map((item: any, idx: number) => ({
+          id: item.id || String(idx),
+          type: item.type || 'user_signup',
+          description: item.message || item.description || '',
+          timestamp: item.timestamp || new Date().toISOString(),
+          user: item.user,
+        }));
         setRecentActivity(activityData);
       } else {
         trackApiError('/api/admin/activity', { success: false });
