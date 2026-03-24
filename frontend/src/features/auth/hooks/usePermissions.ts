@@ -182,7 +182,10 @@ const rolePermissions: Record<UserRole, Permission[]> = {
  * Derive user's role from userType stored in auth state
  */
 function getUserRole(): UserRole {
-  const userType = useBetterAuthStore.getState().user?.userType || '';
+  const user = useBetterAuthStore.getState().user;
+  // Users with admin_access get admin permissions regardless of their primary userType
+  if (user?.adminAccess) return 'admin';
+  const userType = user?.userType || '';
   if (userType in rolePermissions) {
     return userType as UserRole;
   }
