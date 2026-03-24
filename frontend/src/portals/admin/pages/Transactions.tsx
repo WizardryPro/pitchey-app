@@ -62,8 +62,9 @@ const Transactions: React.FC = () => {
   const loadTransactions = async () => {
     try {
       setLoading(true);
-      const data = await adminService.getTransactions(filters);
-      setTransactions(data);
+      const data = await adminService.getTransactions(filters) as any;
+      const list = Array.isArray(data) ? data : (data?.reports ?? data?.transactions ?? data?.data ?? []);
+      setTransactions(list);
     } catch (err) {
       setError('Failed to load transactions');
       console.error('Transactions error:', err);

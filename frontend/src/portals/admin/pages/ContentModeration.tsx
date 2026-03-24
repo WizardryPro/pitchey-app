@@ -57,8 +57,9 @@ const ContentModeration: React.FC = () => {
   const loadPitches = async () => {
     try {
       setLoading(true);
-      const data = await adminService.getPitches(filters);
-      setPitches(data);
+      const data = await adminService.getPitches(filters) as any;
+      const list = Array.isArray(data) ? data : (data?.content ?? data?.pitches ?? data?.data ?? []);
+      setPitches(list);
     } catch (err) {
       setError('Failed to load pitches');
       console.error('Pitches error:', err);

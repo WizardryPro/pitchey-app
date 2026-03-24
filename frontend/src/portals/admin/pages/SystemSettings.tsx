@@ -64,8 +64,10 @@ const SystemSettings: React.FC = () => {
   const loadSettings = async () => {
     try {
       setLoading(true);
-      const data = await adminService.getSystemSettings();
-      setSettings(data);
+      const data = await adminService.getSystemSettings() as any;
+      // Normalize: API returns { settings: {...} } — extract inner object
+      const raw = data?.settings ?? data?.data ?? data ?? {};
+      setSettings(raw);
     } catch (err) {
       setError('Failed to load system settings');
       console.error('Settings error:', err);
