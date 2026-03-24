@@ -1,11 +1,12 @@
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   Home, Activity, Film, FolderOpen, Upload,
   Bookmark, Users, GitBranch, DollarSign,
-  MessageSquare, Calendar, Settings
+  MessageSquare, Calendar, Settings, Shield, ExternalLink
 } from 'lucide-react';
 import { PRODUCTION_ROUTES } from '@/config/navigation.routes';
+import { useBetterAuthStore } from '@/store/betterAuthStore';
 
 interface NavigationItem {
   label: string;
@@ -75,11 +76,26 @@ export const productionNavigationSections: NavigationSection[] = [
 export function EnhancedProductionNav() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useBetterAuthStore();
 
   return (
     <nav className="w-64 bg-white border-r border-gray-200 h-full overflow-y-auto">
       <div className="p-4">
         <h2 className="text-xl font-bold text-blue-600 mb-4">Production Portal</h2>
+
+        {/* Admin Portal Link */}
+        {user?.adminAccess && (
+          <div className="mb-4 pb-4 border-b border-gray-200">
+            <Link
+              to="/admin/dashboard"
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-purple-900 bg-purple-50 hover:bg-purple-100 transition-colors duration-200"
+            >
+              <Shield className="w-4 h-4" />
+              <span className="flex-1 text-left">Admin Portal</span>
+              <ExternalLink className="w-3 h-3 text-gray-400" />
+            </Link>
+          </div>
+        )}
 
         {productionNavigationSections.map((section, sectionIdx) => (
           <div key={section.title || `section-${sectionIdx}`} className="mb-5">

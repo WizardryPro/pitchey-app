@@ -87,6 +87,7 @@ export interface AuthPayload {
   userId: number;
   email: string;
   userType: string;
+  adminAccess?: boolean;
   iat: number;
   exp: number;
 }

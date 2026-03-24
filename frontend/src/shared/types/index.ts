@@ -38,6 +38,8 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   password?: string; // Only included in auth responses
+  adminAccess?: boolean;
+  adminInvitePending?: boolean;
 }
 
 // ========== PITCH TYPES ==========

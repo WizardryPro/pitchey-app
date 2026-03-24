@@ -12,6 +12,8 @@ interface User {
   lastLogin: string | null;
   pitchCount: number;
   investmentCount: number;
+  adminAccess?: boolean;
+  adminInvitePending?: boolean;
 }
 
 interface UserFilters {
@@ -51,6 +53,32 @@ const UserManagement: React.FC = () => {
       console.error('Users error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleInviteAdmin = async (userId: string) => {
+    try {
+      setActionLoading(userId);
+      await adminService.inviteAsAdmin(userId);
+      await loadUsers();
+      setShowUserModal(false);
+    } catch (err) {
+      console.error('Invite admin error:', err);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRevokeAdmin = async (userId: string) => {
+    try {
+      setActionLoading(userId);
+      await adminService.revokeAdmin(userId);
+      await loadUsers();
+      setShowUserModal(false);
+    } catch (err) {
+      console.error('Revoke admin error:', err);
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -177,6 +205,32 @@ const UserManagement: React.FC = () => {
             <div className="pt-4 border-t">
               <p className="text-sm text-gray-600 mb-2">Actions</p>
               <div className="space-y-2">
+                {/* Admin invite/revoke */}
+                {user.adminAccess && user.userType !== 'admin' && (
+                  <button
+                    onClick={() => handleRevokeAdmin(user.id)}
+                    disabled={actionLoading === user.id}
+                    className="w-full bg-orange-600 text-white py-2 rounded hover:bg-orange-700 disabled:opacity-50"
+                  >
+                    Revoke Admin Access
+                  </button>
+                )}
+                {user.adminInvitePending && (
+                  <div className="w-full bg-yellow-50 text-yellow-800 py-2 px-3 rounded border border-yellow-200 text-center text-sm font-medium">
+                    Admin Invite Pending
+                  </div>
+                )}
+                {!user.adminAccess && !user.adminInvitePending && user.userType !== 'admin' && (
+                  <button
+                    onClick={() => handleInviteAdmin(user.id)}
+                    disabled={actionLoading === user.id}
+                    className="w-full bg-purple-900 text-white py-2 rounded hover:bg-purple-800 disabled:opacity-50"
+                  >
+                    Invite as Admin
+                  </button>
+                )}
+
+                {/* Ban/Unban */}
                 {user.status === 'active' ? (
                   <button
                     onClick={() => handleBanUser(user.id, true)}

@@ -841,7 +841,9 @@ class RouteRegistry {
                 lastName: cached.lastName,
                 bio: cached.bio,
                 companyName: cached.companyName,
-                profileImage: cached.profileImage
+                profileImage: cached.profileImage,
+                adminAccess: !!cached.adminAccess,
+                adminInvitePending: !!cached.adminInvitePending
               }
             };
           }
@@ -852,7 +854,7 @@ class RouteRegistry {
           `SELECT s.id, s.user_id, s.expires_at,
                   u.id as user_id, u.email, u.username, u.user_type,
                   u.first_name, u.last_name, u.company_name,
-                  u.bio, u.profile_image,
+                  u.bio, u.profile_image, u.admin_access, u.admin_invite_pending,
                   COALESCE(u.name, u.username, u.email) as name
            FROM sessions s
            JOIN users u ON s.user_id::text = u.id::text
@@ -880,6 +882,8 @@ class RouteRegistry {
                 bio: session.bio,
                 companyName: session.company_name,
                 profileImage: session.profile_image,
+                adminAccess: !!session.admin_access,
+                adminInvitePending: !!session.admin_invite_pending,
                 expiresAt: session.expires_at
               }),
               { expirationTtl: 3600 } // Cache for 1 hour
@@ -899,7 +903,9 @@ class RouteRegistry {
               lastName: session.last_name,
               bio: session.bio,
               companyName: session.company_name,
-              profileImage: session.profile_image
+              profileImage: session.profile_image,
+              adminAccess: !!session.admin_access,
+              adminInvitePending: !!session.admin_invite_pending
             }
           };
         } else {
@@ -1360,7 +1366,7 @@ class RouteRegistry {
       // Query database for user
       const query = `
         SELECT id, email, username, name, user_type, first_name, last_name,
-               bio, company_name, profile_image
+               bio, company_name, profile_image, admin_access, admin_invite_pending
         FROM users
         WHERE email = $1 AND user_type = $2
         LIMIT 1
@@ -1532,7 +1538,9 @@ class RouteRegistry {
             lastName: result.last_name,
             bio: result.bio,
             companyName: result.company_name,
-            profileImage: result.profile_image
+            profileImage: result.profile_image,
+            adminAccess: !!result.admin_access,
+            adminInvitePending: !!result.admin_invite_pending
           }
         }
       }), {
@@ -3605,6 +3613,95 @@ class RouteRegistry {
       });
     }
 
+    // Admin invite endpoints (handled before admin delegation)
+    if (path === '/api/admin/invite/accept' && method === 'POST') {
+      const corsHeaders = getCorsHeaders(request.headers.get('Origin'));
+      const authResult = await this.validateAuth(request);
+      if (!authResult.valid || !authResult.user) {
+        return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+      }
+      try {
+        const result = await this.db!.query(
+          `UPDATE users SET admin_access = true, admin_invite_pending = false, admin_accepted_at = NOW() WHERE id = $1 AND admin_invite_pending = true RETURNING id, email, user_type, admin_access, admin_invite_pending`,
+          [authResult.user.id]
+        );
+        if (!result || result.length === 0) {
+          return new Response(JSON.stringify({ success: false, error: 'No pending admin invite found' }), { status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+        }
+        // Invalidate KV session cache so next request picks up new admin_access
+        const kv = this.env.SESSION_STORE || this.env.SESSIONS_KV || this.env.KV || this.env.CACHE;
+        if (kv) {
+          const cookieHeader = request.headers.get('Cookie');
+          const { parseSessionCookie } = await import('./config/session.config');
+          const sessionId = parseSessionCookie(cookieHeader);
+          if (sessionId) await kv.delete(`session:${sessionId}`);
+        }
+        return new Response(JSON.stringify({ success: true, data: { adminAccess: true, adminInvitePending: false } }), { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+      } catch (err) {
+        const e = err instanceof Error ? err : new Error(String(err));
+        return new Response(JSON.stringify({ success: false, error: e.message }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+      }
+    }
+
+    if (path === '/api/admin/invite/status' && method === 'GET') {
+      const corsHeaders = getCorsHeaders(request.headers.get('Origin'));
+      const authResult = await this.validateAuth(request);
+      if (!authResult.valid || !authResult.user) {
+        return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+      }
+      try {
+        const result = await this.db!.query(
+          `SELECT admin_access, admin_invite_pending FROM users WHERE id = $1`,
+          [authResult.user.id]
+        );
+        const row = result?.[0] || {};
+        return new Response(JSON.stringify({ success: true, data: { adminAccess: !!row.admin_access, adminInvitePending: !!row.admin_invite_pending } }), { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+      } catch (err) {
+        const e = err instanceof Error ? err : new Error(String(err));
+        return new Response(JSON.stringify({ success: false, error: e.message }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+      }
+    }
+
+    // Admin invite/revoke (requires admin auth) — match /api/admin/invite/:userId and /api/admin/invite/:userId/revoke
+    const inviteMatch = path.match(/^\/api\/admin\/invite\/(\d+)(\/revoke)?$/);
+    if (inviteMatch && (method === 'POST')) {
+      const corsHeaders = getCorsHeaders(request.headers.get('Origin'));
+      const authResult = await this.validateAuth(request);
+      if (!authResult.valid || !authResult.user) {
+        return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+      }
+      if (authResult.user.userType !== 'admin' && !authResult.user.adminAccess) {
+        return new Response(JSON.stringify({ success: false, error: 'Admin access required' }), { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+      }
+      const targetUserId = parseInt(inviteMatch[1]);
+      const isRevoke = !!inviteMatch[2];
+      try {
+        if (isRevoke) {
+          await this.db!.query(
+            `UPDATE users SET admin_access = false, admin_invite_pending = false WHERE id = $1 AND user_type != 'admin'`,
+            [targetUserId]
+          );
+          return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+        } else {
+          const existing = await this.db!.query(`SELECT admin_access FROM users WHERE id = $1`, [targetUserId]);
+          if (!existing || existing.length === 0) {
+            return new Response(JSON.stringify({ success: false, error: 'User not found' }), { status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+          }
+          if (existing[0].admin_access) {
+            return new Response(JSON.stringify({ success: false, error: 'User already has admin access' }), { status: 409, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+          }
+          await this.db!.query(
+            `UPDATE users SET admin_invite_pending = true, admin_invited_by = $1, admin_invited_at = NOW() WHERE id = $2`,
+            [authResult.user.id, targetUserId]
+          );
+          return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+        }
+      } catch (err) {
+        const e = err instanceof Error ? err : new Error(String(err));
+        return new Response(JSON.stringify({ success: false, error: e.message }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+      }
+    }
+
     // Delegate admin panel routes to AdminEndpointsHandler
     // (excludes /api/admin/metrics and /api/admin/health which are monitoring routes)
     if (this.adminHandler && path.startsWith('/api/admin/') &&
@@ -3615,6 +3712,7 @@ class RouteRegistry {
         userId: authResult.user.id,
         email: authResult.user.email,
         userType: authResult.user.userType,
+        adminAccess: !!authResult.user.adminAccess,
         iat: 0,
         exp: 0
       } : undefined;
@@ -3925,6 +4023,8 @@ class RouteRegistry {
               bio: user.bio,
               companyName: user.company_name,
               profileImage: user.profile_image,
+              adminAccess: !!user.admin_access,
+              adminInvitePending: !!user.admin_invite_pending,
               expiresAt
             }),
             { expirationTtl: 604800 } // 7 days
@@ -4167,6 +4267,8 @@ class RouteRegistry {
               bio: user.bio,
               companyName: user.company_name,
               profileImage: user.profile_image,
+              adminAccess: !!user.admin_access,
+              adminInvitePending: !!user.admin_invite_pending,
               expiresAt
             }),
             { expirationTtl: 604800 } // 7 days
@@ -4194,7 +4296,9 @@ class RouteRegistry {
               bio: user.bio,
               companyName: user.company_name,
               profileImage: user.profile_image,
-              subscriptionTier: user.subscription_tier
+              subscriptionTier: user.subscription_tier,
+              adminAccess: !!user.admin_access,
+              adminInvitePending: !!user.admin_invite_pending
             },
             session: {
               id: sessionId,
@@ -4844,7 +4948,9 @@ pitchey_analytics_datapoints_per_minute 1250
                         bio: userResult.bio,
                         companyName: userResult.company_name,
                         profileImage: userResult.profile_image,
-                        subscriptionTier: userResult.subscription_tier
+                        subscriptionTier: userResult.subscription_tier,
+                        adminAccess: !!userResult.admin_access,
+                        adminInvitePending: !!userResult.admin_invite_pending
                       },
                       success: true
                     }),
@@ -4877,7 +4983,9 @@ pitchey_analytics_datapoints_per_minute 1250
                   bio: sessionData.bio,
                   companyName: sessionData.company_name,
                   profileImage: sessionData.profile_image,
-                  subscriptionTier: sessionData.subscription_tier
+                  subscriptionTier: sessionData.subscription_tier,
+                  adminAccess: !!sessionData.admin_access,
+                  adminInvitePending: !!sessionData.admin_invite_pending
                 },
                 success: true
               }),
@@ -15186,7 +15294,7 @@ Signatures: [To be completed upon signing]
 
       // For non-admin users, only allow viewing their own logs
       const effectiveUserId = userId ? parseInt(userId) : authResult.user.id;
-      if (effectiveUserId !== authResult.user.id && authResult.user.userType !== 'admin') {
+      if (effectiveUserId !== authResult.user.id && authResult.user.userType !== 'admin' && !authResult.user.adminAccess) {
         return this.jsonResponse({
           success: false,
           error: { message: 'Access denied. You can only view your own audit logs.' }
@@ -15249,7 +15357,7 @@ Signatures: [To be completed upon signing]
       if (!authResult.authorized) return authResult.response!;
 
       // Only allow admin users to export audit logs
-      if (authResult.user.userType !== 'admin') {
+      if (authResult.user.userType !== 'admin' && !authResult.user.adminAccess) {
         return this.jsonResponse({
           success: false,
           error: { message: 'Access denied. Only administrators can export audit logs.' }
@@ -15315,7 +15423,7 @@ Signatures: [To be completed upon signing]
       if (!authResult.authorized) return authResult.response!;
 
       // Check admin access for comprehensive statistics
-      if (authResult.user.userType !== 'admin') {
+      if (authResult.user.userType !== 'admin' && !authResult.user.adminAccess) {
         return this.jsonResponse({
           success: false,
           error: { message: 'Access denied. Only administrators can view audit statistics.' }
@@ -15365,7 +15473,7 @@ Signatures: [To be completed upon signing]
           [entityId, authResult.user.id]
         );
 
-        if (ndaCheck.length === 0 && authResult.user.userType !== 'admin') {
+        if (ndaCheck.length === 0 && authResult.user.userType !== 'admin' && !authResult.user.adminAccess) {
           return this.jsonResponse({
             success: false,
             error: { message: 'Access denied to this entity audit trail' }
@@ -15409,7 +15517,7 @@ Signatures: [To be completed upon signing]
       }
 
       // Users can only view their own audit trail unless they're admin
-      if (targetUserId !== authResult.user.id && authResult.user.userType !== 'admin') {
+      if (targetUserId !== authResult.user.id && authResult.user.userType !== 'admin' && !authResult.user.adminAccess) {
         return this.jsonResponse({
           success: false,
           error: { message: 'Access denied. You can only view your own audit trail.' }

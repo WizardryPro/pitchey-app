@@ -40,6 +40,8 @@ export interface AdminUser {
   lastLogin: string | null;
   pitchCount: number;
   investmentCount: number;
+  adminAccess?: boolean;
+  adminInvitePending?: boolean;
 }
 
 export interface AdminPitch {
@@ -446,6 +448,43 @@ class AdminService {
       credentials: 'include'
     });
     return handleResponse<any[]>(response);
+  }
+
+  // Admin Invite
+  async inviteAsAdmin(userId: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/api/admin/invite/${userId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include'
+    });
+    await handleResponse<void>(response);
+  }
+
+  async revokeAdmin(userId: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/api/admin/invite/${userId}/revoke`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include'
+    });
+    await handleResponse<void>(response);
+  }
+
+  async acceptAdminInvite(): Promise<{ adminAccess: boolean; adminInvitePending: boolean }> {
+    const response = await fetch(`${API_BASE_URL}/api/admin/invite/accept`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include'
+    });
+    return handleResponse<{ adminAccess: boolean; adminInvitePending: boolean }>(response);
+  }
+
+  async checkAdminInviteStatus(): Promise<{ adminAccess: boolean; adminInvitePending: boolean }> {
+    const response = await fetch(`${API_BASE_URL}/api/admin/invite/status`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include'
+    });
+    return handleResponse<{ adminAccess: boolean; adminInvitePending: boolean }>(response);
   }
 
   // Export Data

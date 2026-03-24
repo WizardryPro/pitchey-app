@@ -246,11 +246,9 @@ export class AdminEndpointsHandler {
     }
   }
 
-  // Check if user has admin permissions
+  // Check if user has admin permissions (database-driven, no hardcoded list)
   private checkAdminPermissions(userAuth: AuthPayload): boolean {
-    // Demo admin users
-    const adminUsers = ['admin@pitchey.com', 'alex.creator@demo.com'];
-    return adminUsers.includes(userAuth.email);
+    return userAuth.userType === 'admin' || userAuth.adminAccess === true;
   }
 
   // Admin Dashboard

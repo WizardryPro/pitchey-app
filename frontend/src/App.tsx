@@ -416,7 +416,7 @@ function App() {
           <Route path="/auth/production" element={<Navigate to="/login/production" replace />} />
           <Route path="/login/admin" element={
             !isAuthenticated ? <AdminLogin /> :
-            userType === 'admin' ? <Navigate to="/admin/dashboard" /> :
+            (userType === 'admin' || user?.adminAccess) ? <Navigate to="/admin/dashboard" /> :
             <Navigate to="/" />
           } />
           
@@ -520,7 +520,7 @@ function App() {
           
           {/* Admin Portal Routes — nested under PortalLayout with sidebar */}
           <Route path="/admin/*" element={
-            isAuthenticated && userType === 'admin'
+            isAuthenticated && (userType === 'admin' || user?.adminAccess)
               ? <PortalLayout userType="admin" />
               : <Navigate to="/login/admin" />
           }>
