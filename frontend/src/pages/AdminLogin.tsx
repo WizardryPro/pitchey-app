@@ -25,10 +25,10 @@ export default function AdminLogin() {
         setAuthError('Access denied. This portal is restricted to administrators.');
         return;
       }
-      void navigate('/admin/dashboard');
+      navigate('/admin/dashboard', { replace: true });
     } catch (err) {
       if (err instanceof MFARequiredError) {
-        void navigate(`/mfa/challenge?challengeId=${err.challengeId}&userType=${err.user.userType}&name=${encodeURIComponent(err.user.name)}&email=${encodeURIComponent(err.user.email)}`);
+        navigate(`/mfa/challenge?challengeId=${err.challengeId}&userType=${err.user.userType}&name=${encodeURIComponent(err.user.name)}&email=${encodeURIComponent(err.user.email)}`);
         return;
       }
       console.error('Admin login failed:', err);

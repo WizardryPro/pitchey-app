@@ -415,9 +415,9 @@ function App() {
           <Route path="/auth/investor" element={<Navigate to="/login/investor" replace />} />
           <Route path="/auth/production" element={<Navigate to="/login/production" replace />} />
           <Route path="/login/admin" element={
-            !isAuthenticated ? <AdminLogin /> :
-            (userType === 'admin' || user?.adminAccess) ? <Navigate to="/admin/dashboard" /> :
-            <Navigate to="/" />
+            isAuthenticated && (userType === 'admin' || user?.adminAccess)
+              ? <Navigate to="/admin/dashboard" replace />
+              : <AdminLogin />
           } />
           
           {/* Legacy routes (backwards compatibility) - redirect to appropriate dashboard */}
