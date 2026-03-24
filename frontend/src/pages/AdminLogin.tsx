@@ -18,9 +18,9 @@ export default function AdminLogin() {
     setAuthError(null);
     try {
       await login(formData.email, formData.password);
-      // Verify the user is actually an admin
+      // Verify the user has admin access (either native admin or admin_access flag)
       const user = useBetterAuthStore.getState().user;
-      if (user?.userType !== 'admin') {
+      if (user?.userType !== 'admin' && !user?.adminAccess) {
         useBetterAuthStore.getState().logout();
         setAuthError('Access denied. This portal is restricted to administrators.');
         return;
