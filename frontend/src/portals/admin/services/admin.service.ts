@@ -349,7 +349,7 @@ class AdminService {
       if (value !== undefined) params.append(key, value.toString());
     });
     const query = params.toString() ? `?${params.toString()}` : '';
-    const response = await fetch(`${API_BASE_URL}/api/audit-log${query}`, {
+    const response = await fetch(`${API_BASE_URL}/api/audit/logs${query}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include'
@@ -358,7 +358,7 @@ class AdminService {
   }
 
   async getAuditLogStats(): Promise<any> {
-    const response = await fetch(`${API_BASE_URL}/api/audit-log/stats`, {
+    const response = await fetch(`${API_BASE_URL}/api/audit/statistics`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include'
@@ -367,7 +367,7 @@ class AdminService {
   }
 
   async exportAuditLog(): Promise<Blob> {
-    const response = await fetch(`${API_BASE_URL}/api/audit-log/export`, {
+    const response = await fetch(`${API_BASE_URL}/api/audit/logs/export`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include'

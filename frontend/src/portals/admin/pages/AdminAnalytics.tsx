@@ -57,37 +57,40 @@ export default function AdminAnalytics() {
     );
   }
 
-  const userGrowth = data?.userGrowth ?? {};
-  const contentMetrics = data?.contentMetrics ?? {};
-  const financialMetrics = data?.financialMetrics ?? {};
-  const topGenres = data?.topGenres ?? [];
-  const engagement = data?.engagementMetrics ?? {};
+  // Normalize: API returns { analytics: { user_growth, content_metrics, ... } }
+  const raw = data as any;
+  const analytics = raw?.analytics ?? raw ?? {};
+  const userGrowth = analytics.user_growth ?? analytics.userGrowth ?? {};
+  const contentMetrics = analytics.content_metrics ?? analytics.contentMetrics ?? {};
+  const financialMetrics = analytics.financial_metrics ?? analytics.financialMetrics ?? {};
+  const topGenres = analytics.top_genres ?? analytics.topGenres ?? [];
+  const engagement = analytics.engagement_metrics ?? analytics.engagementMetrics ?? {};
 
   const stats = [
     {
       label: 'New Users',
-      value: userGrowth.newUsers ?? 0,
-      change: userGrowth.growthRate ?? 0,
+      value: userGrowth.new_registrations ?? userGrowth.newUsers ?? 0,
+      change: (userGrowth.activation_rate ?? userGrowth.growthRate ?? 0) * 100,
       icon: Users,
       color: 'purple',
     },
     {
       label: 'New Pitches',
-      value: contentMetrics.newPitches ?? 0,
+      value: contentMetrics.content_created ?? contentMetrics.newPitches ?? 0,
       change: contentMetrics.growthRate ?? 0,
       icon: Film,
       color: 'blue',
     },
     {
       label: 'Revenue',
-      value: `$${(financialMetrics.revenue ?? 0).toLocaleString()}`,
+      value: `$${(financialMetrics.revenue ?? financialMetrics.total ?? 0).toLocaleString()}`,
       change: financialMetrics.revenueGrowthRate ?? 0,
       icon: DollarSign,
       color: 'green',
     },
     {
-      label: 'Active Users',
-      value: engagement.activeUsers ?? 0,
+      label: 'Total Views',
+      value: (engagement.total_views ?? engagement.activeUsers ?? 0).toLocaleString(),
       change: engagement.activityGrowthRate ?? 0,
       icon: BarChart3,
       color: 'indigo',
@@ -145,11 +148,11 @@ export default function AdminAnalytics() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">User Breakdown</h3>
           <div className="space-y-3">
             {[
-              { label: 'Creators', value: userGrowth.creators ?? 0, color: 'bg-purple-500' },
-              { label: 'Investors', value: userGrowth.investors ?? 0, color: 'bg-green-500' },
-              { label: 'Production', value: userGrowth.production ?? 0, color: 'bg-blue-500' },
+              { label: 'New Registrations', value: userGrowth.new_registrations ?? userGrowth.creators ?? 0, color: 'bg-purple-500' },
+              { label: 'Activation Rate', value: Math.round((userGrowth.activation_rate ?? 0) * 100), color: 'bg-green-500' },
+              { label: 'Retention Rate', value: Math.round((userGrowth.retention_rate ?? 0) * 100), color: 'bg-blue-500' },
             ].map((item) => {
-              const total = (userGrowth.creators ?? 0) + (userGrowth.investors ?? 0) + (userGrowth.production ?? 0);
+              const total = 100;
               const pct = total > 0 ? (item.value / total) * 100 : 0;
               return (
                 <div key={item.label}>
@@ -189,16 +192,16 @@ export default function AdminAnalytics() {
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Financial Summary</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <p className="text-sm text-gray-500">Total Revenue</p>
-            <p className="text-xl font-bold text-gray-900">${(financialMetrics.revenue ?? 0).toLocaleString()}</p>
+            <p className="text-sm text-gray-500">Content Created</p>
+            <p className="text-xl font-bold text-gray-900">{(contentMetrics.content_created ?? 0).toLocaleString()}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-500">Total Transactions</p>
-            <p className="text-xl font-bold text-gray-900">{(financialMetrics.totalTransactions ?? 0).toLocaleString()}</p>
+            <p className="text-sm text-gray-500">Content Published</p>
+            <p className="text-xl font-bold text-gray-900">{(contentMetrics.content_published ?? 0).toLocaleString()}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-500">Avg Transaction</p>
-            <p className="text-xl font-bold text-gray-900">${(financialMetrics.avgTransaction ?? 0).toFixed(2)}</p>
+            <p className="text-sm text-gray-500">Flags Resolved</p>
+            <p className="text-xl font-bold text-gray-900">{(analytics.moderation_metrics?.flags_resolved ?? 0).toLocaleString()}</p>
           </div>
         </div>
       </div>

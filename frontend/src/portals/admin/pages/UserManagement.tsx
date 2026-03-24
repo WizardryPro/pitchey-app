@@ -46,8 +46,25 @@ const UserManagement: React.FC = () => {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const data = await adminService.getUsers(filters);
-      setUsers(data);
+      const data = await adminService.getUsers(filters) as any;
+      // Normalize: API may return { users: [...] } or flat array
+      const userList = Array.isArray(data) ? data : (data?.users ?? data?.data ?? []);
+      // Map snake_case to camelCase
+      const normalized = userList.map((u: any) => ({
+        id: String(u.id),
+        email: u.email,
+        name: u.name ?? u.username ?? u.email?.split('@')[0] ?? '',
+        userType: u.user_type ?? u.userType ?? 'creator',
+        credits: u.credits ?? 0,
+        status: u.status ?? 'active',
+        createdAt: u.created_at ?? u.createdAt ?? '',
+        lastLogin: u.last_login ?? u.lastLogin ?? null,
+        pitchCount: u.total_pitches ?? u.pitchCount ?? 0,
+        investmentCount: u.total_investments ?? u.investmentCount ?? 0,
+        adminAccess: !!u.admin_access || !!u.adminAccess,
+        adminInvitePending: !!u.admin_invite_pending || !!u.adminInvitePending,
+      }));
+      setUsers(normalized);
     } catch (err) {
       setError('Failed to load users');
       console.error('Users error:', err);

@@ -93,21 +93,23 @@ export default function AdminSystemHealth() {
 
   // Parse services from health response
   const services: ServiceStatus[] = [];
-  const healthData = health?.data ?? health ?? {};
+  // Normalize: API returns { health: { status, services: { database: {...} }, metrics: {...} } }
+  const raw = health as any;
+  const healthData = raw?.health ?? raw?.data ?? raw ?? {};
   const serviceMap: Record<string, string> = {
     database: 'Database (Neon)',
     redis: 'Cache (Upstash Redis)',
-    stripe: 'Payments (Stripe)',
-    resend: 'Email (Resend)',
+    storage: 'Storage (R2)',
+    email: 'Email (Resend)',
   };
 
   for (const [key, label] of Object.entries(serviceMap)) {
-    const svc = healthData[key] ?? healthData.services?.[key];
+    const svc = healthData.services?.[key] ?? healthData[key];
     if (svc) {
       services.push({
         name: label,
         status: svc.status ?? (svc.healthy ? 'healthy' : 'unhealthy'),
-        responseTime: svc.responseTime ?? svc.latency,
+        responseTime: svc.response_time ?? svc.responseTime ?? svc.latency,
         message: svc.message ?? svc.error,
         lastChecked: svc.checkedAt ?? healthData.timestamp,
       });
