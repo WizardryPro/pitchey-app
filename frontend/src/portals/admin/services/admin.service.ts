@@ -137,6 +137,41 @@ export interface SystemSettings {
   };
 }
 
+export interface AuditLogEntry {
+  id: number;
+  userId: number | null;
+  eventType: string;
+  eventCategory: string;
+  riskLevel: string;
+  description: string;
+  entityType: string | null;
+  entityId: number | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  timestamp: string;
+  metadata: Record<string, any> | null;
+}
+
+export interface AuditLogResponse {
+  logs: AuditLogEntry[];
+  totalCount: number;
+  pagination: {
+    limit: number;
+    offset: number;
+    totalPages: number;
+    currentPage: number;
+  };
+}
+
+export interface AuditLogFilters {
+  eventCategory?: string;
+  riskLevel?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  limit?: number;
+  offset?: number;
+}
+
 export interface UserFilters {
   search?: string;
   userType?: string;
@@ -338,6 +373,36 @@ class AdminService {
       credentials: 'include'
     });
     await handleResponse<void>(response);
+  }
+
+  // Audit Logs
+  async getAuditLogs(filters: AuditLogFilters = {}): Promise<AuditLogResponse> {
+    const params = new URLSearchParams();
+    if (filters.eventCategory) params.append('eventCategories', filters.eventCategory);
+    if (filters.riskLevel) params.append('riskLevels', filters.riskLevel);
+    if (filters.dateFrom) params.append('dateFrom', filters.dateFrom);
+    if (filters.dateTo) params.append('dateTo', filters.dateTo);
+    if (filters.limit) params.append('limit', filters.limit.toString());
+    if (filters.offset) params.append('offset', filters.offset.toString());
+
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const response = await fetch(`${API_BASE_URL}/api/audit/logs${query}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include'
+    });
+    const result = await handleResponse<{ data: AuditLogResponse }>(response);
+    return (result as any).data ?? result;
+  }
+
+  async exportAuditLogs(): Promise<Blob> {
+    const response = await fetch(`${API_BASE_URL}/api/audit/logs/export`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Failed to export audit logs');
+    return response.blob();
   }
 
   // Export Data

@@ -1,6 +1,6 @@
-import { Shield, CheckCircle, Clock, XCircle, Lock, Eye } from 'lucide-react';
+import { Shield, CheckCircle, Clock, XCircle, Lock, Eye, AlertTriangle } from 'lucide-react';
 
-export type NDAStatus = 'none' | 'pending' | 'approved' | 'signed' | 'rejected' | 'required';
+export type NDAStatus = 'none' | 'pending' | 'approved' | 'signed' | 'rejected' | 'required' | 'expired';
 
 interface NDAStatusBadgeProps {
   status: NDAStatus;
@@ -45,6 +45,12 @@ const statusConfig = {
     label: 'NDA Rejected',
     color: 'bg-red-100 text-red-800',
     iconColor: 'text-red-600'
+  },
+  expired: {
+    icon: AlertTriangle,
+    label: 'NDA Expired',
+    color: 'bg-orange-100 text-orange-800',
+    iconColor: 'text-orange-600'
   }
 };
 
@@ -56,7 +62,7 @@ export default function NDAStatusBadge({
 }: NDAStatusBadgeProps) {
   // Determine the actual status to display
   const displayStatus = status === 'none' && requiresNDA ? 'required' : status;
-  const config = statusConfig[displayStatus];
+  const config = statusConfig[displayStatus] || statusConfig.none;
   const Icon = config.icon;
 
   return (

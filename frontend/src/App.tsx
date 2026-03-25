@@ -32,18 +32,21 @@ if (import.meta.env.DEV) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function lazyRetry(factory: () => Promise<{ default: React.ComponentType<any> }>) {
   return lazy(() =>
-    factory().catch(() => {
-      // Chunk likely stale after deploy — reload the page once
+    factory().catch((err) => {
+      // Chunk likely stale after deploy — reload the page once.
+      // Use localStorage so the guard survives tab close/reopen.
       const reloadKey = 'chunk-reload-' + window.location.pathname;
-      if (!sessionStorage.getItem(reloadKey)) {
-        sessionStorage.setItem(reloadKey, '1');
+      const lastReload = localStorage.getItem(reloadKey);
+      const now = Date.now();
+      // Allow a fresh reload if the last one was more than 30s ago
+      if (!lastReload || now - parseInt(lastReload) > 30000) {
+        localStorage.setItem(reloadKey, String(now));
         window.location.reload();
-        // Return a never-resolving promise to prevent flash
         return new Promise<never>(() => {});
       }
-      // Already reloaded once — clear flag and let error boundary handle it
-      sessionStorage.removeItem(reloadKey);
-      return factory();
+      // Already reloaded recently — clear flag and let error boundary handle it
+      localStorage.removeItem(reloadKey);
+      throw err;
     })
   );
 }
@@ -137,6 +140,7 @@ const Privacy = lazyRetry(() => import('./pages/Privacy'));
 const AdminDashboard = lazyRetry(() => import('@portals/admin/pages/AdminDashboard'));
 const UserManagement = lazyRetry(() => import('@portals/admin/pages/UserManagement'));
 const ContentModeration = lazyRetry(() => import('@portals/admin/pages/ContentModeration'));
+const AuditLog = lazyRetry(() => import('@portals/admin/pages/AuditLog'));
 
 // MFA Challenge Page
 const MFAChallengePage = lazyRetry(() => import('./pages/MFAChallengePage'));
@@ -537,7 +541,12 @@ function App() {
               <SystemSettings />
             </PermissionRoute>
           } />
-          
+          <Route path="/admin/audit-log" element={
+            <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+              <AuditLog />
+            </PermissionRoute>
+          } />
+
           {/* Creator Profile Route - accessible to all authenticated users */}
           <Route path="/creator/:creatorId" element={
             isAuthenticated ? <CreatorProfile /> : <Navigate to="/login/production" />
