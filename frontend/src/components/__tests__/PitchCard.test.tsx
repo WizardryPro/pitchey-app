@@ -264,8 +264,10 @@ describe('PitchCard', () => {
       const pitchWithoutThumbnail = { ...mockPitch, thumbnail: '' }
       render(<PitchCard pitch={pitchWithoutThumbnail} />)
 
-      const image = screen.getByRole('img')
-      expect(image).toHaveAttribute('src', '')
+      // Empty thumbnail renders GenrePlaceholder (a div), not an <img>
+      expect(screen.queryByRole('img')).not.toBeInTheDocument()
+      const genreLabels = screen.getAllByText('Drama')
+      expect(genreLabels.length).toBeGreaterThanOrEqual(1)
     })
 
     it('should handle very long titles', () => {

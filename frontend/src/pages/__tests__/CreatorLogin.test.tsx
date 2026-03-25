@@ -18,7 +18,23 @@ vi.mock('react-router-dom', async () => {
   }
 })
 
+class MFARequiredError extends Error {
+  challengeId: string
+  methods: string[]
+  expiresAt: string
+  user: { id: string; email: string; name: string; userType: string }
+  constructor(data: { challengeId: string; methods: string[]; expiresAt: string; user: { id: string; email: string; name: string; userType: string } }) {
+    super('MFA verification required')
+    this.name = 'MFARequiredError'
+    this.challengeId = data.challengeId
+    this.methods = data.methods
+    this.expiresAt = data.expiresAt
+    this.user = data.user
+  }
+}
+
 vi.mock('../../store/betterAuthStore', () => ({
+  MFARequiredError,
   useBetterAuthStore: () => ({
     loginCreator: mockLoginCreator,
     loading: mockLoading,

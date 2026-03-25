@@ -249,6 +249,11 @@ const ALLOWLIST = new Set([
   '/api/investor/connections/:param',
   '/api/follows',
   '/api/investor/connections/:param/accept',
+
+  // ── Admin portal audit-log routes (new admin service) ──
+  '/api/audit-log:param',
+  '/api/audit-log/stats',
+  '/api/audit-log/export',
 ])
 
 // ─── Tests ───────────────────────────────────────────────────────────────────

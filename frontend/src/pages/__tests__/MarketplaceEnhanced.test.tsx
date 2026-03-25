@@ -244,7 +244,7 @@ describe('MarketplaceEnhanced', () => {
       render(<MarketplaceEnhanced />)
 
       await waitFor(() => {
-        expect(screen.getByText('Sci-Fi')).toBeInTheDocument()
+        expect(screen.getAllByText('Sci-Fi').length).toBeGreaterThan(0)
       })
     })
 

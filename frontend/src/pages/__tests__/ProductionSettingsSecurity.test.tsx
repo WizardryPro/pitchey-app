@@ -125,7 +125,7 @@ describe('ProductionSettingsSecurity', () => {
     // Default state has twoFactorEnabled: false
     expect(screen.getByText('Two-Factor Authentication is Disabled')).toBeInTheDocument()
     expect(screen.getByText('Enable 2FA')).toBeInTheDocument()
-    expect(screen.getByText('Setup 2FA')).toBeInTheDocument()
+    expect(screen.getByText('Enhance Your Security')).toBeInTheDocument()
   })
 
   it('switches to Active Sessions tab', () => {

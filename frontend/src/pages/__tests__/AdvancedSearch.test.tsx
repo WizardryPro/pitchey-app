@@ -66,28 +66,28 @@ vi.mock('../../config', () => ({
 vi.stubGlobal('fetch', mockFetch)
 
 const mockSearchResults = {
-  results: [
+  data: [
     {
       id: '1',
       type: 'pitch',
       title: 'Ocean Depths',
-      description: 'A deep sea thriller.',
+      logline: 'A deep sea thriller.',
       genre: ['thriller'],
       budget: 5000000,
       format: 'feature',
       status: 'Development',
       created_at: '2024-01-15T00:00:00.000Z',
       creator_name: 'Creator One',
-      views: 500,
-      likes: 30,
+      view_count: 500,
+      like_count: 30,
     },
     {
       id: '2',
       type: 'creator',
-      title: 'Jane Director',
-      description: 'Award-winning director.',
+      name: 'Jane Director',
+      bio: 'Award-winning director.',
       created_at: '2024-02-20T00:00:00.000Z',
-      views: 200,
+      view_count: 200,
     },
   ],
   total: 2,
@@ -131,7 +131,7 @@ describe('AdvancedSearch', () => {
 
     it('renders search input', () => {
       renderSearch()
-      expect(screen.getByPlaceholderText(/Search for pitches, creators/i)).toBeInTheDocument()
+      expect(screen.getByPlaceholderText(/Search pitches, creators/i)).toBeInTheDocument()
     })
 
     it('renders Filters toggle button', () => {
@@ -143,18 +143,25 @@ describe('AdvancedSearch', () => {
 
   // ─── Filters Sidebar ─────────────────────────────────────────────
   describe('Filters Sidebar', () => {
-    it('shows filters panel by default', () => {
+    function openFilters() {
+      const filtersBtn = screen.getAllByText('Filters').find(el => el.closest('button'))
+      fireEvent.click(filtersBtn!.closest('button')!)
+    }
+
+    it('hides filters panel by default', () => {
       renderSearch()
-      expect(screen.getByText('Search Type')).toBeInTheDocument()
+      expect(screen.queryByText('Search Type')).not.toBeInTheDocument()
     })
 
     it('renders Search Type select with All Results option', () => {
       renderSearch()
+      openFilters()
       expect(screen.getByDisplayValue('All Results')).toBeInTheDocument()
     })
 
     it('renders Genres filter checkboxes', () => {
       renderSearch()
+      openFilters()
       expect(screen.getByText('Genres')).toBeInTheDocument()
       expect(screen.getByText('Action')).toBeInTheDocument()
       expect(screen.getByText('Drama')).toBeInTheDocument()
@@ -162,29 +169,33 @@ describe('AdvancedSearch', () => {
 
     it('renders Budget Range filter', () => {
       renderSearch()
+      openFilters()
       expect(screen.getByText('Budget Range')).toBeInTheDocument()
     })
 
     it('renders Format filter checkboxes', () => {
       renderSearch()
+      openFilters()
       expect(screen.getByText('Format')).toBeInTheDocument()
       expect(screen.getByText('Feature Film')).toBeInTheDocument()
     })
 
     it('renders Minimum Rating filter', () => {
       renderSearch()
+      openFilters()
       expect(screen.getByText('Minimum Rating')).toBeInTheDocument()
     })
 
     it('renders Location filter', () => {
       renderSearch()
-      // The label text exists; input is not associated via htmlFor but is in a sibling
+      openFilters()
       expect(screen.getByText('Location')).toBeInTheDocument()
       expect(screen.getByPlaceholderText('City, State or Country')).toBeInTheDocument()
     })
 
     it('renders Clear All button in filters', () => {
       renderSearch()
+      openFilters()
       expect(screen.getByText('Clear All')).toBeInTheDocument()
     })
   })
@@ -209,7 +220,7 @@ describe('AdvancedSearch', () => {
     it('shows results count', () => {
       renderSearch()
       // Multiple elements may contain "results found" (count span + empty state heading)
-      expect(screen.getAllByText(/results found/i).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/\d+ results/i).length).toBeGreaterThan(0)
     })
   })
 
@@ -238,7 +249,7 @@ describe('AdvancedSearch', () => {
   describe('Search Execution', () => {
     it('performs search when query is entered', async () => {
       renderSearch()
-      const searchInput = screen.getByPlaceholderText(/Search for pitches, creators/i)
+      const searchInput = screen.getByPlaceholderText(/Search pitches, creators/i)
       fireEvent.change(searchInput, { target: { value: 'thriller' } })
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith(
@@ -250,7 +261,7 @@ describe('AdvancedSearch', () => {
 
     it('displays search results after successful search', async () => {
       renderSearch()
-      const searchInput = screen.getByPlaceholderText(/Search for pitches, creators/i)
+      const searchInput = screen.getByPlaceholderText(/Search pitches, creators/i)
       fireEvent.change(searchInput, { target: { value: 'ocean' } })
       await waitFor(() => {
         expect(screen.getByText('Ocean Depths')).toBeInTheDocument()
@@ -260,7 +271,7 @@ describe('AdvancedSearch', () => {
     it('shows error toast when search fails', async () => {
       mockFetch.mockRejectedValue(new Error('Network error'))
       renderSearch()
-      const searchInput = screen.getByPlaceholderText(/Search for pitches, creators/i)
+      const searchInput = screen.getByPlaceholderText(/Search pitches, creators/i)
       fireEvent.change(searchInput, { target: { value: 'something' } })
       await waitFor(() => {
         expect(mockToast.error).toHaveBeenCalledWith('Search failed. Please try again.')
@@ -270,7 +281,7 @@ describe('AdvancedSearch', () => {
     it('shows error toast when search returns non-ok response', async () => {
       mockFetch.mockResolvedValue({ ok: false, status: 500 })
       renderSearch()
-      const searchInput = screen.getByPlaceholderText(/Search for pitches, creators/i)
+      const searchInput = screen.getByPlaceholderText(/Search pitches, creators/i)
       fireEvent.change(searchInput, { target: { value: 'something' } })
       await waitFor(() => {
         expect(mockToast.error).toHaveBeenCalledWith('Search failed. Please try again.')
@@ -284,21 +295,29 @@ describe('AdvancedSearch', () => {
       renderSearch()
       const filtersBtn = screen.getAllByText('Filters').find(el => el.closest('button'))
       expect(filtersBtn).toBeTruthy()
+      // Click once to open
       fireEvent.click(filtersBtn!.closest('button')!)
-      // Filters panel should be hidden now
+      expect(screen.getByText('Search Type')).toBeInTheDocument()
+      // Click again to close
+      fireEvent.click(filtersBtn!.closest('button')!)
       expect(screen.queryByText('Search Type')).not.toBeInTheDocument()
     })
 
     it('clears all filters when Clear All clicked', () => {
       renderSearch()
+      // Open filters first
+      const filtersBtn = screen.getAllByText('Filters').find(el => el.closest('button'))
+      fireEvent.click(filtersBtn!.closest('button')!)
       fireEvent.click(screen.getByText('Clear All'))
-      // After clearing, form resets — search input should be empty
-      const searchInput = screen.getByPlaceholderText(/Search for pitches, creators/i) as HTMLInputElement
+      const searchInput = screen.getByPlaceholderText(/Search pitches, creators/i) as HTMLInputElement
       expect(searchInput.value).toBe('')
     })
 
     it('toggles genre checkbox', () => {
       renderSearch()
+      // Open filters first
+      const filtersBtn = screen.getAllByText('Filters').find(el => el.closest('button'))
+      fireEvent.click(filtersBtn!.closest('button')!)
       const actionCheckbox = screen.getByRole('checkbox', { name: 'Action' })
       fireEvent.click(actionCheckbox)
       expect(actionCheckbox).toBeChecked()
@@ -306,6 +325,9 @@ describe('AdvancedSearch', () => {
 
     it('toggles format checkbox', () => {
       renderSearch()
+      // Open filters first
+      const filtersBtn = screen.getAllByText('Filters').find(el => el.closest('button'))
+      fireEvent.click(filtersBtn!.closest('button')!)
       const featureCheckbox = screen.getByRole('checkbox', { name: 'Feature Film' })
       fireEvent.click(featureCheckbox)
       expect(featureCheckbox).toBeChecked()

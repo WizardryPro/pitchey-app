@@ -172,7 +172,7 @@ describe('Homepage', () => {
 
   it('renders Ready For Your Close Up CTA section', () => {
     renderHomepage()
-    expect(screen.getByText('Ready For Your Close Up?')).toBeInTheDocument()
+    expect(screen.getByText('The data no other platform has')).toBeInTheDocument()
   })
 
   it('shows guest CTA section when not authenticated', () => {
@@ -199,7 +199,7 @@ describe('Homepage', () => {
 
   it('renders footer content', () => {
     renderHomepage()
-    expect(screen.getByText(/© 2025 Pitchey Ltd/)).toBeInTheDocument()
+    expect(screen.getByText(/© 2026 Pitchey Ltd/)).toBeInTheDocument()
   })
 
   it('renders footer columns', () => {

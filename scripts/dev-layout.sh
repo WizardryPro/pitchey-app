@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # Multi-agent dev layout for Pitchey
-# Usage: ./scripts/dev-layout.sh [session-name]
+# Usage: ./scripts/dev-layout.sh [session-name] [project-dir]
+#
+# Examples:
+#   ./scripts/dev-layout.sh                          # main workspace
+#   ./scripts/dev-layout.sh pitchey-feature /opt/enterprise/pitchey-feature
+#   ./scripts/dev-layout.sh pitchey-hotfix  /opt/enterprise/pitchey-hotfix
 #
 # Layout:
 #   ┌──────────────────────┬─────────────────┐
@@ -19,7 +24,7 @@
 set -euo pipefail
 
 SESSION="${1:-pitchey}"
-PROJECT="/opt/enterprise/site-a"
+PROJECT="${2:-/opt/enterprise/site-a}"
 
 # If already inside this session, warn and exit
 if [ "${TMUX:-}" ] && tmux display-message -p '#S' 2>/dev/null | grep -qx "$SESSION"; then
