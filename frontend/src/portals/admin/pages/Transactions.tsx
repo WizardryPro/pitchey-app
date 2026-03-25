@@ -198,15 +198,15 @@ const Transactions: React.FC = () => {
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Name</label>
-                    <p className="text-gray-900">{transaction.user.name}</p>
+                    <p className="text-gray-900">{transaction.user?.name ?? '\u2014'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Email</label>
-                    <p className="text-gray-900">{transaction.user.email}</p>
+                    <p className="text-gray-900">{transaction.user?.email ?? '\u2014'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">User Type</label>
-                    <p className="text-gray-900 capitalize">{transaction.user.userType}</p>
+                    <p className="text-gray-900 capitalize">{transaction.user?.userType ?? '\u2014'}</p>
                   </div>
                 </div>
               </div>
@@ -518,8 +518,8 @@ const Transactions: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{transaction.user.name}</div>
-                          <div className="text-sm text-gray-500">{transaction.user.email}</div>
+                          <div className="text-sm font-medium text-gray-900">{transaction.user?.name ?? '\u2014'}</div>
+                          <div className="text-sm text-gray-500">{transaction.user?.email ?? '\u2014'}</div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
