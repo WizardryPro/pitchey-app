@@ -1,28 +1,4 @@
 {
-  "hooks": {
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/opt/enterprise/site-a/scripts/agent-signal.sh done \"$(basename \"$PWD\")\" \"Agent finished task\""
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "if echo \"$TOOL_INPUT\" | grep -qE '^git push'; then /opt/enterprise/site-a/scripts/agent-signal.sh done \"$(basename \"$PWD\")\" \"Pushed to remote\"; fi"
-          }
-        ]
-      }
-    ]
-  },
   "permissions": {
     "allow": [
       "Bash(npm run build:*)",
