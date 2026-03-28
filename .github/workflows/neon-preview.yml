@@ -7,7 +7,7 @@ jobs:
   # Create or update preview branch
   setup-preview:
     if: github.event.action != 'closed'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       pull-requests: write
       contents: read
@@ -144,7 +144,7 @@ jobs:
   # Cleanup preview branch when PR is closed
   cleanup-preview:
     if: github.event.action == 'closed'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       pull-requests: write
     

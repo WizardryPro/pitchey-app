@@ -20,7 +20,7 @@ jobs:
   # =================================================================
   security-scan:
     name: 🔒 Security & Quality Scan
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -45,7 +45,7 @@ jobs:
   # =================================================================
   frontend-test:
     name: 🎨 Frontend Tests
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     defaults:
       run:
         working-directory: ${{ env.FRONTEND_DIR }}
@@ -92,7 +92,7 @@ jobs:
   # =================================================================
   worker-test:
     name: ⚡ Worker Tests
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
 
     steps:
       - name: 📥 Checkout code
@@ -123,7 +123,7 @@ jobs:
   # =================================================================
   database-test:
     name: 🗄️ Database Schema Tests
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.event_name != 'schedule'
 
     steps:
@@ -155,7 +155,7 @@ jobs:
   # =================================================================
   deploy-staging:
     name: 🚀 Deploy to Staging
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/develop'
     needs: [security-scan, frontend-test, worker-test]
     environment: staging
@@ -201,7 +201,7 @@ jobs:
   # =================================================================
   deploy-production:
     name: 🚀 Deploy to Production
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.ref == 'refs/heads/main'
     needs: [security-scan, frontend-test, worker-test, database-test]
     environment: production
@@ -262,7 +262,7 @@ jobs:
   # =================================================================
   e2e-test:
     name: 🎭 E2E Tests
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     needs: [deploy-production]
     continue-on-error: true
@@ -306,7 +306,7 @@ jobs:
   # =================================================================
   health-monitor:
     name: 🏥 Daily Health Check
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.event_name == 'schedule'
 
     steps:
@@ -360,7 +360,7 @@ jobs:
   # =================================================================
   cleanup:
     name: 🧹 Cleanup & Notify
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: always()
     needs: [security-scan, frontend-test, worker-test, database-test, deploy-production]
 

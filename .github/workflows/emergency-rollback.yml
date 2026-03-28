@@ -47,7 +47,7 @@ env:
 jobs:
   # Pre-rollback analysis and planning
   rollback-planning:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     outputs:
       rollback-plan: ${{ steps.create-plan.outputs.rollback-plan }}
       target-version: ${{ steps.determine-target.outputs.target-version }}
@@ -219,7 +219,7 @@ jobs:
   # Create backup of current state
   backup-current-state:
     needs: rollback-planning
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     outputs:
       backup-id: ${{ steps.create-backup.outputs.backup-id }}
     steps:
@@ -283,7 +283,7 @@ jobs:
   # Execute rollback
   execute-rollback:
     needs: [rollback-planning, backup-current-state]
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     outputs:
       rollback-status: ${{ steps.rollback-execution.outputs.rollback-status }}
     steps:
@@ -392,7 +392,7 @@ jobs:
   # Post-rollback health checks
   post-rollback-health:
     needs: [rollback-planning, execute-rollback]
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: needs.execute-rollback.outputs.rollback-status == 'completed' && !inputs.skip_health_check
     steps:
       - name: Wait for propagation
@@ -503,7 +503,7 @@ jobs:
   # Rollback validation and reporting
   rollback-validation:
     needs: [rollback-planning, execute-rollback, post-rollback-health]
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: always()
     steps:
       - name: Validate rollback success
@@ -654,7 +654,7 @@ jobs:
   # Cleanup and final steps
   rollback-cleanup:
     needs: [rollback-planning, execute-rollback, rollback-validation]
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: always()
     steps:
       - name: Cleanup temporary resources
