@@ -857,11 +857,7 @@ export default function MarketplaceEnhanced() {
               </div>
               <div className="bg-white/10 backdrop-blur rounded-lg px-3 py-2 sm:p-3">
                 <div className="text-xl sm:text-2xl font-bold">
-                  {stats.avgBudget >= 1000000
-                    ? `$${(stats.avgBudget / 1000000).toFixed(1)}M`
-                    : stats.avgBudget >= 1000
-                      ? `$${(stats.avgBudget / 1000).toFixed(0)}K`
-                      : `$${stats.avgBudget.toFixed(0)}`}
+                  {formatBudgetCompact(stats.avgBudget) || '$0'}
                 </div>
                 <div className="text-[10px] sm:text-xs text-purple-200">Avg Budget</div>
               </div>
@@ -899,6 +895,49 @@ export default function MarketplaceEnhanced() {
           </div>
         </div>
       )}
+
+      {/* Featured Pitches Row — shows top trending when no pitches are explicitly featured */}
+      {!loading && pitches.length > 0 && (() => {
+        const featured = pitches.filter((p: Pitch) => (p as unknown as Record<string, unknown>).isFeatured);
+        const spotlight = featured.length > 0 ? featured : pitches.filter((p: Pitch) => getTrendingScore(p) >= 5).slice(0, 3);
+        if (spotlight.length === 0) return null;
+        return (
+          <div className="bg-gradient-to-r from-brand-anchor/5 to-brand-featured/5 border-b">
+            <div className="container mx-auto px-4 py-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Star className="w-4 h-4 text-brand-featured" />
+                <h2 className="text-sm font-semibold text-gray-900">{featured.length > 0 ? 'Featured' : 'Spotlight'}</h2>
+              </div>
+              <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                {spotlight.map((pitch: Pitch) => (
+                  <div
+                    key={`spotlight-${pitch.id}`}
+                    onClick={() => handlePitchClick(pitch)}
+                    className="flex-shrink-0 w-64 bg-white rounded-lg shadow-sm hover:shadow-md transition cursor-pointer overflow-hidden flex"
+                  >
+                    <div className="w-20 h-20 bg-gray-100 flex-shrink-0 overflow-hidden">
+                      {getPitchImageUrl(pitch) ? (
+                        <img src={getPitchImageUrl(pitch)} alt={pitch.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <GenrePlaceholder genre={pitch.genre} />
+                      )}
+                    </div>
+                    <div className="p-2.5 min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold text-gray-900 truncate">{pitch.title}</h3>
+                      <p className="text-xs text-gray-500 truncate">{getCreatorDisplay(pitch)}</p>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
+                        <span className="flex items-center gap-0.5"><Eye className="w-3 h-3" />{pitch.viewCount || 0}</span>
+                        <span className="flex items-center gap-0.5"><Heart className="w-3 h-3" />{pitch.likeCount || 0}</span>
+                        {getPitchBudgetDisplay(pitch) && <span className="text-green-600 font-medium">{getPitchBudgetDisplay(pitch)}</span>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Search and controls bar */}
       <div className="bg-white border-b">
@@ -1220,10 +1259,10 @@ export default function MarketplaceEnhanced() {
               </>
             ) : (
               <EmptyState
-                title="No pitches found"
-                description="Try adjusting your filters or search query"
+                title="No matches found"
+                description="Try broadening your filters or checking your spelling."
                 action={{
-                  label: 'Clear filters',
+                  label: 'Clear All Filters',
                   onClick: clearFilters
                 }}
               />
