@@ -501,7 +501,7 @@ export const EnhancedCreatorAnalytics: React.FC<CreatorAnalyticsProps> = ({
                 </div>
                 <div>
                   <p className="text-gray-600">Engagement</p>
-                  <p className="font-semibold">{pitch.engagement}%</p>
+                  <p className="font-semibold">{(pitch.engagement * 100).toFixed(1)}%</p>
                 </div>
                 <div>
                   <p className="text-gray-600">Funding</p>

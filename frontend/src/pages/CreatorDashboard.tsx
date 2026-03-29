@@ -535,12 +535,15 @@ function CreatorDashboard() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500 mb-4">You haven't created any pitches yet</p>
+                <div className="text-center py-10">
+                  <div className="w-16 h-16 bg-brand-empty-icon/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Upload className="w-8 h-8 text-brand-empty-icon" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">Start Your Story</h3>
+                  <p className="text-gray-500 mb-6 max-w-sm mx-auto">You haven't published any pitches yet. Your first project is just a click away.</p>
                   <button
                     onClick={() => { void navigate('/creator/pitch/new'); }}
-                    className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition"
+                    className="bg-brand-action text-white px-6 py-2.5 rounded-lg hover:opacity-90 transition font-medium"
                   >
                     Create Your First Pitch
                   </button>

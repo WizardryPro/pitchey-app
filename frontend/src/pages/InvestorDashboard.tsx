@@ -640,7 +640,19 @@ function InvestorDashboard() {
                       })}
                     </div>
                   ) : (
-                    <div className="text-center py-8 text-gray-500 text-sm">No recent activity</div>
+                    <div className="text-center py-10">
+                      <div className="w-14 h-14 bg-brand-empty-icon/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <TrendingUp className="w-7 h-7 text-brand-empty-icon" />
+                      </div>
+                      <h4 className="text-base font-semibold text-gray-900 mb-1">Discover New Opportunities</h4>
+                      <p className="text-sm text-gray-500 mb-4 max-w-xs mx-auto">No active deals or saved pitches found. Explore the marketplace to find your next hit.</p>
+                      <button
+                        onClick={() => navigate('/marketplace')}
+                        className="bg-brand-action text-white px-5 py-2 rounded-lg hover:opacity-90 transition font-medium text-sm"
+                      >
+                        Browse Marketplace
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
