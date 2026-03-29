@@ -1,0 +1,37 @@
+{
+  "theme": "Pitchey-Indigo-Vision",
+  "brand_anchor": "#6F2DA8",
+  "hue_spectrum": {
+    "blues": ["#2D40A8", "#2D7FA8"],
+    "indigos": ["#302DA8", "#6366F1"],
+    "purples": ["#6F2DA8", "#842DA8", "#8B5CF6"]
+  },
+  "semantic_mapping": {
+    "primary_action": "#6F2DA8",
+    "trending_badge": "#A82D63",
+    "new_release_badge": "#2D7FA8",
+    "featured_content": "#842DA8",
+    "nda_requirement_alert": "#A82D4E",
+    "progress_bar_start": "#A82D4E",
+    "progress_bar_end": "#2D7FA8"
+  },
+  "component_logic": {
+    "marketplace_card": {
+      "budget_format": "compact",
+      "badge_style": "pill",
+      "font_hierarchy": {
+        "title": "bold",
+        "metadata": "medium",
+        "stats": "regular"
+      }
+    },
+    "creation_onboarding": {
+      "completeness_milestones": [25, 50, 75, 100]
+    },
+    "empty_states": {
+      "text_color": "#2D40A8",
+      "icon_tint": "#302DA8",
+      "cta_variant": "solid_indigo"
+    }
+  }
+}

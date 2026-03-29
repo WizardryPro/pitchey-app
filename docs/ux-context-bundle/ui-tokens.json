@@ -1,0 +1,105 @@
+{
+  "project": "Pitchey",
+  "version": "1.1.0",
+  "ui_tokens": {
+    "colors": {
+      "primary": "#8B5CF6",
+      "trending": "#F59E0B",
+      "new": "#3B82F6",
+      "featured": "#10B981",
+      "nda_gate": "#6366F1",
+      "empty_state_icon": "#D1D5DB"
+    },
+    "spacing": {
+      "base_unit": "4px",
+      "card_gap": "16px",
+      "section_padding": "32px"
+    }
+  },
+  "formatting": {
+    "currency": {
+      "standard": {
+        "style": "currency",
+        "currency": "USD",
+        "minimumFractionDigits": 0
+      },
+      "compact": {
+        "style": "currency",
+        "currency": "USD",
+        "notation": "compact",
+        "compactDisplay": "short"
+      }
+    }
+  },
+  "components": {
+    "marketplace_card": {
+      "badge_anchoring": "lower-right-over-media",
+      "text_alignment": "left",
+      "badges": {
+        "trending": {
+          "label": "Trending",
+          "color_weight": "heavy",
+          "icon": "trending-up"
+        },
+        "new": {
+          "label": "New",
+          "threshold_days": 7,
+          "color_weight": "solid"
+        },
+        "nda": {
+          "label": "NDA Required",
+          "variant": "outline",
+          "semantic": "info"
+        }
+      }
+    },
+    "creation_flow": {
+      "completeness_weights": {
+        "title": 10,
+        "logline": 20,
+        "genre": 10,
+        "synopsis": 30,
+        "media_assets": 20,
+        "production_details": 10
+      },
+      "progress_bar": {
+        "type": "determinate",
+        "color_states": {
+          "low": "#EF4444",
+          "mid": "#F59E0B",
+          "high": "#10B981"
+        }
+      }
+    },
+    "empty_states": {
+      "creator_dashboard": {
+        "headline": "Start Your Story",
+        "description": "You haven't published any pitches yet. Your first project is just a click away.",
+        "cta": "Create Your First Pitch"
+      },
+      "investor_dashboard": {
+        "headline": "Discover New Opportunities",
+        "description": "No active deals or saved pitches found. Explore the marketplace to find your next hit.",
+        "cta": "Browse Marketplace"
+      },
+      "marketplace_search": {
+        "headline": "No matches found",
+        "description": "Try broadening your filters or checking your spelling.",
+        "cta": "Clear All Filters"
+      }
+    }
+  },
+  "algorithms": {
+    "trending_score": {
+      "weights": {
+        "views": 0.7,
+        "likes": 0.3
+      },
+      "time_decay": {
+        "enabled": true,
+        "half_life_days": 7,
+        "formula": "score * 2^(-days_since_interaction / half_life)"
+      }
+    }
+  }
+}

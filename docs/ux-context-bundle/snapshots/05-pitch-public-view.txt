@@ -1,0 +1,142 @@
+uid=17_0 RootWebArea "Pitchey - Where Ideas Meet Investment" url="https://pitchey-5o8.pages.dev/pitch/229"
+  uid=18_0 ignored
+    uid=18_1 ignored [selected in the DevTools Elements panel]
+      uid=18_2 generic
+        uid=18_3 ignored
+          uid=17_1 banner
+            uid=18_4 ignored
+              uid=18_5 ignored
+                uid=17_2 button "Back to Marketplace"
+                  uid=18_6 ignored
+                    uid=18_7 StaticText "Back to Marketplace"
+                      uid=18_8 InlineTextBox "Back to Marketplace"
+                uid=18_9 ignored
+                  uid=17_3 button "Sign In for Full Access"
+                    uid=18_10 StaticText "Sign In for Full Access"
+                      uid=18_8 InlineTextBox "Sign In for Full Access"
+          uid=18_11 ignored
+            uid=18_12 generic
+              uid=17_4 image "At Ever Las" url="https://pitchey-api-prod.ndlovucavelle.workers.dev/api/media/file/pitch-images%2F1025%2F1770684039052-u3192422123_Above_Cavell_is_the_comic_title_in_bold_At_Ever_Las_4a1a8e99-8295-4e1f-9146-72ed19697190.png?token=cGl0Y2gtaW1hZ2VzLzEwMjUvMTc3MDY4NDAzOTA1Mi11MzE5MjQyMjEyM19BYm92ZV9DYXZlbGxfaXNfdGhlX2NvbWljX3RpdGxlX2luX2JvbGRfQXRfRXZlcl9MYXNfNGExYThlOTktODI5NS00ZTFmLTkxNDYtNzJlZDE5Njk3MTkwLnBuZzoxNzcwNjg0MDM5Njkx&filename=u3192422123_Above_Cavell_is_the_comic_title_in_bold_At_Ever_Las_4a1a8e99-8295-4e1f-9146-72ed19697190.png"
+          uid=18_13 ignored
+            uid=18_14 ignored
+              uid=18_15 ignored
+                uid=18_16 ignored
+                  uid=18_17 ignored
+                    uid=18_18 ignored
+                      uid=18_19 ignored
+                      uid=17_5 heading "At Ever Las" level="1"
+                        uid=18_20 StaticText "At Ever Las"
+                          uid=18_8 InlineTextBox "At Ever Las"
+                      uid=18_21 ignored
+                        uid=18_22 ignored
+                          uid=17_6 StaticText "action-comedy"
+                            uid=18_8 InlineTextBox "action-comedy"
+                        uid=18_23 ignored
+                          uid=18_24 generic description="Television - Scripted - Limited Series (closed-ended)"
+                            uid=17_7 StaticText "TV-S: Limited Series (closed-ended)"
+                              uid=18_8 InlineTextBox "TV-S: Limited Series (closed-ended)"
+                  uid=18_25 ignored
+                    uid=18_26 ignored
+                      uid=17_8 heading "Logline" level="3"
+                        uid=18_27 StaticText "Logline"
+                          uid=18_8 InlineTextBox "Logline"
+                      uid=18_28 paragraph
+                        uid=17_9 StaticText "When a reclusive billionaire dies and leaves his sprawling lakeside estate to three estranged siblings who must live together for one year to claim their inheritance, old wounds resurface and unexpected alliances form as they discover the truth behind their fractured family."
+                          uid=18_8 InlineTextBox "When a reclusive billionaire dies and leaves his sprawling lakeside estate to three estranged siblings who "
+                          uid=18_8 InlineTextBox "must live together for one year to claim their inheritance, old wounds resurface and unexpected alliances "
+                          uid=18_8 InlineTextBox "form as they discover the truth behind their fractured family."
+                    uid=18_29 ignored
+                      uid=17_10 heading "Synopsis" level="3"
+                        uid=18_30 StaticText "Synopsis"
+                          uid=18_8 InlineTextBox "Synopsis"
+                      uid=18_31 paragraph
+                        uid=17_11 StaticText "djsaldfd;fbjakkdbsalbd"
+                          uid=18_8 InlineTextBox "djsaldfd;fbjakkdbsalbd"
+                uid=18_32 ignored
+                  uid=18_33 ignored
+                    uid=18_34 ignored
+                      uid=17_12 heading "Enhanced Information Available" level="3"
+                        uid=18_35 StaticText "Enhanced Information Available"
+                          uid=18_8 InlineTextBox "Enhanced Information Available"
+                      uid=18_36 paragraph
+                        uid=17_13 StaticText "Additional project details are available under NDA including full treatment, budget breakdown, and production timeline."
+                          uid=18_8 InlineTextBox "Additional project details are available under NDA including full treatment, budget breakdown, and "
+                          uid=18_8 InlineTextBox "production timeline."
+                      uid=18_37 list
+                        uid=18_38 listitem level="1"
+                          uid=17_14 StaticText "Budget & Financial Projections"
+                            uid=18_8 InlineTextBox "Budget & Financial Projections"
+                        uid=18_39 listitem level="1"
+                          uid=17_15 StaticText "Production Timeline & Milestones"
+                            uid=18_8 InlineTextBox "Production Timeline & Milestones"
+                        uid=18_40 listitem level="1"
+                          uid=17_16 StaticText "Attached Talent & Key Crew"
+                            uid=18_8 InlineTextBox "Attached Talent & Key Crew"
+                        uid=18_41 listitem level="1"
+                          uid=17_17 StaticText "Distribution Strategy & Comparables"
+                            uid=18_8 InlineTextBox "Distribution Strategy & Comparables"
+                      uid=17_18 button "Sign In to Request Access"
+                        uid=18_42 StaticText "Sign In to Request Access"
+                          uid=18_8 InlineTextBox "Sign In to Request Access"
+              uid=18_43 ignored
+                uid=18_44 ignored
+                  uid=17_19 heading "Performance Metrics" level="3"
+                    uid=18_45 StaticText "Performance Metrics"
+                      uid=18_8 InlineTextBox "Performance Metrics"
+                  uid=18_46 ignored
+                    uid=18_47 ignored
+                      uid=18_48 ignored
+                        uid=17_20 StaticText "Views"
+                          uid=18_8 InlineTextBox "Views"
+                      uid=18_49 ignored
+                        uid=17_21 StaticText "11"
+                          uid=18_8 InlineTextBox "11"
+                    uid=18_50 ignored
+                      uid=18_51 ignored
+                        uid=17_22 StaticText "Likes"
+                          uid=18_8 InlineTextBox "Likes"
+                      uid=18_52 ignored
+                        uid=17_23 StaticText "1"
+                          uid=18_8 InlineTextBox "1"
+                    uid=18_53 ignored
+                      uid=18_54 ignored
+                        uid=17_24 StaticText "NDAs Signed"
+                          uid=18_8 InlineTextBox "NDAs Signed"
+                      uid=18_55 ignored
+                        uid=17_25 StaticText "0"
+                          uid=18_8 InlineTextBox "0"
+                uid=18_56 ignored
+                  uid=18_57 ignored
+                    uid=17_26 heading "Creator" level="3"
+                      uid=18_58 StaticText "Creator"
+                        uid=18_8 InlineTextBox "Creator"
+                  uid=18_59 ignored
+                    uid=18_60 ignored
+                      uid=18_61 ignored
+                      uid=18_62 ignored
+                        uid=18_63 generic
+                          uid=17_27 StaticText "Hidden (NDA Required)"
+                            uid=18_8 InlineTextBox "Hidden (NDA Required)"
+                        uid=18_64 generic
+                          uid=17_28 StaticText "Sign NDA to see creator details"
+                            uid=18_8 InlineTextBox "Sign NDA to see creator details"
+                    uid=18_65 ignored
+                      uid=18_66 ignored
+                        uid=18_67 ignored
+                          uid=17_29 StaticText "Listed "
+                            uid=18_8 InlineTextBox "Listed "
+                          uid=17_30 StaticText "25/01/2026"
+                            uid=18_8 InlineTextBox "25/01/2026"
+                uid=18_68 ignored
+                  uid=17_31 heading "Actions" level="3"
+                    uid=18_69 StaticText "Actions"
+                      uid=18_8 InlineTextBox "Actions"
+                  uid=18_70 ignored
+                    uid=17_32 button "Share Pitch"
+                      uid=18_71 StaticText "Share Pitch"
+                        uid=18_8 InlineTextBox "Share Pitch"
+                    uid=17_33 button "Sign In to Request Access"
+                      uid=18_72 StaticText "Sign In to Request Access"
+                        uid=18_8 InlineTextBox "Sign In to Request Access"
+      uid=18_73 generic
+        uid=18_74 generic

@@ -1,0 +1,823 @@
+uid=30_0 RootWebArea "Pitchey - Where Ideas Meet Investment" url="https://pitchey-5o8.pages.dev/creator/pitch/new"
+  uid=31_0 ignored
+    uid=31_1 generic [selected in the DevTools Elements panel]
+      uid=31_2 generic
+        uid=31_3 ignored
+          uid=30_1 banner
+            uid=31_4 ignored
+              uid=30_2 button "Toggle menu"
+              uid=30_3 link "Pitchey" url="https://pitchey-5o8.pages.dev/"
+                uid=31_5 ignored
+                  uid=30_4 StaticText "Pitchey"
+                    uid=30_27 InlineTextBox "Pitchey"
+              uid=31_6 ignored
+              uid=30_5 navigation
+                uid=30_6 link "Home" url="https://pitchey-5o8.pages.dev/"
+                  uid=31_7 ignored
+                    uid=30_7 StaticText "Home"
+                      uid=30_27 InlineTextBox "Home"
+                uid=30_8 link "Marketplace" url="https://pitchey-5o8.pages.dev/marketplace"
+                  uid=31_8 ignored
+                    uid=30_9 StaticText "Marketplace"
+                      uid=30_27 InlineTextBox "Marketplace"
+            uid=31_9 ignored
+              uid=30_10 generic description="Real-time features active"
+              uid=30_11 button "100 Credits"
+                uid=31_10 ignored
+                  uid=31_11 StaticText "100"
+                    uid=30_27 InlineTextBox "100"
+                  uid=31_12 StaticText " Credits"
+                    uid=30_27 InlineTextBox " Credits"
+              uid=31_13 generic
+                uid=30_12 button "Notifications" description="Notifications"
+              uid=31_14 generic
+                uid=30_13 button "Profile menu"
+                  uid=31_15 ignored
+          uid=31_16 ignored
+            uid=30_14 main
+              uid=31_17 ignored
+                uid=31_18 ignored
+                  uid=31_19 sectionheader
+                    uid=31_20 ignored
+                      uid=31_21 ignored
+                        uid=31_22 ignored
+                          uid=30_15 button "Go back"
+                          uid=31_23 ignored
+                            uid=30_16 heading "Create New Pitch" level="1"
+                              uid=31_24 StaticText "Create New Pitch"
+                                uid=30_27 InlineTextBox "Create New Pitch"
+                            uid=31_25 paragraph
+                              uid=30_17 StaticText "Share your creative vision with potential investors"
+                                uid=30_27 InlineTextBox "Share your creative vision with potential investors"
+                        uid=30_18 button "Auto-fill from Document"
+                          uid=31_26 StaticText "Auto-fill from Document"
+                            uid=30_27 InlineTextBox "Auto-fill from Document"
+                  uid=31_27 ignored
+                    uid=31_28 ignored
+                      uid=31_29 ignored
+                        uid=31_30 ignored
+                        uid=31_31 ignored
+                          uid=30_19 heading "💰 Credit System Overview" level="3"
+                            uid=31_32 StaticText "💰 Credit System Overview"
+                              uid=30_27 InlineTextBox "💰 Credit System Overview"
+                          uid=31_33 paragraph
+                            uid=30_20 StaticText "Creating a pitch uses credits from your subscription. Basic pitch creation (form + 1 image) costs "
+                              uid=30_27 InlineTextBox "Creating a pitch uses credits from your subscription. Basic pitch creation (form + 1 image) costs "
+                            uid=31_34 strong
+                              uid=30_21 StaticText "10 credits"
+                                uid=30_27 InlineTextBox "10 credits"
+                            uid=30_22 StaticText "."
+                              uid=30_27 InlineTextBox "."
+                          uid=31_35 paragraph
+                            uid=30_23 StaticText "Additional uploads cost extra credits. See specific costs in each upload section below."
+                              uid=30_27 InlineTextBox "Additional uploads cost extra credits. See specific costs in each upload section below."
+                  uid=31_36 ignored
+                    uid=30_24 form "Create New Pitch"
+                      uid=31_37 ignored
+                        uid=30_25 heading "Basic Information" level="2"
+                          uid=31_38 StaticText "Basic Information"
+                            uid=30_27 InlineTextBox "Basic Information"
+                        uid=31_39 ignored
+                          uid=31_40 ignored
+                            uid=31_41 LabelText
+                              uid=30_26 StaticText "Title"
+                                uid=30_27 InlineTextBox "Title"
+                              uid=31_42 ignored
+                                uid=30_27 StaticText "*"
+                                  uid=30_27 InlineTextBox "*"
+                            uid=30_28 textbox "Title*" required
+                              uid=31_43 ignored
+                              uid=31_44 generic
+                          uid=31_45 ignored
+                            uid=31_46 LabelText
+                              uid=30_29 StaticText "Genre"
+                                uid=30_27 InlineTextBox "Genre"
+                              uid=31_47 ignored
+                                uid=30_27 StaticText "*"
+                                  uid=30_27 InlineTextBox "*"
+                            uid=30_30 combobox "Genre*" expandable haspopup="menu" invalid="true" value="Select a genre"
+                              uid=31_48 MenuListPopup
+                                uid=30_31 option "Select a genre" selectable selected value="Select a genre"
+                                uid=30_32 option "Abstract / Non-Narrative" selectable value="Abstract / Non-Narrative"
+                                uid=30_33 option "Action" selectable value="Action"
+                                uid=30_34 option "Action-Comedy" selectable value="Action-Comedy"
+                                uid=30_35 option "Action-Thriller" selectable value="Action-Thriller"
+                                uid=30_36 option "Adventure" selectable value="Adventure"
+                                uid=30_37 option "Animation" selectable value="Animation"
+                                uid=30_38 option "Avant-Garde" selectable value="Avant-Garde"
+                                uid=30_39 option "Biographical Documentary" selectable value="Biographical Documentary"
+                                uid=30_40 option "Biographical Drama (Biopic)" selectable value="Biographical Drama (Biopic)"
+                                uid=30_41 option "Comedy" selectable value="Comedy"
+                                uid=30_42 option "Coming-of-Age" selectable value="Coming-of-Age"
+                                uid=30_43 option "Crime Drama" selectable value="Crime Drama"
+                                uid=30_44 option "Crime Thriller" selectable value="Crime Thriller"
+                                uid=30_45 option "Dramedy" selectable value="Dramedy"
+                                uid=30_46 option "Documentary" selectable value="Documentary"
+                                uid=30_47 option "Docudrama" selectable value="Docudrama"
+                                uid=30_48 option "Essay Film" selectable value="Essay Film"
+                                uid=30_49 option "Experimental Documentary" selectable value="Experimental Documentary"
+                                uid=30_50 option "Family / Kids" selectable value="Family / Kids"
+                                uid=30_51 option "Fantasy" selectable value="Fantasy"
+                                uid=30_52 option "Fantasy Adventure" selectable value="Fantasy Adventure"
+                                uid=30_53 option "Historical Drama" selectable value="Historical Drama"
+                                uid=30_54 option "Historical Fiction" selectable value="Historical Fiction"
+                                uid=30_55 option "Horror" selectable value="Horror"
+                                uid=30_56 option "Hybrid Experimental" selectable value="Hybrid Experimental"
+                                uid=30_57 option "Meta-Cinema" selectable value="Meta-Cinema"
+                                uid=30_58 option "Mockumentary" selectable value="Mockumentary"
+                                uid=30_59 option "Musical" selectable value="Musical"
+                                uid=30_60 option "Musical Drama" selectable value="Musical Drama"
+                                uid=30_61 option "Mystery Thriller" selectable value="Mystery Thriller"
+                                uid=30_62 option "Noir / Neo-Noir" selectable value="Noir / Neo-Noir"
+                                uid=30_63 option "Parody / Spoof" selectable value="Parody / Spoof"
+                                uid=30_64 option "Performance Film" selectable value="Performance Film"
+                                uid=30_65 option "Period Piece" selectable value="Period Piece"
+                                uid=30_66 option "Political Drama" selectable value="Political Drama"
+                                uid=30_67 option "Political Thriller" selectable value="Political Thriller"
+                                uid=30_68 option "Psychological Thriller" selectable value="Psychological Thriller"
+                                uid=30_69 option "Reality-Drama" selectable value="Reality-Drama"
+                                uid=30_70 option "Romance" selectable value="Romance"
+                                uid=30_71 option "Romantic Comedy (Rom-Com)" selectable value="Romantic Comedy (Rom-Com)"
+                                uid=30_72 option "Romantic Drama" selectable value="Romantic Drama"
+                                uid=30_73 option "Satire" selectable value="Satire"
+                                uid=30_74 option "Science Fiction (Sci-Fi)" selectable value="Science Fiction (Sci-Fi)"
+                                uid=30_75 option "Sci-Fi Horror" selectable value="Sci-Fi Horror"
+                                uid=30_76 option "Slow Cinema" selectable value="Slow Cinema"
+                                uid=30_77 option "Sports Drama" selectable value="Sports Drama"
+                                uid=30_78 option "Superhero" selectable value="Superhero"
+                                uid=30_79 option "Surrealist" selectable value="Surrealist"
+                                uid=30_80 option "Thriller" selectable value="Thriller"
+                                uid=30_81 option "True Crime" selectable value="True Crime"
+                                uid=30_82 option "Visual Poetry" selectable value="Visual Poetry"
+                                uid=30_83 option "War" selectable value="War"
+                                uid=30_84 option "Western" selectable value="Western"
+                          uid=31_49 ignored
+                            uid=31_50 LabelText
+                              uid=30_85 StaticText "Format Category"
+                                uid=30_27 InlineTextBox "Format Category"
+                              uid=31_51 ignored
+                                uid=30_27 StaticText "*"
+                                  uid=30_27 InlineTextBox "*"
+                            uid=30_86 combobox "Format Category*" expandable haspopup="menu" value="Television - Scripted"
+                              uid=31_52 MenuListPopup
+                                uid=30_87 option "Select a format category" selectable value="Select a format category"
+                                uid=30_88 option "Television - Scripted" selectable selected value="Television - Scripted"
+                                uid=30_89 option "Television - Unscripted" selectable value="Television - Unscripted"
+                                uid=30_90 option "Film" selectable value="Film"
+                                uid=30_91 option "Animation (Series)" selectable value="Animation (Series)"
+                                uid=30_92 option "Audio" selectable value="Audio"
+                                uid=30_93 option "Digital / Emerging" selectable value="Digital / Emerging"
+                                uid=30_94 option "Stage-to-Screen" selectable value="Stage-to-Screen"
+                                uid=30_95 option "Other" selectable value="Other"
+                          uid=31_53 ignored
+                            uid=31_54 LabelText
+                              uid=30_96 StaticText "Format Subtype"
+                                uid=30_27 InlineTextBox "Format Subtype"
+                              uid=31_55 ignored
+                                uid=30_27 StaticText "*"
+                                  uid=30_27 InlineTextBox "*"
+                            uid=30_97 combobox "Format Subtype*" expandable haspopup="menu" invalid="true" value="Select a format subtype"
+                              uid=31_56 MenuListPopup
+                                uid=30_98 option "Select a format subtype" selectable selected value="Select a format subtype"
+                                uid=30_99 option "Narrative Series (ongoing)" selectable value="Narrative Series (ongoing)"
+                                uid=30_100 option "Limited Series (closed-ended)" selectable value="Limited Series (closed-ended)"
+                                uid=30_101 option "Soap/Continuing Drama" selectable value="Soap/Continuing Drama"
+                                uid=30_102 option "Anthology Series" selectable value="Anthology Series"
+                        uid=31_57 ignored
+                          uid=31_58 LabelText
+                            uid=30_103 StaticText "Logline"
+                              uid=30_27 InlineTextBox "Logline"
+                            uid=31_59 ignored
+                              uid=30_27 StaticText "*"
+                                uid=30_27 InlineTextBox "*"
+                          uid=30_104 textbox "Logline*" description="Keep it concise and compelling - this is what hooks potential investors" multiline required
+                            uid=31_60 ignored
+                            uid=31_61 generic
+                          uid=31_62 paragraph
+                            uid=30_105 StaticText "Keep it concise and compelling - this is what hooks potential investors"
+                              uid=30_27 InlineTextBox "Keep it concise and compelling - this is what hooks potential investors"
+                        uid=31_63 ignored
+                          uid=31_64 LabelText
+                            uid=30_106 StaticText "Short Synopsis"
+                              uid=30_27 InlineTextBox "Short Synopsis"
+                            uid=31_65 ignored
+                              uid=30_27 StaticText "*"
+                                uid=30_27 InlineTextBox "*"
+                          uid=30_107 textbox "Short Synopsis*" description="0/1000 characters | 0/500 characters recommended" multiline required
+                            uid=31_66 ignored
+                            uid=31_67 generic
+                          uid=31_68 paragraph
+                            uid=30_108 StaticText "0"
+                              uid=30_27 InlineTextBox "0"
+                            uid=30_109 StaticText "/1000 characters | "
+                              uid=30_27 InlineTextBox "/1000 characters | "
+                            uid=30_110 StaticText "0/500"
+                              uid=30_27 InlineTextBox "0/500"
+                            uid=30_111 StaticText " characters recommended"
+                              uid=30_27 InlineTextBox " characters recommended"
+                      uid=31_69 ignored
+                        uid=30_112 heading "Themes & World Building" level="2"
+                          uid=31_70 StaticText "Themes & World Building"
+                            uid=30_27 InlineTextBox "Themes & World Building"
+                        uid=31_71 ignored
+                          uid=31_72 ignored
+                            uid=31_73 LabelText
+                              uid=30_113 StaticText "Themes"
+                                uid=30_27 InlineTextBox "Themes"
+                            uid=30_114 textbox "Themes" multiline
+                              uid=31_74 ignored
+                              uid=31_75 generic
+                            uid=31_76 paragraph
+                              uid=30_115 StaticText "0"
+                                uid=30_27 InlineTextBox "0"
+                              uid=30_116 StaticText "/1000 characters | Recommended: 500-1000 characters"
+                                uid=30_27 InlineTextBox "/1000 characters | Recommended: 500-1000 characters"
+                          uid=31_77 ignored
+                            uid=31_78 LabelText
+                              uid=30_117 StaticText "World & Setting"
+                                uid=30_27 InlineTextBox "World & Setting"
+                            uid=30_118 textbox "World & Setting" multiline
+                              uid=31_79 ignored
+                              uid=31_80 generic
+                            uid=31_81 paragraph
+                              uid=30_119 StaticText "0"
+                                uid=30_27 InlineTextBox "0"
+                              uid=30_120 StaticText "/2000 characters | Describe the world and setting in detail"
+                                uid=30_27 InlineTextBox "/2000 characters | Describe the world and setting in detail"
+                      uid=31_82 ignored
+                        uid=30_121 heading "Story & Style Details" level="2"
+                          uid=31_83 StaticText "Story & Style Details"
+                            uid=30_27 InlineTextBox "Story & Style Details"
+                        uid=31_84 ignored
+                          uid=31_85 ignored
+                            uid=31_86 LabelText
+                              uid=31_87 ignored
+                                uid=31_88 ignored
+                                uid=31_89 ignored
+                                uid=31_90 ignored
+                                uid=31_91 ignored
+                                uid=31_92 ignored
+                              uid=30_122 StaticText "Tone & Style"
+                                uid=30_27 InlineTextBox "Tone & Style"
+                              uid=31_93 ignored
+                                uid=30_123 StaticText "(optional)"
+                                  uid=30_27 InlineTextBox "(optional)"
+                            uid=30_124 textbox "Tone & Style (optional)" multiline
+                              uid=31_94 ignored
+                              uid=31_95 generic
+                            uid=31_96 ignored
+                              uid=31_97 ignored
+                                uid=30_125 StaticText "Word count"
+                                  uid=30_27 InlineTextBox "Word count"
+                              uid=31_98 ignored
+                                uid=30_126 StaticText "0"
+                                  uid=30_27 InlineTextBox "0"
+                                uid=30_127 StaticText " / "
+                                  uid=30_27 InlineTextBox " / "
+                                uid=30_128 StaticText "400"
+                                  uid=30_27 InlineTextBox "400"
+                                uid=30_129 StaticText " words"
+                                  uid=30_27 InlineTextBox " words"
+                            uid=31_99 paragraph
+                              uid=30_130 StaticText "Help investors and producers understand the aesthetic vision of your project."
+                                uid=30_27 InlineTextBox "Help investors and producers understand the aesthetic vision of your project."
+                          uid=31_100 ignored
+                            uid=31_101 LabelText
+                              uid=31_102 ignored
+                                uid=31_103 ignored
+                                uid=31_104 ignored
+                              uid=30_131 StaticText "Comparable Titles (Comps)"
+                                uid=30_27 InlineTextBox "Comparable Titles (Comps)"
+                              uid=31_105 ignored
+                                uid=30_132 StaticText "(optional)"
+                                  uid=30_27 InlineTextBox "(optional)"
+                            uid=30_133 textbox "Comparable Titles (Comps) (optional)" multiline
+                              uid=31_106 ignored
+                              uid=31_107 generic
+                            uid=31_108 ignored
+                              uid=31_109 ignored
+                                uid=30_134 StaticText "Word count"
+                                  uid=30_27 InlineTextBox "Word count"
+                              uid=31_110 ignored
+                                uid=30_135 StaticText "0"
+                                  uid=30_27 InlineTextBox "0"
+                                uid=30_136 StaticText " / "
+                                  uid=30_27 InlineTextBox " / "
+                                uid=30_137 StaticText "400"
+                                  uid=30_27 InlineTextBox "400"
+                                uid=30_138 StaticText " words"
+                                  uid=30_27 InlineTextBox " words"
+                            uid=31_111 paragraph
+                              uid=30_139 StaticText "Help stakeholders understand your project's market positioning and audience appeal."
+                                uid=30_27 InlineTextBox "Help stakeholders understand your project's market positioning and audience appeal."
+                          uid=31_112 ignored
+                            uid=31_113 LabelText
+                              uid=31_114 ignored
+                                uid=31_115 ignored
+                                uid=31_116 ignored
+                              uid=30_140 StaticText "Story Breakdown"
+                                uid=30_27 InlineTextBox "Story Breakdown"
+                              uid=31_117 ignored
+                                uid=30_141 StaticText "(optional)"
+                                  uid=30_27 InlineTextBox "(optional)"
+                            uid=30_142 textbox "Story Breakdown (optional)" multiline
+                              uid=31_118 ignored
+                              uid=31_119 generic
+                            uid=31_120 ignored
+                              uid=31_121 ignored
+                                uid=30_143 StaticText "Word count"
+                                  uid=30_27 InlineTextBox "Word count"
+                              uid=31_122 ignored
+                                uid=30_144 StaticText "0"
+                                  uid=30_27 InlineTextBox "0"
+                                uid=30_145 StaticText " / "
+                                  uid=30_27 InlineTextBox " / "
+                                uid=30_146 StaticText "2000"
+                                  uid=30_27 InlineTextBox "2000"
+                                uid=30_147 StaticText " words"
+                                  uid=30_27 InlineTextBox " words"
+                            uid=31_123 paragraph
+                              uid=30_148 StaticText "This is your opportunity to showcase the full narrative structure of your project."
+                                uid=30_27 InlineTextBox "This is your opportunity to showcase the full narrative structure of your project."
+                      uid=31_124 ignored
+                        uid=30_149 heading "Market & Production" level="2"
+                          uid=31_125 StaticText "Market & Production"
+                            uid=30_27 InlineTextBox "Market & Production"
+                        uid=31_126 ignored
+                          uid=31_127 ignored
+                            uid=31_128 LabelText
+                              uid=31_129 ignored
+                                uid=31_130 ignored
+                                uid=31_131 ignored
+                              uid=30_150 StaticText "Why Now?"
+                                uid=30_27 InlineTextBox "Why Now?"
+                              uid=31_132 ignored
+                                uid=30_151 StaticText "(optional)"
+                                  uid=30_27 InlineTextBox "(optional)"
+                            uid=30_152 textbox "Why Now? (optional)" multiline
+                              uid=31_133 ignored
+                              uid=31_134 generic
+                            uid=31_135 ignored
+                              uid=31_136 ignored
+                                uid=30_153 StaticText "Word count"
+                                  uid=30_27 InlineTextBox "Word count"
+                              uid=31_137 ignored
+                                uid=30_154 StaticText "0"
+                                  uid=30_27 InlineTextBox "0"
+                                uid=30_155 StaticText " / "
+                                  uid=30_27 InlineTextBox " / "
+                                uid=30_156 StaticText "300"
+                                  uid=30_27 InlineTextBox "300"
+                                uid=30_157 StaticText " words"
+                                  uid=30_27 InlineTextBox " words"
+                            uid=31_138 paragraph
+                              uid=30_158 StaticText "Explain the timeliness and relevance of your project in today's market."
+                                uid=30_27 InlineTextBox "Explain the timeliness and relevance of your project in today's market."
+                          uid=31_139 ignored
+                            uid=31_140 LabelText
+                              uid=31_141 ignored
+                                uid=31_142 ignored
+                                uid=31_143 ignored
+                              uid=30_159 StaticText "Production Location"
+                                uid=30_27 InlineTextBox "Production Location"
+                              uid=31_144 ignored
+                                uid=30_160 StaticText "(optional)"
+                                  uid=30_27 InlineTextBox "(optional)"
+                            uid=30_161 textbox "Production Location (optional)" multiline
+                              uid=31_145 ignored
+                              uid=31_146 generic
+                            uid=31_147 ignored
+                              uid=31_148 ignored
+                                uid=30_162 StaticText "Word count"
+                                  uid=30_27 InlineTextBox "Word count"
+                              uid=31_149 ignored
+                                uid=30_163 StaticText "0"
+                                  uid=30_27 InlineTextBox "0"
+                                uid=30_164 StaticText " / "
+                                  uid=30_27 InlineTextBox " / "
+                                uid=30_165 StaticText "100"
+                                  uid=30_27 InlineTextBox "100"
+                                uid=30_166 StaticText " words"
+                                  uid=30_27 InlineTextBox " words"
+                          uid=31_150 ignored
+                            uid=31_151 LabelText
+                              uid=31_152 ignored
+                                uid=31_153 ignored
+                                uid=31_154 ignored
+                                uid=31_155 ignored
+                              uid=30_167 StaticText "Development Stage"
+                                uid=30_27 InlineTextBox "Development Stage"
+                              uid=31_156 ignored
+                                uid=30_168 StaticText "*"
+                                  uid=30_27 InlineTextBox "*"
+                            uid=30_169 combobox "Development Stage *" expandable haspopup="listbox" value="Select current development stage"
+                              uid=31_157 ignored
+                                uid=31_158 StaticText "Select current development stage"
+                                  uid=30_27 InlineTextBox "Select current development stage"
+                            uid=31_159 ignored
+                              uid=31_160 ignored
+                              uid=31_161 ignored
+                              uid=31_162 ignored
+                              uid=31_163 ignored
+                              uid=31_164 ignored
+                              uid=31_165 ignored
+                              uid=31_166 ignored
+                              uid=31_167 ignored
+                      uid=31_168 ignored
+                        uid=30_170 heading "Creative Team" level="2"
+                          uid=31_169 StaticText "Creative Team"
+                            uid=30_27 InlineTextBox "Creative Team"
+                        uid=31_170 ignored
+                          uid=31_171 LabelText
+                            uid=31_172 ignored
+                              uid=31_173 ignored
+                              uid=31_174 ignored
+                              uid=31_175 ignored
+                              uid=31_176 ignored
+                            uid=30_171 StaticText "Creative Team Attachments"
+                              uid=30_27 InlineTextBox "Creative Team Attachments"
+                            uid=31_177 ignored
+                              uid=30_172 StaticText "(optional)"
+                                uid=30_27 InlineTextBox "(optional)"
+                          uid=30_173 button "Add Creative Team Member"
+                            uid=31_178 StaticText "Add Creative Team Member"
+                              uid=30_27 InlineTextBox "Add Creative Team Member"
+                      uid=31_179 ignored
+                        uid=30_174 heading "Funding & Investment" level="2"
+                          uid=31_180 StaticText "Funding & Investment"
+                            uid=30_27 InlineTextBox "Funding & Investment"
+                        uid=31_181 ignored
+                          uid=31_182 ignored
+                            uid=31_183 ignored
+                              uid=30_175 checkbox "Actively Seeking Investment"
+                            uid=31_184 ignored
+                              uid=31_185 ignored
+                                uid=31_186 ignored
+                              uid=31_187 paragraph
+                                uid=30_176 StaticText "Check this box if you're looking for investors for this project"
+                                  uid=30_27 InlineTextBox "Check this box if you're looking for investors for this project"
+                      uid=31_188 ignored
+                        uid=31_189 ignored
+                          uid=31_190 ignored
+                            uid=31_191 ignored
+                              uid=30_177 heading "Characters" level="3"
+                                uid=31_192 StaticText "Characters"
+                                  uid=30_27 InlineTextBox "Characters"
+                              uid=31_193 ignored
+                                uid=30_178 StaticText "0"
+                                  uid=30_27 InlineTextBox "0"
+                                uid=30_179 StaticText "/"
+                                  uid=30_27 InlineTextBox "/"
+                                uid=30_180 StaticText "10"
+                                  uid=30_27 InlineTextBox "10"
+                            uid=31_194 ignored
+                              uid=30_181 button "Add Character" description="Add a new character to your pitch. 10 slots remaining."
+                                uid=31_195 StaticText "Add Character"
+                                  uid=30_27 InlineTextBox "Add Character"
+                              uid=31_196 generic
+                                uid=30_182 StaticText "Add a new character to your pitch. 10 slots remaining."
+                                  uid=30_27 InlineTextBox "Add a new character to your pitch. 10 slots remaining."
+                          uid=31_197 ignored
+                            uid=31_198 ignored
+                              uid=31_199 ignored
+                                uid=31_200 ignored
+                                  uid=31_201 paragraph
+                                    uid=30_183 StaticText "Character Management Tips:"
+                                      uid=30_27 InlineTextBox "Character Management Tips:"
+                                uid=31_202 list
+                                  uid=31_203 listitem level="1"
+                                    uid=30_184 StaticText "• Add key characters that drive your story forward"
+                                      uid=30_27 InlineTextBox "• Add key characters that drive your story forward"
+                                  uid=31_204 listitem level="1"
+                                    uid=30_185 StaticText "• Include main characters, antagonists, and important supporting roles"
+                                      uid=30_27 InlineTextBox "• Include main characters, antagonists, and important supporting roles"
+                                  uid=31_205 listitem level="1"
+                                    uid=30_186 StaticText "• Use the reorder mode to arrange characters by importance"
+                                      uid=30_27 InlineTextBox "• Use the reorder mode to arrange characters by importance"
+                                  uid=31_206 listitem level="1"
+                                    uid=30_187 StaticText "• Rich character details help investors understand your story's scope"
+                                      uid=30_27 InlineTextBox "• Rich character details help investors understand your story's scope"
+                          uid=31_207 ignored
+                            uid=30_188 heading "No Characters Added" level="4"
+                              uid=31_208 StaticText "No Characters Added"
+                                uid=30_27 InlineTextBox "No Characters Added"
+                            uid=31_209 paragraph
+                              uid=30_189 StaticText "Add characters to help investors understand your story's cast and scope."
+                                uid=30_27 InlineTextBox "Add characters to help investors understand your story's cast and scope."
+                            uid=30_190 button "Add Your First Character"
+                              uid=31_210 StaticText "Add Your First Character"
+                                uid=30_27 InlineTextBox "Add Your First Character"
+                      uid=31_211 ignored
+                        uid=31_212 ignored
+                          uid=30_191 heading "Non-Disclosure Agreement (NDA)" level="3"
+                            uid=31_213 StaticText "Non-Disclosure Agreement (NDA)"
+                              uid=30_27 InlineTextBox "Non-Disclosure Agreement (NDA)"
+                        uid=31_214 ignored
+                          uid=31_215 ignored
+                            uid=31_216 paragraph
+                              uid=30_192 StaticText "Choose how you want to handle NDAs for this pitch:"
+                                uid=30_27 InlineTextBox "Choose how you want to handle NDAs for this pitch:"
+                            uid=31_217 ignored
+                              uid=31_218 LabelText
+                                uid=30_193 radio "Use Platform Standard NDA Use our pre-approved standard Non-Disclosure Agreement"
+                                uid=31_219 ignored
+                                  uid=31_220 generic
+                                    uid=30_194 StaticText "Use Platform Standard NDA"
+                                      uid=30_27 InlineTextBox "Use Platform Standard NDA"
+                                  uid=31_221 generic
+                                    uid=30_195 StaticText "Use our pre-approved standard Non-Disclosure Agreement"
+                                      uid=30_27 InlineTextBox "Use our pre-approved standard Non-Disclosure Agreement"
+                                uid=31_222 ignored
+                                  uid=31_223 ignored
+                                  uid=31_224 ignored
+                              uid=31_225 LabelText
+                                uid=30_196 radio "Upload Custom NDA Provide your own custom Non-Disclosure Agreement (PDF only)"
+                                uid=31_226 ignored
+                                  uid=31_227 generic
+                                    uid=30_197 StaticText "Upload Custom NDA"
+                                      uid=30_27 InlineTextBox "Upload Custom NDA"
+                                  uid=31_228 generic
+                                    uid=30_198 StaticText "Provide your own custom Non-Disclosure Agreement (PDF only)"
+                                      uid=30_27 InlineTextBox "Provide your own custom Non-Disclosure Agreement (PDF only)"
+                                uid=31_229 ignored
+                                  uid=31_230 ignored
+                                  uid=31_231 ignored
+                                  uid=31_232 ignored
+                              uid=31_233 LabelText
+                                uid=30_199 radio "Select from Your Templates Choose from your previously saved NDA templates"
+                                uid=31_234 ignored
+                                  uid=31_235 generic
+                                    uid=30_200 StaticText "Select from Your Templates"
+                                      uid=30_27 InlineTextBox "Select from Your Templates"
+                                  uid=31_236 generic
+                                    uid=30_201 StaticText "Choose from your previously saved NDA templates"
+                                      uid=30_27 InlineTextBox "Choose from your previously saved NDA templates"
+                                uid=31_237 ignored
+                                  uid=31_238 ignored
+                                  uid=31_239 ignored
+                                  uid=31_240 ignored
+                                  uid=31_241 ignored
+                              uid=31_242 LabelText
+                                uid=30_202 radio "No NDA Required This pitch does not require any Non-Disclosure Agreement"
+                                uid=31_243 ignored
+                                  uid=31_244 generic
+                                    uid=30_203 StaticText "No NDA Required"
+                                      uid=30_27 InlineTextBox "No NDA Required"
+                                  uid=31_245 generic
+                                    uid=30_204 StaticText "This pitch does not require any Non-Disclosure Agreement"
+                                      uid=30_27 InlineTextBox "This pitch does not require any Non-Disclosure Agreement"
+                                uid=31_246 ignored
+                                  uid=31_247 ignored
+                                  uid=31_248 ignored
+                      uid=31_249 ignored
+                        uid=30_205 heading "Media & Assets" level="2"
+                          uid=31_250 StaticText "Media & Assets"
+                            uid=30_27 InlineTextBox "Media & Assets"
+                        uid=31_251 ignored
+                          uid=31_252 LabelText
+                            uid=30_206 StaticText "Cover Image"
+                              uid=30_27 InlineTextBox "Cover Image"
+                          uid=30_207 button "Cover Image"
+                            uid=31_253 ignored
+                              uid=31_254 paragraph
+                                uid=31_255 StaticText "Upload a cover image for your pitch (JPG, PNG, GIF, WebP - Max 10MB)"
+                                  uid=30_27 InlineTextBox "Upload a cover image for your pitch (JPG, PNG, GIF, WebP - Max 10MB)"
+                              uid=31_256 generic
+                                uid=31_257 StaticText "Choose Image"
+                                  uid=30_27 InlineTextBox "Choose Image"
+                          uid=30_208 button "Choose file" description="Click to upload or drag and drop" value="No file chosen"
+                          uid=31_258 generic
+                            uid=30_209 StaticText "Click to upload or drag and drop"
+                              uid=30_27 InlineTextBox "Click to upload or drag and drop"
+                          uid=31_259 generic
+                            uid=30_210 StaticText "💰 "
+                              uid=30_27 InlineTextBox "💰 "
+                            uid=31_260 strong
+                              uid=30_211 StaticText "This Costs Extra:"
+                                uid=30_27 InlineTextBox "This Costs Extra:"
+                            uid=30_212 StaticText " First image included with basic upload (10 credits), additional images cost 1 credit each"
+                              uid=30_27 InlineTextBox " First image included with basic upload (10 credits), additional images cost 1 credit each"
+                        uid=31_261 ignored
+                          uid=31_262 LabelText
+                            uid=30_213 StaticText "Pitch Video (Optional)"
+                              uid=30_27 InlineTextBox "Pitch Video (Optional)"
+                          uid=30_214 button "Pitch Video (Optional)"
+                            uid=31_263 ignored
+                              uid=31_264 paragraph
+                                uid=31_265 StaticText "Upload a pitch video (MP4, MOV, AVI - Max 100MB)"
+                                  uid=30_27 InlineTextBox "Upload a pitch video (MP4, MOV, AVI - Max 100MB)"
+                              uid=31_266 generic
+                                uid=31_267 StaticText "Choose Video"
+                                  uid=30_27 InlineTextBox "Choose Video"
+                          uid=30_215 button "Choose file" description="Click to upload or drag and drop" value="No file chosen"
+                          uid=31_268 generic
+                            uid=30_216 StaticText "Click to upload or drag and drop"
+                              uid=30_27 InlineTextBox "Click to upload or drag and drop"
+                          uid=31_269 generic
+                            uid=30_217 StaticText "💰 "
+                              uid=30_27 InlineTextBox "💰 "
+                            uid=31_270 strong
+                              uid=30_218 StaticText "This Costs Extra:"
+                                uid=30_27 InlineTextBox "This Costs Extra:"
+                            uid=30_219 StaticText " Video links cost 1 credit each"
+                              uid=30_27 InlineTextBox " Video links cost 1 credit each"
+                      uid=31_271 ignored
+                        uid=30_220 heading "Pitch Documents & NDA Settings" level="3"
+                          uid=31_272 StaticText "Pitch Documents & NDA Settings"
+                            uid=30_27 InlineTextBox "Pitch Documents & NDA Settings"
+                        uid=31_273 ignored
+                          uid=31_274 ignored
+                            uid=31_275 ignored
+                              uid=31_276 ignored
+                                uid=31_277 ignored
+                                uid=31_278 ignored
+                                  uid=30_221 heading "Document Upload Hub" level="2"
+                                    uid=31_279 StaticText "Document Upload Hub"
+                                      uid=30_27 InlineTextBox "Document Upload Hub"
+                                  uid=31_280 paragraph
+                                    uid=30_222 StaticText "Manage your pitch documents and NDAs with advanced upload features"
+                                      uid=30_27 InlineTextBox "Manage your pitch documents and NDAs with advanced upload features"
+                              uid=31_281 ignored
+                                uid=30_223 button "Advanced Settings"
+                          uid=31_282 ignored
+                            uid=31_283 ignored
+                              uid=30_224 heading "Non-Disclosure Agreement (NDA)" level="3"
+                                uid=31_284 StaticText "Non-Disclosure Agreement (NDA)"
+                                  uid=30_27 InlineTextBox "Non-Disclosure Agreement (NDA)"
+                            uid=31_285 ignored
+                              uid=31_286 ignored
+                                uid=31_287 paragraph
+                                  uid=30_225 StaticText "Choose how you want to handle NDAs for this pitch:"
+                                    uid=30_27 InlineTextBox "Choose how you want to handle NDAs for this pitch:"
+                                uid=31_288 ignored
+                                  uid=31_289 LabelText
+                                    uid=30_226 radio "Use Platform Standard NDA Use our pre-approved standard Non-Disclosure Agreement"
+                                    uid=31_290 ignored
+                                      uid=31_291 generic
+                                        uid=30_227 StaticText "Use Platform Standard NDA"
+                                          uid=30_27 InlineTextBox "Use Platform Standard NDA"
+                                      uid=31_292 generic
+                                        uid=30_228 StaticText "Use our pre-approved standard Non-Disclosure Agreement"
+                                          uid=30_27 InlineTextBox "Use our pre-approved standard Non-Disclosure Agreement"
+                                    uid=31_293 ignored
+                                      uid=31_294 ignored
+                                      uid=31_295 ignored
+                                  uid=31_296 LabelText
+                                    uid=30_229 radio "Upload Custom NDA Provide your own custom Non-Disclosure Agreement (PDF only)"
+                                    uid=31_297 ignored
+                                      uid=31_298 generic
+                                        uid=30_230 StaticText "Upload Custom NDA"
+                                          uid=30_27 InlineTextBox "Upload Custom NDA"
+                                      uid=31_299 generic
+                                        uid=30_231 StaticText "Provide your own custom Non-Disclosure Agreement (PDF only)"
+                                          uid=30_27 InlineTextBox "Provide your own custom Non-Disclosure Agreement (PDF only)"
+                                    uid=31_300 ignored
+                                      uid=31_301 ignored
+                                      uid=31_302 ignored
+                                      uid=31_303 ignored
+                                  uid=31_304 LabelText
+                                    uid=30_232 radio "Select from Your Templates Choose from your previously saved NDA templates"
+                                    uid=31_305 ignored
+                                      uid=31_306 generic
+                                        uid=30_233 StaticText "Select from Your Templates"
+                                          uid=30_27 InlineTextBox "Select from Your Templates"
+                                      uid=31_307 generic
+                                        uid=30_234 StaticText "Choose from your previously saved NDA templates"
+                                          uid=30_27 InlineTextBox "Choose from your previously saved NDA templates"
+                                    uid=31_308 ignored
+                                      uid=31_309 ignored
+                                      uid=31_310 ignored
+                                      uid=31_311 ignored
+                                      uid=31_312 ignored
+                                  uid=31_313 LabelText
+                                    uid=30_235 radio "No NDA Required This pitch does not require any Non-Disclosure Agreement" checked
+                                    uid=31_314 ignored
+                                      uid=31_315 generic
+                                        uid=30_236 StaticText "No NDA Required"
+                                          uid=30_27 InlineTextBox "No NDA Required"
+                                      uid=31_316 generic
+                                        uid=30_237 StaticText "This pitch does not require any Non-Disclosure Agreement"
+                                          uid=30_27 InlineTextBox "This pitch does not require any Non-Disclosure Agreement"
+                                    uid=31_317 ignored
+                                      uid=31_318 ignored
+                                      uid=31_319 ignored
+                          uid=31_320 ignored
+                            uid=31_321 ignored
+                              uid=31_322 ignored
+                                uid=31_323 ignored
+                                  uid=30_238 heading "Document Upload" level="3"
+                                    uid=31_324 StaticText "Document Upload"
+                                      uid=30_27 InlineTextBox "Document Upload"
+                                  uid=31_325 paragraph
+                                    uid=30_239 StaticText "Upload multiple files, organize into folders, and manage your content"
+                                      uid=30_27 InlineTextBox "Upload multiple files, organize into folders, and manage your content"
+                                uid=31_326 ignored
+                                  uid=30_240 button "Switch to list view"
+                              uid=31_327 ignored
+                                uid=31_328 LabelText
+                                  uid=30_241 StaticText "Upload to Folder"
+                                    uid=30_27 InlineTextBox "Upload to Folder"
+                                uid=31_329 ignored
+                                  uid=31_330 LabelText
+                                    uid=30_242 radio "📄 Scripts Final Draft, PDF scripts"
+                                    uid=31_331 ignored
+                                      uid=31_332 generic
+                                        uid=30_243 StaticText "📄 Scripts"
+                                          uid=30_27 InlineTextBox "📄 Scripts"
+                                      uid=31_333 generic
+                                        uid=30_244 StaticText "Final Draft, PDF scripts"
+                                          uid=30_27 InlineTextBox "Final Draft, PDF scripts"
+                                  uid=31_334 LabelText
+                                    uid=30_245 radio "📋 Treatments Story treatments and outlines"
+                                    uid=31_335 ignored
+                                      uid=31_336 generic
+                                        uid=30_246 StaticText "📋 Treatments"
+                                          uid=30_27 InlineTextBox "📋 Treatments"
+                                      uid=31_337 generic
+                                        uid=30_247 StaticText "Story treatments and outlines"
+                                          uid=30_27 InlineTextBox "Story treatments and outlines"
+                                  uid=31_338 LabelText
+                                    uid=30_248 radio "🎯 Pitch Materials Pitch decks and presentations"
+                                    uid=31_339 ignored
+                                      uid=31_340 generic
+                                        uid=30_249 StaticText "🎯 Pitch Materials"
+                                          uid=30_27 InlineTextBox "🎯 Pitch Materials"
+                                      uid=31_341 generic
+                                        uid=30_250 StaticText "Pitch decks and presentations"
+                                          uid=30_27 InlineTextBox "Pitch decks and presentations"
+                                  uid=31_342 LabelText
+                                    uid=30_251 radio "🎨 Visual Assets Images, artwork, storyboards"
+                                    uid=31_343 ignored
+                                      uid=31_344 generic
+                                        uid=30_252 StaticText "🎨 Visual Assets"
+                                          uid=30_27 InlineTextBox "🎨 Visual Assets"
+                                      uid=31_345 generic
+                                        uid=30_253 StaticText "Images, artwork, storyboards"
+                                          uid=30_27 InlineTextBox "Images, artwork, storyboards"
+                                  uid=31_346 LabelText
+                                    uid=30_254 radio "💰 Financial Budgets and financial documents"
+                                    uid=31_347 ignored
+                                      uid=31_348 generic
+                                        uid=30_255 StaticText "💰 Financial"
+                                          uid=30_27 InlineTextBox "💰 Financial"
+                                      uid=31_349 generic
+                                        uid=30_256 StaticText "Budgets and financial documents"
+                                          uid=30_27 InlineTextBox "Budgets and financial documents"
+                                  uid=31_350 LabelText
+                                    uid=30_257 radio "⚖️ Legal Contracts, NDAs, legal docs"
+                                    uid=31_351 ignored
+                                      uid=31_352 generic
+                                        uid=30_258 StaticText "⚖️ Legal"
+                                          uid=30_27 InlineTextBox "⚖️ Legal"
+                                      uid=31_353 generic
+                                        uid=30_259 StaticText "Contracts, NDAs, legal docs"
+                                          uid=30_27 InlineTextBox "Contracts, NDAs, legal docs"
+                                  uid=31_354 LabelText
+                                    uid=30_260 radio "📚 Reference Research and reference materials" checked
+                                    uid=31_355 ignored
+                                      uid=31_356 generic
+                                        uid=30_261 StaticText "📚 Reference"
+                                          uid=30_27 InlineTextBox "📚 Reference"
+                                      uid=31_357 generic
+                                        uid=30_262 StaticText "Research and reference materials"
+                                          uid=30_27 InlineTextBox "Research and reference materials"
+                              uid=31_358 ignored
+                                uid=31_359 ignored
+                                  uid=31_360 LabelText
+                                    uid=31_361 ignored
+                                      uid=31_362 ignored
+                                        uid=31_363 ignored
+                                        uid=31_364 ignored
+                                        uid=31_365 ignored
+                                      uid=31_366 paragraph
+                                        uid=30_263 StaticText "Drag & drop files here, or click to browse"
+                                          uid=30_27 InlineTextBox "Drag & drop files here, or click to browse"
+                                      uid=31_367 paragraph
+                                        uid=30_264 StaticText "Max "
+                                          uid=30_27 InlineTextBox "Max "
+                                        uid=30_265 StaticText "500"
+                                          uid=30_27 InlineTextBox "500"
+                                        uid=30_266 StaticText "MB per file • Up to "
+                                          uid=30_27 InlineTextBox "MB per file • Up to "
+                                        uid=30_267 StaticText "50"
+                                          uid=30_27 InlineTextBox "50"
+                                        uid=30_268 StaticText " files"
+                                          uid=30_27 InlineTextBox " files"
+                                    uid=31_368 ignored
+                            uid=31_369 ignored
+                              uid=31_370 paragraph
+                                uid=30_269 StaticText "No files uploaded yet"
+                                  uid=30_27 InlineTextBox "No files uploaded yet"
+                              uid=31_371 paragraph
+                                uid=30_270 StaticText "Upload your first files to get started"
+                                  uid=30_27 InlineTextBox "Upload your first files to get started"
+                      uid=31_372 ignored
+                        uid=30_271 button "Cancel"
+                          uid=31_373 StaticText "Cancel"
+                            uid=30_27 InlineTextBox "Cancel"
+                        uid=30_272 button "Submit pitch"
+                          uid=31_374 StaticText "Create Pitch"
+                            uid=30_27 InlineTextBox "Create Pitch"
+      uid=31_375 generic
+        uid=31_376 generic
+      uid=30_273 generic atomic live="polite" relevant="additions text"

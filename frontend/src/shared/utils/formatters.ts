@@ -17,6 +17,22 @@ export const formatCurrency = (value: unknown, options?: {
   }).format(safeValue);
 };
 
+/**
+ * Compact budget display using Intl compact notation: $12M, $500K, $1.5B
+ */
+export const formatBudgetCompact = (value: unknown): string => {
+  const n = safeNumber(value, 0);
+  if (n === 0) return '';
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    notation: 'compact',
+    compactDisplay: 'short',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1,
+  }).format(n);
+};
+
 export const formatPercentage = (value: unknown, fallback = 0): string => {
   const safeValue = safeNumber(value, fallback);
   return `${safeValue.toFixed(1)}%`;

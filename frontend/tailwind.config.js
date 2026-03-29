@@ -19,6 +19,16 @@ export default {
   				'700': '#6d28d9',
   				'800': '#5b21b6',
   				'900': '#4c1d95'
+  			},
+  			brand: {
+  				anchor: '#6F2DA8',
+  				action: '#6F2DA8',
+  				trending: '#A82D63',
+  				'new': '#2D7FA8',
+  				featured: '#842DA8',
+  				nda: '#A82D4E',
+  				'empty-text': '#2D40A8',
+  				'empty-icon': '#302DA8',
   			}
   		},
   		fontFamily: {

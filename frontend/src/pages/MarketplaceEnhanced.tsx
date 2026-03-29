@@ -46,6 +46,7 @@ import {
   Building2
 } from 'lucide-react';
 import { API_URL } from '../config';
+import { formatBudgetCompact } from '@shared/utils/formatters';
 
 // Get the best available image URL from a pitch (handles snake_case API + camelCase)
 function getPitchImageUrl(pitch: Pitch): string | undefined {
@@ -59,6 +60,37 @@ function getPitchImageUrl(pitch: Pitch): string | undefined {
     if (parsed.protocol === 'https:' || parsed.protocol === 'http:') return parsed.href;
   } catch { /* invalid URL */ }
   return undefined;
+}
+
+// Badge helpers
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+function isNewPitch(pitch: Pitch): boolean {
+  const published = (pitch as unknown as Record<string, unknown>).published_at as string | undefined
+    || pitch.createdAt;
+  if (!published) return false;
+  return Date.now() - new Date(published).getTime() < SEVEN_DAYS_MS;
+}
+
+function getTrendingScore(pitch: Pitch): number {
+  return (pitch.viewCount || 0) * 0.7 + (pitch.likeCount || 0) * 0.3;
+}
+
+function getPitchBudgetDisplay(pitch: Pitch): string {
+  const pp = pitch as unknown as Record<string, unknown>;
+  const raw = pp.estimated_budget || pitch.estimatedBudget;
+  if (raw && Number(raw) > 0) return formatBudgetCompact(raw);
+  const bracket = pp.budget_bracket || pitch.budgetBracket;
+  if (bracket) return String(bracket);
+  return '';
+}
+
+function getCreatorDisplay(pitch: Pitch): string {
+  const pp = pitch as unknown as Record<string, unknown>;
+  return pitch.creator?.name || pitch.creator?.username
+    || (pp.creator_name as string | undefined)
+    || (pp.creator_username as string | undefined)
+    || 'Unknown';
 }
 
 // Enhanced filtering and sorting options
@@ -558,7 +590,7 @@ export default function MarketplaceEnhanced() {
               <div className="flex justify-between items-start gap-2 mb-1 sm:mb-2">
                 <div className="min-w-0">
                   <h3 className="text-base sm:text-lg font-semibold truncate">{pitch.title}</h3>
-                  <p className="text-xs sm:text-sm text-gray-600 truncate">{pitch.creator?.name || pitch.creator?.username || ((pitch as unknown as Record<string, unknown>).creator_username as string | undefined) || ((pitch as unknown as Record<string, unknown>).creator_name as string | undefined) || 'Unknown'}</p>
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">{getCreatorDisplay(pitch)}</p>
                 </div>
                 <div className="flex gap-1 sm:gap-2 flex-shrink-0">
                   {pitch.genre && (
@@ -593,9 +625,10 @@ export default function MarketplaceEnhanced() {
                     {((pitch as unknown as Record<string, unknown>).commentCount as number | undefined) || 0}
                   </span>
                 </div>
-                {(pitch.estimatedBudget || pitch.budgetBracket) && (
-                  <span className="text-xs sm:text-sm font-medium text-green-600">
-                    {pitch.estimatedBudget || pitch.budgetBracket}
+                {getPitchBudgetDisplay(pitch) && (
+                  <span className="text-xs sm:text-sm font-medium text-green-600 flex items-center gap-0.5">
+                    <DollarSign className="w-3 h-3" />
+                    {getPitchBudgetDisplay(pitch).replace('$', '')}
                   </span>
                 )}
               </div>
@@ -652,18 +685,30 @@ export default function MarketplaceEnhanced() {
             </div>
           </div>
 
-          {/* Badges */}
-          <div className="absolute top-2 right-2 flex flex-col gap-1">
-            {(pitch.hasNDA || pitch.requireNDA) && (
-              <span className="bg-black/60 backdrop-blur-sm text-white px-2 py-1 text-xs rounded flex items-center gap-1">
-                <Shield className="w-3 h-3" />
-                NDA
-              </span>
-            )}
+          {/* Badges — lower-right over media, pill style */}
+          <div className="absolute bottom-2 right-2 flex flex-col items-end gap-1">
             {((pitch as unknown as Record<string, unknown>).isFeatured as boolean | undefined) && (
-              <span className="bg-yellow-500/90 backdrop-blur-sm text-white px-2 py-1 text-xs rounded flex items-center gap-1">
+              <span className="bg-brand-featured/90 backdrop-blur-sm text-white px-2.5 py-0.5 text-xs rounded-full font-medium flex items-center gap-1">
                 <Star className="w-3 h-3" />
                 Featured
+              </span>
+            )}
+            {!((pitch as unknown as Record<string, unknown>).isFeatured) && getTrendingScore(pitch) >= 5 && (
+              <span className="bg-brand-trending/90 backdrop-blur-sm text-white px-2.5 py-0.5 text-xs rounded-full font-medium flex items-center gap-1">
+                <TrendingUp className="w-3 h-3" />
+                Trending
+              </span>
+            )}
+            {isNewPitch(pitch) && (
+              <span className="bg-brand-new/90 backdrop-blur-sm text-white px-2.5 py-0.5 text-xs rounded-full font-medium flex items-center gap-1">
+                <Zap className="w-3 h-3" />
+                New
+              </span>
+            )}
+            {(pitch.hasNDA || pitch.requireNDA) && (
+              <span className="border border-white/60 backdrop-blur-sm text-white px-2.5 py-0.5 text-xs rounded-full flex items-center gap-1">
+                <Shield className="w-3 h-3" />
+                NDA
               </span>
             )}
           </div>
@@ -673,7 +718,7 @@ export default function MarketplaceEnhanced() {
           <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1 text-sm sm:text-base">
             {pitch.title}
           </h3>
-          <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2 truncate">{pitch.creator?.name || pitch.creator?.username || ((pitch as unknown as Record<string, unknown>).creator_username as string | undefined) || ((pitch as unknown as Record<string, unknown>).creator_name as string | undefined) || 'Unknown'}</p>
+          <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2 truncate">{getCreatorDisplay(pitch)}</p>
 
           <div className="flex items-center justify-between mb-1 sm:mb-2">
             <div className="flex gap-1 sm:gap-2">
@@ -683,9 +728,10 @@ export default function MarketplaceEnhanced() {
                 </span>
               )}
             </div>
-            {(pitch.estimatedBudget || pitch.budgetBracket) && (
-              <span className="text-xs sm:text-sm font-medium text-green-600">
-                {pitch.estimatedBudget || pitch.budgetBracket}
+            {getPitchBudgetDisplay(pitch) && (
+              <span className="text-xs sm:text-sm font-medium text-green-600 flex items-center gap-0.5">
+                <DollarSign className="w-3 h-3" />
+                {getPitchBudgetDisplay(pitch).replace('$', '')}
               </span>
             )}
           </div>
