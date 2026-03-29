@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import * as Sentry from '@sentry/react';
 import { config } from '@/config';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import type { 
@@ -197,6 +198,9 @@ export function useWebSocketAdvanced(options: UseWebSocketAdvancedOptions = {}) 
   });
   const reconnectAttemptRef = useRef<number>(0);
   const lastReconnectTimeRef = useRef<number>(0);
+  // Tracks the timestamp of the most recent disconnect so that onopen can
+  // compute the total time-to-reconnect for Sentry breadcrumbs.
+  const disconnectTimestampRef = useRef<number | null>(null);
 
   // Reset circuit breaker when user authenticates — prevents stale breaker from blocking
   // reconnection after login (breaker may have opened during unauthenticated page load)
@@ -765,7 +769,16 @@ export function useWebSocketAdvanced(options: UseWebSocketAdvancedOptions = {}) 
       const isCrossOrigin = wsOrigin !== currentOrigin;
 
       if (isCrossOrigin) {
-        // Cross-origin: Need to fetch a WebSocket token
+        // Cross-origin: Must fetch a WebSocket token before connecting.
+        // Browsers do not send cookies on cross-origin WebSocket upgrades so a
+        // token query-param is the only auth mechanism available.  If the token
+        // fetch fails for any reason (network error, 401 unauthenticated, etc.)
+        // we abort the connection attempt entirely rather than connecting
+        // anonymously — an anonymous upgrade will be rejected with HTTP 401,
+        // the browser fires onclose(1006), the reconnect loop fires, the
+        // circuit breaker accumulates failures, and the user ends up with 10
+        // failed reconnect attempts and a 5-minute circuit-breaker lockout.
+        let tokenAcquired = false;
         try {
           const tokenResponse = await fetch(`${config.API_URL}/api/ws/token`, {
             credentials: 'include',
@@ -773,18 +786,30 @@ export function useWebSocketAdvanced(options: UseWebSocketAdvancedOptions = {}) 
               'Accept': 'application/json',
             },
           });
-          
+
           if (tokenResponse.ok) {
             const tokenData = await tokenResponse.json();
             if (tokenData.token) {
               // Add token as query parameter for cross-origin WebSocket
               finalWsUrl = `${wsUrl}/ws?token=${tokenData.token}`;
+              tokenAcquired = true;
             }
           } else {
-            console.warn('Could not get WebSocket token, connecting anonymously');
+            console.warn(`[WS] Token fetch returned ${tokenResponse.status} — aborting connection (user not authenticated)`);
           }
         } catch (error) {
-          console.warn('Error fetching WebSocket token:', error);
+          console.warn('[WS] Token fetch threw — aborting connection:', error);
+        }
+
+        if (!tokenAcquired) {
+          // Revert state to disconnected and bail out without touching the
+          // circuit breaker — this is expected behaviour for unauthenticated
+          // users (login page, expired session) and must not be counted as a
+          // failure that could open the circuit breaker.
+          updateConnectionState('disconnected', {
+            error: null,
+          });
+          return;
         }
       }
       
@@ -794,6 +819,24 @@ export function useWebSocketAdvanced(options: UseWebSocketAdvancedOptions = {}) 
       ws.onopen = () => {
         const connectTime = Date.now();
         const connectionLatency = connectTime - wsCreateTime;
+
+        // Emit a Sentry breadcrumb when a previous disconnect was followed by a
+        // successful reconnect.  disconnectTimestampRef is only set in onclose,
+        // so a null value here means this is the initial connection and we skip
+        // the breadcrumb to avoid noise.
+        if (disconnectTimestampRef.current !== null) {
+          const timeToReconnectMs = connectTime - disconnectTimestampRef.current;
+          Sentry.addBreadcrumb({
+            category: 'websocket',
+            message: 'WebSocket reconnected successfully',
+            level: 'info',
+            data: {
+              reconnectAttempts: reconnectAttemptRef.current,
+              timeToReconnectMs,
+            },
+          });
+          disconnectTimestampRef.current = null;
+        }
 
         // Reset stale connection history so a fresh connect starts clean
         connectionHistoryRef.current = [];
@@ -907,13 +950,31 @@ export function useWebSocketAdvanced(options: UseWebSocketAdvancedOptions = {}) 
       
       ws.onclose = (event) => {
         const disconnectTime = new Date();
-        
+        const disconnectTimestamp = disconnectTime.getTime();
+
+        // Record disconnect timestamp before any reconnect attempt so that
+        // onopen can compute time-to-reconnect.
+        disconnectTimestampRef.current = disconnectTimestamp;
+
+        // Emit a Sentry breadcrumb for every disconnect so the trail of
+        // events is visible in Sentry without raising a full error.
+        Sentry.addBreadcrumb({
+          category: 'websocket',
+          message: 'WebSocket disconnected',
+          level: 'warning',
+          data: {
+            code: event.code,
+            reason: event.reason || null,
+            reconnectAttempts: reconnectAttemptRef.current,
+          },
+        });
+
         // Update connection state
         updateConnectionState('disconnected', {
           lastDisconnected: disconnectTime,
           error: event.reason || `Connection closed (${event.code})`,
         });
-        
+
         wsRef.current = null;
         opts.onDisconnect();
         
@@ -965,6 +1026,15 @@ export function useWebSocketAdvanced(options: UseWebSocketAdvancedOptions = {}) 
           
           
           reconnectTimeoutRef.current = setTimeout(() => {
+            Sentry.addBreadcrumb({
+              category: 'websocket',
+              message: `WebSocket reconnect attempt ${attempt}`,
+              level: 'info',
+              data: {
+                attempt,
+                delayMs: delay,
+              },
+            });
             opts.onReconnect(attempt);
             connect();
           }, delay);

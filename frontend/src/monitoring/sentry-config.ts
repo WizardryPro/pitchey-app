@@ -44,6 +44,17 @@ export function initSentry() {
       })
     ],
 
+    // Attach sentry-trace + baggage headers to outgoing API requests so
+    // frontend traces connect to backend traces.
+    // - /\/api\// matches all same-origin requests through the Pages proxy (production)
+    // - localhost matches dev against http://localhost:8001
+    // - the Worker hostname matches direct-to-Worker calls (WebSocket auth, etc.)
+    tracePropagationTargets: [
+      /\/api\//,
+      'localhost',
+      'pitchey-api-prod.ndlovucavelle.workers.dev'
+    ],
+
     // Performance monitoring sample rate
     tracesSampleRate: TRACES_SAMPLE_RATE,
 

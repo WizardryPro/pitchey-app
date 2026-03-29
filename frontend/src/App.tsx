@@ -392,17 +392,20 @@ function App() {
           <Route path="/login/creator" element={
             !isAuthenticated ? <CreatorLogin /> :
             userType === 'creator' ? <Navigate to="/creator/dashboard" replace /> :
-            <Navigate to={`/${userType}/dashboard`} replace />
+            userType ? <Navigate to={`/${userType}/dashboard`} replace /> :
+            <Navigate to="/portals" replace />
           } />
           <Route path="/login/investor" element={
             !isAuthenticated ? <InvestorLogin /> :
             userType === 'investor' ? <Navigate to="/investor/dashboard" replace /> :
-            <Navigate to={`/${userType}/dashboard`} replace />
+            userType ? <Navigate to={`/${userType}/dashboard`} replace /> :
+            <Navigate to="/portals" replace />
           } />
           <Route path="/login/production" element={
             !isAuthenticated ? <ProductionLogin /> :
             userType === 'production' ? <Navigate to="/production/dashboard" replace /> :
-            <Navigate to={`/${userType}/dashboard`} replace />
+            userType ? <Navigate to={`/${userType}/dashboard`} replace /> :
+            <Navigate to="/portals" replace />
           } />
           
           {/* Portal-specific login redirects */}

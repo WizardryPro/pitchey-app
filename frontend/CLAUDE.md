@@ -1,40 +1,71 @@
-# Pitchey Frontend
+# Frontend — Connectivity & Auth Reference
 
-React 18 SPA with three portals (Creator, Investor, Production) plus Admin.
+Loads automatically when working in `frontend/`. For general architecture see root CLAUDE.md.
 
-## Tech
-React 18 + React Router 7 + Vite + TailwindCSS + Zustand + Radix UI
+## API Communication Path
 
-## Auth
-Better Auth client — session cookies stored as pitchey-session.
-Auth state in store/betterAuthStore.ts (primary, the only auth store).
-Cache in store/sessionCache.ts prevents auth flicker on page load.
-API calls include credentials: 'include' for cookie transmission.
+All API calls go through the **Pages Functions proxy** (`functions/api/[[path]].ts`).
+- Production `API_URL` is `''` (empty string) — requests are same-origin via the proxy
+- The proxy rewrites cookies: removes `Domain`, changes `SameSite=None` to `Lax`
+- The proxy strips all CORS headers from backend responses (unnecessary when same-origin)
+- Dev uses `http://localhost:8001` (or `VITE_API_URL`)
 
-## State Management
-Zustand stores — no Redux. Key stores:
-- betterAuthStore.ts: session auth (primary)
-- pitchStore.ts: pitch data
-- sessionCache.ts: prevents auth flicker on page load
-- onboardingStore.ts: onboarding flow
+Key file: `src/config.ts` — lazy-initialized Proxy, exports `API_URL`, `WS_URL`, `config`
 
-## API Communication
-33 service files in services/ — all calls go to pitchey-api-prod Worker.
-WebSocket service for real-time notifications and 5-second draft auto-sync.
+## Auth Session Flow
 
-## Portal Routing
-user_type from session determines portal access:
-- creator -> /creator/* routes
-- investor -> /investor/* routes
-- production -> /production/* routes
-- admin -> /admin/* routes
+Cookie: `pitchey-session` (HttpOnly, Secure, 30-day expiry on backend)
 
-## Commands
-- Dev: `npm run dev`
-- Build: `npm run build`
-- Type check: `npx tsc --noEmit -p tsconfig.app.json`
-- Tests: `npx vitest run`
-- Deploy: `wrangler pages deploy dist/ --project-name=pitchey` (run from frontend/ dir so Pages Functions proxy is included)
+1. `src/lib/better-auth-client.tsx` — Better Auth client, `baseURL` is empty in prod, `credentials: 'include'`
+2. `src/store/betterAuthStore.ts` — primary auth state (Zustand)
+3. `src/store/sessionCache.ts` — localStorage cache (5min TTL), invalidated when cookie fingerprint changes
+4. `src/lib/session-manager.ts` — deduplicates session checks (30s min interval), returns in-progress promise to prevent races
 
-## Detailed Context
-See [docs/context-frontend.md](../docs/context-frontend.md) for testing patterns, dashboard architecture, RBAC, and key file locations.
+### 401 Handling Gotcha
+`src/lib/api-client.ts` lines 223-259: on 401, it first verifies the session endpoint before redirecting.
+A `_handlingAuth401` flag prevents multiple 401 redirects firing simultaneously.
+The flag resets after 3 seconds — if auth is broken for longer, subsequent calls queue up.
+
+## API Client Retry Logic
+
+File: `src/lib/api-client.ts` (singleton `apiClient`)
+- Max 2 retries with linear-ish backoff (`retryDelay * (retryCount + 1)`)
+- Does NOT retry: CORS errors, `Failed to fetch`, `Cross-Origin`, `Access-Control`
+- DOES retry: `NetworkError`, DNS failures (`ERR_NAME_NOT_RESOLVED`, `ENOTFOUND`)
+- All requests include `credentials: 'include'`
+
+## WebSocket — Different Origin
+
+WebSocket connects **directly** to the Worker (not through the proxy).
+- URL: `wss://pitchey-api-prod.ndlovucavelle.workers.dev` (set in `src/config.ts` line 32)
+- Pages Functions do not support WebSocket proxying
+- Context: `src/shared/contexts/WebSocketContext.tsx` wraps `useWebSocketAdvanced` hook
+- Falls back to polling via `src/features/notifications/services/polling.service.ts`
+
+**Gotcha**: WebSocket is cross-origin, so it needs the `pitchey-session` cookie with `SameSite=None`.
+The backend sets this, but the proxy rewrites it to `Lax` for API calls. Only the initial cookie
+set (before proxy rewrite) makes the cookie available for WebSocket. If the user logs in and
+the cookie is set with `SameSite=Lax` only, WebSocket auth may fail silently.
+
+## Error Boundaries
+
+- Main: `src/shared/components/feedback/ErrorBoundary.tsx` — reports to `/api/errors/client`
+- Portal: `src/components/ErrorBoundary/PortalErrorBoundary.tsx` — Sentry-tagged by portal
+- Chunk errors: auto-reload on `ChunkLoadError` (stale deployment detection)
+
+## Sentry Config
+
+File: `src/monitoring/sentry-config.ts`
+- 10% trace sampling in prod, 100% replay on error
+- Filters out 401/403/404 and auth-timing noise in `beforeSend`
+
+### TODO: Observability Gaps
+- [x] `tracePropagationTargets` added to `Sentry.init()` — traces flow frontend → backend
+- [x] WebSocket reconnection breadcrumbs added to `useWebSocketAdvanced.ts`
+
+## Deployment & Routing
+
+- `wrangler pages deploy dist/` **must run from `frontend/`** not repo root — otherwise `functions/` isn't detected and the Functions bundle silently doesn't compile (no error shown)
+- `_redirects` is **ignored** when Pages Functions exist — SPA fallback is handled by `functions/[[catchall]].ts` which serves `index.html` for all non-API, non-asset routes
+- `functions/api/[[path]].ts` has higher specificity than `functions/[[catchall]].ts` due to directory depth — this is what makes API proxying work alongside the SPA fallback
+- If the catchall is removed or renamed, every direct URL navigation or page refresh will 404

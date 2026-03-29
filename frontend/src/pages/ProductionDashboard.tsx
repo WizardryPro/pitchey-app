@@ -72,7 +72,7 @@ function ProductionDashboard() {
     trackPerformance: true
   });
   const { isConnected, connectionQuality, isReconnecting } = useWebSocket();
-  const [activeTab, setActiveTab] = useState<'overview' | 'my-pitches' | 'following' | 'ndas'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'my-pitches' | 'saved' | 'following' | 'ndas'>('overview');
   const [myPitches, setMyPitches] = useState<Pitch[]>([]);
   const [pipelineCount, setPipelineCount] = useState(0);
   const [followingPitches, setFollowingPitches] = useState<Pitch[]>([]);
@@ -82,6 +82,7 @@ function ProductionDashboard() {
   const [startProjectPitch, setStartProjectPitch] = useState<{ id: number; title: string; genre?: string; logline?: string; budget?: any } | null>(null);
   const [likedPitches, setLikedPitches] = useState<number[]>([]);
   const [savedPitches, setSavedPitches] = useState<number[]>([]);
+  const [savedPitchItems, setSavedPitchItems] = useState<any[]>([]);
   const [outgoingNDARequests, setOutgoingNDARequests] = useState<any[]>([]);
   const [incomingNDARequests, setIncomingNDARequests] = useState<any[]>([]);
   const [signedNDAs, setSignedNDAs] = useState<any[]>([]);
@@ -362,9 +363,10 @@ function ProductionDashboard() {
           setFollowingPitches([]);
         }
 
-        // Saved pitch IDs
+        // Saved pitch IDs and full items for the Saved Pitches tab
         if (savedResponse.success && Array.isArray(savedResponse.data)) {
           setSavedPitches(savedResponse.data.map((sp: any) => sp.pitchId || sp.pitch_id));
+          setSavedPitchItems(savedResponse.data);
         }
 
         // Following creators count — backend returns { data: { stats: { following: N } } }
@@ -489,7 +491,7 @@ function ProductionDashboard() {
         if (isSaved) {
           await savedPitchesAPI.unsavePitch(pitchId);
         } else {
-          await savedPitchesAPI.savePitch(pitchId);
+          await savedPitchesAPI.savePitch({ pitchId });
         }
       } catch (apiErr) {
         console.error('Error calling save API:', apiErr);
@@ -907,9 +909,9 @@ function ProductionDashboard() {
               Overview
             </button>
             <button
-              onClick={() => setActiveTab('my-pitches')}
+              onClick={() => setActiveTab('saved')}
               className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
-                activeTab === 'my-pitches'
+                activeTab === 'saved'
                   ? 'border-purple-500 text-purple-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
@@ -965,16 +967,13 @@ function ProductionDashboard() {
               </button>
             </div>
 
-            {/* Enhanced Production Analytics */}
+            {/* Pitch Evaluation Analytics */}
             <EnhancedProductionAnalytics
-              productionPerformance={{
-                totalPitches: myPitches.length,
-                totalRevenue: myPitches.reduce((sum, p) => sum + (p.budget || 0), 0),
-                activeProjects: pipelineCount,
-                ndaSignedCount: analytics.totalNDAs,
-                averageProjectBudget: myPitches.length > 0 ? myPitches.reduce((sum, p) => sum + (p.budget || 0), 0) / myPitches.length : 0,
-                creatorInteractions: analytics.totalViews + analytics.totalLikes
-              }}
+              savedPitchCount={savedPitchItems?.length || 0}
+              ndaRequestsSent={outgoingNDARequests?.length || 0}
+              ndasSigned={signedNDAs?.length || 0}
+              creatorsFollowing={followingCreators?.length || 0}
+              projectsStarted={pipelineCount || 0}
             />
 
             {/* Notifications Widget */}
@@ -1565,133 +1564,6 @@ function ProductionDashboard() {
                   )}
                 </div>
 
-                {/* Quick Following Overview */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {Array.isArray(displayFollowingPitches) && displayFollowingPitches.slice(0, 6).map((pitch) => (
-                    <div key={pitch.id} className={`bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-lg transition-shadow border-2 ${
-                      pitch.creator?.userType === 'production' ? 'border-purple-200' :
-                      pitch.creator?.userType === 'investor' ? 'border-green-200' :
-                      'border-gray-200'
-                    }`}>
-                      <div
-                        className={`aspect-video bg-gradient-to-br ${
-                          pitch.creator?.userType === 'production' ? 'from-purple-400 to-purple-600' :
-                          pitch.creator?.userType === 'investor' ? 'from-green-400 to-green-600' :
-                          'from-gray-400 to-gray-600'
-                        } flex items-center justify-center relative bg-cover bg-center`}
-                        style={pitch.titleImage ? { backgroundImage: `url(${pitch.titleImage})` } : undefined}
-                      >
-                        {!pitch.titleImage && (
-                          <Film className="w-12 h-12 text-white" />
-                        )}
-                        {pitch.creator?.userType && pitch.creator.userType !== 'creator' && (
-                          <span className="absolute top-2 right-2 bg-white/20 backdrop-blur px-2 py-1 rounded text-xs text-white">
-                            {pitch.creator.userType === 'production' ? 'Production Co.' : 'Investor'}
-                          </span>
-                        )}
-                      </div>
-                      <div className="p-6">
-                        <div className="flex items-center justify-between mb-2">
-                          <Link
-                            to={`/creator/${pitch.creator?.id || pitch.userId}`}
-                            className="text-xs text-purple-600 hover:text-purple-700 cursor-pointer"
-                          >
-                            by @{pitch.creator?.username || 'Unknown'}
-                            {pitch.creator?.companyName && ` • ${pitch.creator.companyName}`}
-                          </Link>
-                          <div className="flex items-center gap-2">
-                            <button 
-                              onClick={(e) => {
-                                e.preventDefault();
-                                handleSavePitch(pitch.id);
-                              }}
-                              className={`text-gray-600 hover:text-blue-600 transition-colors ${savedPitches?.includes(pitch.id) ? 'text-blue-600' : ''}`}
-                              title="Save for later"
-                            >
-                              <Bookmark className={`w-4 h-4 ${savedPitches?.includes(pitch.id) ? 'fill-current' : ''}`} />
-                            </button>
-                            {pitch.ndaStatus !== 'signed' && (
-                              <button 
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  handleRequestNDA(pitch.id, pitch.title);
-                                }}
-                                className="text-purple-600 hover:text-purple-700" 
-                                title="Request NDA for Full Access"
-                              >
-                                <Shield className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <h3 className="font-semibold text-gray-900 mb-2">{pitch.title}</h3>
-                        <p className="text-sm text-gray-600 mb-4 line-clamp-2">{pitch.logline}</p>
-                        
-                        <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                          <span>{pitch.genre}</span>
-                          <FormatDisplay 
-                            formatCategory={pitch.formatCategory}
-                            formatSubtype={pitch.formatSubtype}
-                            format={pitch.format}
-                            variant="compact"
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                          <div className="flex items-center gap-4">
-                            <span className="flex items-center gap-1">
-                              <Eye className="w-4 h-4" />
-                              {pitch.viewCount}
-                            </span>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleLikePitch(pitch.id);
-                              }}
-                              className="flex items-center gap-1 hover:text-red-500 transition-colors"
-                              title="Like this pitch"
-                            >
-                              <Heart className={`w-4 h-4 ${likedPitches?.includes(pitch.id) ? 'fill-red-500 text-red-500' : ''}`} />
-                              {pitch.likeCount}
-                            </button>
-                          </div>
-                          {pitch.ndaStatus === 'signed' && (
-                            <span className="text-green-600 flex items-center gap-1">
-                              <Shield className="w-3 h-3" />
-                              NDA
-                            </span>
-                          )}
-                        </div>
-                        
-                        <div className="flex space-x-2">
-                          <Link
-                            to={`/pitch/${pitch.id}`}
-                            className="flex-1 text-center py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200"
-                          >
-                            View Pitch
-                          </Link>
-                          {pitch.ndaStatus === 'signed' ? (
-                            <button
-                              onClick={() => navigate(`/production/pitch/${pitch.id}`)}
-                              className="flex-1 text-center py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 flex items-center justify-center gap-2"
-                            >
-                              <CheckCircle className="w-4 h-4" />
-                              Full Access
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleRequestNDA(pitch.id, pitch.title)}
-                              className="flex-1 text-center py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200"
-                            >
-                              Request NDA
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
                   </>
                 )}
               </div>
@@ -1870,6 +1742,96 @@ function ProductionDashboard() {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'saved' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                  <Bookmark className="w-6 h-6 text-purple-600" />
+                  Saved Pitches
+                </h2>
+                <p className="text-gray-600 mt-1">Pitches you have bookmarked for future consideration</p>
+              </div>
+              <button
+                onClick={() => navigate('/production/saved')}
+                className="px-4 py-2 text-sm text-purple-600 border border-purple-300 rounded-lg hover:bg-purple-50 transition-colors"
+              >
+                View Full Page
+              </button>
+            </div>
+
+            {savedPitchItems.length === 0 ? (
+              <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+                <Bookmark className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Saved Pitches Yet</h3>
+                <p className="text-gray-600 mb-6">
+                  Browse the marketplace and bookmark pitches you are interested in evaluating
+                </p>
+                <button
+                  onClick={() => navigate('/marketplace')}
+                  className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                >
+                  Browse Marketplace
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {savedPitchItems.map((sp: any) => {
+                  const pitchId = Number(sp.pitch_id ?? sp.pitchId);
+                  const title = sp.title ?? sp.pitch?.title ?? 'Untitled Pitch';
+                  const genre = sp.genre ?? sp.pitch?.genre ?? '';
+                  const creatorName = sp.creator_name ?? sp.first_name
+                    ? `${sp.first_name ?? ''} ${sp.last_name ?? ''}`.trim()
+                    : sp.creator_email?.split('@')[0] ?? 'Creator';
+                  const savedAt = sp.saved_at ?? sp.savedAt ?? '';
+                  const titleImage = sp.title_image ?? sp.pitch?.titleImage ?? '';
+                  const status = sp.status ?? sp.pitch?.status ?? '';
+                  const viewCount = Number(sp.view_count ?? 0);
+                  return (
+                    <div
+                      key={pitchId}
+                      className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-lg transition-shadow cursor-pointer border border-gray-100"
+                      onClick={() => navigate(`/production/pitch/${pitchId}`)}
+                    >
+                      <div
+                        className="h-40 bg-gradient-to-br from-purple-400 to-blue-500 bg-cover bg-center relative"
+                        style={titleImage ? { backgroundImage: `url(${titleImage})` } : undefined}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                        <div className="absolute bottom-3 left-3 right-3">
+                          <h3 className="text-white font-semibold text-base leading-tight">{title}</h3>
+                          <p className="text-white/80 text-xs mt-0.5">by {creatorName}</p>
+                        </div>
+                        <button
+                          className="absolute top-2 right-2 bg-white/90 hover:bg-white p-1.5 rounded-md"
+                          onClick={(e) => { e.stopPropagation(); handleSavePitch(pitchId); }}
+                          title="Remove from saved"
+                        >
+                          <Bookmark className="w-3.5 h-3.5 text-purple-600 fill-current" />
+                        </button>
+                      </div>
+                      <div className="p-4">
+                        <div className="flex items-center justify-between text-sm">
+                          {genre && (
+                            <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">{genre}</span>
+                          )}
+                          {status && (
+                            <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs capitalize">{status}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between mt-3 text-xs text-gray-500">
+                          <span>{savedAt ? `Saved ${new Date(savedAt).toLocaleDateString()}` : ''}</span>
+                          <span>{viewCount > 0 ? `${viewCount.toLocaleString()} views` : ''}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>

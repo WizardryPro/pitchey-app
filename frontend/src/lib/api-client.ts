@@ -243,7 +243,8 @@ class ApiClient {
                 const path = window.location.pathname;
                 const portal = path.startsWith('/investor') ? 'investor' :
                                path.startsWith('/production') ? 'production' :
-                               path.startsWith('/creator') ? 'creator' : null;
+                               path.startsWith('/creator') ? 'creator' :
+                               path.startsWith('/admin') ? 'admin' : null;
                 const loginPath = portal ? `/login/${portal}` : '/portals';
                 window.location.href = loginPath;
               }

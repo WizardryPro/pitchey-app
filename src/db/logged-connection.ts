@@ -6,6 +6,8 @@
  * - Slow query detection
  * - Error tracking
  * - Connection health monitoring
+ * - Trace ID propagation (correlates queries to requests in Axiom)
+ * - SQLCommenter annotations (correlates Neon slow-query logs to HTTP requests)
  */
 
 import { RawSQLDatabase, createDatabase, DatabaseConfig } from './raw-sql-connection';
@@ -32,6 +34,94 @@ export interface QueryLogEntry {
   slow?: boolean;
 }
 
+/**
+ * Per-request trace context threaded into DB logging and SQLCommenter annotations.
+ * Populated by the caller at request start and forwarded via withTraceContext().
+ */
+export interface TraceContext {
+  /** W3C traceparent value (00-<traceId>-<spanId>-<flags>) or just a bare trace ID. */
+  traceparent: string;
+  /** Matched route pattern, e.g. /api/pitches/:id */
+  route: string;
+  /** HTTP method, e.g. GET */
+  method: string;
+}
+
+// ============================================================================
+// SQLCommenter helpers
+// ============================================================================
+
+/**
+ * Sanitise a single SQLCommenter tag value.
+ *
+ * The SQLCommenter spec requires each value to be:
+ *   1. Single-quoted inside the comment
+ *   2. URL-percent-encoded (RFC 3986 unreserved chars pass through; everything
+ *      else, including `'`, `\`, `*`, `/`, and `%` itself, is encoded).
+ *
+ * We use encodeURIComponent (available in all Workers runtimes) and additionally
+ * encode the single-quote character (`%27`) explicitly because encodeURIComponent
+ * already does so — this call is therefore both correct and injection-safe:
+ * the value can never break out of its surrounding single quotes inside the comment.
+ */
+function encodeSQLCommenterValue(raw: string): string {
+  // encodeURIComponent encodes everything except A-Z a-z 0-9 - _ . ! ~ * ' ( )
+  // We want ' and * encoded too.
+  return encodeURIComponent(raw)
+    .replace(/'/g, '%27')
+    .replace(/\*/g, '%2A');
+}
+
+/**
+ * Build a SQLCommenter-style comment string.
+ *
+ * Format (per https://google.github.io/sqlcommenter/spec/):
+ *   /*traceparent='<value>',route='<value>',method='<value>'*\/
+ *
+ * The trailing space before the comment ensures it does not run into a
+ * semicolon if the caller's query already ends with one.
+ *
+ * Returns an empty string when none of the values are present, so no
+ * comment is appended to queries that lack trace context.
+ */
+function buildSQLComment(ctx: TraceContext | undefined): string {
+  if (!ctx) return '';
+
+  const parts: string[] = [];
+
+  if (ctx.traceparent) {
+    parts.push(`traceparent='${encodeSQLCommenterValue(ctx.traceparent)}'`);
+  }
+  if (ctx.route) {
+    parts.push(`route='${encodeSQLCommenterValue(ctx.route)}'`);
+  }
+  if (ctx.method) {
+    parts.push(`method='${encodeSQLCommenterValue(ctx.method)}'`);
+  }
+
+  if (parts.length === 0) return '';
+
+  return ` /*${parts.join(',')}*/`;
+}
+
+/**
+ * Append a SQLCommenter comment to a query string.
+ *
+ * The comment is appended after a trailing semicolon is stripped (if present)
+ * so that Postgres still receives valid SQL.  A stripped semicolon is restored
+ * after the comment.
+ */
+function annotateQuery(queryString: string, ctx: TraceContext | undefined): string {
+  const comment = buildSQLComment(ctx);
+  if (!comment) return queryString;
+
+  const trimmed = queryString.trimEnd();
+  if (trimmed.endsWith(';')) {
+    return trimmed.slice(0, -1) + comment + ';';
+  }
+  return trimmed + comment;
+}
+
 // ============================================================================
 // Logged Database Wrapper
 // ============================================================================
@@ -41,6 +131,7 @@ export class LoggedDatabase {
   private logger: ProductionLogger;
   private slowQueryThreshold: number;
   private logAllQueries: boolean;
+  private traceCtx: TraceContext | undefined;
   private queryMetrics: {
     totalQueries: number;
     slowQueries: number;
@@ -77,11 +168,23 @@ export class LoggedDatabase {
     }
   ): Promise<T[]> {
     const startTime = Date.now();
-    const queryString = typeof queryText === 'string' ? queryText : queryText.join('?');
-    const sanitizedQuery = this.sanitizeQuery(queryString);
+    const rawQueryString = typeof queryText === 'string' ? queryText : queryText.join('?');
+    const sanitizedQuery = this.sanitizeQuery(rawQueryString);
+
+    // Annotate the query sent to the database with SQLCommenter metadata.
+    // The sanitizedQuery (used only for logging) is never annotated — it is
+    // already truncated to 500 chars and is just for human-readable logs.
+    // TemplateStringsArray queries cannot be safely re-stringified back into a
+    // tagged-template, so we only annotate plain string queries.
+    const annotatedQuery: string | TemplateStringsArray =
+      typeof queryText === 'string'
+        ? annotateQuery(rawQueryString, this.traceCtx)
+        : queryText;
 
     try {
-      const result = await this.db.query<T>(queryText, params, options);
+      // Pass the annotated text to the underlying driver so that
+      // pg_stat_statements and Neon's slow-query log both capture the comment.
+      const result = await this.db.query<T>(annotatedQuery as any, params, options);
       const duration = Date.now() - startTime;
 
       this.recordQueryMetrics(duration, false);
@@ -311,6 +414,29 @@ export class LoggedDatabase {
     return newInstance;
   }
 
+  /**
+   * Return a scoped copy of this instance with request trace context attached.
+   *
+   * Every query executed on the returned instance will:
+   *   1. Include traceId in all log fields (Axiom correlation).
+   *   2. Have a SQLCommenter comment appended to the SQL text sent to Neon
+   *      (pg_stat_statements / Neon slow-query log correlation).
+   *
+   * Usage in a request handler:
+   *   const db = loggedDb.withTraceContext({
+   *     traceparent: loggingContext.traceId,   // or full W3C traceparent string
+   *     route: '/api/pitches/:id',
+   *     method: request.method,
+   *   });
+   *
+   * The original instance is not mutated.
+   */
+  withTraceContext(ctx: TraceContext): LoggedDatabase {
+    const scoped = Object.create(this) as LoggedDatabase;
+    scoped.traceCtx = ctx;
+    return scoped;
+  }
+
   // ============================================================================
   // Private Methods
   // ============================================================================
@@ -324,6 +450,17 @@ export class LoggedDatabase {
   ): void {
     const isSlow = duration > this.slowQueryThreshold;
 
+    // Trace fields included in every log entry when trace context is present.
+    // These map directly to the traceId / spanId / method / path fields in the
+    // LogData type (lib/observability.ts) so Axiom can join query logs with
+    // request logs on the traceId field.
+    const traceFields: Record<string, string> = {};
+    if (this.traceCtx) {
+      traceFields.traceId = this.traceCtx.traceparent;
+      traceFields.route = this.traceCtx.route;
+      traceFields.method = this.traceCtx.method;
+    }
+
     // Always log slow queries
     if (isSlow) {
       this.logger.warn('Slow database query', {
@@ -332,6 +469,7 @@ export class LoggedDatabase {
         rowCount,
         threshold: this.slowQueryThreshold,
         exceededBy: duration - this.slowQueryThreshold,
+        ...traceFields,
       });
 
       // Add Sentry breadcrumb for slow queries
@@ -339,7 +477,7 @@ export class LoggedDatabase {
         category: 'query',
         message: `SLOW: ${query.substring(0, 100)}`,
         level: 'warning',
-        data: { duration, rowCount, threshold: this.slowQueryThreshold },
+        data: { duration, rowCount, threshold: this.slowQueryThreshold, ...traceFields },
       });
     } else if (this.logAllQueries) {
       this.logger.debug('Database query', {
@@ -347,6 +485,7 @@ export class LoggedDatabase {
         duration,
         rowCount,
         cached,
+        ...traceFields,
       });
     }
 
@@ -356,7 +495,7 @@ export class LoggedDatabase {
         category: 'query',
         message: query.substring(0, 100),
         level: 'info',
-        data: { duration, rowCount },
+        data: { duration, rowCount, ...traceFields },
       });
     }
   }
@@ -367,12 +506,18 @@ export class LoggedDatabase {
     duration: number,
     error: unknown
   ): void {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const traceFields: Record<string, string> = {};
+    if (this.traceCtx) {
+      traceFields.traceId = this.traceCtx.traceparent;
+      traceFields.route = this.traceCtx.route;
+      traceFields.method = this.traceCtx.method;
+    }
 
     this.logger.error('Database query failed', error, {
       query: query.substring(0, 500),
       duration,
       errorType: error instanceof Error ? error.name : 'Unknown',
+      ...traceFields,
     });
 
     // Send to Sentry
@@ -381,6 +526,10 @@ export class LoggedDatabase {
         scope.setTag('component', 'database');
         scope.setExtra('query', query.substring(0, 500));
         scope.setExtra('duration', duration);
+        if (this.traceCtx) {
+          scope.setTag('traceId', this.traceCtx.traceparent);
+          scope.setTag('route', this.traceCtx.route);
+        }
         Sentry.captureException(error);
       });
     }

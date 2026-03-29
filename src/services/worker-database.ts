@@ -6,6 +6,7 @@
 
 import { neon, neonConfig, type NeonQueryFunction } from '@neondatabase/serverless';
 import { z } from 'zod';
+import { annotateQueryWithTrace } from '../db/trace-context';
 
 // CRITICAL: Configure Neon for connection pooling in edge environments
 // These settings enable HTTP-based queries and connection caching
@@ -158,12 +159,14 @@ export class WorkerDatabase {
     values?: QueryParameters
   ): Promise<T[]> {
     try {
+      // Append SQLCommenter trace context (no-op if no active trace)
+      const annotatedText = annotateQueryWithTrace(text);
       let raw: any;
 
       if (values && values.length > 0) {
-        raw = await (this.sql as any).query(text, values);
+        raw = await (this.sql as any).query(annotatedText, values);
       } else {
-        raw = await (this.sql as any).query(text);
+        raw = await (this.sql as any).query(annotatedText);
       }
 
       // Neon's .query() returns { rows: [...], rowCount, ... } — unwrap to plain array

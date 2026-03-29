@@ -1,138 +1,82 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  DollarSign,
-  TrendingUp,
-  Layers,
-  PieChart,
-  Users,
+  Bookmark,
+  FileCheck,
   Shield,
+  Users,
   Building2,
-  Clock,
-  Calendar,
-  CheckCircle,
-  AlertCircle,
   RefreshCw,
-  Download,
-  Zap,
-  BarChart3
+  DollarSign,
+  CheckCircle,
+  TrendingUp,
 } from 'lucide-react';
 
 import { AnalyticCard } from './AnalyticCard';
 import { TimeRangeFilter } from './TimeRangeFilter';
-import { PerformanceChart } from './PerformanceChart';
 import { AnalyticsExport } from './AnalyticsExport';
 import { config } from '@/config';
 import type { TimeRange } from '../../services/analytics.service';
-import { 
-  LineChart, 
-  BarChart, 
-  PieChart as PieChartComponent, 
+import {
+  LineChart,
+  BarChart,
+  PieChart as PieChartComponent,
   ChartContainer,
-  MultiLineChart,
-  AreaChart,
-  StackedBarChart
 } from './AnalyticsCharts';
 
-interface ProductionAnalyticsProps {
-  productionPerformance?: {
-    totalPitches: number;
-    totalRevenue: number;
-    activeProjects: number;
-    ndaSignedCount: number;
-    averageProjectBudget: number;
-    creatorInteractions: number;
-  };
+interface PitchEvaluationProps {
+  savedPitchCount: number;
+  ndaRequestsSent: number;
+  ndasSigned: number;
+  creatorsFollowing: number;
+  projectsStarted: number;
 }
 
-interface ProductionAnalyticsData {
-  kpis: {
-    activeProjects: number;
+interface ChartData {
+  genreDistribution: { genre: string; count: number }[];
+  pipelineByStage: { stage: string; count: number }[];
+  monthlyActivity: { date: string; value: number }[];
+  // Project management data (only meaningful when projects exist)
+  projectMetrics: {
     totalBudget: number;
-    avgProjectCost: number;
     completionRate: number;
-    partnerships: number;
-    monthlyRevenue: number;
-    crewUtilization: number;
-    onTimeDelivery: number;
-    costVariance: number;
-    clientSatisfaction: number;
+    totalRevenue: number;
   };
-  changes: {
-    projectsChange: number;
-    budgetChange: number;
-    costChange: number;
-    completionChange: number;
-    partnershipsChange: number;
-    revenueChange: number;
-    utilizationChange: number;
-    deliveryChange: number;
-    varianceChange: number;
-    satisfactionChange: number;
-  };
-  charts: {
-    projectPipeline: { stage: string; count: number; budget: number }[];
-    budgetUtilization: { date: string; value: number }[];
-    partnershipGrowth: { date: string; value: number }[];
-    revenueProjections: { date: string; value: number }[];
-    genreDistribution: { genre: string; projects: number; budget: number }[];
-    monthlyMetrics: { month: string; projects: number; revenue: number; costs: number }[];
-    projectTimelines: { project: string; planned: number; actual: number; status: string }[];
-    resourceAllocation: { resource: string; allocated: number; utilized: number }[];
-  };
+  projectTimelines: { project: string; planned: number; actual: number; status: string }[];
 }
 
-export const EnhancedProductionAnalytics: React.FC<ProductionAnalyticsProps> = ({ 
-  productionPerformance 
-}) => {
+export const EnhancedProductionAnalytics: React.FC<PitchEvaluationProps> = (props) => {
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
-  const [analyticsData, setAnalyticsData] = useState<ProductionAnalyticsData | null>(null);
+  const [chartData, setChartData] = useState<ChartData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
 
-  // Use ref to always read the latest timeRange inside the callback,
-  // avoiding stale-closure issues that cause "click twice to update"
   const timeRangeRef = useRef(timeRange);
   timeRangeRef.current = timeRange;
 
-  const fetchAnalyticsData = useCallback(async () => {
+  const fetchChartData = useCallback(async () => {
     const range = timeRangeRef.current;
     try {
       setLoading(true);
-
-      // Call the production analytics API with timeframe parameter
       const response = await fetch(
         `${config.API_URL}/api/production/analytics?timeframe=${range}`,
-        {
-          method: 'GET',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
+        { method: 'GET', credentials: 'include', headers: { 'Content-Type': 'application/json' } }
       );
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
 
       const result = await response.json();
-
-      // Backend returns { success: true, data: { summary, recentActivity, ... } }
-      if (result.success && (result.data || result.analytics)) {
-        // Transform API response to component data structure
-        const apiData = result.data || result.analytics;
-        const transformedData: ProductionAnalyticsData = transformApiResponse(apiData, range);
-        setAnalyticsData(transformedData);
+      if (result.success && result.data) {
+        const apiData = result.data;
+        setChartData(transformChartData(apiData));
       } else {
-        console.warn('API returned unexpected structure', result);
-        setAnalyticsData(null);
+        setChartData(null);
         setError('Unexpected API response format');
       }
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
-      console.error('Error fetching analytics data:', e);
-      setAnalyticsData(null);
+      console.error('Error fetching chart data:', e);
+      setChartData(null);
       setError(e.message);
     } finally {
       setLoading(false);
@@ -140,135 +84,64 @@ export const EnhancedProductionAnalytics: React.FC<ProductionAnalyticsProps> = (
   }, [timeRange]);
 
   useEffect(() => {
-    fetchAnalyticsData();
-    
-    // Set up auto-refresh every 5 minutes if enabled
+    fetchChartData();
     let interval: NodeJS.Timeout;
     if (autoRefresh) {
-      interval = setInterval(fetchAnalyticsData, 5 * 60 * 1000);
+      interval = setInterval(fetchChartData, 5 * 60 * 1000);
     }
-    
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [timeRange, autoRefresh, fetchAnalyticsData]);
+    return () => { if (interval) clearInterval(interval); };
+  }, [timeRange, autoRefresh, fetchChartData]);
 
-  // Transform API response to component data structure
-  const transformApiResponse = (apiData: any, _range: string): ProductionAnalyticsData => {
-    const metrics = apiData.productionMetrics || {};
+  const transformChartData = (apiData: any): ChartData => {
     const genreData = apiData.genrePerformance || [];
-    const timelineData = apiData.timelineAdherence || [];
-    const crewData = apiData.crewUtilization || [];
-    const successData = apiData.successMetrics || {};
     const trendsData = apiData.monthlyTrends || [];
+    const metrics = apiData.productionMetrics || {};
+    const successData = apiData.successMetrics || {};
 
-    const totalProjects = Number(metrics.total_projects) || 0;
-    const totalBudget = Number(metrics.total_budget) || 0;
+    // Build pipeline from props (more accurate than backend pipeline stages)
+    const underReview = Math.max(0, props.savedPitchCount - props.ndasSigned - props.projectsStarted);
+    const pipelineByStage = [
+      { stage: 'Saved', count: props.savedPitchCount },
+      { stage: 'Under Review', count: underReview },
+      { stage: 'NDA Requested', count: props.ndaRequestsSent },
+      { stage: 'NDA Signed', count: props.ndasSigned },
+      { stage: 'Project Started', count: props.projectsStarted },
+    ].filter(s => s.count > 0);
 
     return {
-      kpis: {
-        activeProjects: Number(metrics.active_projects) || 0,
-        totalBudget,
-        avgProjectCost: totalProjects > 0 ? totalBudget / totalProjects : 0,
+      genreDistribution: genreData.map((g: any) => ({
+        genre: g.genre || 'Unknown',
+        count: Number(g.project_count) || 0,
+      })),
+      pipelineByStage,
+      monthlyActivity: trendsData.map((t: any) => ({
+        date: t.month || '',
+        value: Number(t.views) || Number(t.projects_created) || 0,
+      })),
+      projectMetrics: {
+        totalBudget: Number(metrics.total_budget) || 0,
         completionRate: Number(metrics.avg_completion_rate) || 0,
-        partnerships: Number(metrics.partnerships) || 0,
-        monthlyRevenue: Number(successData.total_revenue) || 0,
-        crewUtilization: crewData.length > 0
-          ? crewData.reduce((acc: number, c: any) => acc + (Number(c.utilization_rate) || 0), 0) / crewData.length
-          : 0,
-        onTimeDelivery: timelineData.length > 0
-          ? timelineData.reduce((acc: number, t: any) => acc + (Number(t.on_time_percentage) || 0), 0) / timelineData.length
-          : 0,
-        costVariance: metrics.total_budget && metrics.total_spent
-          ? ((Number(metrics.total_spent) - Number(metrics.total_budget)) / Number(metrics.total_budget)) * 100
-          : 0,
-        clientSatisfaction: Number(successData.client_satisfaction) || 0,
+        totalRevenue: Number(successData.total_revenue) || 0,
       },
-      changes: {
-        projectsChange: Number(metrics.projects_change) || 0,
-        budgetChange: Number(metrics.budget_change) || 0,
-        costChange: Number(metrics.cost_change) || 0,
-        completionChange: Number(metrics.completion_change) || 0,
-        partnershipsChange: Number(metrics.partnerships_change) || 0,
-        revenueChange: Number(successData.revenue_change) || 0,
-        utilizationChange: 0,
-        deliveryChange: 0,
-        varianceChange: 0,
-        satisfactionChange: 0,
-      },
-      charts: {
-        projectPipeline: timelineData.length > 0
-          ? timelineData.map((t: any) => ({
-              stage: t.stage || 'Unknown',
-              count: Number(t.projects) || 0,
-              budget: 0
-            }))
-          : [],
-        budgetUtilization: trendsData.map((t: any) => ({
-          date: t.month || '',
-          value: totalBudget > 0 ? Math.round((Number(t.costs) / totalBudget) * 100) : 0
-        })),
-        partnershipGrowth: trendsData.map((t: any) => ({
-          date: t.month || '',
-          value: Number(t.projects_created) || 0
-        })),
-        revenueProjections: trendsData.map((t: any) => ({
-          date: t.month || '',
-          value: Number(t.revenue) || 0
-        })),
-        genreDistribution: genreData.length > 0
-          ? genreData.map((g: any) => ({
-              genre: g.genre || 'Unknown',
-              projects: Number(g.project_count) || 0,
-              budget: Number(g.total_investment) || 0
-            }))
-          : [],
-        monthlyMetrics: trendsData.map((t: any) => ({
-          month: t.month || '',
-          projects: Number(t.projects_created) || 0,
-          revenue: Number(t.revenue) || 0,
-          costs: Number(t.costs) || 0
-        })),
-        projectTimelines: apiData.projectTimelines?.map((t: any) => ({
-          project: t.project || t.title || 'Unknown',
-          planned: Number(t.planned) || 0,
-          actual: Number(t.actual) || 0,
-          status: t.status || 'Unknown',
-        })) || [],
-        resourceAllocation: crewData.length > 0
-          ? crewData.map((c: any) => ({
-              resource: c.department || 'Unknown',
-              allocated: Number(c.total_crew) || 0,
-              utilized: Math.round((Number(c.total_crew) || 0) * (Number(c.utilization_rate) || 80) / 100)
-            }))
-          : []
-      }
+      projectTimelines: apiData.projectTimelines?.map((t: any) => ({
+        project: t.project || t.title || 'Unknown',
+        planned: Number(t.planned) || 0,
+        actual: Number(t.actual) || 0,
+        status: t.status || 'Unknown',
+      })) || [],
     };
   };
 
-  // Stub generators removed — all charts now use real API data from monthlyTrends
+  // KPI cards use props directly — no loading state needed for them
+  const underReview = Math.max(0, props.savedPitchCount - props.ndasSigned - props.projectsStarted);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  if (!analyticsData) {
-    return (
-      <div className="text-center text-gray-500 py-8">
-        <p className="mb-2">{error ? `Error: ${error}` : 'No analytics data available yet.'}</p>
-        <button
-          onClick={fetchAnalyticsData}
-          className="text-blue-600 hover:text-blue-800 underline text-sm"
-        >
-          Retry
-        </button>
-      </div>
-    );
-  }
+  const exportData = [{
+    pitchesSaved: props.savedPitchCount,
+    underReview,
+    ndasActive: props.ndasSigned,
+    creatorsFollowing: props.creatorsFollowing,
+    projectsStarted: props.projectsStarted,
+  }];
 
   return (
     <div className="space-y-6">
@@ -276,357 +149,219 @@ export const EnhancedProductionAnalytics: React.FC<ProductionAnalyticsProps> = (
       <div className="bg-white rounded-xl border p-6">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Production Analytics Dashboard</h2>
-            <p className="text-gray-600">Monitor project pipeline, costs, and operational efficiency</p>
+            <h2 className="text-2xl font-bold text-gray-900">Pitch Evaluation Dashboard</h2>
+            <p className="text-gray-600">Track your pitch discovery, evaluation, and deal pipeline</p>
           </div>
-          
+
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => setAutoRefresh(!autoRefresh)}
               className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                autoRefresh 
-                  ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                autoRefresh
+                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               <RefreshCw className={`w-4 h-4 ${autoRefresh ? 'animate-pulse' : ''}`} />
               <span>Auto Refresh</span>
             </button>
-            
+
             <TimeRangeFilter
               value={timeRange}
               onChange={(range) => setTimeRange(range)}
               defaultRange="30d"
             />
-            
+
             <AnalyticsExport
-              data={analyticsData as any}
-              title="Production Analytics"
+              data={exportData as any}
+              title="Pitch Evaluation Analytics"
             />
           </div>
         </div>
       </div>
 
-      {/* Primary KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <AnalyticCard 
-          title="Active Projects"
-          value={analyticsData.kpis.activeProjects}
-          change={analyticsData.changes.projectsChange}
-          icon={<Building2 className="w-5 h-5 text-blue-500" />}
+      {/* KPI Cards — always rendered from props, no loading dependency */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <AnalyticCard
+          title="Pitches Saved"
+          value={props.savedPitchCount}
+          change={0}
+          icon={<Bookmark className="w-5 h-5 text-blue-500" />}
           variant="primary"
         />
-        <AnalyticCard 
-          title="Total Budget"
-          value={analyticsData.kpis.totalBudget}
-          change={analyticsData.changes.budgetChange}
-          icon={<DollarSign className="w-5 h-5 text-green-500" />}
-          variant="success"
-          format="currency"
-        />
-        <AnalyticCard 
-          title="Completion Rate"
-          value={analyticsData.kpis.completionRate}
-          change={analyticsData.changes.completionChange}
-          icon={<CheckCircle className="w-5 h-5 text-purple-500" />}
+        <AnalyticCard
+          title="Under Review"
+          value={underReview}
+          change={0}
+          icon={<FileCheck className="w-5 h-5 text-purple-500" />}
           variant="primary"
-          format="percentage"
         />
-        <AnalyticCard 
-          title="Monthly Revenue"
-          value={analyticsData.kpis.monthlyRevenue}
-          change={analyticsData.changes.revenueChange}
-          icon={<TrendingUp className="w-5 h-5 text-orange-500" />}
-          variant="warning"
-          format="currency"
-        />
-        <AnalyticCard 
-          title="Partnerships"
-          value={analyticsData.kpis.partnerships}
-          change={analyticsData.changes.partnershipsChange}
-          icon={<Users className="w-5 h-5 text-indigo-500" />}
-          variant="secondary"
-        />
-      </div>
-
-      {/* Secondary KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <AnalyticCard 
-          title="Avg Project Cost"
-          value={analyticsData.kpis.avgProjectCost}
-          change={analyticsData.changes.costChange}
-          icon={<PieChart className="w-5 h-5 text-cyan-500" />}
-          variant="success"
-          format="currency"
-        />
-        <AnalyticCard 
-          title="Crew Utilization"
-          value={analyticsData.kpis.crewUtilization}
-          change={analyticsData.changes.utilizationChange}
-          icon={<Zap className="w-5 h-5 text-yellow-500" />}
-          variant="warning"
-          format="percentage"
-        />
-        <AnalyticCard 
-          title="On-Time Delivery"
-          value={analyticsData.kpis.onTimeDelivery}
-          change={analyticsData.changes.deliveryChange}
-          icon={<Clock className="w-5 h-5 text-teal-500" />}
-          variant="success"
-          format="percentage"
-        />
-        <AnalyticCard 
-          title="Cost Variance"
-          value={analyticsData.kpis.costVariance.toFixed(1)}
-          change={analyticsData.changes.varianceChange}
-          icon={<BarChart3 className="w-5 h-5 text-red-500" />}
-          variant="danger"
-          format="percentage"
-        />
-        <AnalyticCard 
-          title="Client Satisfaction"
-          value={analyticsData.kpis.clientSatisfaction.toFixed(1)}
-          change={analyticsData.changes.satisfactionChange}
+        <AnalyticCard
+          title="NDAs Active"
+          value={props.ndasSigned}
+          change={0}
           icon={<Shield className="w-5 h-5 text-green-500" />}
           variant="success"
         />
-      </div>
-
-      {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Project Pipeline */}
-        <ChartContainer title="Project Pipeline by Stage">
-          {analyticsData.charts.projectPipeline.length > 0 ? (
-            <BarChart
-              data={analyticsData.charts.projectPipeline.map(item => ({
-                category: item.stage,
-                value: item.count
-              }))}
-              title="Number of Projects"
-              height={300}
-            />
-          ) : (
-            <div className="flex items-center justify-center h-[300px] text-gray-500">No data available</div>
-          )}
-        </ChartContainer>
-
-        {/* Budget Utilization */}
-        <ChartContainer title="Budget Utilization Trends">
-          <AreaChart
-            data={analyticsData.charts.budgetUtilization}
-            title="Utilization (%)"
-            color="#F59E0B"
-            height={300}
-          />
-        </ChartContainer>
-
-        {/* Genre Distribution */}
-        <ChartContainer title="Projects by Genre">
-          {analyticsData.charts.genreDistribution.length > 0 ? (
-            <PieChartComponent
-              data={analyticsData.charts.genreDistribution.map(item => ({
-                category: item.genre,
-                value: item.projects
-              }))}
-              title="Project Distribution"
-              type="doughnut"
-              height={300}
-            />
-          ) : (
-            <div className="flex items-center justify-center h-[300px] text-gray-500">No data available</div>
-          )}
-        </ChartContainer>
-
-        {/* Revenue Projections */}
-        <ChartContainer title="Revenue Projections">
-          <LineChart
-            data={analyticsData.charts.revenueProjections}
-            title="Projected Revenue ($)"
-            color="#10B981"
-            height={300}
-          />
-        </ChartContainer>
-
-        {/* Partnership Growth */}
-        <ChartContainer title="Partnership Growth">
-          <AreaChart
-            data={analyticsData.charts.partnershipGrowth}
-            title="Active Partnerships"
-            color="#8B5CF6"
-            height={300}
-          />
-        </ChartContainer>
-
-        {/* Resource Utilization */}
-        <ChartContainer title="Resource Utilization">
-          {analyticsData.charts.resourceAllocation.length > 0 ? (
-            <MultiLineChart
-              datasets={[
-                {
-                  label: 'Allocated',
-                  data: analyticsData.charts.resourceAllocation.map(item => ({
-                    date: item.resource,
-                    value: item.allocated
-                  })),
-                  color: '#3B82F6'
-                },
-                {
-                  label: 'Utilized',
-                  data: analyticsData.charts.resourceAllocation.map(item => ({
-                    date: item.resource,
-                    value: item.utilized
-                  })),
-                  color: '#EF4444'
-                }
-              ]}
-              height={300}
-            />
-          ) : (
-            <div className="flex items-center justify-center h-[300px] text-gray-500">No data available</div>
-          )}
-        </ChartContainer>
-      </div>
-
-      {/* Monthly Performance Overview */}
-      <ChartContainer title="Monthly Financial Performance">
-        <StackedBarChart
-          data={analyticsData.charts.monthlyMetrics.map(item => ({
-            category: item.month,
-            values: [
-              { label: 'Revenue', value: item.revenue / 1000 },
-              { label: 'Costs', value: item.costs / 1000 }
-            ]
-          }))}
-          height={350}
+        <AnalyticCard
+          title="Creators Following"
+          value={props.creatorsFollowing}
+          change={0}
+          icon={<Users className="w-5 h-5 text-indigo-500" />}
+          variant="secondary"
         />
-      </ChartContainer>
-
-      {/* Project Timelines */}
-      <div className="bg-white rounded-xl border p-6">
-        <h3 className="text-xl font-semibold text-gray-900 mb-6">Project Timeline Performance</h3>
-        {analyticsData.charts.projectTimelines.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="text-left border-b border-gray-200">
-                  <th className="pb-3 text-gray-600">Project</th>
-                  <th className="pb-3 text-gray-600">Planned (Days)</th>
-                  <th className="pb-3 text-gray-600">Actual (Days)</th>
-                  <th className="pb-3 text-gray-600">Variance</th>
-                  <th className="pb-3 text-gray-600">Status</th>
-                </tr>
-              </thead>
-              <tbody className="space-y-2">
-                {analyticsData.charts.projectTimelines.map((project, index) => (
-                  <tr key={index} className="border-b border-gray-100">
-                    <td className="py-3 font-medium text-gray-900">{project.project}</td>
-                    <td className="py-3 text-gray-600">{project.planned}</td>
-                    <td className="py-3 text-gray-600">{project.actual || 'TBD'}</td>
-                    <td className={`py-3 font-medium ${
-                      project.actual === 0 ? 'text-gray-400' :
-                      project.actual <= project.planned ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {project.actual === 0 ? '-' :
-                       project.actual <= project.planned ?
-                       `${project.planned - project.actual} days early` :
-                       `${project.actual - project.planned} days late`}
-                    </td>
-                    <td className="py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        project.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                        project.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-                        project.status === 'Post-Production' ? 'bg-purple-100 text-purple-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {project.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="text-center text-gray-500 py-8">No data available</div>
-        )}
+        <AnalyticCard
+          title="Projects Started"
+          value={props.projectsStarted}
+          change={0}
+          icon={<Building2 className="w-5 h-5 text-orange-500" />}
+          variant="warning"
+        />
       </div>
 
-      {/* Operational Insights — only show when there's real data */}
-      {analyticsData.kpis.activeProjects > 0 && (
+      {/* Charts — depend on API fetch */}
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        </div>
+      ) : error && !chartData ? (
+        <div className="text-center text-gray-500 py-8">
+          <p className="mb-2">Error loading charts: {error}</p>
+          <button onClick={fetchChartData} className="text-purple-600 hover:text-purple-800 underline text-sm">
+            Retry
+          </button>
+        </div>
+      ) : chartData ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="bg-white rounded-xl border p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Production Health</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Pipeline Status</span>
-                <span className={`font-semibold ${analyticsData.kpis.activeProjects > 0 ? 'text-green-600' : 'text-gray-400'}`}>
-                  {analyticsData.kpis.activeProjects > 0 ? 'Active' : 'No projects'}
-                </span>
+          {/* Evaluation Pipeline */}
+          <ChartContainer title="Evaluation Pipeline">
+            {chartData.pipelineByStage.length > 0 ? (
+              <BarChart
+                data={chartData.pipelineByStage.map(item => ({
+                  category: item.stage,
+                  value: item.count
+                }))}
+                title="Pitches by Stage"
+                height={300}
+                color="#8B5CF6"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-gray-500">
+                Save pitches from the marketplace to build your pipeline
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Budget Control</span>
-                <span className={`font-semibold ${analyticsData.kpis.costVariance <= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {analyticsData.kpis.costVariance <= 0 ? 'On Track' : 'Over Budget'}
-                </span>
+            )}
+          </ChartContainer>
+
+          {/* Genre Distribution */}
+          <ChartContainer title="Pitches by Genre">
+            {chartData.genreDistribution.length > 0 ? (
+              <PieChartComponent
+                data={chartData.genreDistribution.map(item => ({
+                  category: item.genre,
+                  value: item.count
+                }))}
+                title="Saved Pitches by Genre"
+                type="doughnut"
+                height={300}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-gray-500">
+                No genre data available yet
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Completion Rate</span>
-                <span className={`font-semibold ${analyticsData.kpis.completionRate >= 80 ? 'text-green-600' : analyticsData.kpis.completionRate >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
-                  {analyticsData.kpis.completionRate}%
-                </span>
+            )}
+          </ChartContainer>
+
+          {/* Monthly Activity */}
+          <ChartContainer title="Monthly Activity">
+            {chartData.monthlyActivity.length > 0 ? (
+              <LineChart
+                data={chartData.monthlyActivity}
+                title="Pitch Engagement"
+                color="#8B5CF6"
+                height={300}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-gray-500">
+                Activity data will appear as you engage with pitches
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">On-Time Delivery</span>
-                <span className={`font-semibold ${analyticsData.kpis.onTimeDelivery >= 80 ? 'text-green-600' : analyticsData.kpis.onTimeDelivery >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                  {analyticsData.kpis.onTimeDelivery}%
-                </span>
-              </div>
-            </div>
+            )}
+          </ChartContainer>
+        </div>
+      ) : null}
+
+      {/* Project Management — only shown when projects exist */}
+      {props.projectsStarted > 0 && chartData && (
+        <div className="space-y-6">
+          <div className="border-t pt-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-1">Active Projects</h2>
+            <p className="text-gray-500 text-sm mb-4">Tracking projects converted from pitches</p>
           </div>
 
-          <div className="bg-white rounded-xl border p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Active Projects</span>
-                <span className="font-semibold text-gray-900">{analyticsData.kpis.activeProjects}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Total Budget</span>
-                <span className="font-semibold text-gray-900">
-                  {analyticsData.kpis.totalBudget > 0 ? `$${(analyticsData.kpis.totalBudget / 1000000).toFixed(1)}M` : '$0'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Avg Project Cost</span>
-                <span className="font-semibold text-gray-900">
-                  {analyticsData.kpis.avgProjectCost > 0 ? `$${(analyticsData.kpis.avgProjectCost / 1000000).toFixed(1)}M` : '$0'}
-                </span>
-              </div>
-            </div>
+          {/* Project KPIs */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <AnalyticCard
+              title="Total Budget"
+              value={chartData.projectMetrics.totalBudget}
+              change={0}
+              icon={<DollarSign className="w-5 h-5 text-green-500" />}
+              variant="success"
+              format="currency"
+            />
+            <AnalyticCard
+              title="Completion Rate"
+              value={chartData.projectMetrics.completionRate}
+              change={0}
+              icon={<CheckCircle className="w-5 h-5 text-purple-500" />}
+              variant="primary"
+              format="percentage"
+            />
+            <AnalyticCard
+              title="Total Revenue"
+              value={chartData.projectMetrics.totalRevenue}
+              change={0}
+              icon={<TrendingUp className="w-5 h-5 text-orange-500" />}
+              variant="warning"
+              format="currency"
+            />
           </div>
 
-          <div className="bg-white rounded-xl border p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Monthly Revenue</span>
-                <span className="font-semibold text-gray-900">
-                  {analyticsData.kpis.monthlyRevenue > 0 ? `$${(analyticsData.kpis.monthlyRevenue / 1000).toFixed(0)}K` : '$0'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Partnerships</span>
-                <span className="font-semibold text-gray-900">{analyticsData.kpis.partnerships}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Client Satisfaction</span>
-                <span className="font-semibold text-gray-900">
-                  {analyticsData.kpis.clientSatisfaction > 0 ? analyticsData.kpis.clientSatisfaction.toFixed(1) : 'N/A'}
-                </span>
+          {/* Project Timelines Table */}
+          {chartData.projectTimelines.length > 0 && (
+            <div className="bg-white rounded-xl border p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Project Timelines</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left border-b border-gray-200">
+                      <th className="pb-3 text-sm font-medium text-gray-600">Project</th>
+                      <th className="pb-3 text-sm font-medium text-gray-600">Planned (Days)</th>
+                      <th className="pb-3 text-sm font-medium text-gray-600">Actual (Days)</th>
+                      <th className="pb-3 text-sm font-medium text-gray-600">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {chartData.projectTimelines.map((project, index) => (
+                      <tr key={index} className="border-b border-gray-100">
+                        <td className="py-3 font-medium text-gray-900">{project.project}</td>
+                        <td className="py-3 text-gray-600">{project.planned || '—'}</td>
+                        <td className="py-3 text-gray-600">{project.actual || 'In Progress'}</td>
+                        <td className="py-3">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            project.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                            project.status === 'Post-Production' ? 'bg-purple-100 text-purple-800' :
+                            project.status === 'Production' ? 'bg-blue-100 text-blue-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {project.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>

@@ -12,6 +12,11 @@ if (typeof process === 'undefined') {
 // Sentry Error Tracking
 import * as Sentry from '@sentry/cloudflare';
 
+// Axiom Request Logging
+import { createAxiomLogger } from './middleware/axiom-logging';
+// Per-request trace context for SQLCommenter + Axiom query correlation
+import { traceStorage } from './db/trace-context';
+
 // import { createAuthAdapter } from './auth/auth-adapter';
 import { createDatabase } from './db/raw-sql-connection';
 import { UserProfileRoutes } from './routes/user-profile';
@@ -3685,6 +3690,7 @@ class RouteRegistry {
 
     // Try exact match first
     let handler = methodRoutes.get(path);
+    let matchedRoute = handler ? path : '';
 
     // Try pattern matching for dynamic routes
     if (!handler) {
@@ -3693,6 +3699,7 @@ class RouteRegistry {
         const match = path.match(regex);
         if (match) {
           handler = routeHandler;
+          matchedRoute = pattern;
           // Extract params and attach to request
           const params = this.extractParams(pattern, path);
           (request as any).params = params;
@@ -3741,8 +3748,17 @@ class RouteRegistry {
       (request as any).user = authResult.user;
     }
 
+    // Build per-request trace context for SQLCommenter + Axiom correlation
+    const traceparent = request.headers.get('traceparent')
+      || request.headers.get('sentry-trace')
+      || request.headers.get('x-trace-id')
+      || '';
+    const traceCtx = { traceparent, route: matchedRoute, method };
+
     try {
-      const response = await handler(request);
+      // Run handler inside AsyncLocalStorage so WorkerDatabase.executeQuery()
+      // can read the trace context and annotate every SQL query automatically.
+      const response = await traceStorage.run(traceCtx, () => handler!(request));
       const duration = Date.now() - requestStartTime;
 
       // Record successful request performance
@@ -16214,9 +16230,10 @@ Signatures: [To be completed upon signing]
       if (!authCheck.authorized) return authCheck.response;
 
       const origin = request.headers.get('Origin');
-      const body = await request.json() as { pitch_id?: string; notes?: string };
+      const body = await request.json() as { pitch_id?: string; pitchId?: number; notes?: string };
+      const pitchId = body.pitch_id || body.pitchId;
 
-      if (!body.pitch_id) {
+      if (!pitchId) {
         return new Response(JSON.stringify({
           success: false,
           error: { message: 'pitch_id is required' }
@@ -16229,7 +16246,7 @@ Signatures: [To be completed upon signing]
       // Check if pitch exists
       const pitchExists = await this.db.query(
         'SELECT id FROM pitches WHERE id = $1',
-        [body.pitch_id]
+        [pitchId]
       );
 
       if (!pitchExists.length) {
@@ -16246,9 +16263,9 @@ Signatures: [To be completed upon signing]
       await this.db.query(`
         INSERT INTO saved_pitches (user_id, pitch_id, notes, saved_at)
         VALUES ($1, $2, $3, NOW())
-        ON CONFLICT (user_id, pitch_id) 
+        ON CONFLICT (user_id, pitch_id)
         DO UPDATE SET notes = $3, saved_at = NOW()
-      `, [authCheck.user.id, body.pitch_id, body.notes || null]);
+      `, [authCheck.user.id, pitchId, body.notes || null]);
 
       return new Response(JSON.stringify({
         success: true,
@@ -19528,10 +19545,14 @@ const workerHandler = {
  */
 const websocketSafeHandler = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const axiomLogger = createAxiomLogger(env);
+    const startTime = Date.now();
+
     // Check for WebSocket upgrade - bypass Sentry entirely for WebSocket requests
     const upgradeHeader = request.headers.get('Upgrade');
     if (upgradeHeader && upgradeHeader.toLowerCase() === 'websocket') {
       console.log('[WebSocket Handler] Bypassing Sentry for WebSocket request');
+      // WebSocket upgrades don't produce a normal HTTP response — skip Axiom logging
       return workerHandler.fetch(request, env, ctx);
     }
 
@@ -19553,7 +19574,27 @@ const websocketSafeHandler = {
       workerHandler as any
     );
 
-    return (sentryHandler as any).fetch(request, env, ctx);
+    let response: Response;
+    try {
+      response = await (sentryHandler as any).fetch(request, env, ctx);
+    } catch (err) {
+      const duration = Date.now() - startTime;
+      const e = err instanceof Error ? err : new Error(String(err));
+      // Log the error to Axiom in the background — never block the throw
+      ctx.waitUntil(
+        axiomLogger.logError(e, request, { duration }).catch(() => {})
+      );
+      throw err;
+    }
+
+    // Fire-and-forget: send request metrics to Axiom after the response is ready.
+    // AXIOM_TOKEN absence is handled inside logRequest — it returns early without throwing.
+    const duration = Date.now() - startTime;
+    ctx.waitUntil(
+      axiomLogger.logRequest(request, response, duration).catch(() => {})
+    );
+
+    return response;
   },
 
   // Scheduled event handler - must be part of the default export object

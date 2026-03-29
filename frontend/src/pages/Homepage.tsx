@@ -166,7 +166,7 @@ export default function Homepage() {
 
                   {/* Dashboard Button */}
                   <button
-                    onClick={() => navigate(`/${userType}/dashboard`)}
+                    onClick={() => navigate(userType ? `/${userType}/dashboard` : '/portals')}
                     className="text-button px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
                   >
                     Dashboard
