@@ -104,7 +104,9 @@ export default function MarketplaceEnhanced() {
     loading: boolean;
     error: string | null;
     loaded: boolean;
+    fetchedAt: number;
   }
+  const STALE_AFTER_MS = 3 * 60 * 1000; // re-fetch after 3 minutes
   const [tabStates, setTabStates] = useState<Record<string, TabState>>({});
   const [viewMode, setViewMode] = useState<keyof typeof VIEW_MODES>('grid');
   const [showFilters, setShowFilters] = useState(false);
@@ -160,10 +162,12 @@ export default function MarketplaceEnhanced() {
   const pitches = currentTabState?.pitches ?? [];
   const loading = currentTabState?.loading ?? !currentTabState?.loaded;
 
-  // Load pitches for the current sort/tab — only fetch if not already loaded
+  // Load pitches for the current sort/tab — re-fetch when stale
   useEffect(() => {
     const tab = sortBy;
-    if (tabStates[tab]?.loaded) return;
+    const state = tabStates[tab];
+    const isStale = state?.fetchedAt && Date.now() - state.fetchedAt > STALE_AFTER_MS;
+    if (state?.loaded && !isStale) return;
     void fetchPitchesForTab(tab);
   }, [sortBy]);
 
@@ -193,7 +197,7 @@ export default function MarketplaceEnhanced() {
 
     setTabStates(prev => ({
       ...prev,
-      [tab]: { pitches: prev[tab]?.pitches ?? [], loading: true, error: null, loaded: false }
+      [tab]: { pitches: prev[tab]?.pitches ?? [], loading: true, error: null, loaded: false, fetchedAt: 0 }
     }));
 
     try {
@@ -208,7 +212,7 @@ export default function MarketplaceEnhanced() {
 
       setTabStates(prev => ({
         ...prev,
-        [tab]: { pitches: validPitches, loading: false, error: null, loaded: true }
+        [tab]: { pitches: validPitches, loading: false, error: null, loaded: true, fetchedAt: Date.now() }
       }));
       calculateStats(validPitches);
     } catch (error) {
@@ -217,7 +221,7 @@ export default function MarketplaceEnhanced() {
       toast.error('Failed to load pitches');
       setTabStates(prev => ({
         ...prev,
-        [tab]: { pitches: [], loading: false, error: 'Failed to load pitches', loaded: true }
+        [tab]: { pitches: [], loading: false, error: 'Failed to load pitches', loaded: true, fetchedAt: Date.now() }
       }));
       calculateStats([]);
     }
@@ -379,14 +383,15 @@ export default function MarketplaceEnhanced() {
 
     // Budget range filter
     filtered = filtered.filter(pitch => {
-      // Parse budget if it's a string like "5-8 million"
       let budgetValue = 0;
       const budgetStr = pitch.estimatedBudget || pitch.budgetBracket || '';
       if (budgetStr) {
-        // Extract numeric value from strings like "5-8 million" or "15-25 million"
         const match = String(budgetStr).match(/(\d+)/);
         if (match) {
-          budgetValue = parseInt(match[1], 10) * 1000000; // Convert to actual number
+          const raw = parseInt(match[1], 10);
+          // If the value is already a large number (e.g. 45000000), use as-is.
+          // Only multiply by 1M for short-form values like "5" or "25" (millions).
+          budgetValue = raw >= 100000 ? raw : raw * 1000000;
         }
       }
 
@@ -438,7 +443,9 @@ export default function MarketplaceEnhanced() {
       const budgetStr = p.estimatedBudget || p.budgetBracket || '';
       if (!budgetStr) return 0;
       const match = String(budgetStr).match(/(\d+)/);
-      return match ? parseInt(match[1], 10) * 1000000 : 0;
+      if (!match) return 0;
+      const raw = parseInt(match[1], 10);
+      return raw >= 100000 ? raw : raw * 1000000;
     };
     const getInvestmentGoal = (p: Pitch) => {
       const pp = p as unknown as Record<string, unknown>;
@@ -711,15 +718,9 @@ export default function MarketplaceEnhanced() {
               <nav className="hidden md:flex items-center gap-6">
                 <button
                   onClick={() => { void navigate('/marketplace'); }}
-                  className="text-gray-700 hover:text-purple-600 transition font-medium"
+                  className="text-purple-600 font-medium"
                 >
-                  Browse Pitches
-                </button>
-                <button
-                  onClick={() => { void navigate('/search/advanced'); }}
-                  className="text-gray-700 hover:text-purple-600 transition"
-                >
-                  Advanced Search
+                  Marketplace
                 </button>
                 <button
                   onClick={() => { void navigate('/about'); }}

@@ -128,3 +128,30 @@ Launch Chrome: `google-chrome-stable --remote-debugging-port=9222 --user-data-di
 
 ### Docs
 - `docs/OBSERVABILITY.md` | `docs/LOGGING.md` | `docs/SENTRY_ERROR_TRACKING.md` | `docs/monitoring-guide.md`
+
+## Schema Drift Detection & Resolution
+
+Cloudflare Workers Observability (100% log sampling) surfaces SQL errors as they happen. Use the Cloudflare MCP to query telemetry without leaving the CLI.
+
+### Detection (Cloudflare MCP)
+```js
+// Find SQL errors in last 24h
+telemetry/query → view: "events", filters: [
+  { key: "$metadata.service", operation: "eq", value: "pitchey-api-prod" },
+  { key: "$metadata.level", operation: "eq", value: "error" }
+]
+```
+Common patterns: `relation "X" does not exist` (missing table), `column X.Y does not exist` (missing column)
+
+### Resolution Workflow
+1. **Detect** — Query Cloudflare MCP for `$metadata.level = error` events
+2. **Trace** — Match error to handler in `src/worker-integrated.ts` (grep for table/column name)
+3. **Cross-reference** — Check `src/db/migrations/` for the intended schema
+4. **Migrate** — Write numbered migration (`NNN_desc.sql`) with `IF NOT EXISTS` patterns
+5. **Test** — Run on Neon branch first (`mcp__neon__create_branch` → `mcp__neon__run_sql`)
+6. **Apply** — Run on production (`mcp__neon__run_sql` on main branch)
+7. **Deploy** — `wrangler deploy` if Worker code also changed
+8. **Verify** — Re-query Cloudflare MCP for errors, expect zero
+
+### Live Tail (alternative)
+`wrangler tail --format=json | grep "does not exist"`

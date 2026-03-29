@@ -12592,7 +12592,7 @@ pitchey_analytics_datapoints_per_minute 1250
         csvContent = 'ID,Title,Genre,Status,Created\n' + pitches.map((p: any) => `${p.id},"${p.title}",${p.genre},${p.status},${p.created_at}`).join('\n');
       } else if (exportType === 'analytics') {
         const analytics = await this.db.query(`
-          SELECT date, views, likes FROM pitch_analytics WHERE user_id = $1 ORDER BY date DESC LIMIT 90
+          SELECT pa.date, pa.views, pa.likes FROM pitch_analytics pa JOIN pitches p ON pa.pitch_id = p.id WHERE p.user_id = $1 ORDER BY pa.date DESC LIMIT 90
         `, [authResult.user!.id]).catch(() => []);
         csvContent = 'Date,Views,Likes\n' + analytics.map((a: any) => `${a.date},${a.views},${a.likes}`).join('\n');
       } else {
