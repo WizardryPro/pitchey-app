@@ -851,7 +851,7 @@ export default function MarketplaceEnhanced() {
               </div>
               <div className="bg-white/10 backdrop-blur rounded-lg px-3 py-2 sm:p-3">
                 <div className="text-xl sm:text-2xl font-bold">
-                  ${(stats.totalInvestment / 1000000).toFixed(1)}M
+                  {stats.totalInvestment > 0 ? formatBudgetCompact(stats.totalInvestment) : '$0'}
                 </div>
                 <div className="text-[10px] sm:text-xs text-purple-200">Total Invested</div>
               </div>

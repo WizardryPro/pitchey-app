@@ -4,6 +4,7 @@ import { ArrowLeft, Eye, Heart, Share2, Tag, Film, Calendar, User, Shield, Lock,
 import { pitchAPI } from '../lib/api';
 import type { Pitch } from '../lib/api';
 import { useBetterAuthStore } from '../store/betterAuthStore';
+import { formatCurrency } from '@shared/utils/formatters';
 import { ndaService } from '@features/ndas/services/nda.service';
 import NDAWizard from '@features/ndas/components/NDAWizard';
 import FormatDisplay from '../components/FormatDisplay';
@@ -356,16 +357,16 @@ export default function PublicPitchView() {
                   {pitch.budget && (
                     <div>
                       <h4 className="font-medium text-gray-900 mb-1">Budget</h4>
-                      <p className="text-gray-700">{pitch.budget}</p>
+                      <p className="text-gray-700">{formatCurrency(pitch.budget)}</p>
                       {pitch.budgetBreakdown != null ? (() => {
                         const bd = pitch.budgetBreakdown as { development?: number; production?: number; postProduction?: number; marketing?: number };
                         return (
                           <div className="mt-2 p-3 bg-gray-50 rounded-lg">
                             <div className="grid grid-cols-2 gap-2 text-sm">
-                              <div>Development: ${bd.development?.toLocaleString()}</div>
-                              <div>Production: ${bd.production?.toLocaleString()}</div>
-                              <div>Post-Production: ${bd.postProduction?.toLocaleString()}</div>
-                              <div>Marketing: ${bd.marketing?.toLocaleString()}</div>
+                              <div>Development: {formatCurrency(bd.development)}</div>
+                              <div>Production: {formatCurrency(bd.production)}</div>
+                              <div>Post-Production: {formatCurrency(bd.postProduction)}</div>
+                              <div>Marketing: {formatCurrency(bd.marketing)}</div>
                             </div>
                           </div>
                         );

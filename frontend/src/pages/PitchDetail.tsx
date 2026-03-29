@@ -11,6 +11,7 @@ import EnhancedNDARequest from '@features/ndas/components/NDA/EnhancedNDARequest
 import FormatDisplay from '../components/FormatDisplay';
 import FollowButton from '@features/browse/components/FollowButton';
 import SocialProofBadge from '@shared/components/SocialProofBadge';
+import { formatCurrency } from '@shared/utils/formatters';
 
 export default function PitchDetail() {
   const navigate = useNavigate();
@@ -538,28 +539,28 @@ export default function PitchDetail() {
                       <div className="bg-gray-50 p-3 rounded">
                         {pitch.protectedContent.budgetBreakdown.total && (
                           <p className="text-sm font-semibold">
-                            Total Budget: ${Number(pitch.protectedContent.budgetBreakdown.total).toLocaleString()}
+                            Total Budget: {formatCurrency(pitch.protectedContent.budgetBreakdown.total)}
                           </p>
                         )}
                         <div className="grid grid-cols-2 gap-2 mt-2">
                           {pitch.protectedContent.budgetBreakdown.production && (
                             <div className="text-sm text-gray-600">
-                              Production: ${Number(pitch.protectedContent.budgetBreakdown.production).toLocaleString()}
+                              Production: {formatCurrency(pitch.protectedContent.budgetBreakdown.production)}
                             </div>
                           )}
                           {pitch.protectedContent.budgetBreakdown.marketing && (
                             <div className="text-sm text-gray-600">
-                              Marketing: ${Number(pitch.protectedContent.budgetBreakdown.marketing).toLocaleString()}
+                              Marketing: {formatCurrency(pitch.protectedContent.budgetBreakdown.marketing)}
                             </div>
                           )}
                           {pitch.protectedContent.budgetBreakdown.distribution && (
                             <div className="text-sm text-gray-600">
-                              Distribution: ${Number(pitch.protectedContent.budgetBreakdown.distribution).toLocaleString()}
+                              Distribution: {formatCurrency(pitch.protectedContent.budgetBreakdown.distribution)}
                             </div>
                           )}
                           {pitch.protectedContent.budgetBreakdown.contingency && (
                             <div className="text-sm text-gray-600">
-                              Contingency: ${Number(pitch.protectedContent.budgetBreakdown.contingency).toLocaleString()}
+                              Contingency: {formatCurrency(pitch.protectedContent.budgetBreakdown.contingency)}
                             </div>
                           )}
                         </div>

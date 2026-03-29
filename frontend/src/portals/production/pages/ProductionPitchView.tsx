@@ -10,6 +10,7 @@ import {
   Truck, Home, Globe, Mic, Edit3, Package, Upload, Sparkles
 } from 'lucide-react';
 import { pitchAPI } from '@/lib/api';
+import { formatCurrency } from '@shared/utils/formatters';
 import apiClient, { savedPitchesAPI } from '@/lib/api-client';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import FormatDisplay from '@/components/FormatDisplay';
@@ -738,7 +739,7 @@ const ProductionPitchView: React.FC = () => {
                     />
                   </span>
                   <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm">
-                    {pitch.budget}
+                    {formatCurrency(pitch.budget)}
                   </span>
                   {pitch.pages && (
                     <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
@@ -1194,7 +1195,7 @@ const ProductionPitchView: React.FC = () => {
                     <DollarSign className="h-4 w-4 mr-2" />
                     Budget
                   </span>
-                  <span className="font-semibold">{pitch.budget}</span>
+                  <span className="font-semibold">{formatCurrency(pitch.budget)}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="flex items-center text-gray-600">

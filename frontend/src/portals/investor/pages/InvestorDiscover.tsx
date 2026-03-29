@@ -4,6 +4,7 @@ import { useSearchParams, useNavigate, useLocation, Link } from 'react-router-do
 import { TrendingUp, Star, Film, Search, Filter, Grid, List, ArrowLeft, Home, RefreshCw, AlertCircle, WifiOff } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { InvestorService, type InvestmentOpportunity } from '@features/deals/services/investor.service';
+import { formatCurrency } from '@shared/utils/formatters';
 
 interface PitchItem {
   id: number;
@@ -420,7 +421,7 @@ const PitchCard = ({ pitch, viewMode }: { pitch: PitchItem; viewMode: 'grid' | '
             <div className="flex justify-between items-start">
               <div>
                 <h3 className="font-semibold text-lg">{pitch.title}</h3>
-                <p className="text-sm text-gray-600">{pitch.genre} • {pitch.budget}</p>
+                <p className="text-sm text-gray-600">{pitch.genre} • {formatCurrency(pitch.budget)}</p>
                 <p className="text-sm text-gray-500 mt-1">{pitch.description}</p>
               </div>
               <div className="text-right">
@@ -461,7 +462,7 @@ const PitchCard = ({ pitch, viewMode }: { pitch: PitchItem; viewMode: 'grid' | '
         <div className="flex justify-between items-center mb-3">
           <div>
             <div className="text-xs text-gray-500">Budget</div>
-            <div className="font-semibold">{pitch.budget}</div>
+            <div className="font-semibold">{formatCurrency(pitch.budget)}</div>
           </div>
           <div>
             <div className="text-xs text-gray-500">Est. ROI</div>
