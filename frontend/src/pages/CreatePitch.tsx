@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Upload, X, FileText, Video, Image as ImageIcon, Shield, AlertCircle, WifiOff } from 'lucide-react';
+import { ArrowLeft, Upload, X, FileText, Video, Image as ImageIcon, Shield, AlertCircle, WifiOff, CheckCircle, Circle } from 'lucide-react';
 import { useToast } from '@shared/components/feedback/ToastProvider';
 import LoadingSpinner from '@shared/components/feedback/LoadingSpinner';
 import { pitchService } from '@features/pitches/services/pitch.service';
@@ -508,6 +508,22 @@ export default function CreatePitch() {
     }
   };
 
+  // Pitch completeness — weights from ui-tokens.json
+  const completeness = useMemo(() => {
+    const fields = [
+      { label: 'Title', weight: 10, filled: !!formData.title?.trim() },
+      { label: 'Logline', weight: 20, filled: (formData.logline?.trim().length || 0) >= 10 },
+      { label: 'Genre', weight: 10, filled: !!formData.genre },
+      { label: 'Synopsis', weight: 30, filled: (formData.shortSynopsis?.trim().length || 0) >= 50 },
+      { label: 'Media', weight: 20, filled: !!(formData.image || (formData.documents && formData.documents.length > 0) || formData.videoUrl) },
+      { label: 'Details', weight: 10, filled: !!(formData.developmentStage || formData.toneAndStyle || formData.whyNow) },
+    ];
+    const score = fields.reduce((sum, f) => sum + (f.filled ? f.weight : 0), 0);
+    return { score, fields };
+  }, [formData.title, formData.logline, formData.genre, formData.shortSynopsis, formData.image, formData.documents, formData.videoUrl, formData.developmentStage, formData.toneAndStyle, formData.whyNow]);
+
+  const completenessColor = completeness.score < 40 ? 'bg-red-500' : completeness.score < 70 ? 'bg-amber-500' : 'bg-emerald-500';
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50">
       {/* Hidden file input for AI extraction */}
@@ -563,6 +579,31 @@ export default function CreatePitch() {
           </div>
         </div>
       </header>
+
+      {/* Pitch Completeness Bar */}
+      <div className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-medium text-gray-600 shrink-0">{completeness.score}%</span>
+            <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${completenessColor}`}
+                style={{ width: `${completeness.score}%` }}
+              />
+            </div>
+            <div className="hidden sm:flex items-center gap-2">
+              {completeness.fields.map(f => (
+                <span key={f.label} className="flex items-center gap-0.5 text-[10px] text-gray-500" title={f.label}>
+                  {f.filled
+                    ? <CheckCircle className="w-3 h-3 text-emerald-500" />
+                    : <Circle className="w-3 h-3 text-gray-300" />}
+                  {f.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Connectivity Warning */}
       {!isOnline && (
