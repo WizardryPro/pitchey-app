@@ -632,7 +632,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
             label: 'Review',
             action: () => {
               // Navigate to NDA management
-              window.location.href = `/creator/nda-management`;
+              window.location.href = `/creator/ndas`;
             },
             type: 'primary'
           }

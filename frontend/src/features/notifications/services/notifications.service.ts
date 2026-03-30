@@ -203,7 +203,7 @@ export class NotificationsService {
           {
             label: 'Manage NDAs',
             action: () => {
-              window.location.href = '/creator/nda-management';
+              window.location.href = '/creator/ndas';
             },
             type: 'secondary'
           }

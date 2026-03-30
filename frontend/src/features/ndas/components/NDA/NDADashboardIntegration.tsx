@@ -188,9 +188,9 @@ export default function NDADashboardIntegration({
 
   const getNDAManagementPath = () => {
     switch (userType) {
-      case 'creator': return '/creator/nda-management';
+      case 'creator': return '/creator/ndas';
       case 'investor': return '/investor/nda-requests';
-      case 'production': return '/production/nda-management';
+      case 'production': return '/production/ndas';
       default: return '/nda';
     }
   };
