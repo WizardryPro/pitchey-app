@@ -10,7 +10,7 @@ import { QuickNDAStatus } from '@features/ndas/components/NDA/NDADashboardIntegr
 import { getSubscriptionTier } from '../config/subscription-plans';
 import { InvestmentService } from '@features/deals/services/investment.service';
 import FundingOverview from '@features/deals/components/Investment/FundingOverview';
-import { EnhancedCreatorAnalytics } from '@features/analytics/components/Analytics/EnhancedCreatorAnalytics';
+// Analytics embedded view removed — users navigate to /creator/analytics instead
 import { withPortalErrorBoundary } from '../components/ErrorBoundary/PortalErrorBoundary';
 import { useSentryPortal } from '@/shared/hooks/useSentryPortal';
 import { useWebSocket } from '@shared/contexts/WebSocketContext';
@@ -717,20 +717,20 @@ function CreatorDashboard() {
         />
       ) : null}
 
-      {/* ===== ENHANCED ANALYTICS ===== */}
-      <div className="mb-8">
-        <EnhancedCreatorAnalytics
-          pitchPerformance={{
-            totalViews: totalViews,
-            viewsChange: 0,
-            totalLikes: safeNumber(stats?.totalLikes),
-            likesChange: 0,
-            totalShares: safeNumber(stats?.totalShares),
-            sharesChange: 0,
-            potentialInvestment: safeNumber(fundingMetrics?.totalFunding),
-            investmentChange: safeNumber(fundingMetrics?.growth)
-          }}
-        />
+      {/* ===== ANALYTICS LINK ===== */}
+      <div className="mb-8 bg-white rounded-xl shadow-sm p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Performance Analytics</h2>
+            <p className="text-sm text-gray-500 mt-1">View detailed charts, audience demographics, and pitch-by-pitch performance</p>
+          </div>
+          <button
+            onClick={() => { void navigate('/creator/analytics'); }}
+            className="px-4 py-2 bg-brand-action text-white rounded-lg hover:opacity-90 transition font-medium text-sm"
+          >
+            View Analytics
+          </button>
+        </div>
       </div>
 
       {/* ===== CREATOR MILESTONES ===== */}
