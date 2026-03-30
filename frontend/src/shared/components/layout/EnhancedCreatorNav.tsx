@@ -1,10 +1,10 @@
 import React from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
-  Home, BarChart3, Activity, TrendingUp, Film, Plus, FolderOpen,
-  FileText, Users, UserPlus, Shield, GitBranch, User, Settings,
-  Calendar, MessageSquare, Eye, Upload, Target, Star, Store, ExternalLink,
-  Scale, FileSignature, Library, FilePlus, GitCompare
+  Home, BarChart3, Activity, Film, Plus,
+  FileText, Users, GitBranch, User, Settings,
+  Calendar, MessageSquare, Target, Star, Store, ExternalLink,
+  Library
 } from 'lucide-react';
 import { CREATOR_ROUTES } from '@/config/navigation.routes';
 
@@ -28,45 +28,21 @@ export const creatorNavigationSections: NavigationSection[] = [
       { label: 'Overview', path: CREATOR_ROUTES.dashboard, icon: Home },
       { label: 'Analytics', path: CREATOR_ROUTES.analytics, icon: BarChart3 },
       { label: 'Activity', path: CREATOR_ROUTES.activity, icon: Activity },
-      { label: 'Stats', path: CREATOR_ROUTES.stats, icon: TrendingUp },
     ],
   },
   {
-    title: 'Projects',
+    title: 'Pitches',
     items: [
       { label: 'My Pitches', path: CREATOR_ROUTES.pitches, icon: Film },
       { label: 'Create New', path: CREATOR_ROUTES.pitchNew, icon: Plus },
-      { label: 'Published', path: CREATOR_ROUTES.pitchesPublished, icon: Upload },
-      { label: 'Drafts', path: CREATOR_ROUTES.pitchesDrafts, icon: FolderOpen },
-      { label: 'Under Review', path: CREATOR_ROUTES.pitchesReview, icon: Eye },
-      { label: 'Pitch Analytics', path: CREATOR_ROUTES.pitchesAnalytics, icon: BarChart3 },
-    ],
-  },
-  {
-    title: 'Team',
-    items: [
-      { label: 'Members', path: CREATOR_ROUTES.teamMembers, icon: Users },
-      { label: 'Invite', path: CREATOR_ROUTES.teamInvite, icon: UserPlus },
-      { label: 'Roles', path: CREATOR_ROUTES.teamRoles, icon: Shield },
-      { label: 'Collaborations', path: CREATOR_ROUTES.collaborations, icon: GitBranch },
-      { label: 'My Collaborations', path: CREATOR_ROUTES.myCollaborations, icon: GitBranch },
     ],
   },
   {
     title: 'Communication',
     items: [
       { label: 'Messages', path: CREATOR_ROUTES.messages, icon: MessageSquare },
-      { label: 'Calendar', path: CREATOR_ROUTES.calendar, icon: Calendar },
       { label: 'NDAs', path: CREATOR_ROUTES.ndas, icon: FileText },
-    ],
-  },
-  {
-    title: 'Legal',
-    items: [
-      { label: 'Documents', path: CREATOR_ROUTES.legalLibrary, icon: Library },
-      { label: 'Create Document', path: CREATOR_ROUTES.legalWizard, icon: FilePlus },
-      { label: 'Templates', path: CREATOR_ROUTES.legalTemplates, icon: FileSignature },
-      { label: 'Compare', path: CREATOR_ROUTES.legalCompare, icon: GitCompare },
+      { label: 'Calendar', path: CREATOR_ROUTES.calendar, icon: Calendar },
     ],
   },
   {
@@ -76,6 +52,14 @@ export const creatorNavigationSections: NavigationSection[] = [
       { label: 'Following', path: CREATOR_ROUTES.following, icon: Target },
       { label: 'Profile', path: CREATOR_ROUTES.profile, icon: User },
       { label: 'Settings', path: CREATOR_ROUTES.settings, icon: Settings },
+    ],
+  },
+  {
+    title: 'Team & Legal',
+    items: [
+      { label: 'Team', path: CREATOR_ROUTES.teamMembers, icon: Users },
+      { label: 'Collaborations', path: CREATOR_ROUTES.collaborations, icon: GitBranch },
+      { label: 'Legal Documents', path: CREATOR_ROUTES.legalLibrary, icon: Library },
     ],
   },
 ];
@@ -122,7 +106,12 @@ export function EnhancedCreatorNav() {
             <div className="space-y-1">
               {section.items.map((item) => {
                 const Icon = item.icon;
-                const isActive = location.pathname === item.path;
+                const isActive = location.pathname === item.path
+                  || (item.path === CREATOR_ROUTES.pitches && location.pathname.startsWith('/creator/pitches'))
+                  || (item.path === CREATOR_ROUTES.analytics && (location.pathname === CREATOR_ROUTES.stats || location.pathname === CREATOR_ROUTES.pitchesAnalytics))
+                  || (item.path === CREATOR_ROUTES.teamMembers && location.pathname.startsWith('/creator/team'))
+                  || (item.path === CREATOR_ROUTES.collaborations && location.pathname.includes('collaborations'))
+                  || (item.path === CREATOR_ROUTES.legalLibrary && location.pathname.startsWith('/legal'));
                 
                 return (
                   <button
