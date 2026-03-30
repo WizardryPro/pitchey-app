@@ -458,7 +458,7 @@ export default function Homepage() {
                     ) : (
                       <GenrePlaceholder genre={pitch.genre} />
                     )}
-                    <div className="absolute top-2 left-2 bg-yellow-500/90 backdrop-blur-sm px-2 py-1 rounded text-xs text-white font-medium">
+                    <div className="absolute top-2 left-2 bg-brand-new/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs text-white font-medium">
                       NEW
                     </div>
                     <div className="absolute top-2 right-2 bg-purple-600 px-2 py-1 rounded text-xs text-white">
