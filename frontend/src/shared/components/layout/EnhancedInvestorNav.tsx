@@ -97,55 +97,18 @@ export function EnhancedInvestorNav() {
   // Define color schemes for different sections
   const getSectionColorScheme = (sectionTitle: string, isActive: boolean) => {
     switch(sectionTitle) {
-      case 'Dashboard':
-        // Portfolio, Analytics, Activity, Performance - Emerald shades
-        return {
-          active: 'bg-emerald-50 text-emerald-700 font-medium',
-          hover: 'hover:bg-emerald-50 hover:text-emerald-700',
-          icon: isActive ? 'text-emerald-600' : 'text-gray-500'        };
-      case 'Investments':
-        // Deals, Pending Deals, All Investments - Teal shades
-        return {
-          active: 'bg-teal-50 text-teal-700 font-medium',
-          hover: 'hover:bg-teal-50 hover:text-teal-700',
-          icon: isActive ? 'text-teal-600' : 'text-gray-500'        };
-      case 'Discover':
-        // Browse, Discover, Saved, Watchlist - Sky blue shades
-        return {
-          active: 'bg-sky-50 text-sky-700 font-medium',
-          hover: 'hover:bg-sky-50 hover:text-sky-700',
-          icon: isActive ? 'text-sky-600' : 'text-gray-500'        };
-      case 'Financial':
-        // Financial routes - Green shades
-        return {
-          active: 'bg-green-50 text-green-700 font-medium',
-          hover: 'hover:bg-green-50 hover:text-green-700',
-          icon: isActive ? 'text-green-600' : 'text-gray-500'        };
-      case 'Market':
-        // Market routes - Indigo shades
-        return {
-          active: 'bg-indigo-50 text-indigo-700 font-medium',
-          hover: 'hover:bg-indigo-50 hover:text-indigo-700',
-          icon: isActive ? 'text-indigo-600' : 'text-gray-500'        };
-      case 'Network':
-        // Network routes - Purple shades
-        return {
-          active: 'bg-purple-50 text-purple-700 font-medium',
-          hover: 'hover:bg-purple-50 hover:text-purple-700',
-          icon: isActive ? 'text-purple-600' : 'text-gray-500'        };
       default:
-        // Account and others - Default green
         return {
-          active: 'bg-green-50 text-green-600 font-medium',
-          hover: 'hover:bg-gray-50 hover:text-gray-900',
-          icon: isActive ? 'text-green-600' : 'text-gray-500'        };
+          active: 'bg-brand-anchor/10 text-brand-anchor font-medium',
+          hover: 'hover:bg-brand-anchor/5 hover:text-brand-anchor',
+          icon: isActive ? 'text-brand-anchor' : 'text-gray-500'        };
     }
   };
 
   return (
     <nav className="w-64 bg-white border-r border-gray-200 h-full overflow-y-auto">
       <div className="p-4">
-        <h2 className="text-xl font-bold text-green-600 mb-4">Investor Portal</h2>
+        <h2 className="text-xl font-bold text-brand-anchor mb-4">Investor Portal</h2>
 
         {/* Quick Links - Always visible at top */}
         <div className="mb-6 pb-4 border-b border-gray-200">
@@ -155,7 +118,7 @@ export function EnhancedInvestorNav() {
           <div className="space-y-1">
             <Link
               to="/"
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-green-50 hover:text-green-600 transition-colors duration-200"
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-brand-anchor/5 hover:text-brand-anchor transition-colors duration-200"
             >
               <Home className="w-4 h-4" />
               <span className="flex-1 text-left">Home</span>
@@ -163,7 +126,7 @@ export function EnhancedInvestorNav() {
             </Link>
             <Link
               to="/marketplace"
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-green-50 hover:text-green-600 transition-colors duration-200"
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-brand-anchor/5 hover:text-brand-anchor transition-colors duration-200"
             >
               <Store className="w-4 h-4" />
               <span className="flex-1 text-left">Marketplace</span>

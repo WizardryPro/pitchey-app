@@ -79,7 +79,7 @@ export function EnhancedProductionNav() {
   return (
     <nav className="w-64 bg-white border-r border-gray-200 h-full overflow-y-auto">
       <div className="p-4">
-        <h2 className="text-xl font-bold text-blue-600 mb-4">Production Portal</h2>
+        <h2 className="text-xl font-bold text-brand-anchor mb-4">Production Portal</h2>
 
         {productionNavigationSections.map((section, sectionIdx) => (
           <div key={section.title || `section-${sectionIdx}`} className="mb-5">
@@ -102,7 +102,7 @@ export function EnhancedProductionNav() {
                       w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm
                       transition-colors duration-200
                       ${isActive
-                        ? 'bg-blue-50 text-blue-600 font-medium'
+                        ? 'bg-brand-anchor/10 text-brand-anchor font-medium'
                         : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                       }
                     `}
