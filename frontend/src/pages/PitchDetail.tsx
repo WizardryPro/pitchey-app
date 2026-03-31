@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Share2, Eye, Calendar, User, Clock, Tag, Film, Heart, LogIn, FileText, Lock, Shield, Briefcase, DollarSign, WifiOff, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Share2, Eye, Calendar, User, Clock, Tag, Film, Heart, LogIn, FileText, Lock, Shield, Briefcase, DollarSign, WifiOff, RefreshCw, Bookmark } from 'lucide-react';
 import { pitchService } from '@features/pitches/services/pitch.service';
 import { createDownloadClickHandler } from '../utils/fileDownloads';
 import type { Pitch } from '@features/pitches/services/pitch.service';
@@ -22,6 +22,7 @@ export default function PitchDetail() {
   const [error, setError] = useState<string | null>(null);
   const [isLiked, setIsLiked] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const [showEnhancedNDARequest, setShowEnhancedNDARequest] = useState(false);
   const [hasSignedNDA, setHasSignedNDA] = useState(false);
   const isOnline = useOnlineStatus();
@@ -182,6 +183,27 @@ export default function PitchDetail() {
       } : null);
     } finally {
       setIsLiking(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!pitch || !isAuthenticated) return;
+    try {
+      const originalSaved = isSaved;
+      setIsSaved(!isSaved);
+      const { API_URL } = await import('../config');
+      if (originalSaved) {
+        await fetch(`${API_URL}/api/saved-pitches/${pitch.id}`, { method: 'DELETE', credentials: 'include' });
+      } else {
+        await fetch(`${API_URL}/api/saved-pitches`, {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pitchId: pitch.id }),
+        });
+      }
+    } catch (err) {
+      console.error('Error toggling save:', err);
+      setIsSaved(isSaved); // revert
     }
   };
 
@@ -781,25 +803,40 @@ export default function PitchDetail() {
               isAuthenticated={isAuthenticated}
             />
 
-            {/* Like Button */}
-            <div className="bg-white rounded-xl shadow-sm p-4 flex items-center justify-center gap-2">
+            {/* Engagement Actions */}
+            <div className="bg-white rounded-xl shadow-sm p-4 flex flex-col gap-2">
               {isAuthenticated ? (
-                <button
-                  onClick={handleLike}
-                  disabled={isLiking}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${
-                    isLiked
-                      ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                  } ${isLiking ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
-                  {isLiked ? 'Liked' : 'Like this pitch'}
-                </button>
+                <>
+                  <button
+                    onClick={handleLike}
+                    disabled={isLiking}
+                    className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition ${
+                      isLiked
+                        ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                    } ${isLiking ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
+                    {isLiked ? 'Liked' : 'Like'}
+                  </button>
+                  {!isOwner && (
+                    <button
+                      onClick={handleSave}
+                      className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition ${
+                        isSaved
+                          ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                          : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-current' : ''}`} />
+                      {isSaved ? 'Saved' : 'Save'}
+                    </button>
+                  )}
+                </>
               ) : (
                 <button
                   onClick={() => navigate('/portals')}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-gray-50 text-gray-400 hover:text-purple-500 transition"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium bg-gray-50 text-gray-400 hover:text-purple-500 transition"
                 >
                   <Heart className="w-5 h-5" />
                   Sign in to like
