@@ -32,19 +32,34 @@ if (import.meta.env.DEV) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function lazyRetry(factory: () => Promise<{ default: React.ComponentType<any> }>) {
   return lazy(() =>
-    factory().catch(() => {
-      // Chunk likely stale after deploy — reload the page once
-      const reloadKey = 'chunk-reload-' + window.location.pathname;
-      if (!sessionStorage.getItem(reloadKey)) {
-        sessionStorage.setItem(reloadKey, '1');
-        window.location.reload();
-        // Return a never-resolving promise to prevent flash
-        return new Promise<never>(() => {});
-      }
-      // Already reloaded once — clear flag and let error boundary handle it
-      sessionStorage.removeItem(reloadKey);
-      return factory();
-    })
+    factory()
+      .then((mod) => {
+        // Guard against stale CDN/cache responses that resolve to a module
+        // with no default export — React's lazy() throws "Cannot read properties
+        // of undefined (reading 'default')" in that case.
+        if (!mod || typeof mod.default === 'undefined') {
+          return Promise.reject(new Error('Module resolved without default export'));
+        }
+        return mod;
+      })
+      .catch(() => {
+        // Chunk likely stale after deploy — reload the page once
+        const reloadKey = 'chunk-reload-' + window.location.pathname;
+        if (!sessionStorage.getItem(reloadKey)) {
+          sessionStorage.setItem(reloadKey, '1');
+          window.location.reload();
+          // Return a never-resolving promise to prevent flash
+          return new Promise<never>(() => {});
+        }
+        // Already reloaded once — clear flag and let error boundary handle it
+        sessionStorage.removeItem(reloadKey);
+        return factory().then((mod) => {
+          if (!mod || typeof mod.default === 'undefined') {
+            return Promise.reject(new Error('Module resolved without default export after retry'));
+          }
+          return mod;
+        });
+      })
   );
 }
 

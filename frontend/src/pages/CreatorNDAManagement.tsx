@@ -1,11 +1,9 @@
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Shield } from 'lucide-react';
+import { Shield } from 'lucide-react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import ComprehensiveNDAManagement from '@features/ndas/components/NDA/ComprehensiveNDAManagement';
 import BackButton from '../components/BackButton';
 
 export default function CreatorNDAManagement() {
-  const navigate = useNavigate();
   const { user, isAuthenticated } = useBetterAuthStore();
 
   return (
