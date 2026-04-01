@@ -21,6 +21,7 @@ export default function CreatorAnalyticsPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'activity' | 'stats'>('overview');
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pitchPerformance, setPitchPerformance] = useState({
     totalViews: 0,
@@ -36,9 +37,10 @@ export default function CreatorAnalyticsPage() {
   const [topPitches, setTopPitches] = useState<{ id: number; title: string; views: number; likes: number }[]>([]);
   const [audienceBreakdown, setAudienceBreakdown] = useState<{ userType: string; count: number; percentage: number }[]>([]);
 
-  const loadAnalytics = async (range: TimeRange) => {
+  const loadAnalytics = async (range: TimeRange, isInitial = false) => {
     try {
-      setLoading(true);
+      if (isInitial) setLoading(true);
+      else setRefreshing(true);
       setError(null);
 
       const days = RANGE_TO_DAYS[range];
@@ -73,11 +75,12 @@ export default function CreatorAnalyticsPage() {
       setError(e.message);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    void loadAnalytics(timeRange);
+    void loadAnalytics(timeRange, loading);
   }, [timeRange]);
 
   const handleTimeRangeChange = (range: TimeRange) => {
@@ -106,7 +109,7 @@ export default function CreatorAnalyticsPage() {
           <h3 className="text-lg font-medium text-red-800 mb-2">Failed to load analytics</h3>
           <p className="text-red-600 mb-4">{error}</p>
           <button
-            onClick={() => void loadAnalytics(timeRange)}
+            onClick={() => void loadAnalytics(timeRange, true)}
             className="inline-flex items-center gap-2 px-4 py-2 border border-red-300 rounded-md text-sm text-red-700 hover:bg-red-100"
           >
             <RefreshCw className="w-4 h-4" />
@@ -155,7 +158,7 @@ export default function CreatorAnalyticsPage() {
         {/* Tab Content */}
         <div className="transition-all duration-200 ease-in-out">
           {activeTab === 'overview' && (
-            <div className="space-y-6">
+            <div className={`space-y-6 transition-opacity duration-200 ${refreshing ? 'opacity-50 pointer-events-none' : ''}`}>
               {/* Main Analytics Component */}
               <CreatorAnalytics
                 pitchPerformance={pitchPerformance}
