@@ -51,14 +51,10 @@ function lazyRetry(factory: () => Promise<{ default: React.ComponentType<any> }>
           // Return a never-resolving promise to prevent flash
           return new Promise<never>(() => {});
         }
-        // Already reloaded once — clear flag and let error boundary handle it
+        // Already reloaded once — force a cache-busted full reload
         sessionStorage.removeItem(reloadKey);
-        return factory().then((mod) => {
-          if (!mod || typeof mod.default === 'undefined') {
-            return Promise.reject(new Error('Module resolved without default export after retry'));
-          }
-          return mod;
-        });
+        window.location.href = window.location.href.split('?')[0] + '?_cb=' + Date.now();
+        return new Promise<never>(() => {});
       })
   );
 }

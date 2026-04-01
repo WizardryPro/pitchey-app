@@ -109,7 +109,7 @@ export function initSentry() {
         || event.message
         || event.exception?.values?.[0]?.value
         || '';
-      if (/Authentication required|not available.*Authentication|Could not get WebSocket token/i.test(message)) {
+      if (/Authentication required|not available.*Authentication|Could not get WebSocket token|Module resolved without default export|ChunkLoadError|Loading chunk/i.test(message)) {
         return null;
       }
 
