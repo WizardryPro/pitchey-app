@@ -401,17 +401,43 @@ export default function CreatorActivity() {
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-sm border p-12 text-center">
-          <Activity className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">No activity yet</h3>
-          <p className="text-gray-600 mb-6">
-            Activity related to your pitches will appear here
-          </p>
-          <button
-            onClick={() => navigate('/creator/pitch/new')}
-            className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
-          >
-            Create Your First Pitch
-          </button>
+          {filter === 'all' ? (
+            <>
+              <Activity className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No activity yet</h3>
+              <p className="text-gray-600 mb-6">
+                Activity related to your pitches will appear here
+              </p>
+              <button
+                onClick={() => navigate('/creator/pitch/new')}
+                className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+              >
+                Create Your First Pitch
+              </button>
+            </>
+          ) : (
+            <>
+              {(() => { const Icon = getActivityIcon(filter); return <Icon className="w-16 h-16 text-gray-300 mx-auto mb-4" />; })()}
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                No {filter} activity
+              </h3>
+              <p className="text-gray-600 mb-4">
+                {filter === 'comment' && 'No messages on your pitches yet.'}
+                {filter === 'investment' && 'No investments in your pitches yet.'}
+                {filter === 'view' && 'No views on your pitches yet.'}
+                {filter === 'like' && 'No likes on your pitches yet.'}
+                {filter === 'follow' && 'No one has followed you yet.'}
+                {filter === 'nda' && 'No NDA requests on your pitches yet.'}
+                {filter === 'milestone' && 'No milestones reached yet.'}
+              </p>
+              <button
+                onClick={() => setFilter('all')}
+                className="px-4 py-2 text-purple-600 border border-purple-300 rounded-lg hover:bg-purple-50 transition text-sm"
+              >
+                View all activity
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
