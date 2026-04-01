@@ -341,7 +341,7 @@ export default function CreatorActivity() {
             
             return (
               <div
-                key={activity.id}
+                key={`${activity.type}-${activity.id}`}
                 className={`bg-white rounded-lg shadow-sm border p-6 hover:shadow-md transition cursor-pointer ${
                   !activity.read ? 'border-l-4 border-l-purple-600' : ''
                 }`}
