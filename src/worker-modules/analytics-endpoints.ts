@@ -525,6 +525,48 @@ export class AnalyticsEndpointsHandler {
         const secondHalfViews = viewsTimeSeries.slice(halfDays).reduce((sum, p) => sum + p.views, 0);
         const viewsChange = firstHalfViews > 0 ? ((secondHalfViews - firstHalfViews) / firstHalfViews) * 100 : 0;
 
+        // Likes change from engagement time series (already fetched)
+        const firstHalfLikes = engagementTimeSeries.slice(0, halfDays).reduce((sum, p) => sum + p.likes, 0);
+        const secondHalfLikes = engagementTimeSeries.slice(halfDays).reduce((sum, p) => sum + p.likes, 0);
+        const likesChange = firstHalfLikes > 0 ? ((secondHalfLikes - firstHalfLikes) / firstHalfLikes) * 100 : 0;
+
+        // Followers change: count follows gained in each half of the period
+        const sqlRef = this.getSqlForQueries();
+        const [followersHalfResult, pitchesHalfResult, ndasHalfResult] = await Promise.all([
+          sqlRef`
+            SELECT
+              COALESCE(SUM(CASE WHEN created_at < NOW() - INTERVAL '1 day' * ${halfDays} THEN 1 ELSE 0 END), 0)::int AS first_half,
+              COALESCE(SUM(CASE WHEN created_at >= NOW() - INTERVAL '1 day' * ${halfDays} THEN 1 ELSE 0 END), 0)::int AS second_half
+            FROM follows
+            WHERE (following_id::text = ${userIdStr} OR creator_id::text = ${userIdStr})
+              AND created_at >= NOW() - INTERVAL '1 day' * ${days}
+          `.catch(() => [{ first_half: 0, second_half: 0 }]),
+          sqlRef`
+            SELECT
+              COALESCE(SUM(CASE WHEN created_at < NOW() - INTERVAL '1 day' * ${halfDays} THEN 1 ELSE 0 END), 0)::int AS first_half,
+              COALESCE(SUM(CASE WHEN created_at >= NOW() - INTERVAL '1 day' * ${halfDays} THEN 1 ELSE 0 END), 0)::int AS second_half
+            FROM pitches
+            WHERE (creator_id::text = ${userIdStr} OR user_id::text = ${userIdStr})
+              AND created_at >= NOW() - INTERVAL '1 day' * ${days}
+          `.catch(() => [{ first_half: 0, second_half: 0 }]),
+          sqlRef`
+            SELECT
+              COALESCE(SUM(CASE WHEN nr.created_at < NOW() - INTERVAL '1 day' * ${halfDays} THEN 1 ELSE 0 END), 0)::int AS first_half,
+              COALESCE(SUM(CASE WHEN nr.created_at >= NOW() - INTERVAL '1 day' * ${halfDays} THEN 1 ELSE 0 END), 0)::int AS second_half
+            FROM nda_requests nr
+            JOIN pitches p ON nr.pitch_id = p.id
+            WHERE (p.creator_id::text = ${userIdStr} OR p.user_id::text = ${userIdStr})
+              AND nr.created_at >= NOW() - INTERVAL '1 day' * ${days}
+          `.catch(() => [{ first_half: 0, second_half: 0 }])
+        ]);
+
+        const fh = followersHalfResult[0] || { first_half: 0, second_half: 0 };
+        const followersChange = fh.first_half > 0 ? ((fh.second_half - fh.first_half) / fh.first_half) * 100 : 0;
+        const ph = pitchesHalfResult[0] || { first_half: 0, second_half: 0 };
+        const pitchesChange = ph.first_half > 0 ? ((ph.second_half - ph.first_half) / ph.first_half) * 100 : 0;
+        const nh = ndasHalfResult[0] || { first_half: 0, second_half: 0 };
+        const ndasChange = nh.first_half > 0 ? ((nh.second_half - nh.first_half) / nh.first_half) * 100 : 0;
+
         const pitchStats = userPitchResults[0] || {};
         const followerCount = followerResults[0]?.follower_count || 0;
 
@@ -547,9 +589,10 @@ export class AnalyticsEndpointsHandler {
             totalFollowers: parseInt(followerCount || '0'),
             totalPitches: parseInt(pitchStats.total_pitches || '0'),
             viewsChange: Math.round(viewsChange * 10) / 10,
-            likesChange: 0, // Calculate similarly if needed
-            followersChange: 0,
-            pitchesChange: 0,
+            likesChange: Math.round(likesChange * 10) / 10,
+            followersChange: Math.round(followersChange * 10) / 10,
+            pitchesChange: Math.round(pitchesChange * 10) / 10,
+            ndasChange: Math.round(ndasChange * 10) / 10,
             avgRating: Math.round(avgRating * 10) / 10,
             responseRate: Math.round(responseRate * 10) / 10
           },
@@ -608,6 +651,7 @@ export class AnalyticsEndpointsHandler {
             likesChange: 0,
             followersChange: 0,
             pitchesChange: 0,
+            ndasChange: 0,
             avgRating: 0,
             responseRate: 0
           },

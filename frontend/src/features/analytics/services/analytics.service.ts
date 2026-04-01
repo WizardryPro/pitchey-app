@@ -93,6 +93,7 @@ export interface DashboardMetrics {
     likesChange: number;
     followersChange: number;
     pitchesChange: number;
+    ndasChange: number;
   };
   performance: {
     topPitches: PitchAnalytics[];
@@ -194,6 +195,7 @@ export class AnalyticsService {
         likesChange: 0,
         followersChange: 0,
         pitchesChange: 0,
+        ndasChange: 0,
       },
       performance: {
         topPitches: [],
@@ -346,6 +348,7 @@ export class AnalyticsService {
           likesChange: safeNumber(overview.likesChange ?? 0),
           followersChange: safeNumber(overview.followersChange ?? 0),
           pitchesChange: safeNumber(overview.pitchesChange ?? 0),
+          ndasChange: safeNumber(overview.ndasChange ?? 0),
         },
         performance: {
           topPitches: safeArray(perf.topPitches ?? []),

@@ -13,6 +13,7 @@ import {
   XAxis, YAxis, CartesianGrid
 } from 'recharts';
 import { CreatorService, type CreatorStats as CreatorStatsType, type CreatorAnalytics } from '@features/analytics/services/creator.service';
+import { AnalyticsService } from '@features/analytics/services/analytics.service';
 import { PitchService, type Pitch } from '@features/pitches/services/pitch.service';
 
 interface QuickStat {
@@ -38,9 +39,10 @@ export default function CreatorStats() {
       setError(null);
 
       // Fetch data from multiple API endpoints
-      const [dashboardData, myPitches] = await Promise.all([
+      const [dashboardData, myPitches, dashboardMetrics] = await Promise.all([
         CreatorService.getDashboard().catch(() => null),
-        PitchService.getMyPitches().catch(() => [])
+        PitchService.getMyPitches().catch(() => []),
+        AnalyticsService.getDashboardMetrics().catch(() => null)
       ]);
 
       // Calculate stats from API data
@@ -53,52 +55,61 @@ export default function CreatorStats() {
       const totalNDAs = apiStats?.totalNDAs || myPitches.reduce((acc: number, p: Pitch) => acc + (p.ndaCount || 0), 0);
       const engagementRate = totalViews > 0 ? ((totalLikes / totalViews) * 100) : 0;
 
+      // Change percentages from analytics dashboard
+      const ov = dashboardMetrics?.overview;
+      const viewsChg = ov?.viewsChange || 0;
+      const likesChg = ov?.likesChange || 0;
+      const pitchesChg = ov?.pitchesChange || 0;
+      const ndasChg = ov?.ndasChange || 0;
+
+      const trendOf = (v: number): 'up' | 'down' | 'stable' => v > 0 ? 'up' : v < 0 ? 'down' : 'stable';
+
       setStats([
         {
           label: 'Total Views',
           value: totalViews.toLocaleString(),
-          change: apiStats?.monthlyGrowth || 0,
-          trend: (apiStats?.monthlyGrowth || 0) > 0 ? 'up' : (apiStats?.monthlyGrowth || 0) < 0 ? 'down' : 'stable',
+          change: viewsChg,
+          trend: trendOf(viewsChg),
           icon: Eye,
           color: 'blue'
         },
         {
           label: 'Engagement Rate',
           value: `${engagementRate.toFixed(1)}%`,
-          change: 0,
-          trend: 'stable',
+          change: likesChg,
+          trend: trendOf(likesChg),
           icon: Heart,
           color: 'red'
         },
         {
           label: 'Active Pitches',
           value: publishedPitches.length,
-          change: 0,
-          trend: 'stable',
+          change: pitchesChg,
+          trend: trendOf(pitchesChg),
           icon: FileText,
           color: 'purple'
         },
         {
           label: 'Total Likes',
           value: totalLikes.toLocaleString(),
-          change: 0,
-          trend: 'stable',
+          change: likesChg,
+          trend: trendOf(likesChg),
           icon: Users,
           color: 'green'
         },
         {
           label: 'Total NDAs',
           value: totalNDAs,
-          change: 0,
-          trend: 'stable',
+          change: ndasChg,
+          trend: trendOf(ndasChg),
           icon: DollarSign,
           color: 'yellow'
         },
         {
           label: 'Total Pitches',
           value: myPitches.length,
-          change: 0,
-          trend: 'stable',
+          change: pitchesChg,
+          trend: trendOf(pitchesChg),
           icon: Star,
           color: 'orange'
         }

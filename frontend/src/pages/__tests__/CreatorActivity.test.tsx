@@ -138,7 +138,7 @@ describe('CreatorActivity', () => {
     })
 
     expect(screen.getByText('Total Views')).toBeInTheDocument()
-    expect(screen.getByText('New Followers')).toBeInTheDocument()
+    expect(screen.getByText('Followers')).toBeInTheDocument()
     expect(screen.getByText('Engagement Rate')).toBeInTheDocument()
   })
 

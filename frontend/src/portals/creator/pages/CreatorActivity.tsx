@@ -253,7 +253,7 @@ export default function CreatorActivity() {
           <div className="bg-white rounded-lg shadow-sm border p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">New Followers</p>
+                <p className="text-sm text-gray-600">Followers</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.newFollowers}</p>
               </div>
               <Users className="w-8 h-8 text-green-600" />

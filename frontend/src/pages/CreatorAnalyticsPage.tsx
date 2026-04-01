@@ -17,12 +17,11 @@ export default function CreatorAnalyticsPage() {
     viewsChange: 0,
     totalLikes: 0,
     likesChange: 0,
-    totalShares: 0,
-    sharesChange: 0,
     potentialInvestment: 0,
     investmentChange: 0
   });
   const [followers, setFollowers] = useState(0);
+  const [followersChange, setFollowersChange] = useState(0);
   const [trends, setTrends] = useState<any>(null);
   const [topPitches, setTopPitches] = useState<{ id: number; title: string; views: number; likes: number }[]>([]);
   const [audienceBreakdown, setAudienceBreakdown] = useState<{ userType: string; count: number; percentage: number }[]>([]);
@@ -44,12 +43,11 @@ export default function CreatorAnalyticsPage() {
           viewsChange: dashboardMetrics.overview.viewsChange,
           totalLikes: dashboardMetrics.overview.totalLikes,
           likesChange: dashboardMetrics.overview.likesChange,
-          totalShares: 0,
-          sharesChange: 0,
           potentialInvestment: dashboardMetrics.revenue?.total || 0,
           investmentChange: dashboardMetrics.revenue?.growth || 0
         });
         setFollowers(dashboardMetrics.overview.totalFollowers || 0);
+        setFollowersChange(dashboardMetrics.overview.followersChange || 0);
         setTrends((dashboardMetrics as any).trends || null);
       }
 
@@ -147,6 +145,7 @@ export default function CreatorAnalyticsPage() {
               <CreatorAnalytics
                 pitchPerformance={pitchPerformance}
                 followers={followers}
+                followersChange={followersChange}
                 trends={trends}
               />
 

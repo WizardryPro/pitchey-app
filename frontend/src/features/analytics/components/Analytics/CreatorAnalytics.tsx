@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { 
-  TrendingUp, 
-  Eye, 
-  Heart, 
-  Share2, 
-  Users, 
-  DollarSign 
+import {
+  TrendingUp,
+  Eye,
+  Heart,
+  Users,
+  DollarSign
 } from 'lucide-react';
 
 import { AnalyticCard } from './AnalyticCard';
@@ -19,12 +18,11 @@ interface CreatorAnalyticsProps {
     viewsChange: number;
     totalLikes: number;
     likesChange: number;
-    totalShares: number;
-    sharesChange: number;
     potentialInvestment: number;
     investmentChange: number;
   };
   followers?: number;
+  followersChange?: number;
   engagementRate?: number;
   trends?: {
     viewsOverTime?: { labels: string[]; datasets: { label: string; data: number[] }[] };
@@ -35,6 +33,7 @@ interface CreatorAnalyticsProps {
 export const CreatorAnalytics: React.FC<CreatorAnalyticsProps> = ({
   pitchPerformance,
   followers = 0,
+  followersChange = 0,
   engagementRate = 0,
   trends
 }) => {
@@ -78,29 +77,22 @@ export const CreatorAnalytics: React.FC<CreatorAnalyticsProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        <AnalyticCard 
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+        <AnalyticCard
           title="Total Views"
           value={pitchPerformance.totalViews}
           change={pitchPerformance.viewsChange}
           icon={<Eye className="w-5 h-5 text-blue-500" />}
           variant="primary"
         />
-        <AnalyticCard 
+        <AnalyticCard
           title="Total Likes"
           value={pitchPerformance.totalLikes}
           change={pitchPerformance.likesChange}
           icon={<Heart className="w-5 h-5 text-red-500" />}
           variant="danger"
         />
-        <AnalyticCard 
-          title="Total Shares"
-          value={pitchPerformance.totalShares}
-          change={pitchPerformance.sharesChange}
-          icon={<Share2 className="w-5 h-5 text-green-500" />}
-          variant="success"
-        />
-        <AnalyticCard 
+        <AnalyticCard
           title="Potential Investment"
           value={pitchPerformance.potentialInvestment}
           change={pitchPerformance.investmentChange}
@@ -111,7 +103,7 @@ export const CreatorAnalytics: React.FC<CreatorAnalyticsProps> = ({
         <AnalyticCard
           title="Followers"
           value={followers}
-          change={0}
+          change={followersChange}
           icon={<Users className="w-5 h-5 text-indigo-500" />}
           variant="secondary"
         />
