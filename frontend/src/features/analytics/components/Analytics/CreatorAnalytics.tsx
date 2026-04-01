@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   TrendingUp,
   Eye,
@@ -28,6 +28,8 @@ interface CreatorAnalyticsProps {
     viewsOverTime?: { labels: string[]; datasets: { label: string; data: number[] }[] };
     pitchesOverTime?: { labels: string[]; datasets: { label: string; data: number[] }[] };
   };
+  timeRange?: '7d' | '30d' | '90d' | '1y';
+  onTimeRangeChange?: (range: '7d' | '30d' | '90d' | '1y') => void;
 }
 
 export const CreatorAnalytics: React.FC<CreatorAnalyticsProps> = ({
@@ -35,9 +37,10 @@ export const CreatorAnalytics: React.FC<CreatorAnalyticsProps> = ({
   followers = 0,
   followersChange = 0,
   engagementRate = 0,
-  trends
+  trends,
+  timeRange = '30d',
+  onTimeRangeChange
 }) => {
-  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
 
   // Build chart data from trends
   const performanceData = {
@@ -67,7 +70,7 @@ export const CreatorAnalytics: React.FC<CreatorAnalyticsProps> = ({
         <div className="flex items-center gap-4">
           <TimeRangeFilter
             value={timeRange}
-            onChange={(range) => setTimeRange(range)}
+            onChange={(range) => onTimeRangeChange?.(range)}
             defaultRange="30d"
           />
           <AnalyticsExport 

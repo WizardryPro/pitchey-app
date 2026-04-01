@@ -315,9 +315,10 @@ export class AnalyticsService {
   }
 
   // Get dashboard metrics
-  static async getDashboardMetrics(timeRange?: TimeRange): Promise<DashboardMetrics> {
+  static async getDashboardMetrics(timeRange?: TimeRange, options?: { days?: number }): Promise<DashboardMetrics> {
     try {
       const params = new URLSearchParams();
+      if (options?.days) params.append('days', options.days.toString());
       if (timeRange?.start) params.append('start', timeRange.start);
       if (timeRange?.end) params.append('end', timeRange.end);
       if (timeRange?.preset) params.append('preset', timeRange.preset);

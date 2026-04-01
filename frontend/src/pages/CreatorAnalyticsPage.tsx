@@ -8,8 +8,18 @@ import CreatorStats from '@portals/creator/pages/CreatorStats';
 import { CreatorService } from '@features/analytics/services/creator.service';
 import { AnalyticsService } from '@features/analytics/services/analytics.service';
 
+type TimeRange = '7d' | '30d' | '90d' | '1y';
+
+const RANGE_TO_DAYS: Record<TimeRange, number> = {
+  '7d': 7,
+  '30d': 30,
+  '90d': 90,
+  '1y': 365
+};
+
 export default function CreatorAnalyticsPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'activity' | 'stats'>('overview');
+  const [timeRange, setTimeRange] = useState<TimeRange>('30d');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pitchPerformance, setPitchPerformance] = useState({
@@ -26,13 +36,14 @@ export default function CreatorAnalyticsPage() {
   const [topPitches, setTopPitches] = useState<{ id: number; title: string; views: number; likes: number }[]>([]);
   const [audienceBreakdown, setAudienceBreakdown] = useState<{ userType: string; count: number; percentage: number }[]>([]);
 
-  const loadAnalytics = async () => {
+  const loadAnalytics = async (range: TimeRange) => {
     try {
       setLoading(true);
       setError(null);
 
+      const days = RANGE_TO_DAYS[range];
       const [dashboardMetrics, creatorAnalytics] = await Promise.all([
-        AnalyticsService.getDashboardMetrics().catch(() => null),
+        AnalyticsService.getDashboardMetrics(undefined, { days }).catch(() => null),
         CreatorService.getAnalytics().catch(() => null)
       ]);
 
@@ -66,8 +77,12 @@ export default function CreatorAnalyticsPage() {
   };
 
   useEffect(() => {
-    void loadAnalytics();
-  }, []);
+    void loadAnalytics(timeRange);
+  }, [timeRange]);
+
+  const handleTimeRangeChange = (range: TimeRange) => {
+    setTimeRange(range);
+  };
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
@@ -91,7 +106,7 @@ export default function CreatorAnalyticsPage() {
           <h3 className="text-lg font-medium text-red-800 mb-2">Failed to load analytics</h3>
           <p className="text-red-600 mb-4">{error}</p>
           <button
-            onClick={() => void loadAnalytics()}
+            onClick={() => void loadAnalytics(timeRange)}
             className="inline-flex items-center gap-2 px-4 py-2 border border-red-300 rounded-md text-sm text-red-700 hover:bg-red-100"
           >
             <RefreshCw className="w-4 h-4" />
@@ -147,6 +162,8 @@ export default function CreatorAnalyticsPage() {
                 followers={followers}
                 followersChange={followersChange}
                 trends={trends}
+                timeRange={timeRange}
+                onTimeRangeChange={handleTimeRangeChange}
               />
 
               {/* Additional Overview Sections */}
