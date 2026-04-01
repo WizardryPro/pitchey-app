@@ -142,10 +142,11 @@ export async function statusDashboardHandler(
     `).catch(() => [{ active_users: 0 }]);
 
     if (metricsQuery && metricsQuery[0]) {
-      dashboard.metrics.requestsLast24h = parseInt(metricsQuery[0].requests_24h) || 0;
-      dashboard.metrics.errorsLast24h = parseInt(metricsQuery[0].errors_24h) || 0;
-      dashboard.metrics.avgResponseTime = Math.round(parseFloat(metricsQuery[0].avg_response_time) || 0);
-      dashboard.metrics.p95ResponseTime = Math.round(parseFloat(metricsQuery[0].p95_response_time) || 0);
+      const m = metricsQuery[0] as any;
+      dashboard.metrics.requestsLast24h = parseInt(m.requests_24h) || 0;
+      dashboard.metrics.errorsLast24h = parseInt(m.errors_24h) || 0;
+      dashboard.metrics.avgResponseTime = Math.round(parseFloat(m.avg_response_time) || 0);
+      dashboard.metrics.p95ResponseTime = Math.round(parseFloat(m.p95_response_time) || 0);
 
       const errorRate = dashboard.metrics.requestsLast24h > 0
         ? (dashboard.metrics.errorsLast24h / dashboard.metrics.requestsLast24h * 100).toFixed(2)
@@ -154,7 +155,7 @@ export async function statusDashboardHandler(
     }
 
     if (activeUsersQuery && activeUsersQuery[0]) {
-      dashboard.metrics.activeUsers = parseInt(activeUsersQuery[0].active_users) || 0;
+      dashboard.metrics.activeUsers = parseInt((activeUsersQuery[0] as any).active_users) || 0;
     }
 
   } catch (error) {
@@ -344,7 +345,7 @@ async function checkAuth(env: any): Promise<{ status: 'operational' | 'degraded'
 
     const latency = Date.now() - start;
 
-    if (!result || !result[0] || parseInt(result[0].count) < 3) {
+    if (!result || !result[0] || parseInt((result[0] as any).count) < 3) {
       return { status: 'degraded', latency, details: 'Auth tables incomplete' };
     }
 

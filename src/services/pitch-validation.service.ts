@@ -2015,7 +2015,7 @@ export class PitchValidationService {
           priority: categoryData.score < 50 ? 'high' : 'medium',
           title: `Improve ${categoryName} Score`,
           description: `Your ${categoryName} category scored ${categoryData.score}/100. ${categoryData.improvements.join(', ')}.`,
-          actionItems: categoryData.improvements.map(improvement => ({
+          actionItems: categoryData.improvements.map((improvement: any) => ({
             task: improvement,
             responsible: 'Creator',
             deadline: '2 weeks',

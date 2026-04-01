@@ -82,12 +82,12 @@ export class BetterAuthSessionHandler {
           const session = cached as BetterAuthSession;
           if (new Date(session.expiresAt) > new Date()) {
             // Fetch user details
-            const [user] = await this.sql`
-              SELECT id, email, username, user_type, first_name, last_name, 
+            const [user] = (await this.sql`
+              SELECT id, email, username, user_type, first_name, last_name,
                      company_name, profile_image, subscription_tier
-              FROM users 
+              FROM users
               WHERE id = ${session.userId}
-            `;
+            `) as any[];
             
             if (user) {
               return {
@@ -110,15 +110,15 @@ export class BetterAuthSessionHandler {
       }
 
       // Check database for session
-      const [session] = await this.sql`
-        SELECT s.id, s.user_id, s.expires_at, 
+      const [session] = (await this.sql`
+        SELECT s.id, s.user_id, s.expires_at,
                u.email, u.user_type, u.username, u.first_name, u.last_name,
                u.company_name, u.profile_image, u.subscription_tier
         FROM sessions s
         JOIN users u ON s.user_id = u.id
         WHERE s.id = ${sessionId}
         AND s.expires_at > NOW()
-      `;
+      `) as any[];
 
       if (!session) {
         return { valid: false };
@@ -167,19 +167,19 @@ export class BetterAuthSessionHandler {
     const corsHeaders = getCORSHeaders(origin, true);
     
     try {
-      const body = await request.json();
+      const body = await request.json() as any;
       const { email, password } = body;
       
       console.log(`Better Auth login attempt for ${portal}: ${email}`);
 
       // Verify credentials against database
-      const [user] = await this.sql`
+      const [user] = (await this.sql`
         SELECT id, email, username, user_type, password_hash,
                first_name, last_name, company_name, profile_image, subscription_tier
-        FROM users 
+        FROM users
         WHERE email = ${email}
         AND user_type = ${portal}
-      `;
+      `) as any[];
 
       if (!user) {
         return new Response(

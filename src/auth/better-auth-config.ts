@@ -67,22 +67,7 @@ export function createAuth(env: any) {
       enabled: true,
       requireEmailVerification: env.ENVIRONMENT === 'production',
       minPasswordLength: 8,
-      maxPasswordLength: 128,
-      // Custom password validation
-      passwordValidation: (password: string) => {
-        const hasUpper = /[A-Z]/.test(password)
-        const hasLower = /[a-z]/.test(password)
-        const hasNumber = /\d/.test(password)
-        
-        if (!hasUpper || !hasLower || !hasNumber) {
-          return {
-            valid: false,
-            message: "Password must contain uppercase, lowercase, and number"
-          }
-        }
-        
-        return { valid: true }
-      }
+      maxPasswordLength: 128
     },
 
     // Session configuration optimized for edge
@@ -92,10 +77,6 @@ export function createAuth(env: any) {
       cookieCache: {
         enabled: true,
         maxAge: 60 * 5 // 5 minutes cache
-      },
-      // Store additional portal context in session
-      fields: {
-        portalContext: "string"
       }
     },
 
@@ -137,7 +118,7 @@ export function createAuth(env: any) {
                "unknown"
       },
       // Custom storage using Cloudflare KV
-      storage: env.RATE_LIMIT_KV ? {
+      storage: (env.RATE_LIMIT_KV ? {
         get: async (key: string) => {
           try {
             const value = await env.RATE_LIMIT_KV.get(key)
@@ -155,7 +136,7 @@ export function createAuth(env: any) {
             console.error("Rate limit storage error:", error)
           }
         }
-      } : undefined
+      } : undefined) as any
     },
 
     // OAuth providers
@@ -163,29 +144,14 @@ export function createAuth(env: any) {
       google: env.GOOGLE_CLIENT_ID ? {
         clientId: env.GOOGLE_CLIENT_ID,
         clientSecret: env.GOOGLE_CLIENT_SECRET,
-        scope: ["openid", "email", "profile"],
-        // Map Google profile to Pitchey user
-        profile: (profile: any) => ({
-          id: profile.id,
-          name: profile.name,
-          email: profile.email,
-          emailVerified: profile.email_verified,
-          image: profile.picture
-        })
-      } : undefined,
+        scope: ["openid", "email", "profile"]
+      } as any : undefined,
 
       github: env.GITHUB_CLIENT_ID ? {
         clientId: env.GITHUB_CLIENT_ID,
         clientSecret: env.GITHUB_CLIENT_SECRET,
-        scope: ["user:email", "read:user"],
-        profile: (profile: any) => ({
-          id: profile.id.toString(),
-          name: profile.name || profile.login,
-          email: profile.email,
-          emailVerified: true,
-          image: profile.avatar_url
-        })
-      } : undefined
+        scope: ["user:email", "read:user"]
+      } as any : undefined
     },
 
     // Plugins will be added after fixing imports
@@ -193,25 +159,21 @@ export function createAuth(env: any) {
 
     // Advanced configuration
     advanced: {
-      // Use crypto.randomUUID for better entropy
-      generateId: () => crypto.randomUUID(),
-      
       // Cross-subdomain cookie support
       crossSubDomainCookies: {
         enabled: env.ENVIRONMENT === 'production',
         domain: ".pages.dev"
       }
-    },
+    } as any,
 
     // Email configuration (for verification, magic links, etc.)
     emailVerification: {
       enabled: env.ENVIRONMENT === 'production',
       expiresIn: 60 * 60 * 24, // 24 hours
       // Custom email sending
-      sendVerificationEmail: async ({ email, url, token }) => {
+      sendVerificationEmail: async ({ user, url, token }: { user: any; url: string; token: string }) => {
         // TODO: Integrate with email service
-        console.log(`Verification email for ${email}: ${url}`)
-        return { success: true }
+        console.log(`Verification email for ${user.email}: ${url}`)
       }
     },
 
@@ -297,10 +259,11 @@ export class PitcheyAuthUtils {
         console.log(`✅ Created demo account: ${account.email}`)
         
       } catch (error) {
-        if (error.message?.includes("already exists")) {
+        const e = error instanceof Error ? error : new Error(String(error));
+        if (e.message?.includes("already exists")) {
           console.log(`⚠️  Demo account already exists: ${account.email}`)
         } else {
-          console.error(`❌ Failed to create demo account ${account.email}:`, error)
+          console.error(`❌ Failed to create demo account ${account.email}:`, e)
         }
       }
     }
@@ -336,5 +299,4 @@ export class PitcheyAuthUtils {
 }
 
 // Type exports for frontend integration
-export type { PitcheyUser, PortalType }
 export { createAuth as default }

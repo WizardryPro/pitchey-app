@@ -58,7 +58,7 @@ export class MediaAccessHandler {
         return accessCheck;
       }
 
-      const media = accessCheck.data.media;
+      const media = (accessCheck as any).data.media;
       
       // Generate signed download URL
       const downloadUrl = await this.generateSignedUrl(media.storage_path, media.file_name);
@@ -259,7 +259,8 @@ export class MediaAccessHandler {
       }
     } catch (error) {
       console.error('R2 upload error:', error);
-      return { success: false, error: `Upload failed: ${error.message}` };
+      const e = error instanceof Error ? error : new Error(String(error));
+      return { success: false, error: `Upload failed: ${e.message}` };
     }
   }
 

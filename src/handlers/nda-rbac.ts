@@ -35,18 +35,18 @@ export class NDAWithRBACHandler {
     }
 
     try {
-      const body: NDAApprovalRequest = await request.json() as Record<string, unknown>;
+      const body: NDAApprovalRequest = await request.json() as unknown as NDAApprovalRequest;
       const { ndaId, action, reason } = body;
 
       // Get NDA details
-      const [nda] = await this.sql`
+      const [nda] = (await this.sql`
         SELECT n.*, p.user_id, p.id as pitch_id, p.title,
                u.email as requester_email, u.name as requester_name
         FROM ndas n
         JOIN pitches p ON n.pitch_id = p.id
         JOIN users u ON n.requester_id = u.id
         WHERE n.id = ${ndaId}
-      `;
+      `) as any[];
 
       if (!nda) {
         return new Response(JSON.stringify({
@@ -253,12 +253,12 @@ export class NDAWithRBACHandler {
       }
 
       // Get NDA details
-      const [nda] = await this.sql`
+      const [nda] = (await this.sql`
         SELECT n.*, p.user_id
         FROM ndas n
         JOIN pitches p ON n.pitch_id = p.id
         WHERE n.id = ${ndaId}
-      `;
+      `) as any[];
 
       if (!nda) {
         return new Response(JSON.stringify({
@@ -366,14 +366,14 @@ export class NDAWithRBACHandler {
       );
 
       // Get NDA details if exists
-      const [nda] = await this.sql`
+      const [nda] = (await this.sql`
         SELECT id, status, approved_at, expires_at
         FROM ndas
         WHERE requester_id = ${user.id}
           AND pitch_id = ${pitchId}
         ORDER BY created_at DESC
         LIMIT 1
-      `;
+      `) as any[];
 
       return new Response(JSON.stringify({
         success: true,

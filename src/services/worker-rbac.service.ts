@@ -229,8 +229,9 @@ export class WorkerRBACService {
       `;
 
       // Grant access to all documents
-      if (documents.length > 0) {
-        const contentItems = documents.map(doc => ({
+      const documentsArr = documents as any[];
+      if (documentsArr.length > 0) {
+        const contentItems = documentsArr.map((doc: any) => ({
           type: 'document',
           id: doc.id
         }));
@@ -395,11 +396,11 @@ export class WorkerRBACService {
       const context = await this.loadUserPermissions(userId);
       
       // Get additional user data
-      const [user] = await this.sql`
+      const [user] = (await this.sql`
         SELECT email, user_type, name, username
         FROM users
         WHERE id = ${userId}
-      `;
+      `) as any[];
 
       return {
         userId,

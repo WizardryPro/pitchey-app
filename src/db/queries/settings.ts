@@ -83,7 +83,7 @@ export async function getUserSettings(sql: Sql, userId: string): Promise<UserSet
       LIMIT 1
     `;
     
-    return result[0] || null;
+    return (result[0] as UserSettings) || null;
   } catch (error) {
     console.error('Error fetching user settings:', error);
     throw error;
@@ -174,7 +174,7 @@ export async function upsertUserSettings(sql: Sql, userId: string, settings: Par
         updated_at as "updatedAt"
     `;
     
-    return result[0];
+    return result[0] as UserSettings;
   } catch (error) {
     console.error('Error upserting user settings:', error);
     throw error;
@@ -218,7 +218,7 @@ export async function logUserSession(sql: Sql, session: {
         expired_at as "expiredAt"
     `;
     
-    return result[0];
+    return result[0] as AuthSession;
   } catch (error) {
     console.error('Error logging auth session:', error);
     throw error;
@@ -247,7 +247,7 @@ export async function getUserSessions(sql: Sql, userId: string, limit: number = 
       LIMIT ${limit}
     `;
     
-    return result;
+    return result as unknown as AuthSession[];
   } catch (error) {
     console.error('Error fetching auth sessions:', error);
     throw error;
@@ -285,7 +285,7 @@ export async function logAccountAction(sql: Sql, action: {
         created_at as "createdAt"
     `;
     
-    return result[0];
+    return result[0] as AccountAction;
   } catch (error) {
     console.error('Error logging account action:', error);
     throw error;
@@ -311,7 +311,7 @@ export async function getAccountActions(sql: Sql, userId: string, limit: number 
       LIMIT ${limit}
     `;
     
-    return result;
+    return result as unknown as AccountAction[];
   } catch (error) {
     console.error('Error fetching account actions:', error);
     throw error;

@@ -162,12 +162,12 @@ export async function updateInvestmentStatus(
   status: Investment['status'],
   userId: string
 ): Promise<Investment | null> {
-  const statusTimestamp = {
+  const statusTimestamp = ({
     'committed': 'committed_at',
     'funded': 'funded_at',
     'cancelled': 'cancelled_at',
     'refunded': 'refunded_at'
-  }[status];
+  } as Record<string, string>)[status];
 
   const query = statusTimestamp 
     ? `

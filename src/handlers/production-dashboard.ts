@@ -157,7 +157,7 @@ export async function productionDashboardHandler(request: Request, env: Env) {
 
     let talentStats = [emptyDashboard.dashboard.talentStats];
     if (talentTableCheck[0]?.exists) {
-      talentStats = await sql`
+      talentStats = (await sql`
         SELECT
           COUNT(DISTINCT talent_id) as total_talent,
           COUNT(CASE WHEN status = 'available' THEN 1 END) as available,
@@ -165,7 +165,7 @@ export async function productionDashboardHandler(request: Request, env: Env) {
           COALESCE(AVG(rating), 0) as avg_rating
         FROM production_talent
         WHERE production_company_id::text = ${user.id}::text
-      `.catch(() => [emptyDashboard.dashboard.talentStats]);
+      `.catch(() => [emptyDashboard.dashboard.talentStats])) as { total_talent: number; available: number; contracted: number; avg_rating: number; }[];
     }
 
     // Get upcoming deadlines
@@ -565,12 +565,12 @@ export async function productionPipelineHandler(request: Request, env: Env) {
       `;
       
       // Create notification for creator
-      await notificationQueries.createNotification(sql, {
-        user_id: (await pitchQueries.getPitchById(sql, pitch_id))!.user_id,
+      await notificationQueries.createNotification(sql as any, {
+        user_id: (await pitchQueries.getPitchById(sql as any, pitch_id as string))!.creator_id,
         type: 'project_greenlit',
         title: 'Your pitch has been greenlit!',
         message: 'A production company has added your pitch to their pipeline',
-        related_pitch_id: pitch_id,
+        related_pitch_id: pitch_id as string | undefined,
         related_user_id: user.id,
         priority: 'high'
       });

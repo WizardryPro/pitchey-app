@@ -59,7 +59,7 @@ export class UserProfileRoutes {
 
       const userId = authResult.user.id;
 
-      const [user] = await this.sql`
+      const [user] = (await this.sql`
         SELECT
           id, email, name, first_name as "firstName",
           last_name as "lastName", user_type as "userType",
@@ -72,7 +72,7 @@ export class UserProfileRoutes {
         FROM users
         WHERE id = ${userId}
         LIMIT 1
-      `;
+      `) as any[];
 
       if (!user) {
         return new Response(JSON.stringify({
@@ -163,9 +163,9 @@ export class UserProfileRoutes {
           });
         }
         // Check uniqueness (excluding current user)
-        const [existing] = await this.sql`
+        const [existing] = (await this.sql`
           SELECT id FROM users WHERE LOWER(username) = ${trimmed} AND id != ${userId} LIMIT 1
-        `;
+        `) as any[];
         if (existing) {
           return new Response(JSON.stringify({
             success: false,
@@ -233,7 +233,7 @@ export class UserProfileRoutes {
           updated_at as "updatedAt"
       `;
 
-      const [updatedUser] = await this.sql.query(updateQuery, values);
+      const [updatedUser] = (await this.sql.query(updateQuery, values)) as any[];
 
       return new Response(JSON.stringify({
         success: true,
@@ -265,15 +265,15 @@ export class UserProfileRoutes {
 
       const userId = authResult.user.id;
 
-      const [settings] = await this.sql`
-        SELECT 
+      const [settings] = (await this.sql`
+        SELECT
           theme, language, timezone, currency,
           notification_settings as "notificationSettings",
           privacy_settings as "privacySettings"
-        FROM user_settings 
+        FROM user_settings
         WHERE user_id = ${userId}
         LIMIT 1
-      `;
+      `) as any[];
 
       // Return default settings if none exist
       const userSettings: UserSettings = settings || {
@@ -379,7 +379,7 @@ export class UserProfileRoutes {
       if (!authResult.authorized) return authResult.response!;
 
       const userId = authResult.user.id;
-      const { password } = await request.json();
+      const { password } = await request.json() as any;
 
       // Verify password before deletion
       if (!password) {
@@ -392,7 +392,7 @@ export class UserProfileRoutes {
         });
       }
 
-      const [user] = await this.sql`SELECT password FROM users WHERE id = ${userId}`;
+      const [user] = (await this.sql`SELECT password FROM users WHERE id = ${userId}`) as any[];
       if (!user?.password) {
         return new Response(JSON.stringify({
           success: false,
@@ -452,7 +452,7 @@ export class UserProfileRoutes {
    */
   async getPublicProfile(request: Request, userId: string): Promise<Response> {
     try {
-      const [user] = await this.sql`
+      const [user] = (await this.sql`
         SELECT
           id, name, first_name as "firstName",
           last_name as "lastName", user_type as "userType",
@@ -462,7 +462,7 @@ export class UserProfileRoutes {
         FROM users
         WHERE id = ${userId} AND deleted_at IS NULL
         LIMIT 1
-      `;
+      `) as any[];
 
       if (!user) {
         return new Response(JSON.stringify({
@@ -508,8 +508,8 @@ export class UserProfileRoutes {
 
     switch (userType) {
       case 'creator': {
-        const [creatorStats] = await this.sql`
-          SELECT 
+        const [creatorStats] = (await this.sql`
+          SELECT
             COUNT(DISTINCT p.id) as "totalPitches",
             COUNT(DISTINCT CASE WHEN p.status = 'published' THEN p.id END) as "publishedPitches",
             COUNT(DISTINCT i.id) as "totalInvestments",
@@ -522,15 +522,15 @@ export class UserProfileRoutes {
           LEFT JOIN views v ON v.pitch_id = p.id
           LEFT JOIN follows f ON f.following_id = ${userId}
           WHERE u.id = ${userId}
-        `;
+        `) as any[];
         stats.creator = creatorStats;
         break;
       }
 
       case 'investor':
         if (!publicOnly) {
-          const [investorStats] = await this.sql`
-            SELECT 
+          const [investorStats] = (await this.sql`
+            SELECT
               COUNT(DISTINCT i.id) as "totalInvestments",
               COALESCE(SUM(i.amount), 0) as "totalInvested",
               COUNT(DISTINCT i.pitch_id) as "pitchesInvested",
@@ -541,14 +541,14 @@ export class UserProfileRoutes {
             LEFT JOIN saved_pitches sp ON sp.user_id = ${userId}
             LEFT JOIN ndas n ON n.investor_id = ${userId} AND n.status = 'signed'
             WHERE u.id = ${userId}
-          `;
+          `) as any[];
           stats.investor = investorStats;
         }
         break;
 
       case 'production': {
-        const [productionStats] = await this.sql`
-          SELECT 
+        const [productionStats] = (await this.sql`
+          SELECT
             COUNT(DISTINCT p.id) as "totalProductions",
             COUNT(DISTINCT p.id) as "activeProjects",
             COUNT(DISTINCT i.id) as "totalInvestments",
@@ -557,7 +557,7 @@ export class UserProfileRoutes {
           LEFT JOIN pitches p ON p.production_company_id = ${userId}
           LEFT JOIN investments i ON i.pitch_id = p.id
           WHERE u.id = ${userId}
-        `;
+        `) as any[];
         stats.production = productionStats;
         break;
       }

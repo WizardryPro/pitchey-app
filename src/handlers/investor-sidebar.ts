@@ -1032,7 +1032,7 @@ export async function investorOpportunitiesHandler(request: Request, env: Env): 
 
   // --- Redis cache (3 min TTL) ---
   const { UpstashCacheService } = await import('../services/upstash-cache.service');
-  const cache = new UpstashCacheService(env);
+  const cache = new UpstashCacheService(env as any);
   const cacheKey = `investor:opportunities:${sortBy}:${genre || 'all'}:o${offset}:l${limit}`;
 
   if (cache.isConnected) {

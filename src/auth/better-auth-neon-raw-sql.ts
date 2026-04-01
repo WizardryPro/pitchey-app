@@ -114,7 +114,7 @@ export function createBetterAuthInstance(env: AuthEnv, request?: Request) {
   const cf = request ? (request as any).cf : undefined;
 
   // Create raw SQL adapter
-  const dbAdapter = createRawSQLAdapter(sql);
+  const dbAdapter = createRawSQLAdapter(sql as any);
 
   // For now, we'll use a simpler approach that doesn't require the drizzleAdapter
   // Better Auth can work with custom session handling

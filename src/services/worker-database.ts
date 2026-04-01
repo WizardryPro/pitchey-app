@@ -7,6 +7,7 @@
 import { neon, neonConfig, type NeonQueryFunction } from '@neondatabase/serverless';
 import { z } from 'zod';
 import { annotateQueryWithTrace } from '../db/trace-context';
+import type { DatabaseService } from '../types/worker-types';
 
 // CRITICAL: Configure Neon for connection pooling in edge environments
 // These settings enable HTTP-based queries and connection caching
@@ -83,8 +84,8 @@ function getOrCreateSqlClient(connectionString: string): NeonQueryFunction<false
   return client;
 }
 
-export class WorkerDatabase {
-  private sql: NeonQueryFunction<false, false>;
+export class WorkerDatabase implements DatabaseService {
+  private _sql: NeonQueryFunction<false, false>;
   private readonly connectionString: string;
   private readonly maxRetries: number;
   private readonly retryDelay: number;
@@ -99,7 +100,7 @@ export class WorkerDatabase {
 
     // CRITICAL: Reuse cached SQL client instead of creating new one per instance
     // This prevents connection exhaustion under high concurrency
-    this.sql = getOrCreateSqlClient(this.connectionString);
+    this._sql =getOrCreateSqlClient(this.connectionString);
   }
 
   private validateConfig(config: DatabaseConfig): void {
@@ -118,7 +119,7 @@ export class WorkerDatabase {
    * Get the raw SQL client for direct queries
    */
   getSql(): NeonQueryFunction<false, false> {
-    return this.sql;
+    return this._sql;
   }
 
   /**
@@ -164,9 +165,9 @@ export class WorkerDatabase {
       let raw: any;
 
       if (values && values.length > 0) {
-        raw = await (this.sql as any).query(annotatedText, values);
+        raw = await (this._sql as any).query(annotatedText, values);
       } else {
-        raw = await (this.sql as any).query(annotatedText);
+        raw = await (this._sql as any).query(annotatedText);
       }
 
       // Neon's .query() returns { rows: [...], rowCount, ... } — unwrap to plain array

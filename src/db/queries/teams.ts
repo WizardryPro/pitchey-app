@@ -3,7 +3,7 @@
  * Handles all team-related database operations
  */
 
-import { Sql } from '../connection';
+import type { SqlQuery } from './base';
 
 export interface Team {
   id: number;
@@ -43,7 +43,7 @@ export interface TeamInvitation {
 }
 
 // Get all teams for a user
-export async function getUserTeams(sql: Sql, userId: string) {
+export async function getUserTeams(sql: SqlQuery, userId: string) {
   try {
     const teams = await sql`
       SELECT DISTINCT
@@ -83,7 +83,7 @@ export async function getUserTeams(sql: Sql, userId: string) {
       ORDER BY t.created_at DESC
     `;
 
-    return teams.map(team => ({
+    return teams.map((team: any) => ({
       ...team,
       members: team.members || []
     }));
@@ -94,7 +94,7 @@ export async function getUserTeams(sql: Sql, userId: string) {
 }
 
 // Get single team details
-export async function getTeamById(sql: Sql, teamId: string, userId: string) {
+export async function getTeamById(sql: SqlQuery, teamId: string, userId: string) {
   try {
     const result = await sql`
       SELECT 
@@ -150,7 +150,7 @@ export async function getTeamById(sql: Sql, teamId: string, userId: string) {
 }
 
 // Create a new team
-export async function createTeam(sql: Sql, data: {
+export async function createTeam(sql: SqlQuery, data: {
   name: string;
   description?: string;
   ownerId: string;
@@ -201,7 +201,7 @@ export async function createTeam(sql: Sql, data: {
 }
 
 // Update team details
-export async function updateTeam(sql: Sql, teamId: string, userId: string, data: {
+export async function updateTeam(sql: SqlQuery, teamId: string, userId: string, data: {
   name?: string;
   description?: string;
   visibility?: 'private' | 'team' | 'public';
@@ -249,7 +249,7 @@ export async function updateTeam(sql: Sql, teamId: string, userId: string, data:
 }
 
 // Delete a team
-export async function deleteTeam(sql: Sql, teamId: string, userId: string) {
+export async function deleteTeam(sql: SqlQuery, teamId: string, userId: string) {
   try {
     // Check if user is owner
     const isOwner = await sql`
@@ -270,7 +270,7 @@ export async function deleteTeam(sql: Sql, teamId: string, userId: string) {
 }
 
 // Send team invitation
-export async function inviteToTeam(sql: Sql, teamId: string, inviterId: string, data: {
+export async function inviteToTeam(sql: SqlQuery, teamId: string, inviterId: string, data: {
   email: string;
   role: 'editor' | 'viewer';
   message?: string;
@@ -356,7 +356,7 @@ export async function inviteToTeam(sql: Sql, teamId: string, inviterId: string, 
 }
 
 // Get user's pending invitations
-export async function getUserInvitations(sql: Sql, email: string) {
+export async function getUserInvitations(sql: SqlQuery, email: string) {
   try {
     const invitations = await sql`
       SELECT 
@@ -388,7 +388,7 @@ export async function getUserInvitations(sql: Sql, email: string) {
 }
 
 // Accept team invitation
-export async function acceptInvitation(sql: Sql, invitationId: string, userId: string, userEmail: string) {
+export async function acceptInvitation(sql: SqlQuery, invitationId: string, userId: string, userEmail: string) {
   try {
     // Get invitation details
     const invitation = await sql`
@@ -406,7 +406,7 @@ export async function acceptInvitation(sql: Sql, invitationId: string, userId: s
     const invite = invitation[0];
 
     // Start transaction
-    await sql.begin(async sql => {
+    await (sql as any).begin(async (sql: any) => {
       // Update invitation status
       await sql`
         UPDATE team_invitations
@@ -433,7 +433,7 @@ export async function acceptInvitation(sql: Sql, invitationId: string, userId: s
 }
 
 // Reject team invitation
-export async function rejectInvitation(sql: Sql, invitationId: string, userEmail: string) {
+export async function rejectInvitation(sql: SqlQuery, invitationId: string, userEmail: string) {
   try {
     const result = await sql`
       UPDATE team_invitations
@@ -457,7 +457,7 @@ export async function rejectInvitation(sql: Sql, invitationId: string, userEmail
 }
 
 // Update team member role
-export async function updateMemberRole(sql: Sql, teamId: string, memberId: string, updaterId: string, newRole: string) {
+export async function updateMemberRole(sql: SqlQuery, teamId: string, memberId: string, updaterId: string, newRole: string) {
   try {
     // Check if updater is owner
     const isOwner = await sql`
@@ -501,7 +501,7 @@ export async function updateMemberRole(sql: Sql, teamId: string, memberId: strin
 }
 
 // Remove team member
-export async function removeTeamMember(sql: Sql, teamId: string, memberId: string, removerId: string) {
+export async function removeTeamMember(sql: SqlQuery, teamId: string, memberId: string, removerId: string) {
   try {
     // Check if remover is owner
     const isOwner = await sql`
@@ -542,7 +542,7 @@ export async function removeTeamMember(sql: Sql, teamId: string, memberId: strin
 }
 
 // Associate pitch with team
-export async function addPitchToTeam(sql: Sql, teamId: string, pitchId: string, userId: string) {
+export async function addPitchToTeam(sql: SqlQuery, teamId: string, pitchId: string, userId: string) {
   try {
     // Check if user is team member with edit permissions
     const hasPermission = await sql`
@@ -576,7 +576,7 @@ export async function addPitchToTeam(sql: Sql, teamId: string, pitchId: string, 
 }
 
 // Remove pitch from team
-export async function removePitchFromTeam(sql: Sql, teamId: string, pitchId: string, userId: string) {
+export async function removePitchFromTeam(sql: SqlQuery, teamId: string, pitchId: string, userId: string) {
   try {
     // Check if user has permission
     const hasPermission = await sql`
@@ -609,7 +609,7 @@ export async function removePitchFromTeam(sql: Sql, teamId: string, pitchId: str
 }
 
 // Get team activity log
-export async function getTeamActivity(sql: Sql, teamId: string, limit: number = 50) {
+export async function getTeamActivity(sql: SqlQuery, teamId: string, limit: number = 50) {
   try {
     const activities = await sql`
       SELECT 
@@ -637,7 +637,7 @@ export async function getTeamActivity(sql: Sql, teamId: string, limit: number = 
 
 // Helper function to log team activity
 async function logTeamActivity(
-  sql: Sql, 
+  sql: SqlQuery, 
   teamId: string | number, 
   userId: string | number | null, 
   action: string, 
@@ -665,7 +665,7 @@ async function logTeamActivity(
 }
 
 // Resend team invitation (reset status and extend expiry)
-export async function resendInvitation(sql: Sql, invitationId: string, userId: string) {
+export async function resendInvitation(sql: SqlQuery, invitationId: string, userId: string) {
   try {
     // Verify the user is an owner/editor of the team this invitation belongs to
     const invite = await sql`
@@ -714,7 +714,7 @@ export async function resendInvitation(sql: Sql, invitationId: string, userId: s
 }
 
 // Cancel (delete) a team invitation
-export async function cancelInvitation(sql: Sql, invitationId: string, userId: string) {
+export async function cancelInvitation(sql: SqlQuery, invitationId: string, userId: string) {
   try {
     // Verify the user is an owner/editor of the team this invitation belongs to
     const invite = await sql`
@@ -745,7 +745,7 @@ export async function cancelInvitation(sql: Sql, invitationId: string, userId: s
 }
 
 // Check if user can access team
-export async function canAccessTeam(sql: Sql, userId: string, teamId: string): Promise<boolean> {
+export async function canAccessTeam(sql: SqlQuery, userId: string, teamId: string): Promise<boolean> {
   try {
     const result = await sql`
       SELECT 

@@ -154,13 +154,13 @@ async function generateTOTP(secret: string, time: number = Date.now()): Promise<
 async function hotp(key: Uint8Array, counter: Uint8Array): Promise<string> {
   const cryptoKey = await crypto.subtle.importKey(
     'raw',
-    key,
+    key as unknown as ArrayBuffer,
     { name: 'HMAC', hash: 'SHA-1' },
     false,
     ['sign']
   );
-  
-  const signature = await crypto.subtle.sign('HMAC', cryptoKey, counter);
+
+  const signature = await crypto.subtle.sign('HMAC', cryptoKey, counter as unknown as ArrayBuffer);
   const hash = new Uint8Array(signature);
   
   // Dynamic truncation

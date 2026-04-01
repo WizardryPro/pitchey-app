@@ -299,7 +299,7 @@ export const validatePartial = <T>(
   data: unknown
 ): { success: true; data: Partial<T> } | { success: false; errors: z.ZodError } => {
   try {
-    const partialSchema = schema.partial();
+    const partialSchema = (schema as any).partial();
     const validated = partialSchema.parse(data);
     return { success: true, data: validated };
   } catch (error) {

@@ -26,7 +26,7 @@ import { requireAuth, requireRole } from '../middleware/auth';
  */
 export async function analyzeHandler(request: Request): Promise<Response> {
   try {
-    const data: ValidationAnalysisRequest = await request.json() as Record<string, unknown>;
+    const data: ValidationAnalysisRequest = await request.json() as unknown as ValidationAnalysisRequest;
     
     // Validate required fields
     if (!data.pitchData?.title || !data.pitchData?.genre || !data.pitchData?.budget) {
@@ -408,7 +408,7 @@ export async function getComparablesHandler(request: Request): Promise<Response>
  */
 export async function benchmarkHandler(request: Request): Promise<Response> {
   try {
-    const data: BenchmarkRequest = await request.json() as Record<string, unknown>;
+    const data: BenchmarkRequest = await request.json() as unknown as BenchmarkRequest;
     
     if (!data.pitchId || !data.categories || data.categories.length === 0) {
       return Response.json({
@@ -715,8 +715,8 @@ export async function getDashboardHandler(request: Request): Promise<Response> {
       }, { status: 404 });
     }
     
-    const validationScore: ValidationScore = scoreData.data;
-    const validationProgress: ValidationProgress = progressData.data;
+    const validationScore: ValidationScore = scoreData.data!;
+    const validationProgress: ValidationProgress = progressData.data!;
     
     // Derive competitive position from the overall score
     const estimatedRanking = Math.max(1, Math.round(100 - validationScore.overallScore));

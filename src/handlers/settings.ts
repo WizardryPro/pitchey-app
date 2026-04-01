@@ -32,11 +32,11 @@ export async function getUserSettingsHandler(request: Request, env: Env): Promis
     }
 
     const db = createDatabase(env.DATABASE_URL);
-    const settings = await getUserSettings(db, authResult.user.id.toString());
+    const settings = await getUserSettings(db as any, authResult.user.id.toString());
 
     // If no settings exist yet, create default settings
     if (!settings) {
-      const defaultSettings = await upsertUserSettings(db, authResult.user.id.toString(), {});
+      const defaultSettings = await upsertUserSettings(db as any, authResult.user.id.toString(), {});
       
       // Format response
       const response = {
@@ -122,11 +122,13 @@ export async function updateUserSettingsHandler(request: Request, env: Env): Pro
     }
 
     const body = await request.json() as Record<string, unknown>;
-    const { notifications, privacy, security } = body;
+    const notifications = body.notifications as Record<string, unknown> | undefined;
+    const privacy = body.privacy as Record<string, unknown> | undefined;
+    const security = body.security as Record<string, unknown> | undefined;
 
     // Prepare settings object
     const settingsUpdate: any = {};
-    
+
     if (notifications) {
       Object.assign(settingsUpdate, {
         emailNotifications: notifications.emailNotifications,
@@ -138,7 +140,7 @@ export async function updateUserSettingsHandler(request: Request, env: Env): Pro
         marketingEmails: notifications.marketingEmails
       });
     }
-    
+
     if (privacy) {
       Object.assign(settingsUpdate, {
         profileVisibility: privacy.profileVisibility,
@@ -148,7 +150,7 @@ export async function updateUserSettingsHandler(request: Request, env: Env): Pro
         allowPitchRequests: privacy.allowPitchRequests
       });
     }
-    
+
     if (security) {
       Object.assign(settingsUpdate, {
         twoFactorEnabled: security.twoFactorEnabled,
@@ -158,11 +160,10 @@ export async function updateUserSettingsHandler(request: Request, env: Env): Pro
     }
 
     const db = createDatabase(env.DATABASE_URL);
-    const sql = db.sql;
-    const updatedSettings = await upsertUserSettings(sql, authResult.user.id.toString(), settingsUpdate);
-    
+    const updatedSettings = await upsertUserSettings(db as any, authResult.user.id.toString(), settingsUpdate);
+
     // Log the action
-    await logAccountAction(sql, {
+    await logAccountAction(db as any, {
       userId: authResult.user.id.toString(),
       actionType: 'settings_updated',
       metadata: { updated_fields: Object.keys(settingsUpdate) },
@@ -222,8 +223,7 @@ export async function getUserSessionsHandler(request: Request, env: Env): Promis
     }
 
     const db = createDatabase(env.DATABASE_URL);
-    const sql = db.sql;
-    const sessions = await getUserSessions(sql, authResult.user.id.toString());
+    const sessions = await getUserSessions(db as any, authResult.user.id.toString());
 
     return new Response(JSON.stringify({ sessions }), {
       status: 200,
@@ -253,8 +253,7 @@ export async function getAccountActivityHandler(request: Request, env: Env): Pro
     }
 
     const db = createDatabase(env.DATABASE_URL);
-    const sql = db.sql;
-    const activities = await getAccountActions(sql, authResult.user.id.toString());
+    const activities = await getAccountActions(db as any, authResult.user.id.toString());
 
     return new Response(JSON.stringify({ activities }), {
       status: 200,
@@ -294,12 +293,11 @@ export async function enableTwoFactorHandler(request: Request, env: Env): Promis
     }
 
     const db = createDatabase(env.DATABASE_URL);
-    const sql = db.sql;
-    const success = await enableTwoFactor(sql, authResult.user.id.toString(), secret);
-    
+    const success = await enableTwoFactor(db as any, authResult.user.id.toString(), secret as string);
+
     if (success) {
       // Log the action
-      await logAccountAction(sql, {
+      await logAccountAction(db as any, {
         userId: authResult.user.id.toString(),
         actionType: 'two_factor_enabled',
         metadata: {},
@@ -340,12 +338,11 @@ export async function disableTwoFactorHandler(request: Request, env: Env): Promi
     }
 
     const db = createDatabase(env.DATABASE_URL);
-    const sql = db.sql;
-    const success = await disableTwoFactor(sql, authResult.user.id.toString());
-    
+    const success = await disableTwoFactor(db as any, authResult.user.id.toString());
+
     if (success) {
       // Log the action
-      await logAccountAction(sql, {
+      await logAccountAction(db as any, {
         userId: authResult.user.id.toString(),
         actionType: 'two_factor_disabled',
         metadata: {},
@@ -397,17 +394,16 @@ export async function deleteAccountHandler(request: Request, env: Env): Promise<
     }
 
     const db = createDatabase(env.DATABASE_URL);
-    const sql = db.sql;
-    
+
     // Log the action before deletion
-    await logAccountAction(sql, {
+    await logAccountAction(db as any, {
       userId: authResult.user.id.toString(),
       actionType: 'account_deletion_requested',
       metadata: {},
       ipAddress: request.headers.get('CF-Connecting-IP') || undefined
     });
 
-    const success = await deleteUserAccount(sql, authResult.user.id.toString());
+    const success = await deleteUserAccount(db as any, authResult.user.id.toString());
     
     if (success) {
       return new Response(JSON.stringify({ message: 'Account deleted successfully' }), {
@@ -444,10 +440,9 @@ export async function logSessionHandler(request: Request, env: Env): Promise<Res
     }
 
     const db = createDatabase(env.DATABASE_URL);
-    const sql = db.sql;
-    
+
     // Extract session info
-    const session = await logUserSession(sql, {
+    const session = await logUserSession(db as any, {
       userId: authResult.user.id.toString(),
       ipAddress: request.headers.get('CF-Connecting-IP') || undefined,
       userAgent: request.headers.get('User-Agent') || undefined,

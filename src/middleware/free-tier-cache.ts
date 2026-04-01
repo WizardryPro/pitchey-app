@@ -92,7 +92,7 @@ export function withCache(
         const cacheData = {
           body,
           status: response.status,
-          headers: Object.fromEntries([...response.headers] as [string, string][]),
+          headers: Object.fromEntries([...(response.headers as any)] as [string, string][]),
           timestamp: Date.now()
         };
         

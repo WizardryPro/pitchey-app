@@ -308,7 +308,7 @@ export class LegalDocumentHandler {
         variables,
         jurisdiction,
         document_type: template.category,
-        parties,
+        parties: parties as GenerationContext['parties'],
         related_entities
       };
 
@@ -448,7 +448,7 @@ export class LegalDocumentHandler {
           generation_metadata: {
             template_name: template.name,
             clauses_applied: generationResult.document.conditional_clauses_applied?.length || 0,
-            estimated_pages: LegalPDFGenerator['estimatePageCount'](htmlContent || ''),
+            estimated_pages: LegalPDFGenerator['estimatePageCount'](generationResult.document.generated_content || ''),
             jurisdiction: jurisdiction
           }
         }
@@ -524,7 +524,7 @@ export class LegalDocumentHandler {
               jurisdiction,
               document_type: 'unknown',
               conditional_clauses_applied: []
-            } as GeneratedDocument;
+            } as unknown as GeneratedDocument;
 
             complianceCheck = LegalDocumentEngine.validateCompliance(
               mockDocument,
@@ -835,7 +835,7 @@ export class LegalDocumentHandler {
       const comparisonHTML = this.generateComparisonReportHTML(comparison_result);
       
       // Generate PDF using LegalPDFGenerator
-      const pdfResult = await LegalPDFGenerator.generatePDF(comparisonHTML, {
+      const pdfResult = await LegalPDFGenerator.generatePDF(comparisonHTML, undefined, {
         format: 'Letter',
         orientation: 'portrait',
         margins: { top: '1in', right: '1in', bottom: '1in', left: '1in' }
@@ -844,7 +844,7 @@ export class LegalDocumentHandler {
       if (pdfResult.success) {
         // Upload to R2
         const fileName = `comparison-${document1_id}-${document2_id}-${Date.now()}.pdf`;
-        const uploadResult = await this.r2Service.uploadBuffer(
+        const uploadResult = await this.storageService.uploadBuffer(
           pdfResult.pdfBuffer,
           fileName,
           'application/pdf'
@@ -949,11 +949,11 @@ export class LegalDocumentHandler {
       }
 
       // Validate against template schema
-      const validation = LegalDocumentEngine.validateVariables(variables, template[0]);
-      
+      const validation = LegalDocumentEngine.validateVariables(variables as Record<string, any>, template[0]);
+
       // Get compliance check
-      const compliance = validation_level === 'compliance' 
-        ? LegalDocumentEngine.checkCompliance({
+      const compliance = validation_level === 'compliance'
+        ? (LegalDocumentEngine as any).checkCompliance({
             template: template[0],
             variables,
             jurisdiction
@@ -994,9 +994,9 @@ export class LegalDocumentHandler {
 
       // Use AI recommendation engine
       const recommendations = await LegalDocumentEngine.recommendClauses(
-        document_type,
-        jurisdiction,
-        deal_context,
+        document_type as string,
+        jurisdiction as string,
+        deal_context as Record<string, any>,
         clauses
       );
 
@@ -1034,7 +1034,7 @@ export class LegalDocumentHandler {
 
       const riskAssessment = LegalDocumentEngine.assessDocumentRisk(
         document[0],
-        industry || 'entertainment'
+        (industry as string) || 'entertainment'
       );
 
       return new Response(JSON.stringify({
@@ -1071,8 +1071,8 @@ export class LegalDocumentHandler {
 
       const translationResult = await LegalDocumentEngine.translateDocument(
         document[0].generated_content,
-        target_language,
-        legal_terminology
+        target_language as string,
+        legal_terminology !== false
       );
 
       return new Response(JSON.stringify({
@@ -1093,7 +1093,8 @@ export class LegalDocumentHandler {
    */
   async initiateSignatures(request: Request): Promise<Response> {
     const data = await request.json() as Record<string, unknown>;
-    const { document_id, signers, signature_method } = data;
+    const { document_id, signature_method } = data;
+    const signers = data.signers as any[];
 
     try {
       const document = await this.db.query(`

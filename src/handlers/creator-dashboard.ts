@@ -97,9 +97,9 @@ export async function creatorDashboardHandler(request: Request, env: Env): Promi
         FROM pitches
         WHERE creator_id::text = ${userId} OR user_id::text = ${userId}
       `.catch((err: unknown) => { console.error('Dashboard analytics query error:', err); return [{ total_views: 0, avg_engagement: 0 }]; }),
-      documentQueries.getUserNDARequests(sql, userId, 'received').catch((err: unknown) => { console.error('Dashboard NDA query error:', err); return []; }),
-      investmentQueries.getInvestorPortfolio(sql, userId, {}).catch((err: unknown) => { console.error('Dashboard investments query error:', err); return []; }),
-      notificationQueries.getUserNotifications(sql, userId, { limit: 5 }).catch((err: unknown) => { console.error('Dashboard notifications query error:', err); return []; })
+      documentQueries.getUserNDARequests(sql as any, userId, 'received').catch((err: unknown) => { console.error('Dashboard NDA query error:', err); return []; }),
+      investmentQueries.getInvestorPortfolio(sql as any, userId, {}).catch((err: unknown) => { console.error('Dashboard investments query error:', err); return []; }),
+      notificationQueries.getUserNotifications(sql as any, userId, { limit: 5 }).catch((err: unknown) => { console.error('Dashboard notifications query error:', err); return []; })
     ]);
 
     const userStats = results[0].status === 'fulfilled' ? (results[0].value as any[])[0] || { totalPitches: 0, totalFollowers: 0 } : { totalPitches: 0, totalFollowers: 0 };
@@ -126,7 +126,7 @@ export async function creatorDashboardHandler(request: Request, env: Env): Promi
           totalViews: analytics.total_views || 0,
           totalFollowers: userStats.totalFollowers || 0,
           totalInvestments: recentInvestments.length || 0,
-          activeDeals: pendingNDAs.filter((n) => n?.status === 'signed' || n?.status === 'approved').length,
+          activeDeals: pendingNDAs.filter((n) => (n?.status as string) === 'signed' || n?.status === 'approved').length,
           pendingActions: pendingNDAs.filter((n) => n?.status === 'pending').length,
           totalNDAs: pendingNDAs.length
         },

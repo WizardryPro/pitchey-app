@@ -5,7 +5,7 @@
 
 import { getDb } from '../db/connection';
 import type { Env } from '../db/connection';
-import { ApiResponseBuilder } from '../utils/api-response';
+import { ApiResponseBuilder, ErrorCode } from '../utils/api-response';
 import { requireRole } from '../utils/auth-extract';
 
 // ---------------------------------------------------------------------------
@@ -95,10 +95,10 @@ export async function creatorContractDetailsHandler(request: Request, env: Env):
 
   const url = new URL(request.url);
   const contractId = Number(url.pathname.split('/').pop());
-  if (!contractId) return ApiResponseBuilder.error('VALIDATION_ERROR', 'Invalid contract ID');
+  if (!contractId) return ApiResponseBuilder.error(ErrorCode.VALIDATION_ERROR, 'Invalid contract ID');
 
   const sql = getDb(env);
-  if (!sql) return ApiResponseBuilder.error('SERVICE_UNAVAILABLE', 'Database unavailable');
+  if (!sql) return ApiResponseBuilder.error(ErrorCode.SERVICE_UNAVAILABLE, 'Database unavailable');
 
   try {
     const userId = Number(roleCheck.user.id);
@@ -112,14 +112,14 @@ export async function creatorContractDetailsHandler(request: Request, env: Env):
     `.catch(() => []);
 
     if (result.length === 0) {
-      return ApiResponseBuilder.error('NOT_FOUND', 'Contract not found');
+      return ApiResponseBuilder.error(ErrorCode.NOT_FOUND, 'Contract not found');
     }
 
     return ApiResponseBuilder.success({ contract: result[0] });
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
     console.error('creatorContractDetailsHandler error:', e.message);
-    return ApiResponseBuilder.error('INTERNAL_ERROR', 'Failed to fetch contract');
+    return ApiResponseBuilder.error(ErrorCode.INTERNAL_ERROR, 'Failed to fetch contract');
   }
 }
 
@@ -130,10 +130,10 @@ export async function creatorContractUpdateHandler(request: Request, env: Env): 
 
   const url = new URL(request.url);
   const contractId = Number(url.pathname.split('/').pop());
-  if (!contractId) return ApiResponseBuilder.error('VALIDATION_ERROR', 'Invalid contract ID');
+  if (!contractId) return ApiResponseBuilder.error(ErrorCode.VALIDATION_ERROR, 'Invalid contract ID');
 
   const sql = getDb(env);
-  if (!sql) return ApiResponseBuilder.error('SERVICE_UNAVAILABLE', 'Database unavailable');
+  if (!sql) return ApiResponseBuilder.error(ErrorCode.SERVICE_UNAVAILABLE, 'Database unavailable');
 
   try {
     const userId = Number(roleCheck.user.id);
@@ -155,14 +155,14 @@ export async function creatorContractUpdateHandler(request: Request, env: Env): 
     `.catch(() => []);
 
     if (result.length === 0) {
-      return ApiResponseBuilder.error('NOT_FOUND', 'Contract not found');
+      return ApiResponseBuilder.error(ErrorCode.NOT_FOUND, 'Contract not found');
     }
 
     return ApiResponseBuilder.success({ contract: result[0] });
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
     console.error('creatorContractUpdateHandler error:', e.message);
-    return ApiResponseBuilder.error('INTERNAL_ERROR', 'Failed to update contract');
+    return ApiResponseBuilder.error(ErrorCode.INTERNAL_ERROR, 'Failed to update contract');
   }
 }
 
@@ -299,7 +299,7 @@ export async function creatorInvestorCommunicationHandler(request: Request, env:
   const parts = new URL(request.url).pathname.split('/');
   // /api/creator/investors/:investorId/communications
   const investorId = Number(parts[4]);
-  if (!investorId) return ApiResponseBuilder.error('VALIDATION_ERROR', 'Invalid investor ID');
+  if (!investorId) return ApiResponseBuilder.error(ErrorCode.VALIDATION_ERROR, 'Invalid investor ID');
 
   const sql = getDb(env);
   if (!sql) return ApiResponseBuilder.success({ communications: [] });
@@ -354,10 +354,10 @@ export async function creatorMessageInvestorHandler(request: Request, env: Env):
   const parts = new URL(request.url).pathname.split('/');
   // /api/creator/investors/:investorId/message
   const investorId = Number(parts[4]);
-  if (!investorId) return ApiResponseBuilder.error('VALIDATION_ERROR', 'Invalid investor ID');
+  if (!investorId) return ApiResponseBuilder.error(ErrorCode.VALIDATION_ERROR, 'Invalid investor ID');
 
   const sql = getDb(env);
-  if (!sql) return ApiResponseBuilder.error('SERVICE_UNAVAILABLE', 'Database unavailable');
+  if (!sql) return ApiResponseBuilder.error(ErrorCode.SERVICE_UNAVAILABLE, 'Database unavailable');
 
   try {
     const userId = Number(roleCheck.user.id);
@@ -365,7 +365,7 @@ export async function creatorMessageInvestorHandler(request: Request, env: Env):
     const content = typeof body.message === 'string' ? body.message.trim() : '';
     const subject = typeof body.subject === 'string' ? body.subject.trim() : '';
 
-    if (!content) return ApiResponseBuilder.error('VALIDATION_ERROR', 'Message content is required');
+    if (!content) return ApiResponseBuilder.error(ErrorCode.VALIDATION_ERROR, 'Message content is required');
 
     // Check if an existing conversation exists between the two users
     const existing = await sql`
@@ -426,6 +426,6 @@ export async function creatorMessageInvestorHandler(request: Request, env: Env):
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
     console.error('creatorMessageInvestorHandler error:', e.message);
-    return ApiResponseBuilder.error('INTERNAL_ERROR', 'Failed to send message');
+    return ApiResponseBuilder.error(ErrorCode.INTERNAL_ERROR, 'Failed to send message');
   }
 }

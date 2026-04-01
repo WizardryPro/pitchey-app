@@ -465,9 +465,9 @@ export class SecurePortalEndpoints {
     }
 
     return this.productionWorkflow.expressProductionInterest(request, pitch_id as number, {
-      deal_type: deal_type as string,
+      deal_type: deal_type as any,
       offer_amount: offer_amount as number,
-      option_period: option_period as number | undefined,
+      option_period: option_period !== undefined ? String(option_period) : undefined,
       proposed_rights: (proposed_rights || {}) as Record<string, unknown>,
       production_timeline: production_timeline as string | undefined,
       message: message as string | undefined

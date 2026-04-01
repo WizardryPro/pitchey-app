@@ -28,15 +28,16 @@ export class PollingService {
    */
   async pollNotifications(userId: string): Promise<PollResponse> {
     const cacheKey = `poll:notifications:${userId}`;
-    
+
     // Check cache first (5 second cache for notifications)
-    const cached = await this.kv.get(cacheKey, 'json');
-    if (cached && Date.now() - cached.timestamp < 5000) {
-      return cached;
+    const cached = await this.kv.get(cacheKey, 'json') as PollResponse | null;
+    if (cached && Date.now() - (cached as PollResponse).timestamp < 5000) {
+      return cached as PollResponse;
     }
 
     // Get fresh notifications
-    const notifications = await this.db.getNotifications(userId, 10);
+    const db = this.db as any;
+    const notifications = await db.getNotifications(userId, 10);
     
     const response: PollResponse = {
       notifications,
@@ -61,15 +62,16 @@ export class PollingService {
       : `poll:messages:${userId}`;
     
     // Check cache (3 second cache for messages)
-    const cached = await this.kv.get(cacheKey, 'json');
-    if (cached && Date.now() - cached.timestamp < 3000) {
-      return cached;
+    const cached = await this.kv.get(cacheKey, 'json') as PollResponse | null;
+    if (cached && Date.now() - (cached as PollResponse).timestamp < 3000) {
+      return cached as PollResponse;
     }
 
     // Get fresh messages
+    const db = this.db as any;
     const messages = conversationId
-      ? await this.db.getConversationMessages(conversationId, userId, 20)
-      : await this.db.getRecentMessages(userId, 20);
+      ? await db.getConversationMessages(conversationId, userId, 20)
+      : await db.getRecentMessages(userId, 20);
     
     const response: PollResponse = {
       messages,
@@ -92,34 +94,35 @@ export class PollingService {
     const cacheKey = `poll:dashboard:${role}:${userId}`;
     
     // Check cache (30 second cache for dashboard)
-    const cached = await this.kv.get(cacheKey, 'json');
-    if (cached && Date.now() - cached.timestamp < 30000) {
-      return cached;
+    const cached = await this.kv.get(cacheKey, 'json') as PollResponse | null;
+    if (cached && Date.now() - (cached as PollResponse).timestamp < 30000) {
+      return cached as PollResponse;
     }
 
     // Get dashboard data based on role
+    const db = this.db as any;
     let updates = {};
-    
+
     switch (role) {
       case 'creator':
         updates = {
-          pitchViews: await this.db.getTotalPitchViews(userId),
-          ndaRequests: await this.db.getPendingNDACount(userId),
-          messages: await this.db.getUnreadMessageCount(userId)
+          pitchViews: await db.getTotalPitchViews(userId),
+          ndaRequests: await db.getPendingNDACount(userId),
+          messages: await db.getUnreadMessageCount(userId)
         };
         break;
       case 'investor':
         updates = {
-          savedPitches: await this.db.getSavedPitchesCount(userId),
-          investments: await this.db.getInvestmentCount(userId),
-          followedCreators: await this.db.getFollowingCount(userId)
+          savedPitches: await db.getSavedPitchesCount(userId),
+          investments: await db.getInvestmentCount(userId),
+          followedCreators: await db.getFollowingCount(userId)
         };
         break;
       case 'production':
         updates = {
-          activeProjects: await this.db.getActiveProjectsCount(userId),
-          ndaActive: await this.db.getActiveNDACount(userId),
-          partnerships: await this.db.getPartnershipsCount(userId)
+          activeProjects: await db.getActiveProjectsCount(userId),
+          ndaActive: await db.getActiveNDACount(userId),
+          partnerships: await db.getPartnershipsCount(userId)
         };
         break;
     }
@@ -187,14 +190,14 @@ export async function handlePolling(
     default:
       return new Response(JSON.stringify({ error: 'Unknown poll endpoint' }), {
         status: 404,
-        headers: { ...getCorsHeaders(request), 'Content-Type': 'application/json' }
+        headers: { ...getCorsHeaders(request.headers.get('origin')), 'Content-Type': 'application/json' }
       });
   }
-  
+
   return new Response(JSON.stringify(response), {
     status: 200,
     headers: {
-      ...getCorsHeaders(request),
+      ...getCorsHeaders(request.headers.get('origin')),
       'Content-Type': 'application/json',
       'Cache-Control': 'no-cache'
     }

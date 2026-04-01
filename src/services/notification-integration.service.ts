@@ -47,7 +47,7 @@ export class NotificationIntegrationService {
     investorId: string;
     investorName: string;
   }): Promise<void> {
-    const notificationData: NotificationData = {
+    const notificationData: any = {
       userId: parseInt(data.pitchOwnerId, 10) || 0,
       type: 'investment',
       category: 'investment',
@@ -77,7 +77,7 @@ export class NotificationIntegrationService {
     approverId: string;
     approverName: string;
   }): Promise<void> {
-    const notificationData: NotificationData = {
+    const notificationData: any = {
       userId: parseInt(data.requesterId, 10) || 0,
       type: 'nda_approval',
       category: 'project',
@@ -109,7 +109,7 @@ export class NotificationIntegrationService {
     amountRaised: string;
     investorCount: number;
   }): Promise<void> {
-    const notificationData: NotificationData = {
+    const notificationData: any = {
       userId: parseInt(data.pitchOwnerId, 10) || 0,
       type: 'investment',
       category: 'investment',
@@ -149,7 +149,7 @@ export class NotificationIntegrationService {
       draft: 'low',
     };
 
-    const notificationData: NotificationData = {
+    const notificationData: any = {
       userId: parseInt(data.pitchOwnerId, 10) || 0,
       type: 'pitch_update',
       category: 'project',
@@ -181,7 +181,7 @@ export class NotificationIntegrationService {
     ipAddress?: string;
     userAgent?: string;
   }): Promise<void> {
-    const notificationData: NotificationData = {
+    const notificationData: any = {
       userId: parseInt(data.userId, 10) || 0,
       type: 'system',
       category: 'system',
@@ -210,7 +210,7 @@ export class NotificationIntegrationService {
     milestoneDetails: string;
     dashboardUrl: string;
   }): Promise<void> {
-    const notificationData: NotificationData = {
+    const notificationData: any = {
       userId: parseInt(data.userId, 10) || 0,
       type: 'system',
       category: 'analytics',
@@ -241,7 +241,7 @@ export class NotificationIntegrationService {
     opportunityDescription: string;
     actionUrl: string;
   }): Promise<void> {
-    const notificationData: NotificationData = {
+    const notificationData: any = {
       userId: parseInt(data.userId, 10) || 0,
       type: 'system',
       category: 'market',
@@ -276,7 +276,7 @@ export class NotificationIntegrationService {
       production: '/production/dashboard',
     };
 
-    const notificationData: NotificationData = {
+    const notificationData: any = {
       userId: parseInt(data.userId, 10) || 0,
       type: 'system',
       category: 'system',
@@ -307,7 +307,7 @@ export class NotificationIntegrationService {
     role: string;
     invitationId: string;
   }): Promise<void> {
-    const notificationData: NotificationData = {
+    const notificationData: any = {
       userId: parseInt(data.inviteeId, 10) || 0,
       type: 'system',
       category: 'system',
@@ -340,7 +340,7 @@ export class NotificationIntegrationService {
     duration: string;
     maintenanceDetails: string;
   }): Promise<void> {
-    const notifications: NotificationData[] = data.userIds.map(userId => ({
+    const notifications: any[] = data.userIds.map(userId => ({
       userId,
       type: 'system',
       category: 'system',
@@ -359,7 +359,9 @@ export class NotificationIntegrationService {
     }));
 
     // Send as bulk notification
-    await this.notificationService.sendBulkNotifications(notifications);
+    for (const notification of notifications) {
+      await this.notificationService.sendNotification(notification);
+    }
   }
 
   /**

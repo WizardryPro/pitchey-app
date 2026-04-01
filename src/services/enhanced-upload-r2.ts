@@ -213,7 +213,7 @@ export class EnhancedR2UploadHandler {
     await this.saveMultipartInfo(uploadId, {
       uploadId: r2UploadId,
       key: fileKey,
-      bucket: this.bucket.name || 'pitchey-uploads'
+      bucket: (this.bucket as any).name || 'pitchey-uploads'
     });
 
     return session;
@@ -281,7 +281,8 @@ export class EnhancedR2UploadHandler {
 
     } catch (error) {
       console.error(`Failed to upload chunk ${chunkIndex}:`, error);
-      throw new Error(`Chunk upload failed: ${error.message}`);
+      const e = error instanceof Error ? error : new Error(String(error));
+      throw new Error(`Chunk upload failed: ${e.message}`);
     }
   }
 
@@ -466,7 +467,7 @@ export class EnhancedR2UploadHandler {
   ): Promise<{ etag: string }> {
     try {
       // Upload part using R2's uploadPart method
-      const part = await this.bucket.uploadPart(multipartInfo.key, multipartInfo.uploadId, partNumber, data);
+      const part = await (this.bucket as any).uploadPart(multipartInfo.key, multipartInfo.uploadId, partNumber, data);
       
       return {
         etag: part.etag
@@ -483,7 +484,7 @@ export class EnhancedR2UploadHandler {
   ): Promise<void> {
     try {
       // Complete multipart upload
-      await this.bucket.completeMultipartUpload(
+      await (this.bucket as any).completeMultipartUpload(
         multipartInfo.key,
         multipartInfo.uploadId,
         parts.map(part => ({
@@ -499,7 +500,7 @@ export class EnhancedR2UploadHandler {
 
   private async abortMultipartUpload(multipartInfo: R2MultipartInfo): Promise<void> {
     try {
-      await this.bucket.abortMultipartUpload(multipartInfo.key, multipartInfo.uploadId);
+      await (this.bucket as any).abortMultipartUpload(multipartInfo.key, multipartInfo.uploadId);
     } catch (error) {
       console.error('Failed to abort multipart upload:', error);
       // Don't throw here, just log the warning

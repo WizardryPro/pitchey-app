@@ -235,7 +235,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Admin service error', code: 'ADMIN_ERROR' } 
@@ -322,7 +322,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to load admin dashboard', code: 'DASHBOARD_ERROR' } 
@@ -379,7 +379,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to get system stats', code: 'STATS_ERROR' } 
@@ -491,7 +491,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to get users', code: 'GET_USERS_ERROR' } 
@@ -561,7 +561,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to get user details', code: 'GET_USER_ERROR' } 
@@ -583,13 +583,10 @@ export class AdminEndpointsHandler {
       };
 
       // Log the admin action
-      await this.logger.captureMessage('Admin user update', {
-        level: 'info',
-        extra: {
+      await this.logger.captureMessage('Admin user update', 'info', {
           admin_id: userAuth.userId,
           target_user_id: userId,
           changes: body
-        }
       });
 
       return new Response(JSON.stringify({
@@ -603,7 +600,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to update user', code: 'UPDATE_USER_ERROR' } 
@@ -648,14 +645,11 @@ export class AdminEndpointsHandler {
         status: 'active'
       };
 
-      await this.logger.captureMessage('User suspended', {
-        level: 'warning',
-        extra: {
+      await this.logger.captureMessage('User suspended', 'warning', {
           admin_id: userAuth.userId,
           suspended_user_id: userId,
           reason: body.reason,
           duration: body.duration
-        }
       });
 
       return new Response(JSON.stringify({
@@ -668,7 +662,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to suspend user', code: 'SUSPEND_USER_ERROR' } 
@@ -698,14 +692,11 @@ export class AdminEndpointsHandler {
         });
       }
 
-      await this.logger.captureMessage('User banned', {
-        level: 'error',
-        extra: {
+      await this.logger.captureMessage('User banned', 'error', {
           admin_id: userAuth.userId,
           banned_user_id: userId,
           reason: body.reason,
           permanent: body.permanent
-        }
       });
 
       return new Response(JSON.stringify({
@@ -724,7 +715,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to ban user', code: 'BAN_USER_ERROR' } 
@@ -743,13 +734,10 @@ export class AdminEndpointsHandler {
         notes?: string;
       };
 
-      await this.logger.captureMessage('User verified', {
-        level: 'info',
-        extra: {
+      await this.logger.captureMessage('User verified', 'info', {
           admin_id: userAuth.userId,
           verified_user_id: userId,
           verification_type: body.verification_type || 'identity'
-        }
       });
 
       return new Response(JSON.stringify({
@@ -768,7 +756,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to verify user', code: 'VERIFY_USER_ERROR' } 
@@ -787,13 +775,10 @@ export class AdminEndpointsHandler {
         notify_user?: boolean;
       };
 
-      await this.logger.captureMessage('User restored', {
-        level: 'info',
-        extra: {
+      await this.logger.captureMessage('User restored', 'info', {
           admin_id: userAuth.userId,
           restored_user_id: userId,
           reason: body.reason
-        }
       });
 
       return new Response(JSON.stringify({
@@ -812,7 +797,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to restore user', code: 'RESTORE_USER_ERROR' } 
@@ -871,7 +856,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to get content', code: 'GET_CONTENT_ERROR' } 
@@ -901,14 +886,11 @@ export class AdminEndpointsHandler {
         });
       }
 
-      await this.logger.captureMessage('Content removed', {
-        level: 'warning',
-        extra: {
+      await this.logger.captureMessage('Content removed', 'warning', {
           admin_id: userAuth.userId,
           content_id: contentId,
           reason: body.reason,
           permanent: body.permanent
-        }
       });
 
       return new Response(JSON.stringify({
@@ -927,7 +909,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to remove content', code: 'REMOVE_CONTENT_ERROR' } 
@@ -947,14 +929,11 @@ export class AdminEndpointsHandler {
         reason?: string;
       };
 
-      await this.logger.captureMessage('Content featured status changed', {
-        level: 'info',
-        extra: {
+      await this.logger.captureMessage('Content featured status changed', 'info', {
           admin_id: userAuth.userId,
           content_id: contentId,
           featured: body.featured,
           reason: body.reason
-        }
       });
 
       return new Response(JSON.stringify({
@@ -973,7 +952,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to update content feature status', code: 'FEATURE_CONTENT_ERROR' } 
@@ -1042,7 +1021,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to get flags', code: 'GET_FLAGS_ERROR' } 
@@ -1098,7 +1077,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to get flag details', code: 'GET_FLAG_ERROR' } 
@@ -1128,14 +1107,11 @@ export class AdminEndpointsHandler {
         });
       }
 
-      await this.logger.captureMessage('Flag resolved', {
-        level: 'info',
-        extra: {
+      await this.logger.captureMessage('Flag resolved', 'info', {
           admin_id: userAuth.userId,
           flag_id: flagId,
           resolution: body.resolution,
           notes: body.resolution_notes
-        }
       });
 
       return new Response(JSON.stringify({
@@ -1154,7 +1130,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to resolve flag', code: 'RESOLVE_FLAG_ERROR' } 
@@ -1200,7 +1176,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to assign flag', code: 'ASSIGN_FLAG_ERROR' } 
@@ -1242,15 +1218,12 @@ export class AdminEndpointsHandler {
         });
       }
 
-      await this.logger.captureMessage('Bulk action performed', {
-        level: 'warning',
-        extra: {
+      await this.logger.captureMessage('Bulk action performed', 'warning', {
           admin_id: userAuth.userId,
           action: body.action,
           target_type: body.target_type,
           target_count: body.target_ids.length,
           reason: body.reason
-        }
       });
 
       const results = body.target_ids.map(id => ({
@@ -1274,7 +1247,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to perform bulk action', code: 'BULK_ACTION_ERROR' } 
@@ -1338,7 +1311,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to get moderation log', code: 'MODERATION_LOG_ERROR' } 
@@ -1392,7 +1365,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to get admin analytics', code: 'ADMIN_ANALYTICS_ERROR' } 
@@ -1434,7 +1407,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to get reports', code: 'GET_REPORTS_ERROR' } 
@@ -1473,7 +1446,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to generate report', code: 'GENERATE_REPORT_ERROR' } 
@@ -1520,7 +1493,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to get system health', code: 'SYSTEM_HEALTH_ERROR' } 
@@ -1540,13 +1513,10 @@ export class AdminEndpointsHandler {
         scheduled_end?: string;
       };
 
-      await this.logger.captureMessage('Maintenance mode changed', {
-        level: 'warning',
-        extra: {
+      await this.logger.captureMessage('Maintenance mode changed', 'warning', {
           admin_id: userAuth.userId,
           enabled: body.enabled,
           message: body.message
-        }
       });
 
       return new Response(JSON.stringify({
@@ -1565,7 +1535,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to set maintenance mode', code: 'MAINTENANCE_ERROR' } 
@@ -1616,7 +1586,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to get settings', code: 'GET_SETTINGS_ERROR' } 
@@ -1635,13 +1605,10 @@ export class AdminEndpointsHandler {
         settings: Record<string, any>;
       };
 
-      await this.logger.captureMessage('Settings updated', {
-        level: 'info',
-        extra: {
+      await this.logger.captureMessage('Settings updated', 'info', {
           admin_id: userAuth.userId,
           section: body.section,
           settings: body.settings
-        }
       });
 
       return new Response(JSON.stringify({
@@ -1655,7 +1622,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to update settings', code: 'UPDATE_SETTINGS_ERROR' } 
@@ -1716,7 +1683,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to get audit log', code: 'AUDIT_LOG_ERROR' } 
@@ -1748,14 +1715,11 @@ export class AdminEndpointsHandler {
         });
       }
 
-      await this.logger.captureMessage('Broadcast message sent', {
-        level: 'info',
-        extra: {
+      await this.logger.captureMessage('Broadcast message sent', 'info', {
           admin_id: userAuth.userId,
           target_audience: body.target_audience,
           message_type: body.message_type,
           send_email: body.send_email
-        }
       });
 
       return new Response(JSON.stringify({
@@ -1778,7 +1742,7 @@ export class AdminEndpointsHandler {
       });
 
     } catch (error) {
-      await this.logger.captureException(error);
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: 'Failed to send broadcast message', code: 'BROADCAST_ERROR' } 

@@ -456,7 +456,7 @@ export class EmailService {
   }
 
   private getEmailTemplate(type: keyof EmailTemplate): EmailTemplate[keyof EmailTemplate] | null {
-    const templates: EmailTemplate = {
+    const templates: any = {
       welcome: {
         subject: 'Welcome to Pitchey - {{name}}!',
         html: this.getWelcomeTemplate(),

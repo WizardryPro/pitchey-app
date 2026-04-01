@@ -628,7 +628,7 @@ export const queueConsumers = {
     
     for (const message of batch.messages) {
       try {
-        await orchestrator.processDLQ(message.body.queue_name);
+        await orchestrator.processDLQ((message.body as any).queue_name);
         message.ack();
       } catch (error) {
         console.error('DLQ processing failed:', error);

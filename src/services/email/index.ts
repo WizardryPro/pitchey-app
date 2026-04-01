@@ -6,7 +6,7 @@
  * pass `env.RESEND_API_KEY` directly since Workers don't have process.env.
  */
 
-import { WorkerEmailService } from '../worker-email.ts';
+import { WorkerEmailService } from '../worker-email';
 
 // Helper to get email service — prefers explicit apiKey, falls back to globals for local dev
 function getEmailService(apiKey?: string) {

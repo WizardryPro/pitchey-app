@@ -693,6 +693,8 @@ export class InvestorPortfolioHandler {
         avg_roi: 0
       };
 
+      let dateCol = 'created_at';
+
       if (investmentsTableCheck && investmentsTableCheck[0]?.exists) {
         // Check if invested_at column exists, fallback to created_at
         const colCheck = await this.db.query(`
@@ -701,7 +703,7 @@ export class InvestorPortfolioHandler {
             WHERE table_name = 'investments' AND column_name = 'invested_at'
           ) as exists
         `);
-        const dateCol = colCheck && colCheck[0]?.exists ? 'invested_at' : 'created_at';
+        dateCol = colCheck && colCheck[0]?.exists ? 'invested_at' : 'created_at';
 
         // Calculate current period analytics
         const result = await this.db.query(

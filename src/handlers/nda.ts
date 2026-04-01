@@ -185,11 +185,11 @@ export async function createNDARequest(request: Request, env: Env): Promise<Resp
       });
     }
     
-    const nda = await documentQueries.createNDARequest(sql, {
-      pitch_id,
-      requester_id,
-      nda_type,
-      custom_nda_url,
+    const nda = await documentQueries.createNDARequest(sql as any, {
+      pitch_id: pitch_id as string,
+      requester_id: requester_id as string,
+      nda_type: nda_type as 'custom' | 'standard' | 'mutual' | undefined,
+      custom_nda_url: custom_nda_url as string | undefined,
       expires_in_days: 30
     });
     
@@ -235,7 +235,7 @@ export async function approveNDARequest(request: Request, env: Env): Promise<Res
       });
     }
     
-    const nda = await documentQueries.approveNDARequest(sql, ndaId, approver_id, signature);
+    const nda = await documentQueries.approveNDARequest(sql as any, ndaId, approver_id as string, signature as string);
     
     if (!nda) {
       return new Response(JSON.stringify({ error: 'NDA not found or cannot be approved' }), {
@@ -286,7 +286,7 @@ export async function rejectNDARequest(request: Request, env: Env): Promise<Resp
       });
     }
     
-    const nda = await documentQueries.rejectNDARequest(sql, ndaId, rejector_id, reason);
+    const nda = await documentQueries.rejectNDARequest(sql as any, ndaId, rejector_id as string, reason as string);
     
     if (!nda) {
       return new Response(JSON.stringify({ error: 'NDA not found or cannot be rejected' }), {
@@ -332,7 +332,7 @@ export async function getDocuments(request: Request, env: Env): Promise<Response
       });
     }
     
-    const documents = await documentQueries.getPitchDocuments(sql, pitchId, userId || undefined);
+    const documents = await documentQueries.getPitchDocuments(sql as any, pitchId, userId || undefined);
     
     return new Response(JSON.stringify({
       success: true,
@@ -408,7 +408,7 @@ export async function uploadDocuments(request: Request, env: Env): Promise<Respo
       }
       
       // Create document record
-      const document = await documentQueries.createDocument(sql, {
+      const document = await documentQueries.createDocument(sql as any, {
         pitch_id: pitchId,
         uploaded_by_id: uploaderId,
         file_name: file.name,

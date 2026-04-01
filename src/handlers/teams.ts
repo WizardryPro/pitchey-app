@@ -39,7 +39,7 @@ export async function getTeamsHandler(request: Request, env: Env): Promise<Respo
       });
     }
 
-    const teams = await teamQueries.getUserTeams(sql, authResult.user.id.toString());
+    const teams = await teamQueries.getUserTeams(sql as any, authResult.user.id.toString());
 
     return new Response(JSON.stringify({
       success: true,
@@ -110,7 +110,7 @@ export async function getTeamByIdHandler(request: Request, env: Env): Promise<Re
       });
     }
 
-    const team = await teamQueries.getTeamById(sql, teamId, authResult.user.id.toString());
+    const team = await teamQueries.getTeamById(sql as any, teamId, authResult.user.id.toString());
 
     if (!team) {
       return new Response(JSON.stringify({ 
@@ -169,9 +169,9 @@ export async function createTeamHandler(request: Request, env: Env): Promise<Res
     const { name, description, visibility } = body;
 
     if (!name) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Team name is required' 
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Team name is required'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
@@ -180,20 +180,20 @@ export async function createTeamHandler(request: Request, env: Env): Promise<Res
 
     const sql = getDb(env);
     if (!sql) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Database unavailable' 
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Database unavailable'
       }), {
         status: 503,
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
       });
     }
 
-    const team = await teamQueries.createTeam(sql, {
-      name,
-      description,
+    const team = await teamQueries.createTeam(sql as any, {
+      name: name as string,
+      description: description as string | undefined,
       ownerId: authResult.user.id.toString(),
-      visibility: visibility || 'private'
+      visibility: (visibility as 'public' | 'private' | 'team' | undefined) || 'private'
     });
 
     return new Response(JSON.stringify({
@@ -267,8 +267,8 @@ export async function updateTeamHandler(request: Request, env: Env): Promise<Res
     }
 
     const team = await teamQueries.updateTeam(
-      sql, 
-      teamId, 
+      sql as any,
+      teamId,
       authResult.user.id.toString(), 
       body
     );
@@ -341,7 +341,7 @@ export async function deleteTeamHandler(request: Request, env: Env): Promise<Res
       });
     }
 
-    await teamQueries.deleteTeam(sql, teamId, authResult.user.id.toString());
+    await teamQueries.deleteTeam(sql as any, teamId, authResult.user.id.toString());
 
     return new Response(JSON.stringify({
       success: true,
@@ -425,21 +425,21 @@ export async function inviteToTeamHandler(request: Request, env: Env): Promise<R
     }
 
     const invitation = await teamQueries.inviteToTeam(
-      sql,
+      sql as any,
       teamId,
       authResult.user.id.toString(),
       {
-        email,
-        role: role || 'viewer',
-        message
+        email: email as string,
+        role: ((role as string) || 'viewer') as 'viewer' | 'editor',
+        message: message as string | undefined
       }
     );
 
     // Send invite email (fire-and-forget — don't block invitation creation)
     try {
-      const team = await teamQueries.getTeamById(sql, teamId, authResult.user.id.toString());
+      const team = await teamQueries.getTeamById(sql as any, teamId, authResult.user.id.toString());
       const teamName = team?.name || 'a team';
-      const inviterName = authResult.user.name || authResult.user.email;
+      const inviterName = (authResult.user as any).name || authResult.user.email;
       const acceptUrl = `https://pitchey.com/teams/invites/${invitation.token || invitation.id}`;
 
       sendTeamInviteEmail(email as string, {
@@ -511,7 +511,7 @@ export async function getInvitationsHandler(request: Request, env: Env): Promise
       });
     }
 
-    const invites = await teamQueries.getUserInvitations(sql, authResult.user.email);
+    const invites = await teamQueries.getUserInvitations(sql as any, authResult.user.email);
 
     return new Response(JSON.stringify({
       success: true,
@@ -583,8 +583,8 @@ export async function acceptInvitationHandler(request: Request, env: Env): Promi
     }
 
     await teamQueries.acceptInvitation(
-      sql, 
-      inviteId, 
+      sql as any,
+      inviteId,
       authResult.user.id.toString(),
       authResult.user.email
     );
@@ -657,7 +657,7 @@ export async function rejectInvitationHandler(request: Request, env: Env): Promi
       });
     }
 
-    await teamQueries.rejectInvitation(sql, inviteId, authResult.user.email);
+    await teamQueries.rejectInvitation(sql as any, inviteId, authResult.user.email);
 
     return new Response(JSON.stringify({
       success: true,
@@ -742,11 +742,11 @@ export async function updateMemberRoleHandler(request: Request, env: Env): Promi
     }
 
     await teamQueries.updateMemberRole(
-      sql, 
-      teamId, 
-      memberId, 
-      authResult.user.id.toString(), 
-      role
+      sql as any,
+      teamId,
+      memberId,
+      authResult.user.id.toString(),
+      role as string
     );
 
     return new Response(JSON.stringify({
@@ -815,7 +815,7 @@ export async function resendInvitationHandler(request: Request, env: Env): Promi
       });
     }
 
-    const invitation = await teamQueries.resendInvitation(sql, inviteId, authResult.user.id.toString());
+    const invitation = await teamQueries.resendInvitation(sql as any, inviteId, authResult.user.id.toString());
 
     return new Response(JSON.stringify({
       success: true,
@@ -878,7 +878,7 @@ export async function cancelInvitationHandler(request: Request, env: Env): Promi
       });
     }
 
-    await teamQueries.cancelInvitation(sql, inviteId, authResult.user.id.toString());
+    await teamQueries.cancelInvitation(sql as any, inviteId, authResult.user.id.toString());
 
     return new Response(JSON.stringify({
       success: true,
@@ -945,9 +945,9 @@ export async function removeTeamMemberHandler(request: Request, env: Env): Promi
     }
 
     await teamQueries.removeTeamMember(
-      sql, 
-      teamId, 
-      memberId, 
+      sql as any,
+      teamId,
+      memberId,
       authResult.user.id.toString()
     );
 

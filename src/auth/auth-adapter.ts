@@ -40,15 +40,15 @@ export class AuthAdapter {
    */
   async handleLogin(request: Request, userType: PortalType): Promise<Response> {
     try {
-      const body = await request.json();
+      const body = await request.json() as { email?: string; password?: string; name?: string; companyName?: string; userType?: string };
       const { email, password } = body;
 
       // Check for demo users first (bypass Better Auth for demo accounts)
-      const isDemoUser = ['alex.creator@demo.com', 'sarah.investor@demo.com', 'stellar.production@demo.com'].includes(email);
-      
+      const isDemoUser = ['alex.creator@demo.com', 'sarah.investor@demo.com', 'stellar.production@demo.com'].includes(email ?? '');
+
       if (isDemoUser && (password === 'Demo123' || password === 'Demo123!') && this.env?.ENVIRONMENT !== 'production') {
         // Get user details for demo user
-        const user = await this.getUserFromDatabase(email, userType);
+        const user = await this.getUserFromDatabase(email ?? '', userType);
         
         if (!user) {
           const origin = request.headers.get('Origin');
@@ -101,82 +101,6 @@ export class AuthAdapter {
         }
       });
 
-      // Original Better Auth code (kept for future use):
-      /*
-      const authResponse = await this.auth.api.signInEmail({
-        body: { email, password },
-        asResponse: true
-      });
-
-      if (authResponse.status !== 200) {
-        const error = await authResponse.json();
-        return new Response(JSON.stringify({
-          success: false,
-          error: { message: error.message || 'Invalid credentials' }
-        }), { 
-          status: 401,
-          headers: { 
-            ...getCorsHeaders(request.headers.get('Origin')),
-            'Content-Type': 'application/json'
-          }
-        });
-      }
-
-      const authData = await authResponse.json();
-      
-      // Get user details from database
-      const user = await this.getUserFromDatabase(authData.user.id, userType);
-      */
-      
-      if (!user || user.userType !== userType) {
-        const origin = request.headers.get('Origin');
-        return new Response(JSON.stringify({
-          success: false,
-          error: { message: 'Unauthorized for this portal' }
-        }), { 
-          status: 403,
-          headers: { 
-            ...getCorsHeaders(origin),
-            'Content-Type': 'application/json'
-          }
-        });
-      }
-
-      // Generate JWT token for backward compatibility if enabled
-      let token = '';
-      if (this.enableJWTFallback) {
-        token = await this.generateJWTToken(user);
-      }
-
-      // Create response with both session cookie and JWT
-      const response = new Response(JSON.stringify({
-        success: true,
-        data: {
-          token, // For legacy frontend
-          user: {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            userType: user.userType,
-            companyName: user.companyName,
-            bio: user.bio,
-            website: user.website,
-            linkedinUrl: user.linkedinUrl,
-            createdAt: user.createdAt,
-            updatedAt: user.updatedAt
-          }
-        }
-      }), {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          // Forward Better Auth session cookies
-          'Set-Cookie': authResponse.headers.get('Set-Cookie') || ''
-        }
-      });
-
-      return response;
-
     } catch (error) {
       console.error('Login error:', error);
       const origin = request.headers.get('Origin');
@@ -198,15 +122,15 @@ export class AuthAdapter {
    */
   async handleRegister(request: Request, userType: PortalType): Promise<Response> {
     try {
-      const body = await request.json();
+      const body = await request.json() as { email?: string; password?: string; name?: string; companyName?: string; phone?: string; bio?: string; website?: string; linkedinUrl?: string; userType?: string };
       const { email, password, name, companyName, phone, bio, website, linkedinUrl } = body;
 
       // Register with Better Auth
       const authResponse = await this.auth.api.signUpEmail({
-        body: { 
-          email, 
-          password,
-          name,
+        body: {
+          email: email ?? '',
+          password: password ?? '',
+          name: name ?? '',
           data: {
             userType,
             companyName,
@@ -215,17 +139,17 @@ export class AuthAdapter {
             website,
             linkedinUrl
           }
-        },
+        } as any,
         asResponse: true
       });
 
       if (authResponse.status !== 200) {
-        const error = await authResponse.json();
+        const error = await authResponse.json() as any;
         const origin = request.headers.get('Origin');
         return new Response(JSON.stringify({
           success: false,
           error: { message: error.message || 'Registration failed' }
-        }), { 
+        }), {
           status: 400,
           headers: { 
             ...getCorsHeaders(origin),
@@ -234,8 +158,8 @@ export class AuthAdapter {
         });
       }
 
-      const authData = await authResponse.json();
-      
+      const authData = await authResponse.json() as any;
+
       // Create user in our database with portal-specific data
       const user = await this.createUserInDatabase({
         id: authData.user.id,
@@ -316,18 +240,16 @@ export class AuthAdapter {
 
         // Fallback to database lookup
         const sql = neon(this.env.DATABASE_URL);
-        const result = await sql(
-          `SELECT s.id, s.user_id, s.expires_at,
-                  u.id as uid, u.email, u.username, u.user_type,
-                  u.first_name, u.last_name, u.company_name, u.bio,
-                  COALESCE(u.name, u.username, u.email) as name
-           FROM sessions s
-           JOIN users u ON s.user_id::text = u.id::text
-           WHERE s.id = $1
-           AND s.expires_at > NOW()
-           LIMIT 1`,
-          [sessionId]
-        );
+        const result = await sql`
+          SELECT s.id, s.user_id, s.expires_at,
+                 u.id as uid, u.email, u.username, u.user_type,
+                 u.first_name, u.last_name, u.company_name, u.bio,
+                 COALESCE(u.name, u.username, u.email) as name
+          FROM sessions s
+          JOIN users u ON s.user_id::text = u.id::text
+          WHERE s.id = ${sessionId}
+          AND s.expires_at > NOW()
+          LIMIT 1`;
 
         if (result && result.length > 0) {
           const row = result[0];
@@ -573,15 +495,13 @@ export class AuthAdapter {
     if (this.env.DATABASE_URL) {
       try {
         const sql = neon(this.env.DATABASE_URL);
-        const result = await sql(
-          `SELECT id, email, username, user_type,
-                  first_name, last_name, company_name, bio,
-                  COALESCE(name, username, email) as name
-           FROM users
-           WHERE id::text = $1 OR email = $1
-           LIMIT 1`,
-          [userId]
-        );
+        const result = await sql`
+          SELECT id, email, username, user_type,
+                 first_name, last_name, company_name, bio,
+                 COALESCE(name, username, email) as name
+          FROM users
+          WHERE id::text = ${userId} OR email = ${userId}
+          LIMIT 1`;
 
         if (result && result.length > 0) {
           const row = result[0];

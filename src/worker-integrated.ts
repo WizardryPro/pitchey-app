@@ -699,7 +699,7 @@ class RouteRegistry {
           captureMessage: async (m: string) => console.log('[Admin]', m),
           captureException: async (e: unknown) => console.error('[Admin]', e),
         };
-        this.adminHandler = new AdminEndpointsHandler(adminLogger as any, env, this.db);
+        this.adminHandler = new AdminEndpointsHandler(adminLogger as any, env, this.db as any);
       } catch (adminErr) {
         console.error('Failed to initialize admin handler (non-fatal):', adminErr);
       }
@@ -721,7 +721,7 @@ class RouteRegistry {
       try {
         if (this.db) {
           this.notificationIntegration = createNotificationIntegration({
-            database: this.db,
+            database: this.db as any,
             redis: undefined, // Redis is optional
             vapidKeys: env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY ? {
               publicKey: env.VAPID_PUBLIC_KEY,
@@ -731,7 +731,7 @@ class RouteRegistry {
           });
 
           this.notificationRoutes = new NotificationRoutesHandler(
-            this.db,
+            this.db as any,
             this.notificationIntegration
           );
         }
@@ -5198,7 +5198,7 @@ pitchey_analytics_datapoints_per_minute 1250
                 pitch_id, name, role, bio, imdb_link, website_link, created_at
               ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
             `, [
-              pitch.id,
+              pitch.id as any,
               attachment.name,
               attachment.role,
               attachment.bio,
@@ -6104,7 +6104,7 @@ pitchey_analytics_datapoints_per_minute 1250
         pitchId,
         file.name,
         file.name,
-        uploadResult.url,
+        uploadResult.url ?? null,
         storagePath,
         mediaType,
         file.type,
@@ -7386,7 +7386,7 @@ pitchey_analytics_datapoints_per_minute 1250
         `approved_by = $2`,
         `updated_at = NOW()`
       ];
-      const queryParams: unknown[] = [params.id, authResult.user.id];
+      const queryParams: (string | number | boolean | Date | null)[] = [params.id, authResult.user.id];
 
       if (customTerms) {
         queryParams.push(customTerms);
@@ -7648,8 +7648,8 @@ pitchey_analytics_datapoints_per_minute 1250
            FROM pitches p
            LEFT JOIN users u ON u.id = p.user_id
            WHERE p.id = $1`,
-          [nda.pitch_id]
-        );
+          [nda.pitch_id as any]
+        ) as { user_id: any; title: any; creator_name: any }[];
 
         if (pitch && pitch.user_id && pitch.user_id !== authResult.user.id) {
           const pitchTitle = pitch.title || 'Untitled Pitch';
@@ -8711,7 +8711,7 @@ pitchey_analytics_datapoints_per_minute 1250
          WHERE user_id = $1 OR creator_id = $1`,
         [userId]
       );
-      const stats = pitchStats[0] || {};
+      const stats = (pitchStats[0] || {}) as any;
 
       // Get follower count
       const followerResults = await this.db.query(
@@ -8754,7 +8754,7 @@ pitchey_analytics_datapoints_per_minute 1250
       const totalLikes = parseInt(stats.total_likes || '0');
       const totalSaves = parseInt(stats.total_saves || '0');
       const totalPitchCount = parseInt(stats.total_pitches || '0');
-      const totalNDACount = parseInt(ndaResults[0]?.count || '0');
+      const totalNDACount = parseInt(String(ndaResults[0]?.count || '0'));
       const avgEngagement = totalViews > 0 ? (totalLikes + totalSaves) / totalViews : 0;
 
       const analytics = {
@@ -8764,7 +8764,7 @@ pitchey_analytics_datapoints_per_minute 1250
         publishedPitches: parseInt(stats.published_pitches || '0'),
         totalViews,
         totalLikes,
-        totalFollowers: parseInt(followerResults[0]?.count || '0'),
+        totalFollowers: parseInt(String(followerResults[0]?.count || '0')),
         totalNDAs: totalNDACount,
         avgEngagement: Math.round(avgEngagement * 100) / 100,
         avgRating: totalPitchCount > 0 ? Math.round(avgEngagement * 50) / 10 : 0,
@@ -9260,7 +9260,7 @@ pitchey_analytics_datapoints_per_minute 1250
       return new ApiResponseBuilder(request).error(ErrorCode.UNAUTHORIZED, 'Authentication required');
     }
 
-    const paymentMethodId = this.extractParam(request, '/api/payments/payment-methods/:id');
+    const paymentMethodId = new URL(request.url).pathname.split('/').pop();
     const stripeKey = (this.env as any).STRIPE_SECRET_KEY;
 
     try {
@@ -11158,15 +11158,15 @@ pitchey_analytics_datapoints_per_minute 1250
     const builder = new ApiResponseBuilder(request);
     try {
       const body = await request.json() as Record<string, unknown>;
-      const taxYear = body.taxYear || new Date().getFullYear();
-      const documentType = body.documentType || 'annual_summary';
+      const taxYear = (body.taxYear as number | string) || new Date().getFullYear();
+      const documentType = (body.documentType as string) || 'annual_summary';
 
       // Create a pending tax document record
       const result = await this.db.query(`
         INSERT INTO tax_documents (user_id, document_type, tax_year, status, created_at)
         VALUES ($1, $2, $3, 'pending', NOW())
         RETURNING id, document_type, tax_year, status, created_at
-      `, [authResult.user.id, documentType, taxYear]);
+      `, [authResult.user.id, documentType, taxYear as string | number]);
 
       if (result && result.length > 0) {
         return builder.success({ document: result[0], message: 'Tax document generation initiated' });
@@ -11257,7 +11257,7 @@ pitchey_analytics_datapoints_per_minute 1250
         SET status = $1, updated_at = NOW()
         WHERE id = $2 AND investor_id = $3
         RETURNING id, status, updated_at
-      `, [body.status, dealId, authResult.user.id]);
+      `, [body.status as string, dealId, authResult.user.id]);
 
       if (!result || result.length === 0) {
         return builder.error(ErrorCode.NOT_FOUND, 'Deal not found or not owned by you');
@@ -11296,7 +11296,7 @@ pitchey_analytics_datapoints_per_minute 1250
         { event: 'Deal created', status: 'negotiating', date: deal.created_at, amount: deal.proposed_amount },
       ];
       if (deal.status !== 'negotiating') {
-        events.push({ event: `Status changed to ${deal.status}`, status: deal.status, date: deal.updated_at, amount: deal.final_amount || deal.proposed_amount });
+        events.push({ event: `Status changed to ${deal.status as string}`, status: deal.status as string, date: deal.updated_at, amount: deal.final_amount || deal.proposed_amount });
       }
 
       return builder.success({ timeline: events });
@@ -12377,7 +12377,7 @@ pitchey_analytics_datapoints_per_minute 1250
         INSERT INTO scheduled_reports (user_id, report_type, frequency, filters, next_run, created_at)
         VALUES ($1, $2, $3, $4, NOW() + INTERVAL '1 day', NOW())
         RETURNING id, next_run
-      `, [authResult.user!.id, body.type || 'analytics', body.frequency || 'weekly', JSON.stringify(body.filters || {})]).catch(() => null);
+      `, [authResult.user!.id, (body.type as string) || 'analytics', (body.frequency as string) || 'weekly', JSON.stringify(body.filters || {})]).catch(() => null);
 
       if (result && result[0]) {
         return builder.success({ success: true, reportId: result[0].id, nextRun: result[0].next_run });
@@ -12457,10 +12457,10 @@ pitchey_analytics_datapoints_per_minute 1250
         VALUES ($1, $2, $3, $4, $5, NOW())
       `, [
         authResult.user!.id,
-        body.pitchId,
-        body.query,
-        body.resultPosition,
-        body.searchHistoryId || null
+        body.pitchId as string | number | null,
+        body.query as string | null,
+        body.resultPosition as number | null,
+        (body.searchHistoryId as string | number | null) || null
       ]).catch(() => {});
 
       return builder.success({ tracked: true });
@@ -12518,7 +12518,7 @@ pitchey_analytics_datapoints_per_minute 1250
 
     try {
       let whereClause = "WHERE p.status = 'published'";
-      const queryParams: unknown[] = [];
+      const queryParams: (string | number | boolean | Date | null)[] = [];
       let paramIdx = 1;
 
       if (genre) {
@@ -12608,8 +12608,8 @@ pitchey_analytics_datapoints_per_minute 1250
       `, [
         authResult.user!.id,
         `Meeting: ${body.meetingType || 'general'}`,
-        body.message || '',
-        body.dateTime || new Date().toISOString(),
+        (body.message as string) || '',
+        (body.dateTime as string) || new Date().toISOString(),
         body.dateTime ? new Date(new Date(body.dateTime as string).getTime() + ((body.duration as number) || 60) * 60000).toISOString() : new Date(Date.now() + 3600000).toISOString()
       ]).catch(() => null);
 
@@ -12717,7 +12717,7 @@ pitchey_analytics_datapoints_per_minute 1250
       const body = await request.json() as Record<string, unknown>;
       await this.db.query(`
         UPDATE users SET company_name = $1, verification_status = 'pending', updated_at = NOW() WHERE id = $2
-      `, [body.companyName, authResult.user!.id]).catch(() => {});
+      `, [body.companyName as string | null, authResult.user!.id]).catch(() => {});
 
       return builder.success({ success: true, status: 'pending' });
     } catch (error) {
@@ -12762,7 +12762,7 @@ pitchey_analytics_datapoints_per_minute 1250
       const result = await this.db.query(`
         INSERT INTO info_requests (requester_id, target_user_id, pitch_id, message, status, created_at)
         VALUES ($1, $2, $3, $4, 'pending', NOW()) RETURNING *
-      `, [authResult.user!.id, body.targetUserId, body.pitchId || null, body.message || '']).catch(() => null);
+      `, [authResult.user!.id, body.targetUserId as string | number, (body.pitchId as string | number | null) || null, (body.message as string) || '']).catch(() => null);
 
       if (result && result[0]) {
         return builder.success(result[0]);
@@ -13318,7 +13318,7 @@ pitchey_analytics_datapoints_per_minute 1250
          FROM mfa_challenges c
          WHERE c.id = $1`,
         [challengeId]
-      );
+      ) as { id: any; user_id: any; expires_at: any; attempts: any; max_attempts: any; completed_at: any }[];
 
       if (!challenge) {
         return new Response(JSON.stringify({ success: false, error: 'Invalid or expired challenge' }), {
@@ -13356,7 +13356,7 @@ pitchey_analytics_datapoints_per_minute 1250
         [challengeId]
       );
       const challengeData = typeof challengeRow?.challenge_data === 'string'
-        ? JSON.parse(challengeRow.challenge_data)
+        ? JSON.parse(challengeRow.challenge_data as string)
         : challengeRow?.challenge_data;
 
       if (!challengeData?.otp || code.trim() !== challengeData.otp) {
@@ -13584,7 +13584,7 @@ pitchey_analytics_datapoints_per_minute 1250
         `SELECT id, user_id, challenge_data, expires_at, attempts, max_attempts, completed_at
          FROM mfa_challenges WHERE id = $1 AND challenge_type = 'email_otp'`,
         [challengeId]
-      );
+      ) as { id: any; user_id: any; challenge_data: any; expires_at: any; attempts: any; max_attempts: any; completed_at: any }[];
 
       if (!challenge) {
         return new Response(JSON.stringify({ success: false, error: 'Invalid or expired code' }), {
@@ -16494,7 +16494,7 @@ Signatures: [To be completed upon signing]
       const byGenre: Record<string, number> = {};
       if (genreRows) {
         for (const row of genreRows) {
-          byGenre[row.genre] = row.count;
+          byGenre[row.genre as string] = row.count as number;
         }
       }
 
@@ -16509,7 +16509,7 @@ Signatures: [To be completed upon signing]
       const byFormat: Record<string, number> = {};
       if (formatRows) {
         for (const row of formatRows) {
-          byFormat[row.format] = row.count;
+          byFormat[row.format as string] = row.count as number;
         }
       }
 
@@ -17831,8 +17831,8 @@ Signatures: [To be completed upon signing]
           timelineAdherence: timelineAdherence || [],
           crewUtilization: crewUtilization || [],
           successMetrics: {
-            total_revenue: parseFloat(successMetrics.total_revenue) || 0,
-            total_investors: parseInt(successMetrics.total_investors) || 0
+            total_revenue: parseFloat(String(successMetrics.total_revenue)) || 0,
+            total_investors: parseInt(String(successMetrics.total_investors)) || 0
           },
           recentActivity: recentActivity || [],
           monthlyTrends: monthlyTrends || [],
@@ -19049,7 +19049,7 @@ Signatures: [To be completed upon signing]
       }
 
       // Initialize trace service and get trace details
-      const traceService = new TraceService(this.env);
+      const traceService = new TraceService(this.env as any);
       const spans = await traceService.getTrace(traceId);
 
       if (spans.length === 0) {
@@ -19117,7 +19117,7 @@ Signatures: [To be completed upon signing]
       }
 
       // Initialize trace service and analyze performance
-      const traceService = new TraceService(this.env);
+      const traceService = new TraceService(this.env as any);
       const analysis = await traceService.analyzeTracePerformance(traceId);
 
       const origin = request.headers.get('Origin');
@@ -19380,7 +19380,7 @@ Signatures: [To be completed upon signing]
       if (!results.length) return builder.error(ErrorCode.NOT_FOUND, 'Invite not found');
 
       const invite = results[0];
-      const expired = invite.expires_at && new Date(invite.expires_at) < new Date();
+      const expired = invite.expires_at && new Date(invite.expires_at as string) < new Date();
       const redeemed = !!invite.redeemed_at;
 
       return builder.success({
@@ -19450,7 +19450,7 @@ const workerHandler = {
     // Request handling with distributed tracing
     const handleRequest = async (): Promise<Response> => {
       // Use distributed tracing for all API requests
-      return await handleAPIRequestWithTracing(request, env, async (request, rootSpan) => {
+      return await handleAPIRequestWithTracing(request, env as any, async (request, rootSpan) => {
         try {
           // Add Sentry breadcrumb for request (if Sentry is available)
           if (typeof Sentry?.addBreadcrumb === 'function') {

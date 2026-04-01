@@ -109,7 +109,7 @@ export class NotificationRoutesHandler {
         expiresAt: validatedData.expiresAt ? new Date(validatedData.expiresAt) : undefined,
       };
 
-      const result = await services.notification.sendNotification(notificationData);
+      const result = await services.notification.sendNotification(notificationData as any);
 
       return c.json({
         success: true,
@@ -142,7 +142,7 @@ export class NotificationRoutesHandler {
       const contextType = c.req.query('contextType');
 
       const services = this.notificationIntegration.getServices();
-      const result = await services.notification.getUserNotifications(user.id, {
+      const result = await (services.notification as any).getUserNotifications(user.id, {
         page,
         limit,
         category,
@@ -159,7 +159,7 @@ export class NotificationRoutesHandler {
           total: result.total,
           pages: Math.ceil(result.total / limit),
         },
-        unreadCount: result.unreadCount,
+        unreadCount: (result as any).unreadCount,
       });
     } catch (error) {
       console.error('Error getting notifications:', error);
@@ -183,7 +183,7 @@ export class NotificationRoutesHandler {
       const notificationId = c.req.param('id');
       const services = this.notificationIntegration.getServices();
 
-      await services.notification.markAsRead([notificationId], user.id);
+      await (services.notification as any).markAsRead([notificationId], user.id);
 
       return c.json({
         success: true,
@@ -215,7 +215,7 @@ export class NotificationRoutesHandler {
       }
 
       const services = this.notificationIntegration.getServices();
-      await services.notification.markAsRead(notificationIds, user.id);
+      await (services.notification as any).markAsRead(notificationIds, user.id);
 
       return c.json({
         success: true,
@@ -270,7 +270,7 @@ export class NotificationRoutesHandler {
       const updates = UpdatePreferencesSchema.parse(body);
 
       const services = this.notificationIntegration.getServices();
-      const updatedPreferences = await services.notification.updateUserPreferences(user.id, updates);
+      const updatedPreferences = await (services.notification as any).updateUserPreferences(user.id, updates);
 
       return c.json({
         success: true,
@@ -470,7 +470,7 @@ export class NotificationRoutesHandler {
       }
 
       const services = this.notificationIntegration.getServices();
-      await services.notification.sendDigestNotifications(digestType);
+      await (services.notification as any).sendDigestNotifications(digestType);
 
       return c.json({
         success: true,
@@ -543,7 +543,7 @@ export class NotificationRoutesHandler {
       }
 
       const services = this.notificationIntegration.getServices();
-      const result = await services.notification.processUnsubscribe(token);
+      const result = await (services.notification as any).processUnsubscribe(token);
 
       if (!result.success) {
         return c.json({ error: 'Invalid or expired unsubscribe token' }, 400);
@@ -610,7 +610,7 @@ export class NotificationRoutesHandler {
       const services = this.notificationIntegration.getServices();
       
       // Delete notification logic
-      await services.notification.deleteNotification(notificationId, user.id);
+      await (services.notification as any).deleteNotification(notificationId, user.id);
 
       return c.json({
         success: true,
@@ -636,7 +636,7 @@ export class NotificationRoutesHandler {
       const services = this.notificationIntegration.getServices();
       
       // Send bulk notifications
-      const results = await services.notification.sendBulkNotifications(body);
+      const results = await (services.notification as any).sendBulkNotifications(body);
 
       return c.json({
         success: true,
@@ -676,7 +676,7 @@ export class NotificationRoutesHandler {
       }
 
       const services = this.notificationIntegration.getServices();
-      await services.push.testPush(user.id);
+      await (services.push as any).testPush(user.id);
 
       return c.json({
         success: true,
@@ -700,7 +700,7 @@ export class NotificationRoutesHandler {
 
       const body = await c.req.json();
       const services = this.notificationIntegration.getServices();
-      const template = await services.notification.createTemplate(body);
+      const template = await (services.notification as any).createTemplate(body);
 
       return c.json({
         success: true,
@@ -726,7 +726,7 @@ export class NotificationRoutesHandler {
       const templateId = c.req.param('id');
       const body = await c.req.json();
       const services = this.notificationIntegration.getServices();
-      const template = await services.notification.updateTemplate(templateId, body);
+      const template = await (services.notification as any).updateTemplate(templateId, body);
 
       return c.json({
         success: true,
@@ -751,7 +751,7 @@ export class NotificationRoutesHandler {
 
       const templateId = c.req.param('id');
       const services = this.notificationIntegration.getServices();
-      await services.notification.deleteTemplate(templateId);
+      await (services.notification as any).deleteTemplate(templateId);
 
       return c.json({
         success: true,
@@ -774,7 +774,7 @@ export class NotificationRoutesHandler {
       }
 
       const services = this.notificationIntegration.getServices();
-      const token = await services.notification.createUnsubscribeToken(user.id);
+      const token = await (services.notification as any).createUnsubscribeToken(user.id);
 
       return c.json({
         success: true,
@@ -798,7 +798,7 @@ export class NotificationRoutesHandler {
       }
 
       const services = this.notificationIntegration.getServices();
-      const batches = await services.notification.getBatches();
+      const batches = await (services.notification as any).getBatches();
 
       return c.json({
         success: true,
@@ -821,7 +821,7 @@ export class NotificationRoutesHandler {
       }
 
       const services = this.notificationIntegration.getServices();
-      const results = await services.notification.processBatches();
+      const results = await (services.notification as any).processBatches();
 
       return c.json({
         success: true,
@@ -845,7 +845,7 @@ export class NotificationRoutesHandler {
       }
 
       const services = this.notificationIntegration.getServices();
-      const analytics = await services.analytics.getDeliveryAnalytics();
+      const analytics = await (services as any).analytics.getDeliveryAnalytics();
 
       return c.json({
         success: true,
@@ -868,7 +868,7 @@ export class NotificationRoutesHandler {
       }
 
       const services = this.notificationIntegration.getServices();
-      const analytics = await services.analytics.getEngagementAnalytics();
+      const analytics = await (services as any).analytics.getEngagementAnalytics();
 
       return c.json({
         success: true,
@@ -891,7 +891,7 @@ export class NotificationRoutesHandler {
       }
 
       const services = this.notificationIntegration.getServices();
-      const analytics = await services.analytics.getPerformanceAnalytics();
+      const analytics = await (services as any).analytics.getPerformanceAnalytics();
 
       return c.json({
         success: true,
@@ -910,7 +910,7 @@ export class NotificationRoutesHandler {
     try {
       const body = await c.req.json();
       const services = this.notificationIntegration.getServices();
-      await services.analytics.trackEvent(body);
+      await (services as any).analytics.trackEvent(body);
 
       return c.json({
         success: true,
@@ -933,7 +933,7 @@ export class NotificationRoutesHandler {
       }
 
       const services = this.notificationIntegration.getServices();
-      const tests = await services.abTesting.getTests();
+      const tests = await (services as any).abTesting.getTests();
 
       return c.json({
         success: true,
@@ -957,7 +957,7 @@ export class NotificationRoutesHandler {
 
       const body = await c.req.json();
       const services = this.notificationIntegration.getServices();
-      const test = await services.abTesting.createTest(body);
+      const test = await (services as any).abTesting.createTest(body);
 
       return c.json({
         success: true,
@@ -983,7 +983,7 @@ export class NotificationRoutesHandler {
       const testId = c.req.param('id');
       const body = await c.req.json();
       const services = this.notificationIntegration.getServices();
-      const test = await services.abTesting.updateTest(testId, body);
+      const test = await (services as any).abTesting.updateTest(testId, body);
 
       return c.json({
         success: true,
@@ -1008,7 +1008,7 @@ export class NotificationRoutesHandler {
 
       const testId = c.req.param('id');
       const services = this.notificationIntegration.getServices();
-      const results = await services.abTesting.getTestResults(testId);
+      const results = await (services as any).abTesting.getTestResults(testId);
 
       return c.json({
         success: true,

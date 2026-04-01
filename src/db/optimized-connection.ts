@@ -91,11 +91,11 @@ export class OptimizedQueries {
    */
   async getPitches(limit = 10, offset = 0, genre?: string): Promise<any[]> {
     const cacheKey = `pitches:${limit}:${offset}:${genre || 'all'}`;
-    
+
     // Try cache first
     if (this.kv) {
       const cached = await this.kv.get(cacheKey, 'json');
-      if (cached) return cached;
+      if (cached) return cached as any[];
     }
 
     // Optimized query with proper indexes
