@@ -27,6 +27,9 @@ export default {
   				'new': '#2D7FA8',
   				featured: '#842DA8',
   				nda: '#A82D4E',
+  				'portal-creator': '#7B3FBF',
+  				'portal-investor': '#5B4FC7',
+  				'portal-production': '#4A5FD0',
   				'empty-text': '#2D40A8',
   				'empty-icon': '#302DA8',
   			}
