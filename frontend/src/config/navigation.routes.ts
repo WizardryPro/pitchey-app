@@ -133,6 +133,9 @@ export const PRODUCTION_ROUTES = {
   collaborations: '/production/collaborations',
   myCollaborations: '/production/my-collaborations',
   
+  // Referral Invites
+  invites: '/production/invites',
+
   // Team
   teamManagement: '/production/team',
   teamMembers: '/production/team/members',

@@ -74,6 +74,7 @@ const Homepage = lazyRetry(() =>
 // Lazy loaded pages with prefetch for critical paths
 const Login = lazyRetry(() => import('./pages/Login' /* webpackPrefetch: true */));
 const Register = lazyRetry(() => import('./pages/Register' /* webpackPrefetch: true */));
+const InviteLanding = lazyRetry(() => import('./pages/InviteLanding'));
 const Dashboard = lazyRetry(() => import('./pages/Dashboard'));
 
 // Onboarding Components (lazy-loaded to defer onboarding CSS)
@@ -456,6 +457,9 @@ function App() {
             !isAuthenticated ? <EmailOTPLogin /> :
             <Navigate to={userType ? `/${userType}/dashboard` : '/'} replace />
           } />
+
+          {/* Referral Invite Landing (public) */}
+          <Route path="/invite/:code" element={<InviteLanding />} />
 
           {/* Collaborator Invite Acceptance */}
           <Route path="/collaborate/accept" element={<AcceptInvitePage />} />

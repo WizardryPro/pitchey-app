@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, Activity, Film, FolderOpen, Upload,
   Bookmark, Users, GitBranch, DollarSign,
-  MessageSquare, Calendar, Settings
+  MessageSquare, Calendar, Settings, UserPlus
 } from 'lucide-react';
 import { PRODUCTION_ROUTES } from '@/config/navigation.routes';
 
@@ -38,6 +38,7 @@ export const productionNavigationSections: NavigationSection[] = [
     title: 'Submissions',
     items: [
       { label: 'Submissions', path: PRODUCTION_ROUTES.submissions, icon: FolderOpen },
+      { label: 'Invite Creators', path: PRODUCTION_ROUTES.invites, icon: UserPlus },
     ],
   },
   {

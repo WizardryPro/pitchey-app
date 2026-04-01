@@ -76,6 +76,7 @@ const ProductionSubmissionsArchive = lazy(() => import('@portals/production/page
 const ProductionRevenue = lazy(() => import('@portals/production/pages/ProductionRevenue'));
 const ProductionSaved = lazy(() => import('@portals/production/pages/ProductionSaved'));
 const ProductionCollaborations = lazy(() => import('@portals/production/pages/ProductionCollaborations'));
+const ProductionInvites = lazy(() => import('@portals/production/pages/ProductionInvites'));
 // TeamInvite route now redirects to /production/team (TeamManagement)
 const TeamRoles = lazy(() => import('@portals/production/pages/TeamRoles'));
 const ProductionPitchCreate = lazy(() => import('../../pages/ProductionPitchCreate'));
@@ -328,6 +329,11 @@ export function AllProductionRoutes({ isAuthenticated, userType }: RoutesProps) 
         isProduction ? <ProductionSubmissionsArchive /> : <Navigate to="/login/production" />
       } />
       
+      {/* Invite Creators */}
+      <Route path={getRelativePath(PRODUCTION_ROUTES.invites, '/production')} element={
+        isProduction ? <ProductionInvites /> : <Navigate to="/login/production" />
+      } />
+
       {/* Operations */}
       <Route path={getRelativePath(PRODUCTION_ROUTES.revenue, '/production')} element={
         isProduction ? <ProductionRevenue /> : <Navigate to="/login/production" />

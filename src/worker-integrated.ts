@@ -3454,6 +3454,12 @@ class RouteRegistry {
 
     // A/B Testing WebSocket for real-time updates
     this.register('GET', '/ws/ab-testing', this.handleABTestingWebSocket.bind(this));
+
+    // Referral invites
+    this.register('POST', '/api/invites', this.createInvite.bind(this));
+    this.register('GET', '/api/invites', this.listInvites.bind(this));
+    this.register('GET', '/api/invites/:code', this.getInvite.bind(this));
+    this.register('POST', '/api/invites/:code/redeem', this.redeemInvite.bind(this));
   }
 
   /**
@@ -19275,6 +19281,153 @@ Signatures: [To be completed upon signing]
       });
     } catch (error) {
       return errorHandler(error, request);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Referral Invites
+  // ---------------------------------------------------------------------------
+
+  private async createInvite(request: Request): Promise<Response> {
+    const authResult = await this.validateAuth(request);
+    if (!authResult.valid) return new ApiResponseBuilder(request).error(ErrorCode.UNAUTHORIZED, 'Authentication required');
+
+    const builder = new ApiResponseBuilder(request);
+    const userId = authResult.user?.id?.toString();
+    const userType = authResult.user?.userType;
+
+    if (userType !== 'production' && userType !== 'investor') {
+      return builder.error(ErrorCode.FORBIDDEN, 'Only production companies and investors can create invite links');
+    }
+
+    if (!this.db) await this.initializeDatabase();
+    if (!this.db) return builder.error(ErrorCode.INTERNAL_ERROR, 'Database unavailable');
+
+    try {
+      const body = await request.json().catch(() => ({})) as { email?: string };
+      const code = this.generateInviteCode();
+      const userName = authResult.user?.name || authResult.user?.username || 'A producer';
+
+      await this.db.query(`
+        INSERT INTO referral_invites (code, inviter_id, inviter_name, email)
+        VALUES ($1, $2, $3, $4)
+      `, [code, userId, userName, body.email || null]);
+
+      return builder.success({ code, url: `https://pitchey.com/invite/${code}` });
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      console.error('Error creating invite:', e.message);
+      return builder.error(ErrorCode.INTERNAL_ERROR, 'Failed to create invite');
+    }
+  }
+
+  private generateInviteCode(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  }
+
+  private async listInvites(request: Request): Promise<Response> {
+    const authResult = await this.validateAuth(request);
+    if (!authResult.valid) return new ApiResponseBuilder(request).error(ErrorCode.UNAUTHORIZED, 'Authentication required');
+
+    const builder = new ApiResponseBuilder(request);
+    const userId = authResult.user?.id?.toString();
+
+    if (!this.db) await this.initializeDatabase();
+    if (!this.db) return builder.error(ErrorCode.INTERNAL_ERROR, 'Database unavailable');
+
+    try {
+      const invites = await this.db.query(`
+        SELECT ri.id, ri.code, ri.email, ri.inviter_name,
+          ri.redeemed_at, ri.expires_at, ri.created_at,
+          u.name as redeemed_by_name, u.email as redeemed_by_email
+        FROM referral_invites ri
+        LEFT JOIN users u ON ri.redeemed_by = u.id
+        WHERE ri.inviter_id = $1
+        ORDER BY ri.created_at DESC
+        LIMIT 50
+      `, [userId]);
+
+      return builder.success({ invites });
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      console.error('Error listing invites:', e.message);
+      return builder.error(ErrorCode.INTERNAL_ERROR, 'Failed to list invites');
+    }
+  }
+
+  private async getInvite(request: Request): Promise<Response> {
+    const builder = new ApiResponseBuilder(request);
+    const params = (request as any).params;
+    const code = params?.code || new URL(request.url).pathname.split('/').pop();
+
+    if (!code) return builder.error(ErrorCode.BAD_REQUEST, 'Invite code required');
+
+    if (!this.db) await this.initializeDatabase();
+    if (!this.db) return builder.error(ErrorCode.INTERNAL_ERROR, 'Database unavailable');
+
+    try {
+      const results = await this.db.query(`
+        SELECT ri.code, ri.inviter_name, ri.email, ri.redeemed_at, ri.expires_at
+        FROM referral_invites ri
+        WHERE ri.code = $1
+      `, [code]);
+
+      if (!results.length) return builder.error(ErrorCode.NOT_FOUND, 'Invite not found');
+
+      const invite = results[0];
+      const expired = invite.expires_at && new Date(invite.expires_at) < new Date();
+      const redeemed = !!invite.redeemed_at;
+
+      return builder.success({
+        code: invite.code,
+        inviterName: invite.inviter_name,
+        email: invite.email,
+        valid: !expired && !redeemed,
+        expired,
+        redeemed
+      });
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      console.error('Error getting invite:', e.message);
+      return builder.error(ErrorCode.INTERNAL_ERROR, 'Failed to get invite');
+    }
+  }
+
+  private async redeemInvite(request: Request): Promise<Response> {
+    const authResult = await this.validateAuth(request);
+    if (!authResult.valid) return new ApiResponseBuilder(request).error(ErrorCode.UNAUTHORIZED, 'Authentication required');
+
+    const builder = new ApiResponseBuilder(request);
+    const userId = authResult.user?.id?.toString();
+    const params = (request as any).params;
+    const code = params?.code;
+
+    if (!code) return builder.error(ErrorCode.BAD_REQUEST, 'Invite code required');
+
+    if (!this.db) await this.initializeDatabase();
+    if (!this.db) return builder.error(ErrorCode.INTERNAL_ERROR, 'Database unavailable');
+
+    try {
+      const results = await this.db.query(`
+        UPDATE referral_invites
+        SET redeemed_by = $1, redeemed_at = NOW()
+        WHERE code = $2 AND redeemed_by IS NULL
+          AND (expires_at IS NULL OR expires_at > NOW())
+        RETURNING id, inviter_id
+      `, [userId, code]);
+
+      if (!results.length) return builder.error(ErrorCode.BAD_REQUEST, 'Invite already redeemed or expired');
+
+      return builder.success({ redeemed: true });
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      console.error('Error redeeming invite:', e.message);
+      return builder.error(ErrorCode.INTERNAL_ERROR, 'Failed to redeem invite');
     }
   }
 

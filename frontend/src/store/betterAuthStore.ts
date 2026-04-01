@@ -272,6 +272,20 @@ export const useBetterAuthStore = create<BetterAuthState>((set) => ({
         loading: false,
         error: null
       });
+
+      // Redeem pending referral invite if present
+      if (result.user) {
+        const pendingCode = localStorage.getItem('pendingInviteCode');
+        if (pendingCode) {
+          localStorage.removeItem('pendingInviteCode');
+          fetch(`${import.meta.env.VITE_API_URL || ''}/api/invites/${pendingCode}/redeem`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: '{}'
+          }).catch(() => {}); // fire-and-forget
+        }
+      }
     } catch {
       sessionCache.clear();
       set({
