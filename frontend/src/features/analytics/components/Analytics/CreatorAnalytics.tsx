@@ -26,6 +26,7 @@ interface CreatorAnalyticsProps {
   engagementRate?: number;
   trends?: {
     viewsOverTime?: { labels: string[]; datasets: { label: string; data: number[] }[] };
+    likesOverTime?: { labels: string[]; datasets: { label: string; data: number[] }[] };
     pitchesOverTime?: { labels: string[]; datasets: { label: string; data: number[] }[] };
   };
   timeRange?: '7d' | '30d' | '90d' | '1y';
@@ -48,9 +49,9 @@ export const CreatorAnalytics: React.FC<CreatorAnalyticsProps> = ({
       label,
       value: trends?.viewsOverTime?.datasets?.[0]?.data?.[i] || 0
     })),
-    likes: (trends?.pitchesOverTime?.labels || []).map((label, i) => ({
+    likes: (trends?.likesOverTime?.labels || trends?.pitchesOverTime?.labels || []).map((label, i) => ({
       label,
-      value: trends?.pitchesOverTime?.datasets?.[0]?.data?.[i] || 0
+      value: (trends?.likesOverTime?.datasets?.[0]?.data?.[i] ?? trends?.pitchesOverTime?.datasets?.[0]?.data?.[i]) || 0
     }))
   };
 
