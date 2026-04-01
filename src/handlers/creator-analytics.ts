@@ -63,15 +63,16 @@ export class CreatorAnalyticsHandler {
         [userId]
       );
 
-      // Get audience breakdown from pitch_engagement
+      // Get audience breakdown from views + users
       let audienceBreakdown: { userType: string; count: number; percentage: number }[] = [];
       try {
         const viewerTypes = await this.db.query(
-          `SELECT pe.viewer_type AS "userType", COUNT(*)::int AS count
-           FROM pitch_engagement pe
-           JOIN pitches p ON p.id = pe.pitch_id
-           WHERE p.user_id = $1
-           GROUP BY pe.viewer_type`,
+          `SELECT COALESCE(u.user_type, 'visitor') AS "userType", COUNT(*)::int AS count
+           FROM views v
+           JOIN pitches p ON p.id = v.pitch_id
+           LEFT JOIN users u ON u.id = v.viewer_id
+           WHERE p.user_id = $1 AND v.viewer_id IS DISTINCT FROM $1
+           GROUP BY u.user_type`,
           [userId]
         );
         const total = viewerTypes.reduce((sum: number, row: any) => sum + Number(row.count), 0);
@@ -81,7 +82,7 @@ export class CreatorAnalyticsHandler {
           percentage: total > 0 ? Math.round((Number(row.count) / total) * 100) : 0,
         }));
       } catch {
-        // pitch_engagement table may not exist or be empty
+        // views table query failed
       }
 
       // Get engagement breakdown by genre

@@ -17262,6 +17262,24 @@ Signatures: [To be completed upon signing]
         const stats = pitchStats[0] || {};
         const ndas = ndaRes[0] || {};
 
+        // Audience breakdown from views table
+        const viewerTypesRes = await this.db.query(
+          `SELECT COALESCE(u.user_type, 'visitor') AS user_type, COUNT(*)::int AS count
+           FROM views v
+           JOIN pitches p ON p.id = v.pitch_id
+           LEFT JOIN users u ON u.id = v.viewer_id
+           WHERE p.user_id = $1 AND v.viewer_id IS DISTINCT FROM $1
+           GROUP BY u.user_type`,
+          [userId]
+        ).catch(() => []);
+
+        const viewerTotal = viewerTypesRes.reduce((sum: number, r: any) => sum + Number(r.count), 0);
+        const audienceBreakdown = viewerTypesRes.map((r: any) => ({
+          userType: r.user_type || 'visitor',
+          count: Number(r.count),
+          percentage: viewerTotal > 0 ? Math.round((Number(r.count) / viewerTotal) * 100) : 0
+        }));
+
         return new Response(JSON.stringify({
           success: true,
           data: {
@@ -17286,7 +17304,7 @@ Signatures: [To be completed upon signing]
               views: parseInt(String(p.views)) || 0,
               likes: parseInt(String(p.likes)) || 0
             })),
-            audienceBreakdown: [],
+            audienceBreakdown,
             engagementByGenre: []
           }
         }), {
