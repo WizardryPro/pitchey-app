@@ -491,7 +491,7 @@ function ProductionDashboard() {
         if (isSaved) {
           await savedPitchesAPI.unsavePitch(pitchId);
         } else {
-          await savedPitchesAPI.savePitch({ pitchId });
+          await savedPitchesAPI.savePitch(pitchId);
         }
       } catch (apiErr) {
         console.error('Error calling save API:', apiErr);
