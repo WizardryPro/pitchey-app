@@ -10,7 +10,7 @@ import { CreatorService, type CreatorActivity as CreatorActivityType } from '@fe
 
 interface ActivityItem {
   id: string;
-  type: 'view' | 'like' | 'comment' | 'follow' | 'investment' | 'nda' | 'milestone';
+  type: 'view' | 'like' | 'message' | 'follow' | 'investment' | 'nda' | 'milestone';
   title: string;
   description: string;
   timestamp: Date;
@@ -38,7 +38,7 @@ function mapActivityType(apiType: string): ActivityItem['type'] {
     'pitch_published': 'milestone',
     'pitch_updated': 'milestone',
     'nda_signed': 'nda',
-    'message_sent': 'comment',
+    'message_sent': 'message',
     'pitch_view': 'view',
     'pitch_like': 'like',
     'nda_request': 'nda',
@@ -168,7 +168,7 @@ export default function CreatorActivity() {
     switch (type) {
       case 'view': return Eye;
       case 'like': return Heart;
-      case 'comment': return MessageSquare;
+      case 'message': return MessageSquare;
       case 'follow': return Users;
       case 'investment': return TrendingUp;
       case 'nda': return FileText;
@@ -181,7 +181,7 @@ export default function CreatorActivity() {
     switch (type) {
       case 'view': return 'text-blue-600 bg-blue-50';
       case 'like': return 'text-red-600 bg-red-50';
-      case 'comment': return 'text-green-600 bg-green-50';
+      case 'message': return 'text-green-600 bg-green-50';
       case 'follow': return 'text-purple-600 bg-purple-50';
       case 'investment': return 'text-yellow-600 bg-yellow-50';
       case 'nda': return 'text-indigo-600 bg-indigo-50';
@@ -282,7 +282,7 @@ export default function CreatorActivity() {
           >
             All Activity
           </button>
-          {['view', 'like', 'comment', 'follow', 'investment', 'nda', 'milestone'].map((type) => {
+          {['view', 'like', 'message', 'follow', 'nda', 'milestone'].map((type) => {
             const Icon = getActivityIcon(type);
             return (
               <button
@@ -422,7 +422,7 @@ export default function CreatorActivity() {
                 No {filter} activity
               </h3>
               <p className="text-gray-600 mb-4">
-                {filter === 'comment' && 'No messages on your pitches yet.'}
+                {filter === 'message' && 'No messages on your pitches yet.'}
                 {filter === 'investment' && 'No investments in your pitches yet.'}
                 {filter === 'view' && 'No views on your pitches yet.'}
                 {filter === 'like' && 'No likes on your pitches yet.'}

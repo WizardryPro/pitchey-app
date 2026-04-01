@@ -225,6 +225,7 @@ export async function creatorActivitiesHandler(request: Request, env: Env): Prom
       nda: ['nda_request'],
       investment: ['investment'],
       comment: ['message_sent'],
+      message: ['message_sent'],
       milestone: ['pitch_published', 'pitch_created'],
     };
     const allowedTypes = type && typeMap[type] ? typeMap[type] : null;
@@ -325,6 +326,22 @@ export async function creatorActivitiesHandler(request: Request, env: Env): Prom
         FROM investments i
         JOIN creator_pitches cp ON cp.id = i.pitch_id
         LEFT JOIN users u ON u.id = i.investor_id
+
+        UNION ALL
+
+        -- Messages received on creator's pitches
+        SELECT
+          m.id as source_id,
+          'message_sent' as type,
+          COALESCE(u.username, 'Someone') || ' messaged you about "' || COALESCE(cp.title, 'a pitch') || '"' as description,
+          COALESCE(m.sent_at, m.created_at) as created_at,
+          COALESCE(u.username, 'Anonymous') as actor_name,
+          COALESCE(u.user_type, 'user') as actor_role,
+          jsonb_build_object('pitchId', m.pitch_id, 'pitchTitle', cp.title, 'subject', m.subject) as metadata
+        FROM messages m
+        LEFT JOIN creator_pitches cp ON cp.id = m.pitch_id
+        LEFT JOIN users u ON u.id = m.sender_id
+        WHERE m.receiver_id = ${userId} OR m.recipient_id = ${userId}
       )
       SELECT * FROM all_activities
       WHERE (${allowedTypes}::text[] IS NULL OR type = ANY(${allowedTypes}::text[]))
@@ -344,6 +361,7 @@ export async function creatorActivitiesHandler(request: Request, env: Env): Prom
         UNION ALL SELECT 'follow' FROM follows WHERE following_id = ${userId}
         UNION ALL SELECT 'nda_request' FROM nda_requests WHERE pitch_id IN (SELECT id FROM creator_pitches)
         UNION ALL SELECT 'investment' FROM investments WHERE pitch_id IN (SELECT id FROM creator_pitches)
+        UNION ALL SELECT 'message_sent' FROM messages WHERE (receiver_id = ${userId} OR recipient_id = ${userId})
       )
       SELECT COUNT(*) as total FROM all_activities
       WHERE (${allowedTypes}::text[] IS NULL OR type = ANY(${allowedTypes}::text[]))
