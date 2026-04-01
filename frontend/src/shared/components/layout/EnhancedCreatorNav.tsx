@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
-  Home, BarChart3, Activity, Film, Plus,
+  Home, BarChart3, Film, Plus,
   FileText, Users, GitBranch, User, Settings,
   Calendar, MessageSquare, Target, Star, Store, ExternalLink,
   Library
@@ -27,7 +27,6 @@ export const creatorNavigationSections: NavigationSection[] = [
     items: [
       { label: 'Overview', path: CREATOR_ROUTES.dashboard, icon: Home },
       { label: 'Analytics', path: CREATOR_ROUTES.analytics, icon: BarChart3 },
-      { label: 'Activity', path: CREATOR_ROUTES.activity, icon: Activity },
     ],
   },
   {
