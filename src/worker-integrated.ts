@@ -19441,6 +19441,23 @@ Signatures: [To be completed upon signing]
 
       if (!results.length) return builder.error(ErrorCode.BAD_REQUEST, 'Invite already redeemed or expired');
 
+      const inviterId = results[0].inviter_id;
+
+      // Feature: Auto-follow — inviter (producer) automatically follows the new creator
+      if (inviterId) {
+        try {
+          await this.db.query(`
+            INSERT INTO follows (follower_id, following_id, followed_at, created_at)
+            VALUES ($1, $2, NOW(), NOW())
+            ON CONFLICT (follower_id, following_id) DO NOTHING
+          `, [inviterId, userId]);
+        } catch (followErr) {
+          const e = followErr instanceof Error ? followErr : new Error(String(followErr));
+          console.error('Auto-follow on invite redemption failed:', e.message);
+          // Non-blocking — don't fail the redemption if the follow insert fails
+        }
+      }
+
       return builder.success({ redeemed: true });
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));

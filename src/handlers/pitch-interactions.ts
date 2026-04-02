@@ -264,6 +264,46 @@ export async function pitchPublishHandler(request: Request, env: Env): Promise<R
       console.error('Follower email notification error:', emailErr);
     }
 
+    // Feature: Notify inviter (producer) when referred creator publishes their first pitch
+    try {
+      const [referral] = await sql`
+        SELECT ri.inviter_id
+        FROM referral_invites ri
+        WHERE ri.redeemed_by = ${userId} AND ri.redeemed_at IS NOT NULL
+        LIMIT 1
+      `;
+      if (referral?.inviter_id) {
+        const [creatorInfo] = await sql`
+          SELECT name, first_name, last_name FROM users WHERE id = ${Number(userId)} LIMIT 1
+        `;
+        const creatorName = creatorInfo?.name
+          || `${creatorInfo?.first_name || ''} ${creatorInfo?.last_name || ''}`.trim()
+          || 'A creator';
+        const pitchTitle = pitch.title || 'Untitled Pitch';
+        await sql`
+          INSERT INTO notifications (
+            user_id, type, title, message,
+            related_user_id, related_pitch_id, created_at
+          ) VALUES (
+            ${Number(referral.inviter_id)},
+            'pitch_published',
+            ${`New pitch from ${creatorName}`},
+            ${`${creatorName} published "${pitchTitle}" — they signed up through your invite`},
+            ${Number(userId)},
+            ${Number(pitchId)},
+            NOW()
+          )
+        `.catch((err: unknown) => {
+          const e = err instanceof Error ? err : new Error(String(err));
+          console.error('Failed to notify inviter of first pitch publish:', e.message);
+        });
+      }
+    } catch (referralErr) {
+      // Non-blocking — don't fail the publish if referral notification fails
+      const e = referralErr instanceof Error ? referralErr : new Error(String(referralErr));
+      console.error('Referral invite notification error:', e.message);
+    }
+
     return jsonResponse({ success: true, data: { pitch } }, 200, origin);
   } catch (error) {
     console.error('Pitch publish error:', error);

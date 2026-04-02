@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { UserPlus, AlertCircle, CheckCircle, Lock, Mail, User } from 'lucide-react';
+import { UserPlus, AlertCircle, CheckCircle, Lock, Mail, User, Shield, BarChart3, Eye, Globe } from 'lucide-react';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { apiClient } from '@/lib/api-client';
 
@@ -154,7 +154,50 @@ export default function InviteLanding() {
           Join Pitchey
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          Create your creator account and start submitting pitches.
+          The platform connecting filmmakers directly with investors and production companies.
+        </p>
+
+        <ul className="mt-6 space-y-3">
+          <li className="flex items-start gap-3">
+            <div className="mt-0.5 flex-shrink-0 w-7 h-7 rounded-full bg-purple-100 flex items-center justify-center">
+              <UserPlus className="w-3.5 h-3.5 text-purple-600" />
+            </div>
+            <div>
+              <span className="text-sm font-medium text-gray-900">Direct line to {invite.inviterName}</span>
+              <p className="text-xs text-gray-500 mt-0.5">Submit pitches directly to industry decision-makers who are already looking for projects like yours.</p>
+            </div>
+          </li>
+          <li className="flex items-start gap-3">
+            <div className="mt-0.5 flex-shrink-0 w-7 h-7 rounded-full bg-purple-100 flex items-center justify-center">
+              <BarChart3 className="w-3.5 h-3.5 text-purple-600" />
+            </div>
+            <div>
+              <span className="text-sm font-medium text-gray-900">Know who's reading your pitch</span>
+              <p className="text-xs text-gray-500 mt-0.5">Analytics show you which investors and producers have viewed your project — no more guessing.</p>
+            </div>
+          </li>
+          <li className="flex items-start gap-3">
+            <div className="mt-0.5 flex-shrink-0 w-7 h-7 rounded-full bg-purple-100 flex items-center justify-center">
+              <Shield className="w-3.5 h-3.5 text-purple-600" />
+            </div>
+            <div>
+              <span className="text-sm font-medium text-gray-900">NDA-protected submissions</span>
+              <p className="text-xs text-gray-500 mt-0.5">Reviewers must agree to an NDA before accessing your full pitch. Your IP stays yours.</p>
+            </div>
+          </li>
+          <li className="flex items-start gap-3">
+            <div className="mt-0.5 flex-shrink-0 w-7 h-7 rounded-full bg-purple-100 flex items-center justify-center">
+              <Globe className="w-3.5 h-3.5 text-purple-600" />
+            </div>
+            <div>
+              <span className="text-sm font-medium text-gray-900">Discoverable across the marketplace</span>
+              <p className="text-xs text-gray-500 mt-0.5">Your published pitches are visible to the wider Pitchey network — not just your inviter.</p>
+            </div>
+          </li>
+        </ul>
+
+        <p className="mt-5 text-center text-xs text-gray-400">
+          Join creators already pitching on Pitchey
         </p>
       </div>
 
