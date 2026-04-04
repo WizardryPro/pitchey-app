@@ -273,9 +273,9 @@ export default function ProductionSaved() {
             <Bookmark className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No saved pitches</h3>
             <p className="text-gray-600 mb-6">Start browsing and save pitches you're interested in</p>
-            <Button 
+            <Button
               onClick={() => navigate('/marketplace')}
-              className="bg-purple-600 hover:bg-purple-700"
+              className="bg-purple-600 hover:bg-purple-700 text-white"
             >
               Browse Pitches
             </Button>
