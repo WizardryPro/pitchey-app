@@ -9,7 +9,7 @@ interface NDAItem {
   id: number;
   pitchId: number;
   pitchTitle: string;
-  status: 'pending' | 'approved' | 'rejected' | 'signed' | 'expired';
+  status: 'pending' | 'approved' | 'rejected' | 'signed' | 'revoked';
   ndaType: 'basic' | 'enhanced' | 'custom';
   requestedDate?: string;
   signedDate?: string;
@@ -91,15 +91,15 @@ export default function NDAManagementPanel({
       approved: 'bg-green-100 text-green-800 border-green-300',
       rejected: 'bg-red-100 text-red-800 border-red-300',
       signed: 'bg-blue-100 text-blue-800 border-blue-300',
-      expired: 'bg-gray-100 text-gray-800 border-gray-300'
+      revoked: 'bg-gray-100 text-gray-800 border-gray-300'
     };
-    
+
     const icons = {
       pending: Clock,
       approved: CheckCircle,
       rejected: XCircle,
       signed: Shield,
-      expired: AlertTriangle
+      revoked: AlertTriangle
     };
     
     const Icon = icons[status as keyof typeof icons] || Shield;
@@ -234,22 +234,6 @@ export default function NDAManagementPanel({
         
         {items.length > 0 && (
           <div className="flex gap-3 text-sm">
-            {category.includes('signed') && items.filter(item => isExpired(item.expiresAt)).length > 0 && (
-              <div className="text-center">
-                <div className="font-semibold text-red-600">
-                  {items.filter(item => isExpired(item.expiresAt)).length}
-                </div>
-                <div className="text-gray-600">Expired</div>
-              </div>
-            )}
-            {category.includes('signed') && items.filter(item => !isExpired(item.expiresAt) && isExpiringSoon(item.expiresAt)).length > 0 && (
-              <div className="text-center">
-                <div className="font-semibold text-orange-600">
-                  {items.filter(item => !isExpired(item.expiresAt) && isExpiringSoon(item.expiresAt)).length}
-                </div>
-                <div className="text-gray-600">Expiring Soon</div>
-              </div>
-            )}
             <div className="text-center">
               <div className="font-semibold text-gray-900">{items.length}</div>
               <div className="text-gray-600">Total</div>
@@ -284,7 +268,6 @@ export default function NDAManagementPanel({
                 <option value="approved">Approved</option>
                 <option value="signed">Signed</option>
                 <option value="rejected">Rejected</option>
-                <option value="expired">Expired</option>
               </select>
               
               <select
@@ -338,18 +321,6 @@ export default function NDAManagementPanel({
                     </h4>
                     {getStatusBadge(item.status)}
                     {getTypeBadge(item.ndaType)}
-                    {item.status === 'signed' && isExpired(item.expiresAt) && (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">
-                        <AlertTriangle className="w-3 h-3" />
-                        Expired
-                      </span>
-                    )}
-                    {item.status === 'signed' && !isExpired(item.expiresAt) && isExpiringSoon(item.expiresAt) && (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs">
-                        <AlertTriangle className="w-3 h-3" />
-                        Expiring Soon
-                      </span>
-                    )}
                   </div>
                   
                   {/* User/Company Info */}
@@ -390,18 +361,6 @@ export default function NDAManagementPanel({
                       <span className="flex items-center gap-1">
                         <CheckCircle className="w-3 h-3" />
                         Signed: {formatDate(item.signedDate)}
-                      </span>
-                    )}
-                    {item.expiresAt && item.status === 'signed' && (
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        Expires: {formatDate(item.expiresAt)}
-                      </span>
-                    )}
-                    {item.expiresIn && (
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        Expires in: {item.expiresIn}
                       </span>
                     )}
                   </div>
