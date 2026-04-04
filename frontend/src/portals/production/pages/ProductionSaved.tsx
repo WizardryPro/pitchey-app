@@ -57,7 +57,7 @@ interface SavedPitch {
   views: number;
   rating: number;
   hasNDA: boolean;
-  ndaStatus?: 'signed' | 'pending' | 'approved' | 'expired' | 'revoked' | null;
+  ndaStatus?: 'signed' | 'pending' | 'approved' | 'revoked' | null;
   ndaExpiresAt?: string | null;
   notes?: string;
 }
@@ -306,12 +306,10 @@ export default function ProductionSaved() {
                   {(pitch.hasNDA || pitch.ndaStatus) && (
                     <div className={`absolute top-3 left-3 text-white px-2 py-1 rounded text-xs ${
                       pitch.ndaStatus === 'signed' ? 'bg-green-600' :
-                      pitch.ndaStatus === 'expired' ? 'bg-red-600' :
                       pitch.ndaStatus === 'pending' || pitch.ndaStatus === 'approved' ? 'bg-yellow-600' :
                       'bg-purple-600'
                     }`}>
                       {pitch.ndaStatus === 'signed' ? 'NDA Active' :
-                       pitch.ndaStatus === 'expired' ? 'NDA Expired' :
                        pitch.ndaStatus === 'pending' ? 'NDA Pending' :
                        pitch.ndaStatus === 'approved' ? 'NDA Approved' :
                        'NDA Required'}

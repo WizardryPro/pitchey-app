@@ -13996,7 +13996,7 @@ pitchey_analytics_datapoints_per_minute 1250
         JOIN pitches p ON n.pitch_id = p.id
         LEFT JOIN users u ON n.signer_id = u.id
         WHERE p.user_id::text = ${String(authResult.user.id)}
-          AND n.status IN ('signed', 'expired')
+          AND n.status = 'signed'
         ORDER BY n.signed_at DESC
       `;
 
