@@ -16305,7 +16305,7 @@ Signatures: [To be completed upon signing]
         LEFT JOIN LATERAL (
           SELECT n.status, n.expires_at
           FROM ndas n
-          WHERE n.pitch_id = p.id AND n.requester_id::text = $1::text
+          WHERE n.pitch_id = p.id AND n.signer_id::text = $1::text
           ORDER BY n.created_at DESC
           LIMIT 1
         ) nda ON true
