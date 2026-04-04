@@ -16310,6 +16310,7 @@ Signatures: [To be completed upon signing]
           LIMIT 1
         ) nda ON true
         WHERE sp.user_id::text = $1::text
+        AND p.user_id::text != $1::text
         ${genreFilter ? `AND p.genre = $2` : ''}
         ORDER BY sp.created_at DESC
       `, genreFilter ? [authCheck.user.id, genreFilter] : [authCheck.user.id]);
@@ -16362,18 +16363,28 @@ Signatures: [To be completed upon signing]
         });
       }
 
-      // Check if pitch exists
-      const pitchExists = await this.db.query(
-        'SELECT id FROM pitches WHERE id = $1',
+      // Check if pitch exists and is not owned by the current user
+      const pitchCheck = await this.db.query(
+        'SELECT id, user_id FROM pitches WHERE id = $1',
         [pitchId]
       );
 
-      if (!pitchExists.length) {
+      if (!pitchCheck.length) {
         return new Response(JSON.stringify({
           success: false,
           error: { message: 'Pitch not found' }
         }), {
           status: 404,
+          headers: getCorsHeaders(origin)
+        });
+      }
+
+      if (String(pitchCheck[0].user_id) === String(authCheck.user.id)) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: { message: 'You cannot save your own pitch' }
+        }), {
+          status: 400,
           headers: getCorsHeaders(origin)
         });
       }
