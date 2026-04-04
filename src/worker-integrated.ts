@@ -13984,21 +13984,39 @@ pitchey_analytics_datapoints_per_minute 1250
 
       const sql = this.db.getSql() as any;
       const result = await sql`
-        SELECT 
-          n.*,
-          p.title as pitch_title,
-          u.username as requester_name
+        SELECT
+          n.id, n.pitch_id, n.signer_id, n.status, n.nda_type,
+          n.signed_at, n.expires_at, n.access_granted, n.created_at,
+          p.title AS "pitchTitle",
+          u.username AS "signerName",
+          u.user_type AS "signerType",
+          u.company_name AS "signerCompany",
+          u.email AS signer_email
         FROM ndas n
         JOIN pitches p ON n.pitch_id = p.id
-        JOIN users u ON n.user_id = u.id
-        WHERE p.user_id = ${authResult.user.id}
-          AND n.status = 'signed'
+        LEFT JOIN users u ON n.signer_id = u.id
+        WHERE p.user_id::text = ${String(authResult.user.id)}
+          AND n.status IN ('signed', 'expired')
         ORDER BY n.signed_at DESC
       `;
 
+      const ndas = result.map((r: any) => ({
+        id: r.id,
+        pitchId: r.pitch_id,
+        pitchTitle: r.pitchTitle,
+        status: r.status,
+        ndaType: r.nda_type || 'basic',
+        signedDate: r.signed_at,
+        expiresAt: r.expires_at,
+        signerName: r.signerName || r.signer_email?.split('@')[0] || 'Unknown',
+        signerType: r.signerType || 'investor',
+        signerCompany: r.signerCompany,
+        accessGranted: r.access_granted
+      }));
+
       return new Response(JSON.stringify({
         success: true,
-        data: result
+        ndas
       }), {
         headers: {
           'Content-Type': 'application/json',
