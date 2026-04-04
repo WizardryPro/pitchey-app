@@ -17719,20 +17719,19 @@ Signatures: [To be completed upon signing]
         total_likes: parseInt(rawMetrics.recent_evaluations) || 0
       };
 
-      // Genre performance from saved (evaluated) pitches — filtered by timeframe
+      // Genre distribution across all published pitches in the marketplace
       const genreQuery = `
         SELECT
           COALESCE(p.genre, 'Other') as genre,
           COUNT(*) as project_count,
-          COALESCE(SUM(p.budget), 0) as total_investment,
           COALESCE(SUM(p.view_count), 0) as total_views
-        FROM saved_pitches sp
-        JOIN pitches p ON p.id = sp.pitch_id
-        WHERE sp.user_id = $1
-          AND sp.created_at >= NOW() - INTERVAL '${days} days'
+        FROM pitches p
+        WHERE p.status = 'published'
+          AND p.user_id::text != $1::text
+          AND p.created_at >= NOW() - INTERVAL '${days} days'
         GROUP BY p.genre
         ORDER BY project_count DESC
-        LIMIT 6
+        LIMIT 10
       `;
       let genrePerformance: any[] = [];
       try {
