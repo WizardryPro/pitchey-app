@@ -5,6 +5,7 @@ import { TrendingUp, Star, Film, Search, Filter, Grid, List, ArrowLeft, Home, Re
 import { Button } from '@shared/components/ui/button';
 import { InvestorService, type InvestmentOpportunity } from '@features/deals/services/investor.service';
 import { formatCurrency } from '@shared/utils/formatters';
+import { getGenresSync } from '@/config/pitchConstants';
 
 interface PitchItem {
   id: number;
@@ -55,10 +56,7 @@ const InvestorDiscover = () => {
     { id: 'genres', label: 'Browse by Genre', icon: Film },
   ];
 
-  const genres = [
-    'All Genres', 'Action', 'Comedy', 'Drama', 'Horror', 'Sci-Fi', 
-    'Thriller', 'Romance', 'Documentary', 'Animation'
-  ];
+  const genres = ['All Genres', ...getGenresSync()];
 
   const handleTabChange = (tabId: string) => {
     if (tabId === 'genres') {

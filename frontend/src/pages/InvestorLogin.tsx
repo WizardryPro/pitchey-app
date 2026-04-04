@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useBetterAuthStore, MFARequiredError } from '../store/betterAuthStore';
 import { DollarSign, LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
 import BackButton from '../components/BackButton';
+import Turnstile from '../components/Turnstile';
 import { useLoadingState } from '@/shared/hooks/useLoadingState';
 import { clearAuthenticationState } from '../utils/auth';
 
@@ -16,6 +17,7 @@ export default function InvestorLogin() {
       clearAuthenticationState();
     }
   });
+  const [turnstileToken, setTurnstileToken] = useState<string>('');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -40,7 +42,7 @@ export default function InvestorLogin() {
     setLoading('logging-in', 'Authenticating investor account...');
     
     try {
-      await loginInvestor(formData.email, formData.password);
+      await loginInvestor(formData.email, formData.password, turnstileToken);
       // Small delay for state propagation
       setTimeout(() => {
         clearLoading();
@@ -68,7 +70,7 @@ export default function InvestorLogin() {
     setLoading('logging-in', 'Authenticating demo investor account...');
 
     try {
-      await loginInvestor(demoData.email, demoData.password);
+      await loginInvestor(demoData.email, demoData.password, turnstileToken);
       // Small delay for state propagation
       setTimeout(() => {
         clearLoading();
@@ -166,6 +168,8 @@ export default function InvestorLogin() {
                 </Link>
               </div>
             </div>
+
+            <Turnstile onVerify={setTurnstileToken} onExpire={() => setTurnstileToken('')} />
 
             <div>
               <button

@@ -320,8 +320,8 @@ export const authAPI = {
   },
 
   // Password reset methods
-  async requestPasswordReset(email: string) {
-    const response = await api.post('/api/auth/forgot-password', { email });
+  async requestPasswordReset(email: string, turnstileToken?: string) {
+    const response = await api.post('/api/auth/forgot-password', { email, turnstileToken });
     return response.data;
   },
 

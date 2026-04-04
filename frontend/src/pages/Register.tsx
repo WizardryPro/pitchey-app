@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { UserPlus, Mail, Lock, User, Briefcase, AlertCircle, CheckCircle } from 'lucide-react';
+import Turnstile from '../components/Turnstile';
 
 
 export default function Register() {
   const { register, loading, error } = useBetterAuthStore();
+  const [turnstileToken, setTurnstileToken] = useState<string>('');
   const [registrationComplete, setRegistrationComplete] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -31,6 +33,7 @@ export default function Register() {
         password: formData.password,
         userType: formData.userType,
         companyName: formData.companyName,
+        turnstileToken,
       });
 
       // Store email for verification resend if needed
@@ -264,6 +267,8 @@ export default function Register() {
                 </a>
               </label>
             </div>
+
+            <Turnstile onVerify={setTurnstileToken} onExpire={() => setTurnstileToken('')} />
 
             <div>
               <button

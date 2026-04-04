@@ -12,6 +12,7 @@ import { Skeleton } from '@shared/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
 import { SavedPitchesService, type SavedPitch as ApiSavedPitch } from '@features/pitches/services/saved-pitches.service';
 import { Clapperboard } from 'lucide-react';
+import { getGenresSync } from '@/config/pitchConstants';
 import StartProjectModal from '../components/StartProjectModal';
 
 // Loading skeleton for pitch cards
@@ -56,6 +57,8 @@ interface SavedPitch {
   views: number;
   rating: number;
   hasNDA: boolean;
+  ndaStatus?: 'signed' | 'pending' | 'approved' | 'expired' | 'revoked' | null;
+  ndaExpiresAt?: string | null;
   notes?: string;
 }
 
@@ -102,6 +105,8 @@ export default function ProductionSaved() {
         const pitchId = Number(raw.pitch_id ?? sp.pitchId);
 
         const requireNda = raw.require_nda === true || raw.require_nda === 'true';
+        const ndaStatus = (raw.nda_status as string) || null;
+        const ndaExpiresAt = (raw.nda_expires_at as string) || null;
 
         return {
           id: pitchId,
@@ -116,6 +121,8 @@ export default function ProductionSaved() {
           views: viewCount,
           rating: likeCount,
           hasNDA: requireNda,
+          ndaStatus: ndaStatus as SavedPitch['ndaStatus'],
+          ndaExpiresAt,
           notes: sp.notes
         };
       });
@@ -235,12 +242,9 @@ export default function ProductionSaved() {
             className="px-4 py-2 border rounded-lg bg-white"
           >
             <option value="all">All Genres</option>
-            <option value="Action">Action</option>
-            <option value="Comedy">Comedy</option>
-            <option value="Drama">Drama</option>
-            <option value="Horror">Horror</option>
-            <option value="Sci-Fi">Sci-Fi</option>
-            <option value="Thriller">Thriller</option>
+            {getGenresSync().map((genre) => (
+              <option key={genre} value={genre}>{genre}</option>
+            ))}
           </select>
           <select
             value={sortBy}
@@ -299,9 +303,18 @@ export default function ProductionSaved() {
                       <BookmarkCheck className="w-4 h-4 text-purple-600" />
                     </Button>
                   </div>
-                  {pitch.hasNDA && (
-                    <div className="absolute top-3 left-3 bg-purple-600 text-white px-2 py-1 rounded text-xs">
-                      NDA Protected
+                  {(pitch.hasNDA || pitch.ndaStatus) && (
+                    <div className={`absolute top-3 left-3 text-white px-2 py-1 rounded text-xs ${
+                      pitch.ndaStatus === 'signed' ? 'bg-green-600' :
+                      pitch.ndaStatus === 'expired' ? 'bg-red-600' :
+                      pitch.ndaStatus === 'pending' || pitch.ndaStatus === 'approved' ? 'bg-yellow-600' :
+                      'bg-purple-600'
+                    }`}>
+                      {pitch.ndaStatus === 'signed' ? 'NDA Active' :
+                       pitch.ndaStatus === 'expired' ? 'NDA Expired' :
+                       pitch.ndaStatus === 'pending' ? 'NDA Pending' :
+                       pitch.ndaStatus === 'approved' ? 'NDA Approved' :
+                       'NDA Required'}
                     </div>
                   )}
                   <div className="absolute bottom-3 left-3 right-3">

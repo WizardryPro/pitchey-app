@@ -143,7 +143,7 @@ describe('Login', () => {
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }))
 
     await waitFor(() => {
-      expect(mockLoginCreator).toHaveBeenCalledWith('alex@test.com', 'secret123')
+      expect(mockLoginCreator).toHaveBeenCalledWith('alex@test.com', 'secret123', '')
       expect(mockNavigate).toHaveBeenCalledWith('/creator/dashboard')
     })
   })
@@ -157,7 +157,7 @@ describe('Login', () => {
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }))
 
     await waitFor(() => {
-      expect(mockLoginInvestor).toHaveBeenCalledWith('investor@test.com', 'pass123')
+      expect(mockLoginInvestor).toHaveBeenCalledWith('investor@test.com', 'pass123', '')
       expect(mockNavigate).toHaveBeenCalledWith('/investor/dashboard')
     })
   })
@@ -171,7 +171,7 @@ describe('Login', () => {
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }))
 
     await waitFor(() => {
-      expect(mockLoginProduction).toHaveBeenCalledWith('prod@test.com', 'pass456')
+      expect(mockLoginProduction).toHaveBeenCalledWith('prod@test.com', 'pass456', '')
       expect(mockNavigate).toHaveBeenCalledWith('/production/dashboard')
     })
   })

@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import { authAPI } from '../lib/api';
+import Turnstile from '../components/Turnstile';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -15,7 +17,7 @@ export default function ForgotPassword() {
     setError(null);
 
     try {
-      await authAPI.requestPasswordReset(email);
+      await authAPI.requestPasswordReset(email, turnstileToken);
       setSubmitted(true);
     } catch (_error: unknown) {
       // Generic error message to prevent user enumeration
@@ -74,6 +76,8 @@ export default function ForgotPassword() {
                   />
                 </div>
               </div>
+
+              <Turnstile onVerify={setTurnstileToken} onExpire={() => setTurnstileToken('')} theme="dark" />
 
               <div>
                 <button

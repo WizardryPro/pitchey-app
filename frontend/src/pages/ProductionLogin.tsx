@@ -3,10 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useBetterAuthStore, MFARequiredError } from '../store/betterAuthStore';
 import { Briefcase, LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
 import BackButton from '../components/BackButton';
+import Turnstile from '../components/Turnstile';
 
 export default function ProductionLogin() {
   const navigate = useNavigate();
   const { loginProduction, loading, error } = useBetterAuthStore();
+  const [turnstileToken, setTurnstileToken] = useState<string>('');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -15,7 +17,7 @@ export default function ProductionLogin() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await loginProduction(formData.email, formData.password);
+      await loginProduction(formData.email, formData.password, turnstileToken);
       void navigate('/production/dashboard');
     } catch (err) {
       if (err instanceof MFARequiredError) {
@@ -35,7 +37,7 @@ export default function ProductionLogin() {
     
     // Auto-submit the form with demo credentials
     try {
-      await loginProduction(demoData.email, demoData.password);
+      await loginProduction(demoData.email, demoData.password, turnstileToken);
       void navigate('/production/dashboard');
     } catch (error) {
       console.error('Demo production login failed:', error);
@@ -123,6 +125,8 @@ export default function ProductionLogin() {
                 </Link>
               </div>
             </div>
+
+            <Turnstile onVerify={setTurnstileToken} onExpire={() => setTurnstileToken('')} />
 
             <div>
               <button

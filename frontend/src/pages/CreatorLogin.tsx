@@ -3,10 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useBetterAuthStore, MFARequiredError } from '../store/betterAuthStore';
 import { Film, LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
 import BackButton from '../components/BackButton';
+import Turnstile from '../components/Turnstile';
 
 export default function CreatorLogin() {
   const navigate = useNavigate();
   const { loginCreator, loading, error } = useBetterAuthStore();
+  const [turnstileToken, setTurnstileToken] = useState<string>('');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -15,7 +17,7 @@ export default function CreatorLogin() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await loginCreator(formData.email, formData.password);
+      await loginCreator(formData.email, formData.password, turnstileToken);
       void navigate('/creator/dashboard');
     } catch (err) {
       if (err instanceof MFARequiredError) {
@@ -35,7 +37,7 @@ export default function CreatorLogin() {
     
     // Auto-submit the form with demo credentials
     try {
-      await loginCreator(demoData.email, demoData.password);
+      await loginCreator(demoData.email, demoData.password, turnstileToken);
       void navigate('/creator/dashboard');
     } catch (err) {
       if (err instanceof MFARequiredError) {
@@ -127,6 +129,8 @@ export default function CreatorLogin() {
                 </Link>
               </div>
             </div>
+
+            <Turnstile onVerify={setTurnstileToken} onExpire={() => setTurnstileToken('')} />
 
             <div>
               <button

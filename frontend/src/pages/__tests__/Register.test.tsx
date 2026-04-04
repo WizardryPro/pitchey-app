@@ -152,6 +152,7 @@ describe('Register', () => {
         password: 'securepass123',
         userType: 'creator',
         companyName: '',
+        turnstileToken: '',
       })
     })
   })

@@ -121,7 +121,7 @@ describe('ProductionLogin', () => {
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }))
 
     await waitFor(() => {
-      expect(mockLoginProduction).toHaveBeenCalledWith('prod@test.com', 'secret123')
+      expect(mockLoginProduction).toHaveBeenCalledWith('prod@test.com', 'secret123', '')
       expect(mockNavigate).toHaveBeenCalledWith('/production/dashboard')
     })
   })
@@ -144,7 +144,7 @@ describe('ProductionLogin', () => {
     fireEvent.click(screen.getByRole('button', { name: /use demo production account/i }))
 
     await waitFor(() => {
-      expect(mockLoginProduction).toHaveBeenCalledWith('stellar.production@demo.com', 'Demo123')
+      expect(mockLoginProduction).toHaveBeenCalledWith('stellar.production@demo.com', 'Demo123', '')
     })
   })
 

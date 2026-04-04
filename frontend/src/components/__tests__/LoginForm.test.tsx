@@ -157,7 +157,7 @@ describe('LoginForm Components', () => {
         await user.type(passwordInput, 'password123')
         await user.click(submitButton)
 
-        expect(authStore.loginCreator).toHaveBeenCalledWith('creator@test.com', 'password123')
+        expect(authStore.loginCreator).toHaveBeenCalledWith('creator@test.com', 'password123', '')
       })
 
       it('should navigate to creator dashboard on successful login', async () => {
@@ -298,7 +298,7 @@ describe('LoginForm Components', () => {
       await user.type(passwordInput, 'password123')
       await user.click(submitButton)
 
-      expect(authStore.loginInvestor).toHaveBeenCalledWith('investor@test.com', 'password123')
+      expect(authStore.loginInvestor).toHaveBeenCalledWith('investor@test.com', 'password123', '')
     })
 
     it('should navigate to investor dashboard on successful login', async () => {
@@ -354,7 +354,7 @@ describe('LoginForm Components', () => {
       await user.type(passwordInput, 'password123')
       await user.click(submitButton)
 
-      expect(authStore.loginProduction).toHaveBeenCalledWith('production@test.com', 'password123')
+      expect(authStore.loginProduction).toHaveBeenCalledWith('production@test.com', 'password123', '')
     })
 
     it('should navigate to production dashboard on successful login', async () => {
@@ -455,7 +455,7 @@ describe('LoginForm Components', () => {
       await user.type(passwordInput, 'password123')
       await user.click(submitButton)
 
-      expect(authStore.loginCreator).toHaveBeenCalledWith('creator@test.com', 'password123')
+      expect(authStore.loginCreator).toHaveBeenCalledWith('creator@test.com', 'password123', '')
     })
   })
 

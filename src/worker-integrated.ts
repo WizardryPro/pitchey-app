@@ -23,6 +23,7 @@ import { UserProfileRoutes } from './routes/user-profile';
 import { ApiResponseBuilder, ErrorCode, errorHandler } from './utils/api-response';
 // import { getEnvConfig } from './utils/env-config';
 import { getCorsHeaders, setRequestOrigin, errorResponse } from './utils/response';
+import { verifyTurnstileToken } from './utils/turnstile';
 import { createJWT, verifyJWT, extractJWT } from './utils/worker-jwt';
 import { hashPassword, verifyPassword, isHashedPassword } from './utils/worker-password';
 import { StripeService } from './services/stripe.service';
@@ -592,6 +593,9 @@ export interface Env {
   // Video Processing
   VIDEO_PROCESSING_QUEUE?: Queue;
   N8N_WEBHOOK_URL?: string;
+
+  // Turnstile Bot Protection
+  TURNSTILE_SECRET_KEY?: string;
 
   // Sentry Error Tracking
   SENTRY_DSN?: string;
@@ -1576,6 +1580,16 @@ class RouteRegistry {
     const username = (body as any).username || email.split('@')[0];
     const companyName = (body as any).companyName || null;
 
+    // Verify Turnstile token
+    const clientIP = request.headers.get('CF-Connecting-IP') || undefined;
+    const turnstileResult = await verifyTurnstileToken((body as any).turnstileToken, this.env.TURNSTILE_SECRET_KEY, clientIP);
+    if (!turnstileResult.success) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: { code: 'TURNSTILE_FAILED', message: turnstileResult.error || 'Bot verification failed' }
+      }), { status: 403, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) } });
+    }
+
     if (!email || !password) {
       return new Response(JSON.stringify({
         success: false,
@@ -1830,7 +1844,16 @@ class RouteRegistry {
       }
 
       // Route Better Auth sign-in to our portal login handler
-      const body = await request.json() as { email?: string; password?: string; userType?: string; };
+      const body = await request.json() as { email?: string; password?: string; userType?: string; turnstileToken?: string };
+
+      // Verify Turnstile token
+      const turnstileResult = await verifyTurnstileToken(body.turnstileToken, this.env.TURNSTILE_SECRET_KEY, clientIP !== 'unknown' ? clientIP : undefined);
+      if (!turnstileResult.success) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: { code: 'TURNSTILE_FAILED', message: turnstileResult.error || 'Bot verification failed' }
+        }), { status: 403, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request.headers.get('Origin')) } });
+      }
 
       // Validate input
       try {
@@ -3843,6 +3866,17 @@ class RouteRegistry {
   private async handleLogin(request: Request): Promise<Response> {
     console.log('handleLogin called (generic)');
 
+    // Verify Turnstile token
+    const clonedBody = await request.clone().json() as any;
+    const clientIP = request.headers.get('CF-Connecting-IP') || undefined;
+    const turnstileResult = await verifyTurnstileToken(clonedBody.turnstileToken, this.env.TURNSTILE_SECRET_KEY, clientIP);
+    if (!turnstileResult.success) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: { code: 'TURNSTILE_FAILED', message: turnstileResult.error || 'Bot verification failed' }
+      }), { status: 403, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request.headers.get('Origin')) } });
+    }
+
     // First try Better Auth's raw SQL implementation if available
     if (this.betterAuth && this.betterAuth.dbAdapter) {
       try {
@@ -4002,6 +4036,17 @@ class RouteRegistry {
     console.log('handlePortalLogin called for portal:', portal);
     console.log('Better Auth available:', !!this.betterAuth);
     console.log('Better Auth dbAdapter available:', !!(this.betterAuth && this.betterAuth.dbAdapter));
+
+    // Verify Turnstile token
+    const clonedBody = await request.clone().json() as any;
+    const clientIP = request.headers.get('CF-Connecting-IP') || undefined;
+    const turnstileResult = await verifyTurnstileToken(clonedBody.turnstileToken, this.env.TURNSTILE_SECRET_KEY, clientIP);
+    if (!turnstileResult.success) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: { code: 'TURNSTILE_FAILED', message: turnstileResult.error || 'Bot verification failed' }
+      }), { status: 403, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request.headers.get('Origin')) } });
+    }
 
     // First try Better Auth's raw SQL implementation
     if (this.betterAuth && this.betterAuth.dbAdapter) {
@@ -11839,6 +11884,13 @@ pitchey_analytics_datapoints_per_minute 1250
     const url = new URL(request.url);
     const limit = parseInt(url.searchParams.get('limit') || '20');
     const offset = parseInt(url.searchParams.get('offset') || '0');
+    const timeframe = url.searchParams.get('timeframe');
+
+    // Map timeframe to interval
+    let intervalClause = '';
+    if (timeframe === '1d') intervalClause = `AND p.created_at >= NOW() - INTERVAL '1 day'`;
+    else if (timeframe === '7d') intervalClause = `AND p.created_at >= NOW() - INTERVAL '7 days'`;
+    else if (timeframe === '30d') intervalClause = `AND p.created_at >= NOW() - INTERVAL '30 days'`;
 
     try {
       const pitches = await this.db.query(`
@@ -11859,6 +11911,7 @@ pitchey_analytics_datapoints_per_minute 1250
         LEFT JOIN (SELECT pitch_id, COUNT(*) as save_count FROM saved_pitches GROUP BY pitch_id) s ON s.pitch_id = p.id
         WHERE f.follower_id = $1
           AND p.status = 'published'
+          ${intervalClause}
         ORDER BY p.created_at DESC
         LIMIT $2 OFFSET $3
       `, [authResult.user.id, limit, offset]);
@@ -16234,19 +16287,32 @@ Signatures: [To be completed upon signing]
         });
       }
 
+      const url = new URL(request.url);
+      const genreFilter = url.searchParams.get('genre');
+
       let savedPitches: any[] = [];
       savedPitches = await this.db.query(`
         SELECT sp.id, sp.pitch_id, sp.notes, sp.created_at as saved_at,
                p.title, p.logline, p.genre, p.status, p.thumbnail_url, p.budget_range,
                p.view_count, p.like_count, p.title_image, p.require_nda,
                COALESCE(u.first_name || ' ' || u.last_name, u.company_name, u.email) as creator_name,
-               COALESCE(u.verified, false) as creator_verified
+               COALESCE(u.verified, false) as creator_verified,
+               nda.status AS nda_status,
+               nda.expires_at AS nda_expires_at
         FROM saved_pitches sp
         JOIN pitches p ON p.id = sp.pitch_id
         LEFT JOIN users u ON p.user_id = u.id
+        LEFT JOIN LATERAL (
+          SELECT n.status, n.expires_at
+          FROM ndas n
+          WHERE n.pitch_id = p.id AND n.requester_id::text = $1::text
+          ORDER BY n.created_at DESC
+          LIMIT 1
+        ) nda ON true
         WHERE sp.user_id::text = $1::text
+        ${genreFilter ? `AND p.genre = $2` : ''}
         ORDER BY sp.created_at DESC
-      `, [authCheck.user.id]);
+      `, genreFilter ? [authCheck.user.id, genreFilter] : [authCheck.user.id]);
 
       const { getCorsHeaders } = await import('./utils/response');
       return new Response(JSON.stringify({

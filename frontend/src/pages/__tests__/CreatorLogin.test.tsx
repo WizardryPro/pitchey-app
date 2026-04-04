@@ -116,7 +116,7 @@ describe('CreatorLogin', () => {
       await user.click(screen.getByRole('button', { name: /sign in/i }))
 
       await waitFor(() => {
-        expect(mockLoginCreator).toHaveBeenCalledWith('test@example.com', 'Password123')
+        expect(mockLoginCreator).toHaveBeenCalledWith('test@example.com', 'Password123', '')
       })
     })
 
@@ -155,7 +155,7 @@ describe('CreatorLogin', () => {
       await user.click(screen.getByText('Use Demo Creator Account'))
 
       await waitFor(() => {
-        expect(mockLoginCreator).toHaveBeenCalledWith('alex.creator@demo.com', 'Demo123')
+        expect(mockLoginCreator).toHaveBeenCalledWith('alex.creator@demo.com', 'Demo123', '')
         expect(mockNavigate).toHaveBeenCalledWith('/creator/dashboard')
       })
     })

@@ -37,13 +37,13 @@ interface BetterAuthState {
   error: string | null;
   
   // Sign in methods for each portal
-  loginCreator: (email: string, password: string) => Promise<void>;
-  loginInvestor: (email: string, password: string) => Promise<void>;
-  loginProduction: (email: string, password: string) => Promise<void>;
-  
+  loginCreator: (email: string, password: string, turnstileToken?: string) => Promise<void>;
+  loginInvestor: (email: string, password: string, turnstileToken?: string) => Promise<void>;
+  loginProduction: (email: string, password: string, turnstileToken?: string) => Promise<void>;
+
   // Generic login (determines portal from user data)
-  login: (email: string, password: string) => Promise<void>;
-  
+  login: (email: string, password: string, turnstileToken?: string) => Promise<void>;
+
   // Registration
   register: (data: {
     email: string;
@@ -51,6 +51,7 @@ interface BetterAuthState {
     password: string;
     userType: string;
     companyName?: string;
+    turnstileToken?: string;
   }) => Promise<void>;
   
   // Sign out
@@ -84,10 +85,10 @@ const getCachedAuthState = () => {
 export const useBetterAuthStore = create<BetterAuthState>((set) => ({
   ...getCachedAuthState(), // Initialize from cache
 
-  loginCreator: async (email: string, password: string) => {
+  loginCreator: async (email: string, password: string, turnstileToken?: string) => {
     set({ loading: true, error: null });
     try {
-      const response = await portalAuth.signInCreator(email, password);
+      const response = await portalAuth.signInCreator(email, password, turnstileToken);
       // Check if MFA is required
       const raw = response as any;
       if (raw.requiresMFA) {
@@ -106,10 +107,10 @@ export const useBetterAuthStore = create<BetterAuthState>((set) => ({
     }
   },
 
-  loginInvestor: async (email: string, password: string) => {
+  loginInvestor: async (email: string, password: string, turnstileToken?: string) => {
     set({ loading: true, error: null });
     try {
-      const response = await portalAuth.signInInvestor(email, password);
+      const response = await portalAuth.signInInvestor(email, password, turnstileToken);
       const raw = response as any;
       if (raw.requiresMFA) {
         set({ loading: false });
@@ -127,10 +128,10 @@ export const useBetterAuthStore = create<BetterAuthState>((set) => ({
     }
   },
 
-  loginProduction: async (email: string, password: string) => {
+  loginProduction: async (email: string, password: string, turnstileToken?: string) => {
     set({ loading: true, error: null });
     try {
-      const response = await portalAuth.signInProduction(email, password);
+      const response = await portalAuth.signInProduction(email, password, turnstileToken);
       const raw = response as any;
       if (raw.requiresMFA) {
         set({ loading: false });
@@ -148,14 +149,14 @@ export const useBetterAuthStore = create<BetterAuthState>((set) => ({
     }
   },
 
-  login: async (email: string, password: string) => {
+  login: async (email: string, password: string, turnstileToken?: string) => {
     // Generic login - let the server determine the portal
     set({ loading: true, error: null });
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/sign-in`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, turnstileToken }),
         credentials: 'include'
       });
 
@@ -186,10 +187,11 @@ export const useBetterAuthStore = create<BetterAuthState>((set) => ({
   register: async (data) => {
     set({ loading: true, error: null });
     try {
+      const { turnstileToken, ...registrationData } = data;
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/sign-up`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...registrationData, turnstileToken }),
         credentials: 'include'
       });
 

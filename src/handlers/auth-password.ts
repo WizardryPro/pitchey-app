@@ -6,6 +6,7 @@
 import { ApiResponseBuilder, ErrorCode } from '../utils/api-response';
 import { createDatabase } from '../db/raw-sql-connection';
 import { getAuthenticatedUser } from '../utils/auth-extract';
+import { verifyTurnstileToken } from '../utils/turnstile';
 import * as bcrypt from 'bcryptjs';
 
 /**
@@ -153,16 +154,26 @@ export async function requestPasswordResetHandler(
   ctx: ExecutionContext
 ): Promise<Response> {
   try {
-    const body = await request.json() as PasswordResetRequestBody;
-    const { email } = body;
-    
+    const body = await request.json() as PasswordResetRequestBody & { turnstileToken?: string };
+    const { email, turnstileToken } = body;
+
+    // Verify Turnstile token
+    const clientIP = request.headers.get('CF-Connecting-IP') || undefined;
+    const turnstileResult = await verifyTurnstileToken(turnstileToken, env.TURNSTILE_SECRET_KEY, clientIP);
+    if (!turnstileResult.success) {
+      return ApiResponseBuilder.error(
+        ErrorCode.FORBIDDEN,
+        turnstileResult.error || 'Bot verification failed'
+      );
+    }
+
     if (!email) {
       return ApiResponseBuilder.error(
         ErrorCode.VALIDATION_ERROR,
         'Email is required'
       );
     }
-    
+
     const db = createDatabase(env.DATABASE_URL);
     
     // Check if user exists

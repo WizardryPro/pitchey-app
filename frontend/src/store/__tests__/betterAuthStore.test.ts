@@ -159,7 +159,7 @@ describe('betterAuthStore', () => {
         await useBetterAuthStore.getState().loginInvestor('inv@example.com', 'pass');
       });
 
-      expect(mockSignInInvestor).toHaveBeenCalledWith('inv@example.com', 'pass');
+      expect(mockSignInInvestor).toHaveBeenCalledWith('inv@example.com', 'pass', undefined);
       expect(useBetterAuthStore.getState().user?.userType).toBe('investor');
     });
 
@@ -190,7 +190,7 @@ describe('betterAuthStore', () => {
         await useBetterAuthStore.getState().loginProduction('prod@example.com', 'pass');
       });
 
-      expect(mockSignInProduction).toHaveBeenCalledWith('prod@example.com', 'pass');
+      expect(mockSignInProduction).toHaveBeenCalledWith('prod@example.com', 'pass', undefined);
       expect(useBetterAuthStore.getState().user?.userType).toBe('production');
     });
   });

@@ -97,7 +97,7 @@ describe('ForgotPassword', () => {
     fireEvent.click(screen.getByRole('button', { name: /send reset link/i }))
 
     await waitFor(() => {
-      expect(mockRequestPasswordReset).toHaveBeenCalledWith('forgot@test.com')
+      expect(mockRequestPasswordReset).toHaveBeenCalledWith('forgot@test.com', '')
     })
   })
 

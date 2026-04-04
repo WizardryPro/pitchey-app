@@ -134,7 +134,7 @@ describe('InvestorLogin', () => {
       await user.click(screen.getByRole('button', { name: /sign in/i }))
 
       await waitFor(() => {
-        expect(mockLoginInvestor).toHaveBeenCalledWith('investor@example.com', 'Secret123')
+        expect(mockLoginInvestor).toHaveBeenCalledWith('investor@example.com', 'Secret123', '')
       })
     })
 
@@ -178,7 +178,7 @@ describe('InvestorLogin', () => {
       await user.click(screen.getByText('Use Demo Investor Account'))
 
       await waitFor(() => {
-        expect(mockLoginInvestor).toHaveBeenCalledWith('sarah.investor@demo.com', 'Demo123')
+        expect(mockLoginInvestor).toHaveBeenCalledWith('sarah.investor@demo.com', 'Demo123', '')
       })
     })
 

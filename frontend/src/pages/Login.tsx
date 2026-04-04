@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useBetterAuthStore, MFARequiredError } from '../store/betterAuthStore';
 import { Film, Briefcase, DollarSign, LogIn, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
+import Turnstile from '../components/Turnstile';
 
 
 export default function Login() {
@@ -10,6 +11,7 @@ export default function Login() {
   const verified = searchParams.get('verified');
   const { loginCreator, loginInvestor, loginProduction, loading, error } = useBetterAuthStore();
   const [selectedPortal, setSelectedPortal] = useState<'creator' | 'investor' | 'production' | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string>('');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -24,13 +26,13 @@ export default function Login() {
 
     try {
       if (selectedPortal === 'creator') {
-        await loginCreator(formData.email, formData.password);
+        await loginCreator(formData.email, formData.password, turnstileToken);
         void navigate('/creator/dashboard');
       } else if (selectedPortal === 'investor') {
-        await loginInvestor(formData.email, formData.password);
+        await loginInvestor(formData.email, formData.password, turnstileToken);
         void navigate('/investor/dashboard');
       } else if (selectedPortal === 'production') {
-        await loginProduction(formData.email, formData.password);
+        await loginProduction(formData.email, formData.password, turnstileToken);
         void navigate('/production/dashboard');
       }
     } catch (err) {
@@ -231,6 +233,8 @@ export default function Login() {
                   </Link>
                 </div>
               </div>
+
+              <Turnstile onVerify={setTurnstileToken} onExpire={() => setTurnstileToken('')} theme="dark" />
 
               <div>
                 <button

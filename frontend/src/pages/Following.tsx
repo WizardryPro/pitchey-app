@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, TrendingUp, Users, Film, Calendar, MapPin, Eye, Heart, AlertCircle } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Users, Film, Calendar, MapPin, Eye, Heart, AlertCircle, Search } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { API_URL } from '../config';
 import { useBetterAuthStore } from '../store/betterAuthStore';
@@ -58,6 +58,8 @@ const Following: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timeframe, setTimeframe] = useState('7d');
+  const [userTypeFilter, setUserTypeFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
   const { user } = useBetterAuthStore();
   const userType = user?.userType;
@@ -303,11 +305,58 @@ const Following: React.FC = () => {
     );
   };
 
+  // Client-side filtering for followers/following lists
+  const filteredUsers = useMemo(() => {
+    if (activeTab === 'activity') return data;
+    const users = data as Creator[];
+    return users.filter(u => {
+      if (!u) return false;
+      const matchesType = userTypeFilter === 'all' || u.userType === userTypeFilter;
+      if (!matchesType) return false;
+      if (!searchTerm) return true;
+      const term = searchTerm.toLowerCase();
+      const name = getDisplayName(u).toLowerCase();
+      const username = (u.username || '').toLowerCase();
+      return name.includes(term) || username.includes(term);
+    });
+  }, [data, activeTab, userTypeFilter, searchTerm]);
+
+  const renderUserFilterBar = () => (
+    <div className="bg-white p-4 rounded-lg shadow-sm border mb-4 space-y-3">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+        <input
+          type="text"
+          placeholder="Search by name..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+      </div>
+      <div className="flex gap-2 flex-wrap">
+        {(['all', 'creator', 'investor', 'production'] as const).map(type => (
+          <button
+            key={type}
+            onClick={() => setUserTypeFilter(type)}
+            className={`px-3 py-1 rounded-full text-sm transition ${
+              userTypeFilter === type
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            {type === 'all' ? 'All' : type.charAt(0).toUpperCase() + type.slice(1) + 's'}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
   const renderFollowersTab = () => {
-    const followers = data as Creator[];
-    
+    const followers = filteredUsers as Creator[];
+
     return (
       <div className="space-y-4">
+        {renderUserFilterBar()}
         {followers.length === 0 ? (
           <div className="bg-white p-8 rounded-lg shadow-sm border text-center">
             <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
@@ -390,10 +439,11 @@ const Following: React.FC = () => {
   };
 
   const renderFollowingTab = () => {
-    const following = data as Creator[];
-    
+    const following = filteredUsers as Creator[];
+
     return (
       <div className="space-y-4">
+        {renderUserFilterBar()}
         {following.length === 0 ? (
           <div className="bg-white p-8 rounded-lg shadow-sm border text-center">
             <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />

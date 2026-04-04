@@ -72,9 +72,9 @@ export interface Session {
  */
 export interface PortalAuthMethods {
   // Sign in methods
-  signInCreator: (email: string, password: string) => Promise<AuthResponse>;
-  signInInvestor: (email: string, password: string) => Promise<AuthResponse>;
-  signInProduction: (email: string, password: string) => Promise<AuthResponse>;
+  signInCreator: (email: string, password: string, turnstileToken?: string) => Promise<AuthResponse>;
+  signInInvestor: (email: string, password: string, turnstileToken?: string) => Promise<AuthResponse>;
+  signInProduction: (email: string, password: string, turnstileToken?: string) => Promise<AuthResponse>;
   
   // Registration methods  
   registerCreator: (email: string, username: string, password: string) => Promise<AuthResponse>;
@@ -126,14 +126,14 @@ export function createPortalAuthMethods(): PortalAuthMethods {
 
   return {
     // Sign in methods
-    signInCreator: (email: string, password: string) => 
-      makeAuthRequest('/api/auth/creator/login', { email, password }),
-    
-    signInInvestor: (email: string, password: string) => 
-      makeAuthRequest('/api/auth/investor/login', { email, password }),
-    
-    signInProduction: (email: string, password: string) => 
-      makeAuthRequest('/api/auth/production/login', { email, password }),
+    signInCreator: (email: string, password: string, turnstileToken?: string) =>
+      makeAuthRequest('/api/auth/creator/login', { email, password, turnstileToken }),
+
+    signInInvestor: (email: string, password: string, turnstileToken?: string) =>
+      makeAuthRequest('/api/auth/investor/login', { email, password, turnstileToken }),
+
+    signInProduction: (email: string, password: string, turnstileToken?: string) =>
+      makeAuthRequest('/api/auth/production/login', { email, password, turnstileToken }),
 
     // Registration methods
     registerCreator: (email: string, username: string, password: string) => 

@@ -193,6 +193,7 @@ export const productionSecurityConfig: SecurityConfig = {
           'https://unpkg.com',
           'https://js.stripe.com',
           'https://checkout.stripe.com',
+          'https://challenges.cloudflare.com',
           'https://www.googletagmanager.com',
           'https://www.google-analytics.com'
         ],
@@ -232,7 +233,8 @@ export const productionSecurityConfig: SecurityConfig = {
         'frame-src': [
           "'self'",
           'https://js.stripe.com',
-          'https://checkout.stripe.com'
+          'https://checkout.stripe.com',
+          'https://challenges.cloudflare.com'
         ],
         'media-src': [
           "'self'",
