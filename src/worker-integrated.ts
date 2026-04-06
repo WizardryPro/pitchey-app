@@ -19425,7 +19425,20 @@ Signatures: [To be completed upon signing]
         VALUES ($1, $2, $3, $4)
       `, [code, userId, userName, body.email || null]);
 
-      return builder.success({ code, url: `https://pitchey.com/invite/${code}` });
+      const inviteUrl = `https://pitchey.com/invite/${code}`;
+
+      // Send invite email if an email address was provided
+      if (body.email && this.emailService) {
+        this.emailService.sendTemplate(body.email, 'referralInvite', {
+          subject: `${userName} invited you to Pitchey`,
+          inviterName: userName,
+          inviteUrl,
+        }).catch((emailErr: unknown) => {
+          console.error('Failed to send referral invite email:', emailErr);
+        });
+      }
+
+      return builder.success({ code, url: inviteUrl });
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
       console.error('Error creating invite:', e.message);
@@ -19552,7 +19565,32 @@ Signatures: [To be completed upon signing]
         }
       }
 
-      return builder.success({ redeemed: true });
+      // Feature: Referral bonus — grant 5 bonus credits to the invited creator
+      try {
+        const bonusCredits = 5;
+        const balanceResult = await this.db.query(
+          `SELECT balance FROM user_credits WHERE user_id = $1`, [userId]
+        );
+        const currentBalance = balanceResult.length ? balanceResult[0].balance : 0;
+
+        await this.db.query(`
+          INSERT INTO user_credits (user_id, balance, total_purchased, total_used, last_updated)
+          VALUES ($1, $2, $2, 0, NOW())
+          ON CONFLICT (user_id) DO UPDATE
+            SET balance = user_credits.balance + $2, total_purchased = user_credits.total_purchased + $2, last_updated = NOW()
+        `, [userId, bonusCredits]);
+
+        await this.db.query(`
+          INSERT INTO credit_transactions (user_id, type, amount, description, balance_before, balance_after, created_at)
+          VALUES ($1, 'grant', $2, 'Referral invite bonus credits', $3, $3 + $2, NOW())
+        `, [userId, bonusCredits, currentBalance]);
+      } catch (creditErr) {
+        const e = creditErr instanceof Error ? creditErr : new Error(String(creditErr));
+        console.error('Referral bonus credits failed:', e.message);
+        // Non-blocking — don't fail the redemption if credits fail
+      }
+
+      return builder.success({ redeemed: true, bonusCredits: 5 });
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
       console.error('Error redeeming invite:', e.message);

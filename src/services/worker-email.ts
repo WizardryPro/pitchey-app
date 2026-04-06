@@ -226,6 +226,16 @@ export class WorkerEmailService {
           <a href="${data.pitchUrl}" style="background-color: #7c3aed; color: #fff; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block;">View Pitch</a>
         </p>
       `,
+
+      referralInvite: (data) => `
+        <h2>You've been invited to Pitchey</h2>
+        <p><strong>${data.inviterName}</strong> has invited you to join Pitchey — the platform where creators pitch their movie ideas directly to producers and investors.</p>
+        <p>Sign up with this exclusive invite and get <strong>5 bonus credits</strong> to kickstart your journey.</p>
+        <p style="margin: 24px 0;">
+          <a href="${data.inviteUrl}" style="background-color: #7c3aed; color: #fff; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block;">Accept Invitation</a>
+        </p>
+        <p style="font-size: 13px; color: #666;">This invitation expires in 90 days.</p>
+      `,
     };
 
     const renderFn = templates[template];
