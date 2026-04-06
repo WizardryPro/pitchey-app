@@ -260,14 +260,14 @@ export default function BrowseGenres() {
 
   const getStageColor = (stage?: string) => {
     switch (stage?.toLowerCase()) {
-      case 'concept': return 'bg-blue-100 text-blue-800';
-      case 'script development': return 'bg-purple-100 text-purple-800';
-      case 'pre-production': return 'bg-yellow-100 text-yellow-800';
-      case 'financing': return 'bg-orange-100 text-orange-800';
-      case 'production': return 'bg-green-100 text-green-800';
-      case 'post-production': return 'bg-indigo-100 text-indigo-800';
-      case 'distribution': return 'bg-pink-100 text-pink-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'concept': return 'bg-white text-blue-800 shadow-sm';
+      case 'script development': return 'bg-white text-purple-800 shadow-sm';
+      case 'pre-production': return 'bg-white text-yellow-800 shadow-sm';
+      case 'financing': return 'bg-white text-orange-800 shadow-sm';
+      case 'production': return 'bg-white text-green-800 shadow-sm';
+      case 'post-production': return 'bg-white text-indigo-800 shadow-sm';
+      case 'distribution': return 'bg-white text-pink-800 shadow-sm';
+      default: return 'bg-white text-gray-800 shadow-sm';
     }
   };
 

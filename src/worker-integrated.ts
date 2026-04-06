@@ -5360,11 +5360,11 @@ pitchey_analytics_datapoints_per_minute 1250
             email: null // Still don't expose email publicly
           };
         } else {
-          // Hide creator info if no NDA
+          // Show basic creator info pre-NDA (user_id is already exposed for messaging)
           creatorInfo = {
-            id: null,
-            name: 'Hidden (NDA Required)',
-            type: null,
+            id: pitch.user_id,
+            name: (pitch.creator_name as string)?.split(' ')[0] || 'Creator',
+            type: pitch.creator_type,
             email: null
           };
         }

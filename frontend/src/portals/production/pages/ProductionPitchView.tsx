@@ -680,19 +680,28 @@ const ProductionPitchView: React.FC = () => {
             {/* Tabs */}
             <div className="bg-white rounded-xl shadow-lg mb-6">
               <div className="flex border-b">
-                {['overview', 'production', 'team', 'notes'].map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab as any)}
-                    className={`flex-1 py-3 px-4 text-sm font-medium capitalize ${
-                      activeTab === tab
-                        ? 'text-orange-600 border-b-2 border-orange-600'
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    {tab === 'production' ? 'Feasibility' : tab}
-                  </button>
-                ))}
+                {['overview', 'production', 'team', 'notes'].map((tab) => {
+                  const ndaRequired = tab === 'team' || tab === 'notes';
+                  const locked = ndaRequired && !isOwner && !pitch?.hasSignedNDA;
+                  return (
+                    <button
+                      key={tab}
+                      onClick={() => !locked && setActiveTab(tab as any)}
+                      disabled={locked}
+                      className={`flex-1 py-3 px-4 text-sm font-medium capitalize ${
+                        locked
+                          ? 'text-gray-300 cursor-not-allowed'
+                          : activeTab === tab
+                          ? 'text-orange-600 border-b-2 border-orange-600'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                      title={locked ? 'NDA required to view' : undefined}
+                    >
+                      {tab === 'production' ? 'Feasibility' : tab}
+                      {locked && ' 🔒'}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -901,16 +910,26 @@ const ProductionPitchView: React.FC = () => {
                   <div className="grid grid-cols-2 gap-3">
                     {Object.entries(productionChecklist).map(([key, value]) => (
                       <div key={key} className="flex items-center">
-                        <button
-                          onClick={() => handleChecklistUpdate(key as keyof typeof productionChecklist)}
-                          className="mr-2"
-                        >
-                          {value ? (
-                            <CheckSquare className="h-5 w-5 text-green-600" />
-                          ) : (
-                            <Square className="h-5 w-5 text-gray-400" />
-                          )}
-                        </button>
+                        {isOwner || hasExistingProject ? (
+                          <button
+                            onClick={() => handleChecklistUpdate(key as keyof typeof productionChecklist)}
+                            className="mr-2"
+                          >
+                            {value ? (
+                              <CheckSquare className="h-5 w-5 text-green-600" />
+                            ) : (
+                              <Square className="h-5 w-5 text-gray-400" />
+                            )}
+                          </button>
+                        ) : (
+                          <span className="mr-2">
+                            {value ? (
+                              <CheckSquare className="h-5 w-5 text-green-600" />
+                            ) : (
+                              <Square className="h-5 w-5 text-gray-400" />
+                            )}
+                          </span>
+                        )}
                         <label className="text-gray-700 capitalize">
                           {key.replace(/([A-Z])/g, ' $1').trim()}
                         </label>
@@ -921,7 +940,7 @@ const ProductionPitchView: React.FC = () => {
               </div>
             )}
 
-            {activeTab === 'team' && (
+            {activeTab === 'team' && (isOwner || pitch?.hasSignedNDA) && (
               <div className="bg-white rounded-xl shadow-lg p-8">
                 <div className="flex items-center justify-between mb-6">
                   <div>
@@ -987,7 +1006,7 @@ const ProductionPitchView: React.FC = () => {
               </div>
             )}
 
-            {activeTab === 'notes' && (
+            {activeTab === 'notes' && (isOwner || pitch?.hasSignedNDA) && (
               <div className="bg-white rounded-xl shadow-lg p-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Production Notes</h2>
                 
@@ -1076,20 +1095,12 @@ const ProductionPitchView: React.FC = () => {
               <div className="bg-white rounded-xl shadow-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Pitch</h3>
                 <div className="space-y-2">
-                  {hasExistingProject ? (
+                  {hasExistingProject && (
                     <button
                       onClick={() => navigate('/production/pipeline')}
                       className="w-full flex items-center justify-between px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                     >
                       <span>View in Pipeline</span>
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => setShowStartProjectModal(true)}
-                      className="w-full flex items-center justify-between px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-                    >
-                      <span>Start Project</span>
                       <ChevronRight className="h-4 w-4" />
                     </button>
                   )}
@@ -1153,20 +1164,12 @@ const ProductionPitchView: React.FC = () => {
                     <span>Start Negotiations</span>
                     <ChevronRight className="h-4 w-4" />
                   </button>
-                  {hasExistingProject ? (
+                  {hasExistingProject && (
                     <button
                       onClick={() => navigate('/production/pipeline')}
                       className="w-full flex items-center justify-between px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                     >
                       <span>View in Pipeline</span>
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => setShowStartProjectModal(true)}
-                      className="w-full flex items-center justify-between px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-                    >
-                      <span>Start Project</span>
                       <ChevronRight className="h-4 w-4" />
                     </button>
                   )}
@@ -1214,8 +1217,8 @@ const ProductionPitchView: React.FC = () => {
               </div>
             </div>
 
-            {/* AI Auto-fill */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
+            {/* AI Auto-fill — only for pitches the user owns or has a project for */}
+            {(isOwner || hasExistingProject) && <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">AI Assessment</h3>
               <p className="text-sm text-gray-500 mb-4">
                 Upload a script, treatment, or pitch deck to auto-fill the feasibility checklist, team priorities, and production notes.
@@ -1248,58 +1251,59 @@ const ProductionPitchView: React.FC = () => {
                 )}
               </button>
               <p className="text-xs text-gray-400 mt-2 text-center">PDF, TXT, or DOCX — 5 credits</p>
-            </div>
+            </div>}
 
-            {/* Documents */}
-            {(pitch.pitchDeck || pitch.script || pitch.trailer) && (
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Production Materials</h3>
+            {/* Documents — show full links post-NDA, attachment status pre-NDA */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Production Materials</h3>
+              {(isOwner || pitch.hasSignedNDA) ? (
                 <div className="space-y-2">
                   {pitch.script && (
-                    <a
-                      href={pitch.script}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between p-2 hover:bg-gray-50 rounded"
-                    >
-                      <span className="flex items-center text-blue-600">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Full Script
-                      </span>
+                    <a href={pitch.script} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+                      <span className="flex items-center text-blue-600"><FileText className="h-4 w-4 mr-2" />Full Script</span>
                       <Download className="h-4 w-4 text-gray-400" />
                     </a>
                   )}
                   {pitch.pitchDeck && (
-                    <a
-                      href={pitch.pitchDeck}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between p-2 hover:bg-gray-50 rounded"
-                    >
-                      <span className="flex items-center text-blue-600">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Pitch Deck
-                      </span>
+                    <a href={pitch.pitchDeck} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+                      <span className="flex items-center text-blue-600"><FileText className="h-4 w-4 mr-2" />Pitch Deck</span>
                       <Download className="h-4 w-4 text-gray-400" />
                     </a>
                   )}
                   {pitch.trailer && (
-                    <a
-                      href={pitch.trailer}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between p-2 hover:bg-gray-50 rounded"
-                    >
-                      <span className="flex items-center text-blue-600">
-                        <Film className="h-4 w-4 mr-2" />
-                        Concept Trailer
-                      </span>
+                    <a href={pitch.trailer} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+                      <span className="flex items-center text-blue-600"><Film className="h-4 w-4 mr-2" />Concept Trailer</span>
                       <Download className="h-4 w-4 text-gray-400" />
                     </a>
                   )}
+                  {!pitch.script && !pitch.pitchDeck && !pitch.trailer && (
+                    <p className="text-gray-500 text-sm">No materials attached</p>
+                  )}
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-2">
+                    <span className="flex items-center text-gray-700"><FileText className="h-4 w-4 mr-2" />Full Script</span>
+                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${pitch.script ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                      {pitch.script ? 'Attached' : 'Not attached'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-2">
+                    <span className="flex items-center text-gray-700"><FileText className="h-4 w-4 mr-2" />Pitch Deck</span>
+                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${pitch.pitchDeck ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                      {pitch.pitchDeck ? 'Attached' : 'Not attached'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-2">
+                    <span className="flex items-center text-gray-700"><Film className="h-4 w-4 mr-2" />Concept Trailer</span>
+                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${pitch.trailer ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                      {pitch.trailer ? 'Attached' : 'Not attached'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">Sign the NDA to download materials</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

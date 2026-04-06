@@ -6,7 +6,7 @@ type PortalType = 'creator' | 'investor' | 'production' | 'admin';
 export default function PortalSelect() {
   const navigate = useNavigate();
 
-  const portals: PortalType[] = ['creator', 'production', 'investor', 'admin'];
+  const portals: PortalType[] = ['creator', 'production', 'investor'];
 
   const handlePortalSelect = (portalType: PortalType) => {
     const routes: Record<PortalType, string> = {

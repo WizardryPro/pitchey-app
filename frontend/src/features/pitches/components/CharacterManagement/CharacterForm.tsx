@@ -113,9 +113,7 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSubmit = () => {
     if (!validateForm()) {
       return;
     }
@@ -161,8 +159,8 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({
             </button>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Form — uses div instead of <form> to avoid nested-form issues inside CreatePitch */}
+          <div className="space-y-4">
             {/* Character Name */}
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -362,14 +360,15 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({
                 Cancel
               </button>
               <button
-                type="submit"
+                type="button"
+                onClick={handleSubmit}
                 disabled={!formData.name.trim() || !formData.description.trim() || formData.description.length < 10}
                 className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
               >
                 {character ? 'Update Character' : 'Add Character'}
               </button>
             </div>
-          </form>
+          </div>
         </div>
       </div>
     </div>

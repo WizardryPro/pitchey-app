@@ -242,20 +242,20 @@ export default function InvestorBrowse() {
 
   const getRiskColor = (risk?: string) => {
     switch (risk) {
-      case 'low': return 'bg-green-100 text-green-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'high': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'low': return 'bg-white text-green-800 shadow-sm';
+      case 'medium': return 'bg-white text-yellow-800 shadow-sm';
+      case 'high': return 'bg-white text-red-800 shadow-sm';
+      default: return 'bg-white text-gray-800 shadow-sm';
     }
   };
 
   const getStageColor = (stage?: string) => {
     switch (stage) {
-      case 'Development': return 'bg-blue-100 text-blue-800';
-      case 'Pre-Production': return 'bg-purple-100 text-purple-800';
-      case 'Financing': return 'bg-orange-100 text-orange-800';
-      case 'Post-Production': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'Development': return 'bg-white text-blue-800 shadow-sm';
+      case 'Pre-Production': return 'bg-white text-purple-800 shadow-sm';
+      case 'Financing': return 'bg-white text-orange-800 shadow-sm';
+      case 'Post-Production': return 'bg-white text-green-800 shadow-sm';
+      default: return 'bg-white text-gray-800 shadow-sm';
     }
   };
 
