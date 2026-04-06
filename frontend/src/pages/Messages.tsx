@@ -55,6 +55,7 @@ export default function Messages() {
   // State management
   const [selectedConversation, setSelectedConversation] = useState<number | null>(null);
   const [newMessage, setNewMessage] = useState('');
+  const [suggestedMessage, setSuggestedMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
@@ -252,9 +253,9 @@ export default function Messages() {
     if (!recipient || recipientHandledRef.current) return;
     recipientHandledRef.current = true;
 
-    // Pre-fill message input from body query param (e.g. Request Full Script)
+    // Show suggested message as ghost text — press Tab to accept
     if (bodyParam) {
-      setNewMessage(bodyParam);
+      setSuggestedMessage(bodyParam);
     }
 
     const initConversation = async () => {
@@ -485,11 +486,15 @@ export default function Messages() {
   }, [newMessage, selectedFiles, selectedConversation, sendingMessage, user, addNotification, refreshConversations]);
 
   const handleKeyPress = useCallback((event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
+    if (event.key === 'Tab' && suggestedMessage && !newMessage) {
+      event.preventDefault();
+      setNewMessage(suggestedMessage);
+      setSuggestedMessage('');
+    } else if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       sendMessage();
     }
-  }, [sendMessage]);
+  }, [sendMessage, suggestedMessage, newMessage]);
 
   const handleManualRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -1251,14 +1256,22 @@ export default function Messages() {
                         </button>
                         
                         {/* Message input */}
-                        <div className="flex-1">
+                        <div className="flex-1 relative">
+                          {suggestedMessage && !newMessage && (
+                            <div className="absolute inset-0 px-3 py-2 text-sm text-gray-400 pointer-events-none whitespace-pre-wrap overflow-hidden">
+                              {suggestedMessage}
+                            </div>
+                          )}
                           <textarea
                             ref={messageInputRef}
                             value={newMessage}
-                            onChange={(e) => setNewMessage(e.target.value)}
-                            placeholder={selectedFiles.length > 0 ? "Add a message (optional)..." : "Type your message..."}
+                            onChange={(e) => {
+                              setNewMessage(e.target.value);
+                              if (e.target.value && suggestedMessage) setSuggestedMessage('');
+                            }}
+                            placeholder={suggestedMessage ? 'Press Tab to use suggested message...' : selectedFiles.length > 0 ? "Add a message (optional)..." : "Type your message..."}
                             rows={3}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-sm"
+                            className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-sm ${suggestedMessage && !newMessage ? 'bg-transparent' : ''}`}
                             onKeyDown={handleKeyPress}
                           />
                         </div>
