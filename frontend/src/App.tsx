@@ -145,6 +145,10 @@ const Contact = lazyRetry(() => import('./pages/Contact'));
 const Terms = lazyRetry(() => import('./pages/Terms'));
 const Privacy = lazyRetry(() => import('./pages/Privacy'));
 
+// Watcher Pages
+const WatcherLogin = lazyRetry(() => import('./pages/WatcherLogin'));
+const WatcherDashboard = lazyRetry(() => import('@portals/watcher/pages/WatcherDashboard'));
+
 // Admin Pages
 const AdminLogin = lazyRetry(() => import('./pages/AdminLogin'));
 const AdminDashboard = lazyRetry(() => import('@portals/admin/pages/AdminDashboard'));
@@ -429,6 +433,11 @@ function App() {
           <Route path="/auth/creator" element={<Navigate to="/login/creator" replace />} />
           <Route path="/auth/investor" element={<Navigate to="/login/investor" replace />} />
           <Route path="/auth/production" element={<Navigate to="/login/production" replace />} />
+          <Route path="/login/watcher" element={
+            !isAuthenticated ? <WatcherLogin /> :
+            userType === 'watcher' ? <Navigate to="/watcher/dashboard" /> :
+            <Navigate to="/" />
+          } />
           <Route path="/login/admin" element={
             !isAuthenticated ? <AdminLogin /> :
             userType === 'admin' ? <Navigate to="/admin/dashboard" /> :
@@ -536,6 +545,23 @@ function App() {
             {AllProductionRoutes({ isAuthenticated: true, userType: 'production' })}
           </Route>
           
+          {/* Watcher Portal Routes */}
+          <Route path="/watcher/*" element={
+            isAuthenticated && userType === 'watcher'
+              ? <PortalLayout userType="watcher" />
+              : <Navigate to="/login/watcher" />
+          }>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<WatcherDashboard />} />
+            <Route path="browse" element={<Marketplace />} />
+            <Route path="saved" element={<Marketplace />} />
+            <Route path="pitch/new" element={<CreatePitch />} />
+            <Route path="drafts" element={<ManagePitches />} />
+            <Route path="billing" element={<Billing />} />
+            <Route path="profile" element={<Profile />} />
+            <Route path="settings" element={<Settings />} />
+          </Route>
+
           {/* Admin Portal Routes — nested under PortalLayout with sidebar */}
           <Route path="/admin/*" element={
             isAuthenticated && userType === 'admin'

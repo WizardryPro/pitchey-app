@@ -184,6 +184,17 @@ export const PUBLIC_ROUTES = {
   userPortfolio: '/portfolio/:username',
 };
 
+export const WATCHER_ROUTES = {
+  dashboard: '/watcher/dashboard',
+  browse: '/watcher/browse',
+  saved: '/watcher/saved',
+  pitchNew: '/watcher/pitch/new',
+  drafts: '/watcher/drafts',
+  billing: '/watcher/billing',
+  profile: '/watcher/profile',
+  settings: '/watcher/settings',
+};
+
 export const ADMIN_ROUTES = {
   dashboard: '/admin/dashboard',
   analytics: '/admin/analytics',

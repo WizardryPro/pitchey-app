@@ -571,7 +571,7 @@ function CreatorDashboard() {
               </div>
             ) : (() => {
               const tier = getSubscriptionTier(safeString(subscription?.tier));
-              const tierName = tier?.name || 'The Watcher';
+              const tierName = tier?.name || 'Free Plan';
               const isActive = subscription?.status === 'active';
               const isUnlimited = tier?.credits === -1;
               const monthlyCredits = tier?.credits || 0;
@@ -593,7 +593,7 @@ function CreatorDashboard() {
                       </div>
                     ) : (
                       <div>
-                        {tierName === 'The Watcher' ? (
+                        {tierName === 'Free Plan' ? (
                           <>
                             <p className="font-medium mb-1">Free Plan Features:</p>
                             <ul className="text-xs space-y-0.5 mb-2">

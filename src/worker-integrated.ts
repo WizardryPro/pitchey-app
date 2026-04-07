@@ -1818,6 +1818,7 @@ class RouteRegistry {
     this.register('POST', '/api/auth/creator/login', (req: Request) => this.handlePortalLogin(req, 'creator'));
     this.register('POST', '/api/auth/investor/login', (req: Request) => this.handlePortalLogin(req, 'investor'));
     this.register('POST', '/api/auth/production/login', (req: Request) => this.handlePortalLogin(req, 'production'));
+    this.register('POST', '/api/auth/watcher/login', (req: Request) => this.handlePortalLogin(req, 'watcher'));
 
     // Better Auth routes (compatibility layer for frontend)
     this.register('POST', '/api/auth/sign-in', async (request: Request) => {
@@ -3669,6 +3670,7 @@ class RouteRegistry {
       '/api/auth/creator/login',
       '/api/auth/investor/login',
       '/api/auth/production/login',
+      '/api/auth/watcher/login',
       '/api/auth/mfa/verify',
       '/api/auth/email-otp/send',
       '/api/auth/email-otp/verify',
@@ -7800,6 +7802,15 @@ pitchey_analytics_datapoints_per_minute 1250
 
     const authResult = await this.requireAuth(request);
     if (!authResult.authorized) return authResult.response!;
+
+    // Watchers cannot request NDAs
+    if (authResult.user?.userType === 'watcher') {
+      return builder.success({
+        canRequest: false,
+        reason: 'Watchers cannot sign NDAs. Upgrade your account to request NDA access.',
+        existingNDA: null
+      });
+    }
 
     try {
       // Initialize database if needed

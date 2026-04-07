@@ -40,7 +40,7 @@ export default function Billing() {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
 
-  const userType = (user?.userType || 'creator') as 'creator' | 'investor' | 'production';
+  const userType = (user?.userType || 'creator') as 'creator' | 'investor' | 'production' | 'watcher';
 
   useEffect(() => {
     fetchBillingData();
@@ -91,6 +91,7 @@ export default function Billing() {
       case 'creator': return '/creator/dashboard';
       case 'investor': return '/investor/dashboard';
       case 'production': return '/production/dashboard';
+      case 'watcher': return '/watcher/dashboard';
       default: return '/dashboard';
     }
   };
@@ -291,7 +292,7 @@ function OverviewTab({ subscription, credits, paymentHistory, onRefresh }: any) 
           <p className="text-2xl font-bold mb-2">
             {(() => {
               const tier = getSubscriptionTier(subscription?.tier || '');
-              return tier?.name || 'The Watcher';
+              return tier?.name || 'Free Plan';
             })()}
           </p>
           <p className="text-purple-100 text-sm">

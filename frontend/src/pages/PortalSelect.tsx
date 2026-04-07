@@ -1,18 +1,19 @@
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Film, DollarSign, Building, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Film, DollarSign, Building, ShieldCheck, Eye } from 'lucide-react';
 
-type PortalType = 'creator' | 'investor' | 'production' | 'admin';
+type PortalType = 'creator' | 'investor' | 'production' | 'watcher' | 'admin';
 
 export default function PortalSelect() {
   const navigate = useNavigate();
 
-  const portals: PortalType[] = ['creator', 'production', 'investor'];
+  const portals: PortalType[] = ['creator', 'production', 'investor', 'watcher'];
 
   const handlePortalSelect = (portalType: PortalType) => {
     const routes: Record<PortalType, string> = {
       creator: '/login/creator',
       investor: '/login/investor',
       production: '/login/production',
+      watcher: '/login/watcher',
       admin: '/login/admin',
     };
     navigate(routes[portalType]);
@@ -23,6 +24,7 @@ export default function PortalSelect() {
       case 'creator': return Film;
       case 'investor': return DollarSign;
       case 'production': return Building;
+      case 'watcher': return Eye;
       case 'admin': return ShieldCheck;
     }
   };
@@ -32,6 +34,7 @@ export default function PortalSelect() {
       case 'creator': return 'Creator Portal';
       case 'investor': return 'Investor Portal';
       case 'production': return 'Production Portal';
+      case 'watcher': return 'Watcher Portal';
       case 'admin': return 'Admin Portal';
     }
   };
@@ -41,6 +44,7 @@ export default function PortalSelect() {
       case 'creator': return 'Submit and manage your movie pitches';
       case 'investor': return 'Discover and invest in promising projects';
       case 'production': return 'Find and develop exciting content';
+      case 'watcher': return 'Browse, save, and draft pitches for free';
       case 'admin': return 'Manage users, content, and platform settings';
     }
   };
@@ -77,18 +81,21 @@ export default function PortalSelect() {
                 creator: 'from-purple-400 to-purple-600 shadow-purple-500/30 hover:shadow-purple-500/50',
                 investor: 'from-green-400 to-green-600 shadow-green-500/30 hover:shadow-green-500/50',
                 production: 'from-orange-400 to-orange-600 shadow-orange-500/30 hover:shadow-orange-500/50',
+                watcher: 'from-cyan-400 to-cyan-600 shadow-cyan-500/30 hover:shadow-cyan-500/50',
                 admin: 'from-red-400 to-red-600 shadow-red-500/30 hover:shadow-red-500/50'
               };
               const iconColors = {
                 creator: 'text-purple-600',
                 investor: 'text-green-600',
                 production: 'text-orange-600',
+                watcher: 'text-cyan-600',
                 admin: 'text-red-600'
               };
               const bgColors = {
                 creator: 'bg-purple-50',
                 investor: 'bg-green-50',
                 production: 'bg-orange-50',
+                watcher: 'bg-cyan-50',
                 admin: 'bg-red-50'
               };
               
@@ -101,6 +108,7 @@ export default function PortalSelect() {
                     boxShadow: `0 10px 30px -10px ${
                       portal === 'creator' ? 'rgb(168 85 247 / 0.3)' :
                       portal === 'investor' ? 'rgb(34 197 94 / 0.3)' :
+                      portal === 'watcher' ? 'rgb(6 182 212 / 0.3)' :
                       portal === 'admin' ? 'rgb(239 68 68 / 0.3)' :
                       'rgb(251 146 60 / 0.3)'
                     }`

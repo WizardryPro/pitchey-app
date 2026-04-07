@@ -89,10 +89,11 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     credits: 0,
     analytics: 'basic',
     features: [
-      'Like projects',
-      'Search projects',
-      'Create pitch (no upload)',
-      'Cannot buy credits'
+      'Browse & search projects',
+      'Like & save pitches',
+      'Create & save drafts',
+      'Buy credits',
+      'Cannot sign NDAs'
     ],
     userType: 'watcher'
   },
@@ -223,8 +224,10 @@ export const getSubscriptionTiersByUserType = (userType: string): SubscriptionTi
     return SUBSCRIPTION_TIERS.filter(tier => tier.userType === 'production' || tier.userType === 'watcher');
   }
   if (userType === 'investor') {
-    // Investors use exec/studio tiers
     return SUBSCRIPTION_TIERS.filter(tier => tier.userType === 'exec' || tier.userType === 'watcher');
+  }
+  if (userType === 'watcher') {
+    return SUBSCRIPTION_TIERS.filter(tier => tier.userType === 'watcher');
   }
   return SUBSCRIPTION_TIERS;
 };

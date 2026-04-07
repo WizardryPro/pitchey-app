@@ -40,6 +40,7 @@ interface BetterAuthState {
   loginCreator: (email: string, password: string, turnstileToken?: string) => Promise<void>;
   loginInvestor: (email: string, password: string, turnstileToken?: string) => Promise<void>;
   loginProduction: (email: string, password: string, turnstileToken?: string) => Promise<void>;
+  loginWatcher: (email: string, password: string, turnstileToken?: string) => Promise<void>;
 
   // Generic login (determines portal from user data)
   login: (email: string, password: string, turnstileToken?: string) => Promise<void>;
@@ -132,6 +133,27 @@ export const useBetterAuthStore = create<BetterAuthState>((set) => ({
     set({ loading: true, error: null });
     try {
       const response = await portalAuth.signInProduction(email, password, turnstileToken);
+      const raw = response as any;
+      if (raw.requiresMFA) {
+        set({ loading: false });
+        throw new MFARequiredError(raw);
+      }
+      const user = response.user || response.data?.user;
+      if (!user) throw new Error('User data not received from server');
+      sessionCache.set(user);
+      sessionManager.updateCache(user);
+      set({ user: user as User, isAuthenticated: true, loading: false });
+    } catch (error: any) {
+      if (error instanceof MFARequiredError) throw error;
+      set({ error: error.message || 'Login failed', loading: false });
+      throw error;
+    }
+  },
+
+  loginWatcher: async (email: string, password: string, turnstileToken?: string) => {
+    set({ loading: true, error: null });
+    try {
+      const response = await portalAuth.signInWatcher(email, password, turnstileToken);
       const raw = response as any;
       if (raw.requiresMFA) {
         set({ loading: false });

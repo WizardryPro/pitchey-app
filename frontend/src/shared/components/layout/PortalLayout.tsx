@@ -7,6 +7,7 @@ import { EnhancedCreatorNav } from './EnhancedCreatorNav';
 import { EnhancedInvestorNav } from './EnhancedInvestorNav';
 import { EnhancedProductionNav } from './EnhancedProductionNav';
 import { EnhancedAdminNav } from './EnhancedAdminNav';
+import { EnhancedWatcherNav } from './EnhancedWatcherNav';
 
 interface PortalLayoutProps {
   userType: string | null;
@@ -36,6 +37,8 @@ export function PortalLayout({ userType }: PortalLayoutProps) {
         return <EnhancedProductionNav />;
       case 'admin':
         return <EnhancedAdminNav />;
+      case 'watcher':
+        return <EnhancedWatcherNav />;
       default:
         return null;
     }

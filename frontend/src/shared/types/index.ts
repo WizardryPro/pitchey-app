@@ -3,7 +3,7 @@
 
 // ========== USER TYPES ==========
 
-export type UserType = 'creator' | 'investor' | 'production' | 'admin';
+export type UserType = 'creator' | 'investor' | 'production' | 'watcher' | 'admin';
 
 export interface User {
   id: number;

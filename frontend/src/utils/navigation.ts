@@ -39,6 +39,8 @@ export function getLoginRoute(userType?: string | null): string {
       return '/login/investor';
     case 'production':
       return '/login/production';
+    case 'watcher':
+      return '/login/watcher';
     case 'admin':
       return '/login/admin';
     default:

@@ -52,6 +52,7 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
       case 'investor': return 'green';
       case 'production': return 'blue';
       case 'admin': return 'indigo';
+      case 'watcher': return 'cyan';
       default: return 'purple';
     }
   };

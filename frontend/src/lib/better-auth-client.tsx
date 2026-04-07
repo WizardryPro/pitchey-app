@@ -75,6 +75,7 @@ export interface PortalAuthMethods {
   signInCreator: (email: string, password: string, turnstileToken?: string) => Promise<AuthResponse>;
   signInInvestor: (email: string, password: string, turnstileToken?: string) => Promise<AuthResponse>;
   signInProduction: (email: string, password: string, turnstileToken?: string) => Promise<AuthResponse>;
+  signInWatcher: (email: string, password: string, turnstileToken?: string) => Promise<AuthResponse>;
   
   // Registration methods  
   registerCreator: (email: string, username: string, password: string) => Promise<AuthResponse>;
@@ -134,6 +135,9 @@ export function createPortalAuthMethods(): PortalAuthMethods {
 
     signInProduction: (email: string, password: string, turnstileToken?: string) =>
       makeAuthRequest('/api/auth/production/login', { email, password, turnstileToken }),
+
+    signInWatcher: (email: string, password: string, turnstileToken?: string) =>
+      makeAuthRequest('/api/auth/watcher/login', { email, password, turnstileToken }),
 
     // Registration methods
     registerCreator: (email: string, username: string, password: string) => 
