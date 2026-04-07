@@ -3060,6 +3060,11 @@ class RouteRegistry {
       const { updateCollaborationHandler } = await import('./handlers/collaborations-real');
       return updateCollaborationHandler(req, this.env);
     });
+    // Collaboration progress timeline
+    this.register('GET', '/api/collaborations/:id/timeline', async (req) => {
+      const { collaborationTimelineHandler } = await import('./handlers/collaboration-timeline');
+      return collaborationTimelineHandler(req, this.env);
+    });
 
     // Investor Portal Sidebar Routes (real DB queries)
     this.register('GET', '/api/investor/deals', async (req) => {

@@ -25,7 +25,7 @@ export async function getCollaborationsHandler(request: Request, env: Env): Prom
 
   const emptyData = {
     success: true,
-    data: { collaborations: [], invitations: [], active: 0, pending: 0, completed: 0 }
+    data: { collaborations: [], invitations: [], active: 0, pending: 0, completed: 0, closed: 0 }
   };
 
   if (!userId) {
@@ -56,12 +56,13 @@ export async function getCollaborationsHandler(request: Request, env: Env): Prom
       SELECT
         COUNT(*) FILTER (WHERE status = 'accepted')::int as active,
         COUNT(*) FILTER (WHERE status = 'pending')::int as pending,
-        COUNT(*) FILTER (WHERE status = 'completed')::int as completed
+        COUNT(*) FILTER (WHERE status = 'completed')::int as completed,
+        COUNT(*) FILTER (WHERE status = 'closed')::int as closed
       FROM collaborations
       WHERE requester_id = ${userId} OR collaborator_id = ${userId}
     `;
 
-    const counts = countResult[0] || { active: 0, pending: 0, completed: 0 };
+    const counts = countResult[0] || { active: 0, pending: 0, completed: 0, closed: 0 };
 
     // Invitations are pending collaborations where the current user is the collaborator
     const invitations = (collaborations || []).filter(
@@ -75,7 +76,8 @@ export async function getCollaborationsHandler(request: Request, env: Env): Prom
         invitations,
         active: counts.active ?? 0,
         pending: counts.pending ?? 0,
-        completed: counts.completed ?? 0
+        completed: counts.completed ?? 0,
+        closed: counts.closed ?? 0
       }
     }, 200, origin);
   } catch (error) {
@@ -190,7 +192,7 @@ export async function updateCollaborationHandler(request: Request, env: Env): Pr
   }
 
   const { status } = body;
-  const allowedStatuses = ['accepted', 'rejected', 'completed', 'cancelled'];
+  const allowedStatuses = ['accepted', 'rejected', 'completed', 'cancelled', 'closed'];
 
   if (!status || !allowedStatuses.includes(status)) {
     return jsonResponse({
@@ -239,13 +241,27 @@ export async function updateCollaborationHandler(request: Request, env: Env): Pr
       }, 403, origin);
     }
 
+    if (status === 'closed' && !isRequester) {
+      return jsonResponse({
+        success: false,
+        error: 'Only the requester (production company) can close a collaboration'
+      }, 403, origin);
+    }
+
     // Perform the update
-    const updated = await sql`
-      UPDATE collaborations
-      SET status = ${status}, updated_at = NOW()
-      WHERE id = ${collaborationId}
-      RETURNING *
-    `;
+    const updated = status === 'closed'
+      ? await sql`
+          UPDATE collaborations
+          SET status = 'closed', closed_at = NOW(), closed_by = ${userId}::integer, updated_at = NOW()
+          WHERE id = ${collaborationId}
+          RETURNING *
+        `
+      : await sql`
+          UPDATE collaborations
+          SET status = ${status}, updated_at = NOW()
+          WHERE id = ${collaborationId}
+          RETURNING *
+        `;
 
     if (!updated || updated.length === 0) {
       return jsonResponse({ success: false, error: 'Failed to update collaboration' }, 500, origin);
@@ -272,7 +288,7 @@ export async function getProductionCollaborationsHandler(request: Request, env: 
 
   const emptyData = {
     success: true,
-    data: { collaborations: [], invitations: [], active: 0, pending: 0, completed: 0 }
+    data: { collaborations: [], invitations: [], active: 0, pending: 0, completed: 0, closed: 0 }
   };
 
   if (!userId) {
@@ -303,12 +319,13 @@ export async function getProductionCollaborationsHandler(request: Request, env: 
       SELECT
         COUNT(*) FILTER (WHERE status = 'accepted')::int as active,
         COUNT(*) FILTER (WHERE status = 'pending')::int as pending,
-        COUNT(*) FILTER (WHERE status = 'completed')::int as completed
+        COUNT(*) FILTER (WHERE status = 'completed')::int as completed,
+        COUNT(*) FILTER (WHERE status = 'closed')::int as closed
       FROM collaborations
       WHERE requester_id = ${userId} OR collaborator_id = ${userId}
     `;
 
-    const counts = countResult[0] || { active: 0, pending: 0, completed: 0 };
+    const counts = countResult[0] || { active: 0, pending: 0, completed: 0, closed: 0 };
 
     const invitations = (collaborations || []).filter(
       (c: any) => c.status === 'pending' && String(c.collaborator_id) === String(userId)
@@ -321,7 +338,8 @@ export async function getProductionCollaborationsHandler(request: Request, env: 
         invitations,
         active: counts.active ?? 0,
         pending: counts.pending ?? 0,
-        completed: counts.completed ?? 0
+        completed: counts.completed ?? 0,
+        closed: counts.closed ?? 0
       }
     }, 200, origin);
   } catch (error) {

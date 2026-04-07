@@ -8,6 +8,7 @@ import {
   Globe, Lock, Plus, Download, Share2, User
 } from 'lucide-react';
 import { CollaborationService, type Collaboration as ApiCollaboration } from '@/services/collaboration.service';
+import CollaborationTimeline from '@/components/CollaborationTimeline';
 
 interface Collaboration {
   id: string;
@@ -549,6 +550,11 @@ export default function CreatorCollaborations() {
                       </div>
                       
                       <span>Updated {formatDate(collaboration.lastUpdate)}</span>
+                    </div>
+
+                    {/* Progress Timeline */}
+                    <div className="pt-3">
+                      <CollaborationTimeline collaborationId={collaboration.id} />
                     </div>
 
                     {/* Actions */}

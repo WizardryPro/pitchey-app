@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Plus, Eye, TrendingUp, Film, MapPin, Calendar, BadgeCheck, Edit2 } from 'lucide-react';
+import { ArrowLeft, Plus, Eye, TrendingUp, Film, MapPin, Calendar, BadgeCheck, Edit2, Share2 } from 'lucide-react';
 import { apiClient } from '../lib/api-client';
 import { useBetterAuthStore } from '../store/betterAuthStore';
+import ShareLinksModal from '../components/portfolio/ShareLinksModal';
 
 interface Pitch {
   id: string;
@@ -57,6 +58,7 @@ export default function CreatorPortfolio() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<PortfolioData | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
   const navigate = useNavigate();
 
   const effectiveCreatorId = creatorId || user?.id?.toString() || null;
@@ -151,10 +153,16 @@ export default function CreatorPortfolio() {
               <span>Back to Dashboard</span>
             </button>
             {isOwnProfile && (
-              <button onClick={() => navigate('/profile')} className="flex items-center gap-2 px-4 py-2 text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors text-sm font-medium">
-                <Edit2 className="w-4 h-4" />
-                Edit Profile
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setShowShareModal(true)} className="flex items-center gap-2 px-4 py-2 text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors text-sm font-medium">
+                  <Share2 className="w-4 h-4" />
+                  Share Portfolio
+                </button>
+                <button onClick={() => navigate('/profile')} className="flex items-center gap-2 px-4 py-2 text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors text-sm font-medium">
+                  <Edit2 className="w-4 h-4" />
+                  Edit Profile
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -313,6 +321,7 @@ export default function CreatorPortfolio() {
           )}
         </div>
       </div>
+      {showShareModal && <ShareLinksModal onClose={() => setShowShareModal(false)} />}
     </div>
   );
 }

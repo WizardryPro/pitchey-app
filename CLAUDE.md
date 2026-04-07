@@ -56,7 +56,7 @@ Available slash commands: `/deploy`, `/test`, `/migrate`
 ## Platform Status
 
 ### Completed (Stages 1-11)
-- **Foundation**: 619 API routes, 3 portals + Admin, RBAC, CI/CD
+- **Foundation**: 619+ API routes, 3 portals + Admin + Watcher, RBAC, CI/CD
 - **Core Platform**: Dashboards, WebSocket + polling, search/browse, marketplace
 - **Communication**: Messaging (edit/delete/attachments), credit system (9 actions), email via Resend
 - **Security**: Email OTP 2FA, passwordless login, JWT verification, rate limiting (4 strategies), file validation
@@ -66,16 +66,28 @@ Available slash commands: `/deploy`, `/test`, `/migrate`
 - **Notifications**: Email (new follower, pitch publish), WebSocket push, 401 auto-redirect
 - **Production Portal**: 26-issue remediation complete (uploads, dead buttons, stubs, settings, calendar)
 - **Tests**: 192 files, 3639+ tests, zero failures
+- **Watcher Portal**: Browse-only portal (like/save/drafts/credits, no NDAs)
+- **Company Verification**: Region-adaptive (USA EIN, UK Companies House, insurance fallback), auto-checks, admin review panel
+- **Portfolio Sharing**: Token-based share links with labels, view tracking, revocation (`/portfolio/s/:token`)
+- **Production Tier Repricing**: Aligned to creator price ladder (€19.99/€29.99/€39.99)
+- **Project Close + NDA Retention**: Close collaborations without revoking NDAs (`closed_at`, `closed_by` on collaborations)
+- **Collaboration Timeline**: 7-milestone progress timeline derived from existing tables (NDA, views, messages, collaboration status)
 
 ### TODO
+- **Slate System**: Curated pitch collections — migration `072_slates.sql` written but NOT yet applied to Neon. Plan approved, backend handler `src/handlers/slates.ts` not yet created. See plan at `.claude/plans/playful-wondering-floyd.md`
+- **Heat Score Algorithm**: Bayesian + role-weighted rating system — not started
+- **Consumption Gating**: Proof-of-watch/read before rating — not started
+- **Heat Visualisation**: Browse + detail page heat badges — not started
+- **Structured Feedback/Comments**: Hook/Pros, Viability/Cons, Suggestion sections — not started
+- **Trust Badges**: Grey/Silver/Gold verification badges — not started
 - **Stripe Go-Live**: Create products/prices in Stripe Dashboard, set secrets (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`), set `stripePriceId` in `src/config/subscription-plans.ts`
 - **Malware Scanning**: VirusTotal integration deferred — needs `VIRUSTOTAL_API_KEY` (free tier: 4 req/min)
 - **Full Crew Features**: Availability calendars, rate cards — deferred post-launch
 
 ### Current Numbers
-- 619 API routes, 135 pages, 166 components, 28 services, 3 stores
-- 114 backend service files, 65 handlers, 77 migrations
-- 3 portals (Creator, Investor, Production) + Admin shell
+- 630+ API routes, 135+ pages, 170+ components, 28 services, 3 stores
+- 114+ backend service files, 68 handlers, 80 migrations
+- 4 portals (Creator, Investor, Production, Watcher) + Admin shell
 - 13 CI/CD workflows, 7 R2 buckets, 5 KV namespaces, 2 Durable Objects
 
 ## Observability & Analysis Stack

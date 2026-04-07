@@ -145,7 +145,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
   {
     id: 'production',
     name: 'Production Company',
-    price: { monthly: 29.99, annual: 299 },
+    price: { monthly: 19.99, annual: 199 },
     credits: 20,
     analytics: 'basic',
     features: [
@@ -159,7 +159,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
   {
     id: 'production_plus',
     name: 'Production Company+',
-    price: { monthly: 39.99, annual: 399 },
+    price: { monthly: 29.99, annual: 299 },
     credits: 40,
     analytics: 'enhanced',
     features: [
@@ -173,7 +173,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
   {
     id: 'production_unlimited',
     name: 'Production Company Unlimited',
-    price: { monthly: 49.99, annual: 499 },
+    price: { monthly: 39.99, annual: 399 },
     credits: -1, // Unlimited
     analytics: 'customizable',
     features: [

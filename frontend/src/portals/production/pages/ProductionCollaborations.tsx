@@ -10,6 +10,7 @@ import {
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { config } from '@/config';
 import { CollaborationService } from '@/services/collaboration.service';
+import CollaborationTimeline from '@/components/CollaborationTimeline';
 
 interface Collaboration {
   id: string;
@@ -224,6 +225,11 @@ export default function ProductionCollaborations() {
                 +{collaboration.tags.length - 3}
               </span>
             )}
+          </div>
+
+          {/* Progress Timeline */}
+          <div className="mb-4">
+            <CollaborationTimeline collaborationId={collaboration.id} />
           </div>
 
           <div className="flex justify-between items-center">
