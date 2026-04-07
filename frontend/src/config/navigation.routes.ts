@@ -22,6 +22,7 @@ export const CREATOR_ROUTES = {
   teamRoles: '/creator/team/roles',
   collaborations: '/creator/collaborations',
   myCollaborations: '/creator/my-collaborations',
+  slates: '/creator/slates',
   
   // Onboarding
   onboarding: '/creator/onboarding',

@@ -72,9 +72,9 @@ Available slash commands: `/deploy`, `/test`, `/migrate`
 - **Production Tier Repricing**: Aligned to creator price ladder (€19.99/€29.99/€39.99)
 - **Project Close + NDA Retention**: Close collaborations without revoking NDAs (`closed_at`, `closed_by` on collaborations)
 - **Collaboration Timeline**: 7-milestone progress timeline derived from existing tables (NDA, views, messages, collaboration status)
+- **Slate System**: Curated pitch collections — CRUD + add/remove/reorder pitches, public view, drag-and-drop editor. 10 API routes, 2 creator pages, nav wired.
 
 ### TODO
-- **Slate System**: Curated pitch collections — migration `072_slates.sql` written but NOT yet applied to Neon. Plan approved, backend handler `src/handlers/slates.ts` not yet created. See plan at `.claude/plans/playful-wondering-floyd.md`
 - **Heat Score Algorithm**: Bayesian + role-weighted rating system — not started
 - **Consumption Gating**: Proof-of-watch/read before rating — not started
 - **Heat Visualisation**: Browse + detail page heat badges — not started

@@ -23,6 +23,8 @@ const CreatorTeamMembers = lazy(() => import('@portals/creator/pages/CreatorTeam
 const CreatorTeamInvite = lazy(() => import('@portals/creator/pages/CreatorTeamInvite'));
 const CreatorTeamRoles = lazy(() => import('@portals/creator/pages/CreatorTeamRoles'));
 const CreatorCollaborations = lazy(() => import('@portals/creator/pages/CreatorCollaborations'));
+const CreatorSlates = lazy(() => import('@portals/creator/pages/CreatorSlates'));
+const CreatorSlateDetail = lazy(() => import('@portals/creator/pages/CreatorSlateDetail'));
 const CreatorInvestors = lazy(() => import('@portals/creator/pages/CreatorInvestors'));
 const CreatorFundingSettings = lazy(() => import('@portals/creator/pages/CreatorFundingSettings'));
 
@@ -146,6 +148,14 @@ export function AllCreatorRoutes({ isAuthenticated, userType }: RoutesProps) {
       } />
       <Route path="my-collaborations/:projectId" element={
         isCreator ? <CollaborationProjectView /> : <Navigate to="/login/creator" />
+      } />
+
+      {/* Slates */}
+      <Route path={getRelativePath(CREATOR_ROUTES.slates, '/creator')} element={
+        isCreator ? <CreatorSlates /> : <Navigate to="/login/creator" />
+      } />
+      <Route path="slates/:id" element={
+        isCreator ? <CreatorSlateDetail /> : <Navigate to="/login/creator" />
       } />
 
       {/* Funding & Investors */}

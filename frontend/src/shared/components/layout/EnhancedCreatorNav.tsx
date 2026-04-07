@@ -4,7 +4,7 @@ import {
   Home, BarChart3, Film, Plus,
   FileText, Users, GitBranch, User, Settings,
   Calendar, MessageSquare, Target, Star, Store, ExternalLink,
-  Library
+  Library, Layers
 } from 'lucide-react';
 import { CREATOR_ROUTES } from '@/config/navigation.routes';
 
@@ -33,6 +33,7 @@ export const creatorNavigationSections: NavigationSection[] = [
     title: 'Pitches',
     items: [
       { label: 'My Pitches', path: CREATOR_ROUTES.pitches, icon: Film },
+      { label: 'Slates', path: CREATOR_ROUTES.slates, icon: Layers },
       { label: 'Create New', path: CREATOR_ROUTES.pitchNew, icon: Plus },
     ],
   },
@@ -107,6 +108,7 @@ export function EnhancedCreatorNav() {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path
                   || (item.path === CREATOR_ROUTES.pitches && location.pathname.startsWith('/creator/pitches'))
+                  || (item.path === CREATOR_ROUTES.slates && location.pathname.startsWith('/creator/slates'))
                   || (item.path === CREATOR_ROUTES.analytics && (location.pathname === CREATOR_ROUTES.stats || location.pathname === CREATOR_ROUTES.pitchesAnalytics))
                   || (item.path === CREATOR_ROUTES.teamMembers && location.pathname.startsWith('/creator/team'))
                   || (item.path === CREATOR_ROUTES.collaborations && location.pathname.includes('collaborations'))

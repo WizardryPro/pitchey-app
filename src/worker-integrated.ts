@@ -3223,6 +3223,45 @@ class RouteRegistry {
       return publicPortfolioByTokenHandler(req, this.env);
     });
 
+    // Slates — curated pitch collections
+    this.register('POST', '/api/slates', async (req) => {
+      const { createSlateHandler } = await import('./handlers/slates');
+      return createSlateHandler(req, this.env);
+    });
+    this.register('GET', '/api/slates', async (req) => {
+      const { listSlatesHandler } = await import('./handlers/slates');
+      return listSlatesHandler(req, this.env);
+    });
+    this.register('GET', '/api/slates/:id', async (req) => {
+      const { getSlateHandler } = await import('./handlers/slates');
+      return getSlateHandler(req, this.env);
+    });
+    this.register('PUT', '/api/slates/:id', async (req) => {
+      const { updateSlateHandler } = await import('./handlers/slates');
+      return updateSlateHandler(req, this.env);
+    });
+    this.register('DELETE', '/api/slates/:id', async (req) => {
+      const { deleteSlateHandler } = await import('./handlers/slates');
+      return deleteSlateHandler(req, this.env);
+    });
+    this.register('POST', '/api/slates/:id/pitches', async (req) => {
+      const { addPitchToSlateHandler } = await import('./handlers/slates');
+      return addPitchToSlateHandler(req, this.env);
+    });
+    this.register('DELETE', '/api/slates/:id/pitches/:pitchId', async (req) => {
+      const { removePitchFromSlateHandler } = await import('./handlers/slates');
+      return removePitchFromSlateHandler(req, this.env);
+    });
+    this.register('PUT', '/api/slates/:id/pitches/reorder', async (req) => {
+      const { reorderSlatePitchesHandler } = await import('./handlers/slates');
+      return reorderSlatePitchesHandler(req, this.env);
+    });
+    // Public slate view (no auth — listed in publicEndpoints)
+    this.register('GET', '/api/slates/:id/public', async (req) => {
+      const { publicSlateHandler } = await import('./handlers/slates');
+      return publicSlateHandler(req, this.env);
+    });
+
     this.register('GET', '/api/creator/ndas', async (req) => {
       const { creatorNdasHandler } = await import('./handlers/creator-sidebar');
       return creatorNdasHandler(req, this.env);
@@ -3807,10 +3846,11 @@ class RouteRegistry {
 
     // NOW check if endpoint requires authentication (after confirming route exists)
     const isPublicEndpoint = publicEndpoints.some(endpoint => path === endpoint || path.startsWith(endpoint + '/'));
+    const isPublicSlate = method === 'GET' && /^\/api\/slates\/\d+\/public$/.test(path);
     const isGetPitches = method === 'GET' && path === '/api/pitches';
 
     // Validate JWT for protected endpoints
-    if (!isPublicEndpoint && !isGetPitches) {
+    if (!isPublicEndpoint && !isPublicSlate && !isGetPitches) {
       const authResult = await this.validateAuth(request);
       if (!authResult.valid) {
         return new Response(JSON.stringify({
