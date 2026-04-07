@@ -37,7 +37,7 @@ File: `src/lib/api-client.ts` (singleton `apiClient`)
 ## WebSocket — Different Origin
 
 WebSocket connects **directly** to the Worker (not through the proxy).
-- URL: `wss://pitchey-api-prod.ndlovucavelle.workers.dev` (set in `src/config.ts` line 32)
+- URL: `wss://pitchey-api-prod.ndlovucavelle.workers.dev` (default in `src/config.ts`, exported via lazy proxy)
 - Pages Functions do not support WebSocket proxying
 - Context: `src/shared/contexts/WebSocketContext.tsx` wraps `useWebSocketAdvanced` hook
 - Falls back to polling via `src/features/notifications/services/polling.service.ts`

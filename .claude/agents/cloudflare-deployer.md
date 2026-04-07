@@ -17,8 +17,8 @@ You are a Cloudflare deployment specialist for the Pitchey platform. Your expert
 
 2. **Deployment Execution**
    - Build frontend: `cd frontend && npm run build`
-   - Deploy Workers: `CLOUDFLARE_API_TOKEN=tWkywPwDEp-Lt8JERDSEiMoRdYuU4oL6psqswUmk npx wrangler deploy`
-   - Deploy Pages (MUST run from frontend/ dir): `cd frontend && CLOUDFLARE_API_TOKEN=tWkywPwDEp-Lt8JERDSEiMoRdYuU4oL6psqswUmk npx wrangler pages deploy dist/ --project-name=pitchey`
+   - Deploy Workers: `CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN npx wrangler deploy`
+   - Deploy Pages (MUST run from frontend/ dir): `cd frontend && CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN npx wrangler pages deploy dist/ --project-name=pitchey`
    - Handle staging deployments with `--env staging` flag
 
 3. **Post-deployment Validation**

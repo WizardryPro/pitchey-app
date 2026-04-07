@@ -326,7 +326,7 @@ describe('CreatorDashboard', () => {
       })
       renderDashboard()
       await waitFor(() => {
-        expect(screen.getByText(/haven't created any pitches/i)).toBeInTheDocument()
+        expect(screen.getByText(/haven't published any pitches/i)).toBeInTheDocument()
       })
     })
   })

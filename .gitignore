@@ -112,3 +112,4 @@ playwright-report/
 TWILIO_SETUP_GUIDE.md
 .env.notifications
 TWILIO_CREDENTIALS_SECURE.txt
+CLAUDE.local.md

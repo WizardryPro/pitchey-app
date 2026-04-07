@@ -25,13 +25,13 @@ Uncommitted changes: !`git status --porcelain | head -5`
 Ask user for deployment target (staging/production):
 
 #### For Production:
-1. Deploy Worker: `CLOUDFLARE_API_TOKEN=tWkywPwDEp-Lt8JERDSEiMoRdYuU4oL6psqswUmk npx wrangler deploy`
-2. Deploy Pages (MUST run from frontend/ dir): `cd frontend && CLOUDFLARE_API_TOKEN=tWkywPwDEp-Lt8JERDSEiMoRdYuU4oL6psqswUmk npx wrangler pages deploy dist/ --project-name=pitchey`
+1. Deploy Worker: `CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN npx wrangler deploy`
+2. Deploy Pages (MUST run from frontend/ dir): `cd frontend && CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN npx wrangler pages deploy dist/ --project-name=pitchey`
 3. Report deployment URLs
 
 #### For Staging:
-1. Deploy Worker: `CLOUDFLARE_API_TOKEN=tWkywPwDEp-Lt8JERDSEiMoRdYuU4oL6psqswUmk npx wrangler deploy --env staging`
-2. Deploy Pages (MUST run from frontend/ dir): `cd frontend && CLOUDFLARE_API_TOKEN=tWkywPwDEp-Lt8JERDSEiMoRdYuU4oL6psqswUmk npx wrangler pages deploy dist/ --project-name=pitchey --branch staging`
+1. Deploy Worker: `CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN npx wrangler deploy --env staging`
+2. Deploy Pages (MUST run from frontend/ dir): `cd frontend && CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN npx wrangler pages deploy dist/ --project-name=pitchey --branch staging`
 
 ### 4. Post-Deployment Verification
 - Check Worker status in logs

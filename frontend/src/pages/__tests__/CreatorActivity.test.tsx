@@ -155,9 +155,8 @@ describe('CreatorActivity', () => {
 
     expect(screen.getByText('Views')).toBeInTheDocument()
     expect(screen.getByText('Likes')).toBeInTheDocument()
-    expect(screen.getByText('Comments')).toBeInTheDocument()
+    expect(screen.getByText('Messages')).toBeInTheDocument()
     expect(screen.getByText('Follows')).toBeInTheDocument()
-    expect(screen.getByText('Investments')).toBeInTheDocument()
     expect(screen.getByText('Ndas')).toBeInTheDocument()
     expect(screen.getByText('Milestones')).toBeInTheDocument()
   })

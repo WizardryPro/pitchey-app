@@ -56,7 +56,7 @@ Available slash commands: `/deploy`, `/test`, `/migrate`
 ## Platform Status
 
 ### Completed (Stages 1-11)
-- **Foundation**: 612+ API routes, 3 portals + Admin, RBAC, CI/CD
+- **Foundation**: 619 API routes, 3 portals + Admin, RBAC, CI/CD
 - **Core Platform**: Dashboards, WebSocket + polling, search/browse, marketplace
 - **Communication**: Messaging (edit/delete/attachments), credit system (9 actions), email via Resend
 - **Security**: Email OTP 2FA, passwordless login, JWT verification, rate limiting (4 strategies), file validation
@@ -65,7 +65,7 @@ Available slash commands: `/deploy`, `/test`, `/migrate`
 - **Data Quality**: Follow system (user + pitch), NDA messaging gate, snake_case normalization
 - **Notifications**: Email (new follower, pitch publish), WebSocket push, 401 auto-redirect
 - **Production Portal**: 26-issue remediation complete (uploads, dead buttons, stubs, settings, calendar)
-- **Tests**: 184 files, 3450+ tests, zero failures
+- **Tests**: 192 files, 3639+ tests, zero failures
 
 ### TODO
 - **Stripe Go-Live**: Create products/prices in Stripe Dashboard, set secrets (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`), set `stripePriceId` in `src/config/subscription-plans.ts`
@@ -73,8 +73,8 @@ Available slash commands: `/deploy`, `/test`, `/migrate`
 - **Full Crew Features**: Availability calendars, rate cards — deferred post-launch
 
 ### Current Numbers
-- 612+ API routes, 135 pages, 166 components, 26 services, 4 stores
-- 114 backend service files, 57 handlers, 67 migrations
+- 619 API routes, 135 pages, 166 components, 28 services, 3 stores
+- 114 backend service files, 65 handlers, 77 migrations
 - 3 portals (Creator, Investor, Production) + Admin shell
 - 13 CI/CD workflows, 7 R2 buckets, 5 KV namespaces, 2 Durable Objects
 

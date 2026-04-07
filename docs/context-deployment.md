@@ -3,7 +3,7 @@
 ## CI/CD Pipeline
 - **Primary**: `.github/workflows/ci-cd.yml` — runs on push/PR/daily
 - **Health check**: `.github/workflows/simple-health-check.yml` — every 30 min
-- 12 workflow files total in `.github/workflows/`
+- 13 workflow files total in `.github/workflows/`
 - TypeScript type-check is **BLOCKING** — zero TS errors required
 - ESLint is non-blocking (`continue-on-error: true`)
 - SonarCloud: `sonarsource/sonarqube-scan-action@v6`
@@ -34,6 +34,13 @@ VITE_WS_URL=ws://localhost:8001
 ```
 VITE_API_URL=
 VITE_WS_URL=wss://pitchey-api-prod.ndlovucavelle.workers.dev
+VITE_FRONTEND_URL=https://pitchey-5o8.pages.dev
+VITE_DISABLE_WEBSOCKET=false
+VITE_ENABLE_REALTIME=true
+VITE_ENABLE_ANALYTICS=true
+VITE_NODE_ENV=production
+VITE_TURNSTILE_SITE_KEY=0x4AAAAAACzpFR_oniI4M7PI
+VITE_SENTRY_DSN=https://fd5664ae577039ccb7cce31e91f54533@o4510137537396736.ingest.de.sentry.io/4510138308755536
 ```
 `VITE_API_URL=` (empty) means API calls go same-origin through Pages Functions proxy at `frontend/functions/api/[[path]].ts`.
 
@@ -60,7 +67,7 @@ gh run watch <run-id> --exit-status          # watch until completion
 
 ## Test Suite
 ```bash
-cd frontend && npx vitest run                # 921 tests, ~15s
+cd frontend && npx vitest run                # 3639+ tests, ~21s
 cd frontend && npx tsc --noEmit -p tsconfig.app.json  # type check
 ```
 

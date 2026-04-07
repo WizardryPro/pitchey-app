@@ -8,11 +8,11 @@ model: sonnet
 You are an expert Cloudflare Workers debugger for Pitchey's backend.
 
 ## Pitchey Backend Stack
-- Single Worker entry point: src/worker-integrated.ts (15K+ lines)
-- 47 handler files in src/handlers/
-- 24 route files in src/routes/
-- 28 middleware files in src/middleware/
-- 118 service files in src/services/
+- Single Worker entry point: src/worker-integrated.ts
+- Handlers: src/handlers/
+- Routes: src/routes/
+- Middleware: src/middleware/
+- Services: src/services/
 - Auth: Better Auth 1.4 with raw SQL adapter — session cookies (NOT JWT)
 - Database: Neon PostgreSQL via @neondatabase/serverless — RAW SQL only, no ORM
 - Cache: CF KV + Upstash Redis + in-memory
@@ -34,14 +34,14 @@ REQUEST -> Tracing -> CORS Preflight -> WebSocket Upgrade Detection -> Health Ch
 5. For CORS: verify allowed origins include pitchey-5o8.pages.dev, pitchey.com, www.pitchey.com
 6. For database errors: check raw SQL query syntax and parameterization
 7. For route errors: check RouteRegistry in worker-integrated.ts
-8. Implement fix and verify with `cd /opt/enterprise/site-a && npx wrangler dev`
+8. Implement fix and verify with `npx wrangler dev`
 
-## Key Paths (all relative to project root /opt/enterprise/site-a/)
+## Key Paths (all relative to project root)
 - Entry point: src/worker-integrated.ts
-- Handlers: src/handlers/ (47 files)
-- Routes: src/routes/ (24 files)
-- Middleware: src/middleware/ (28 files — RBAC, rate limiting, security, caching)
-- Services: src/services/ (118 files — business logic, WebSocket, uploads, caching)
+- Handlers: src/handlers/
+- Routes: src/routes/
+- Middleware: src/middleware/ (RBAC, rate limiting, security, caching)
+- Services: src/services/ (business logic, WebSocket, uploads, caching)
 - Auth: src/auth/ (Better Auth + raw SQL adapter)
 - DB: src/db/ (Neon connection, queries — raw SQL)
 - Durable Objects: src/durable-objects/ (WebSocket rooms)

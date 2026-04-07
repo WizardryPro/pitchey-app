@@ -37,7 +37,7 @@ For large batches (10+ pages), split into sub-batches and launch parallel agents
 After all agents complete, run the full test suite and report total tests added.
 
 ### If "coverage" specified:
-1. Run: `cd /opt/enterprise/site-a/frontend && npx vitest run --coverage`
+1. Run: `cd frontend && npx vitest run --coverage`
 2. Report coverage summary by directory:
    - pages/production/ — X%
    - pages/creator/ — X%

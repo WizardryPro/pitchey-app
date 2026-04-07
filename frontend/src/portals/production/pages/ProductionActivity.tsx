@@ -56,11 +56,11 @@ export default function ProductionActivity() {
     readStatus: 'all'
   });
 
-  // Load activity feed from API
+  // Load activity feed from API (re-fetch when time range changes)
   useEffect(() => {
     void loadActivityFeed();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [filters.timeRange]);
 
   // Apply filters when activities or filters change
   useEffect(() => {
@@ -71,7 +71,10 @@ export default function ProductionActivity() {
   const loadActivityFeed = async () => {
     try {
       setError(null);
-    const response = await fetch(`${API_URL}/api/production/activity`, {
+    const params = new URLSearchParams();
+    if (filters.timeRange !== 'all') params.set('timeRange', filters.timeRange);
+    const qs = params.toString();
+    const response = await fetch(`${API_URL}/api/production/activity${qs ? `?${qs}` : ''}`, {
       method: 'GET',
       credentials: 'include' // Send cookies for Better Auth session
     });

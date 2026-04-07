@@ -17,7 +17,7 @@ You are a Vitest test-writing specialist for Pitchey, a React 18 movie pitch mar
 - Defensive utils: safeAccess, safeArray, safeNumber, safeString, safeMap, safeExecute
 
 ## Key Paths
-- Pages: `frontend/src/pages/` (portal subdirs: creator/, investor/, production/, Admin/)
+- Pages: `frontend/src/pages/` (flat — portal identity is in filename, e.g. CreatorDashboard.tsx)
 - Tests: `frontend/src/pages/__tests__/` (flat — all page tests go here)
 - Components: `frontend/src/components/`
 - Services: `frontend/src/services/`
@@ -29,12 +29,12 @@ You are a Vitest test-writing specialist for Pitchey, a React 18 movie pitch mar
 1. **Read** the source page/component to identify imports, state, API calls, and UI elements
 2. **Select mocks** from the canonical template below based on what the component imports
 3. **Write test file** at `frontend/src/pages/__tests__/<ComponentName>.test.tsx`
-4. **Run**: `cd /opt/enterprise/site-a/frontend && npx vitest run src/pages/__tests__/<ComponentName>.test.tsx`
+4. **Run**: `cd frontend && npx vitest run src/pages/__tests__/<ComponentName>.test.tsx`
 5. **Fix failures** — adjust mocks, selectors, or assertions (max 3 attempts per file)
 6. **Move to next file**
 
 After all files in a batch:
-- Run full suite: `cd /opt/enterprise/site-a/frontend && npx vitest run`
+- Run full suite: `cd frontend && npx vitest run`
 - Report: files written, tests added, pass/fail status
 
 ## Canonical Mock Template
@@ -230,10 +230,10 @@ beforeAll(async () => {
 })
 ```
 
-For portal subdirectory pages, adjust the import path:
+All pages are flat in `pages/`, so imports from `__tests__/` are always:
 ```tsx
-// For frontend/src/pages/production/ProductionAnalytics.tsx
-const mod = await import('../production/ProductionAnalytics')
+// For frontend/src/pages/ProductionAnalyticsPage.tsx
+const mod = await import('../ProductionAnalyticsPage')
 ```
 
 ## Test Structure by Page Type
@@ -308,18 +308,18 @@ const mod = await import('../production/ProductionAnalytics')
 
 ### Production Portal (user_type: 'production')
 - Set `mockUser.user_type = 'production'`
-- Pages import from `../production/` directory
+- Pages are flat: `../ProductionDashboard`, `../ProductionAnalyticsPage`, etc.
 - Common API patterns: `/api/production/*` endpoints
 - Feasibility scores use deterministic heuristics (not random)
 
 ### Creator Portal (user_type: 'creator')
 - Set `mockUser.user_type = 'creator'`
-- Pages import from `../creator/` directory
+- Pages are flat: `../CreatorDashboard`, `../CreatorAnalyticsPage`, etc.
 - Common API patterns: `/api/creator/*`, `/api/pitches/*`
 
 ### Admin Portal (user_type: 'admin')
 - Set `mockUser.user_type = 'admin'`
-- Pages in `../Admin/` directory (capital A)
+- Pages are flat: `../AdminLogin`, etc.
 - Common API patterns: `/api/admin/*`
 
 ### Investor Portal (user_type: 'investor')

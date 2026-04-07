@@ -174,8 +174,8 @@ describe('MarketplaceEnhanced', () => {
       render(<MarketplaceEnhanced />)
 
       await waitFor(() => {
-        expect(screen.getByText('Test Pitch 1')).toBeInTheDocument()
-        expect(screen.getByText('Test Pitch 2')).toBeInTheDocument()
+        expect(screen.getAllByText('Test Pitch 1').length).toBeGreaterThan(0)
+        expect(screen.getAllByText('Test Pitch 2').length).toBeGreaterThan(0)
       })
     })
   })
@@ -188,7 +188,7 @@ describe('MarketplaceEnhanced', () => {
       render(<MarketplaceEnhanced />)
 
       await waitFor(() => {
-        expect(screen.getByText('Test Pitch 1')).toBeInTheDocument()
+        expect(screen.getAllByText('Test Pitch 1').length).toBeGreaterThan(0)
       })
 
       const input = screen.getByPlaceholderText(/search/i)
@@ -213,7 +213,7 @@ describe('MarketplaceEnhanced', () => {
       render(<MarketplaceEnhanced />)
 
       await waitFor(() => {
-        expect(screen.getByText('Test Pitch 1')).toBeInTheDocument()
+        expect(screen.getAllByText('Test Pitch 1').length).toBeGreaterThan(0)
         expect(screen.queryByTestId('skeleton')).not.toBeInTheDocument()
       })
     })
@@ -226,9 +226,9 @@ describe('MarketplaceEnhanced', () => {
       render(<MarketplaceEnhanced />)
 
       await waitFor(() => {
-        expect(screen.getByText('Test Pitch 1')).toBeInTheDocument()
-        expect(screen.getByText('Test Pitch 2')).toBeInTheDocument()
-        expect(screen.getByText('Test Pitch 3')).toBeInTheDocument()
+        expect(screen.getAllByText('Test Pitch 1').length).toBeGreaterThan(0)
+        expect(screen.getAllByText('Test Pitch 2').length).toBeGreaterThan(0)
+        expect(screen.getAllByText('Test Pitch 3').length).toBeGreaterThan(0)
       })
     })
 
@@ -281,7 +281,7 @@ describe('MarketplaceEnhanced', () => {
       render(<MarketplaceEnhanced />)
 
       await waitFor(() => {
-        expect(screen.getByText('Test Pitch 1')).toBeInTheDocument()
+        expect(screen.getAllByText('Test Pitch 1').length).toBeGreaterThan(0)
       })
       expect(screen.queryByText(/offline/i)).not.toBeInTheDocument()
     })

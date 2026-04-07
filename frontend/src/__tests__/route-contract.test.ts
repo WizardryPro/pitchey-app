@@ -114,8 +114,9 @@ function extractFrontendCalls(): FrontendCall[] {
 
       fetchRe.lastIndex = 0
       while ((m = fetchRe.exec(line)) !== null) {
-        // Look at surrounding lines for method context
-        const context = lines.slice(Math.max(0, i - 2), Math.min(lines.length, i + 5)).join(' ')
+        // Look at current and following lines for method context (not backward,
+        // to avoid picking up method: from a preceding fetch call's options block)
+        const context = lines.slice(i, Math.min(lines.length, i + 5)).join(' ')
         calls.push({
           method: methodFromContext(context),
           path: normalizePath(m[1]),

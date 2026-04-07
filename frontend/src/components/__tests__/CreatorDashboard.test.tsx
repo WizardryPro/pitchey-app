@@ -373,7 +373,7 @@ describe('CreatorDashboard', () => {
 
       renderDashboard()
       await waitFor(() => {
-        expect(screen.getByText(/haven't created any pitches/)).toBeInTheDocument()
+        expect(screen.getByText(/haven't published any pitches/)).toBeInTheDocument()
         expect(screen.getByText('Create Your First Pitch')).toBeInTheDocument()
       })
     })
@@ -579,10 +579,11 @@ describe('CreatorDashboard', () => {
   // ─── Analytics Section ─────────────────────────────────────────────
 
   describe('Analytics Section', () => {
-    it('renders enhanced analytics component', async () => {
+    it('renders analytics link section', async () => {
       renderDashboard()
       await waitFor(() => {
-        expect(screen.getByTestId('creator-analytics')).toBeInTheDocument()
+        expect(screen.getByText('Performance Analytics')).toBeInTheDocument()
+        expect(screen.getByText('View Analytics')).toBeInTheDocument()
       })
     })
   })

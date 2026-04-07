@@ -37,10 +37,10 @@ Return your findings and recommended fixes to the main agent for implementation.
 6. For session issues: check sessions table — Better Auth manages this with raw SQL adapter
 7. Use Neon MCP server to run read-only diagnostic queries if available
 
-## Key Paths (all relative to /opt/enterprise/site-a/)
+## Key Paths (all relative to project root)
 - DB connection: src/db/ (client setup, connection config)
 - SQL queries: scattered across src/handlers/ and src/services/
-- Migrations: migrations/ (raw SQL files)
+- Migrations: src/db/migrations/ (raw SQL files)
 - Auth tables: sessions table managed by Better Auth raw SQL adapter
 - Worker config: wrangler.toml (Hyperdrive binding)
 

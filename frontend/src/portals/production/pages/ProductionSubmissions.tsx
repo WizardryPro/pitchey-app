@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   FileText, Clock, Star, CheckCircle, XCircle, Archive,
-  Filter, Search, Calendar, User, DollarSign, TrendingUp,
-  Eye, Download, MessageSquare, ThumbsUp, ThumbsDown, Film
+  Search, Calendar, User, DollarSign,
+  Eye, MessageSquare, Film
 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { toast } from 'react-hot-toast';
@@ -44,7 +44,6 @@ export default function ProductionSubmissions() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedGenre, setSelectedGenre] = useState('all');
   const [startProjectPitch, setStartProjectPitch] = useState<{ id: number; title: string; genre?: string } | null>(null);
   
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
@@ -166,8 +165,7 @@ export default function ProductionSubmissions() {
     const matchesStatus = statusFilter === 'all' || submission.status === statusFilter;
     const matchesSearch = submission.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           submission.creator.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesGenre = selectedGenre === 'all' || submission.genre === selectedGenre;
-    return matchesStatus && matchesSearch && matchesGenre;
+    return matchesStatus && matchesSearch;
   });
 
   const stats = {
@@ -177,7 +175,6 @@ export default function ProductionSubmissions() {
     shortlisted: submissions.filter(s => s.status === 'shortlisted').length
   };
 
-  const genres = ['all', ...new Set(submissions.map(s => s.genre))];
 
   return (
     <div>
@@ -242,18 +239,6 @@ export default function ProductionSubmissions() {
               </div>
             </div>
             
-            <select
-              value={selectedGenre}
-              onChange={(e) => setSelectedGenre(e.target.value)}
-              className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
-            >
-              {genres.map(genre => (
-                <option key={genre} value={genre}>
-                  {genre === 'all' ? 'All Genres' : genre}
-                </option>
-              ))}
-            </select>
-
             <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => setStatusFilter('all')}

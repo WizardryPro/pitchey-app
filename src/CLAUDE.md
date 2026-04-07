@@ -14,10 +14,8 @@ Allowed headers (line 102):
 Content-Type, Authorization, X-Request-Id, X-Client-Id
 ```
 
-### TODO: Missing trace headers
-- [ ] Add `sentry-trace, baggage, traceparent` to `Access-Control-Allow-Headers`
-      Without these, the browser blocks the frontend from sending trace context cross-origin.
-      This breaks distributed tracing for any direct Worker calls (WebSocket upgrade, etc.)
+### Trace Headers — DONE
+- [x] `sentry-trace, baggage, traceparent` added to `Access-Control-Allow-Headers` (line 102 of response.ts)
 
 ## Cookie Configuration
 
@@ -34,7 +32,7 @@ only ever set through the proxy path.
 
 ## Sentry Integration
 
-File: `worker-integrated.ts` lines 19539-19554
+File: `worker-integrated.ts` (near end of file — line numbers drift as file grows)
 - `withSentry()` wraps the main handler (non-WebSocket requests only)
 - 10% trace sampling, filters `/health` and `/favicon` transactions
 - DSN and release from `env.SENTRY_DSN` and `env.CF_VERSION_METADATA`
@@ -43,9 +41,8 @@ File: `worker-integrated.ts` lines 19539-19554
 
 wrangler.toml: `[observability]` enabled, logs at 100% sampling, persisted.
 
-### TODO: Enable automatic tracing
-- [ ] Add `[observability.traces]` with `enabled = true`, `head_sampling_rate = 0.1` to wrangler.toml
-      Enables zero-code OTel tracing for all I/O (fetch, KV, R2, DO) with no CPU overhead.
+### Automatic Tracing — DONE
+- [x] `[observability.traces]` with `enabled = true`, `head_sampling_rate = 0.1` configured in wrangler.toml (lines 245-247)
 
 ## Axiom Logging
 

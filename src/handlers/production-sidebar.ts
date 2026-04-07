@@ -188,6 +188,15 @@ export async function productionActivityHandler(
     const limit = Math.min(50, Math.max(1, parseInt(url.searchParams.get('limit') || '20', 10)));
     const offset = (page - 1) * limit;
 
+    const timeRange = url.searchParams.get('timeRange');
+    const intervalMap: Record<string, string> = {
+      '1h': "AND created_at >= NOW() - INTERVAL '1 hour'",
+      '24h': "AND created_at >= NOW() - INTERVAL '24 hours'",
+      '7d': "AND created_at >= NOW() - INTERVAL '7 days'",
+      '30d': "AND created_at >= NOW() - INTERVAL '30 days'",
+    };
+    const timeFilter = (timeRange && intervalMap[timeRange]) ? sql.unsafe(intervalMap[timeRange]) : sql``;
+
     const [activities, countResult] = await Promise.all([
       sql`
         SELECT
@@ -204,6 +213,7 @@ export async function productionActivityHandler(
           created_at
         FROM notifications
         WHERE user_id = ${Number(userId)}
+        ${timeFilter}
         ORDER BY created_at DESC
         LIMIT ${limit}
         OFFSET ${offset}
@@ -212,6 +222,7 @@ export async function productionActivityHandler(
         SELECT COUNT(*)::int AS total
         FROM notifications
         WHERE user_id = ${Number(userId)}
+        ${timeFilter}
       `.catch(() => [{ total: 0 }]),
     ]);
 
