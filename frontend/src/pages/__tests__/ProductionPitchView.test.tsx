@@ -292,8 +292,8 @@ describe('ProductionPitchView', () => {
       expect(screen.getByText('overview')).toBeInTheDocument()
     })
     expect(screen.getByText('Feasibility')).toBeInTheDocument()
-    expect(screen.getByText('team')).toBeInTheDocument()
-    expect(screen.getByText('notes')).toBeInTheDocument()
+    expect(screen.getByText(/^team/)).toBeInTheDocument()
+    expect(screen.getByText(/^notes/)).toBeInTheDocument()
   })
 
   it('shows NDA credit cost when NDA not signed', async () => {

@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, Activity, Film, FolderOpen, Upload,
   Bookmark, Users, GitBranch, DollarSign,
-  MessageSquare, Calendar, Settings, UserPlus
+  MessageSquare, Calendar, Settings, UserPlus, Shield
 } from 'lucide-react';
 import { PRODUCTION_ROUTES } from '@/config/navigation.routes';
 
@@ -25,6 +25,7 @@ export const productionNavigationSections: NavigationSection[] = [
     items: [
       { label: 'Overview', path: PRODUCTION_ROUTES.dashboard, icon: Home },
       { label: 'Activity', path: PRODUCTION_ROUTES.activity, icon: Activity },
+      { label: 'Verification', path: PRODUCTION_ROUTES.verification, icon: Shield },
     ],
   },
   {

@@ -137,6 +137,7 @@ const Billing = lazyRetry(() => import('./pages/Billing'));
 const Following = lazyRetry(() => import('./pages/Following'));
 const CreatorPortfolio = lazyRetry(() => import('./pages/CreatorPortfolio'));
 const UserPortfolio = lazyRetry(() => import('./pages/UserPortfolio'));
+const SharedPortfolio = lazyRetry(() => import('./pages/SharedPortfolio'));
 
 // Info Pages
 const HowItWorks = lazyRetry(() => import('./pages/HowItWorks'));
@@ -160,6 +161,7 @@ const AdminAuditLog = lazyRetry(() => import('@portals/admin/pages/AdminAuditLog
 const AdminGDPR = lazyRetry(() => import('@portals/admin/pages/AdminGDPR'));
 const AdminReports = lazyRetry(() => import('@portals/admin/pages/AdminReports'));
 const AdminModerationLog = lazyRetry(() => import('@portals/admin/pages/AdminModerationLog'));
+const AdminVerifications = lazyRetry(() => import('@portals/admin/pages/AdminVerifications'));
 
 // MFA Challenge Page
 const MFAChallengePage = lazyRetry(() => import('./pages/MFAChallengePage'));
@@ -624,6 +626,11 @@ function App() {
                 <SystemSettings />
               </PermissionRoute>
             } />
+            <Route path="verifications" element={
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+                <AdminVerifications />
+              </PermissionRoute>
+            } />
           </Route>
           
           {/* Creator Profile Route - accessible to all authenticated users */}
@@ -646,6 +653,9 @@ function App() {
             <Navigate to="/login/creator" />
           } />
           
+          {/* Shared Portfolio (public, token-based) */}
+          <Route path="/portfolio/s/:token" element={<SharedPortfolio />} />
+
           {/* New Unified Portfolio Routes */}
           <Route path="/portfolio" element={<UserPortfolio />} />
           <Route path="/portfolio/:userId" element={<UserPortfolio />} />

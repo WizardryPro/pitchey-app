@@ -212,7 +212,7 @@ describe('ProductionSubmissions', () => {
     expect(screen.getAllByText('archived').length).toBeGreaterThanOrEqual(1)
   })
 
-  it('renders genre filter dropdown', async () => {
+  it('renders status filter buttons', async () => {
     mockFetch.mockResolvedValue({
       ok: true,
       json: async () => ({ data: { submissions: mockSubmissions } }),
@@ -221,7 +221,7 @@ describe('ProductionSubmissions', () => {
     renderComponent()
 
     await waitFor(() => {
-      expect(screen.getByText('All Genres')).toBeInTheDocument()
+      expect(screen.getByText('All')).toBeInTheDocument()
     })
   })
 

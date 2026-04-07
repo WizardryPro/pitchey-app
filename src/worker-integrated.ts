@@ -2884,6 +2884,32 @@ class RouteRegistry {
     );
 
     // =============================================================================
+    // COMPANY VERIFICATION ROUTES
+    // =============================================================================
+
+    this.register('POST', '/api/production/verify', async (req) => {
+      const { submitVerificationHandler } = await import('./handlers/company-verification');
+      return submitVerificationHandler(req, this.env);
+    });
+    this.register('POST', '/api/production/verify/upload-insurance', async (req) => {
+      const { uploadInsuranceHandler } = await import('./handlers/company-verification');
+      return uploadInsuranceHandler(req, this.env);
+    });
+    this.register('GET', '/api/production/verification-status', async (req) => {
+      const { verificationStatusHandler } = await import('./handlers/company-verification');
+      return verificationStatusHandler(req, this.env);
+    });
+    this.register('GET', '/api/admin/verifications', async (req) => {
+      const { adminListVerificationsHandler } = await import('./handlers/company-verification');
+      return adminListVerificationsHandler(req, this.env);
+    });
+    this.register('PATCH', '/api/admin/verifications/:id', async (req) => {
+      const params = this.extractParams('/api/admin/verifications/:id', new URL(req.url).pathname);
+      const { adminReviewVerificationHandler } = await import('./handlers/company-verification');
+      return adminReviewVerificationHandler(req, this.env, params.id);
+    });
+
+    // =============================================================================
     // STUB ENDPOINTS FOR SIDEBAR ROUTES (prevents 404 errors)
     // =============================================================================
 
@@ -3172,6 +3198,26 @@ class RouteRegistry {
       const { creatorPortfolioHandler } = await import('./handlers/creator-sidebar');
       return creatorPortfolioHandler(req, this.env);
     });
+
+    // Portfolio Share Links
+    this.register('POST', '/api/creator/share-links', async (req) => {
+      const { createShareLinkHandler } = await import('./handlers/portfolio-share');
+      return createShareLinkHandler(req, this.env);
+    });
+    this.register('GET', '/api/creator/share-links', async (req) => {
+      const { listShareLinksHandler } = await import('./handlers/portfolio-share');
+      return listShareLinksHandler(req, this.env);
+    });
+    this.register('DELETE', '/api/creator/share-links/:id', async (req) => {
+      const { revokeShareLinkHandler } = await import('./handlers/portfolio-share');
+      return revokeShareLinkHandler(req, this.env);
+    });
+    // Public shared portfolio (no auth — listed in publicEndpoints)
+    this.register('GET', '/api/portfolio/s/:token', async (req) => {
+      const { publicPortfolioByTokenHandler } = await import('./handlers/portfolio-share');
+      return publicPortfolioByTokenHandler(req, this.env);
+    });
+
     this.register('GET', '/api/creator/ndas', async (req) => {
       const { creatorNdasHandler } = await import('./handlers/creator-sidebar');
       return creatorNdasHandler(req, this.env);
@@ -3707,7 +3753,8 @@ class RouteRegistry {
       '/api/browse/genres',     // Browse by genre
       '/api/browse/top-rated',  // Top rated pitches
       '/api/demos/request',     // Demo request (anonymous OK)
-      '/api/analytics/track-view' // View tracking (anonymous views)
+      '/api/analytics/track-view', // View tracking (anonymous views)
+      '/api/portfolio/s'  // Public shared portfolio (token-based)
     ];
 
     // Find handler FIRST (before auth check)
@@ -9014,6 +9061,21 @@ pitchey_analytics_datapoints_per_minute 1250
       return new ApiResponseBuilder(request).error(ErrorCode.UNAUTHORIZED, 'Authentication required');
     }
 
+    // Production users must be verified before purchasing credits
+    if (authResult.user?.userType === 'production') {
+      const sql = this.db?.getSql() as any;
+      if (sql) {
+        const { isProductionVerified } = await import('./services/company-verification.service');
+        const verified = await isProductionVerified(sql, authResult.user.id);
+        if (!verified) {
+          return new ApiResponseBuilder(request).error(
+            ErrorCode.FORBIDDEN,
+            'Company verification required before purchasing credits. Please verify your production company first.'
+          );
+        }
+      }
+    }
+
     try {
       const body = await request.json() as any;
       const packageIndex = parseInt(String(body.creditPackage).replace('package_', ''));
@@ -9153,6 +9215,21 @@ pitchey_analytics_datapoints_per_minute 1250
     const authResult = await this.validateAuth(request);
     if (!authResult.valid) {
       return new ApiResponseBuilder(request).error(ErrorCode.UNAUTHORIZED, 'Authentication required');
+    }
+
+    // Production users must be verified before using credits (e.g. viewing pitches)
+    if (authResult.user?.userType === 'production') {
+      const sql = this.db?.getSql() as any;
+      if (sql) {
+        const { isProductionVerified } = await import('./services/company-verification.service');
+        const verified = await isProductionVerified(sql, authResult.user.id);
+        if (!verified) {
+          return new ApiResponseBuilder(request).error(
+            ErrorCode.FORBIDDEN,
+            'Company verification required before using credits. Please verify your production company first.'
+          );
+        }
+      }
     }
 
     try {

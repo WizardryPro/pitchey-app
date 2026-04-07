@@ -100,6 +100,7 @@ export const INVESTOR_ROUTES = {
 export const PRODUCTION_ROUTES = {
   // Onboarding
   onboarding: '/production/onboarding',
+  verification: '/production/verification',
 
   // Main Dashboard
   dashboard: '/production/dashboard',
@@ -207,4 +208,5 @@ export const ADMIN_ROUTES = {
   auditLog: '/admin/audit-log',
   gdpr: '/admin/gdpr',
   settings: '/admin/settings',
+  verifications: '/admin/verifications',
 };

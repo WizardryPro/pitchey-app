@@ -23,11 +23,11 @@ export default function WatcherDashboard() {
   const fetchDashboardData = async () => {
     try {
       const [creditsRes, savedRes] = await Promise.all([
-        apiClient.get<{ balance: number }>('/api/credits/balance').catch(() => ({ success: false, data: null })),
-        apiClient.get<{ total: number }>('/api/pitches/saved/count').catch(() => ({ success: false, data: null })),
+        apiClient.get<{ data: { credits: number } }>('/api/payments/credits/balance').catch(() => ({ success: false, data: null })),
+        apiClient.get<{ data: { totalSaved: number } }>('/api/saved-pitches/stats').catch(() => ({ success: false, data: null })),
       ]);
-      if (creditsRes.success && creditsRes.data) setCredits(creditsRes.data.balance || 0);
-      if (savedRes.success && savedRes.data) setSavedCount(savedRes.data.total || 0);
+      if (creditsRes.success && creditsRes.data) setCredits(creditsRes.data.data?.credits || 0);
+      if (savedRes.success && savedRes.data) setSavedCount(savedRes.data.data?.totalSaved || 0);
     } catch {
       // Non-critical
     } finally {

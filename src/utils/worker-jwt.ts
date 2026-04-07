@@ -33,7 +33,7 @@ async function getSigningKey(secret: string): Promise<CryptoKey> {
 function base64UrlEncode(data: ArrayBuffer | string): string {
   const str = typeof data === 'string' 
     ? data 
-    : String.fromCharCode(...new Uint8Array(data));
+    : Array.from(new Uint8Array(data), b => String.fromCharCode(b)).join('');
   
   return btoa(str)
     .replace(/\+/g, '-')

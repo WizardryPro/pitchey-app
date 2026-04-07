@@ -150,46 +150,49 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     userType: 'creator'
   },
 
-  // Production Company Tiers
+  // Production Company Tiers (matched to Creator pricing)
   {
     id: 'production',
     name: 'Production Company',
-    price: { monthly: 29.99, annual: 299 },
+    price: { monthly: 19.99, annual: 199 },
     credits: 20,
     analytics: 'basic',
     features: [
       '20 Credits per month',
       'Basic Analytics',
       'Profile views, pitch views, search appearances',
-      'First month free (12 month contract)'
+      'First month free (12 month contract)',
+      'Company verification required'
     ],
     userType: 'production'
   },
   {
     id: 'production_plus',
     name: 'Production Company+',
-    price: { monthly: 39.99, annual: 399 },
+    price: { monthly: 29.99, annual: 299 },
     credits: 40,
     analytics: 'enhanced',
     features: [
-      '40 Creator Credits per month',
+      '40 Credits per month',
       'Enhanced Analytics',
       'Who viewed, time spent, location/device',
-      'First month free (12 month contract)'
+      'First month free (12 month contract)',
+      'Company verification required'
     ],
     userType: 'production'
   },
   {
     id: 'production_unlimited',
     name: 'Production Company Unlimited',
-    price: { monthly: 49.99, annual: 499 },
+    price: { monthly: 39.99, annual: 399 },
     credits: -1, // Unlimited
     analytics: 'customizable',
     features: [
-      'Unlimited Creator Credits per month',
+      'Unlimited Credits per month',
       'Enhanced & Customizable Analytics',
       'Choose what to track, export, or monitor in real time',
-      'First month free (12 month contract)'
+      'First month free (12 month contract)',
+      'Company verification required'
     ],
     userType: 'production'
   },
