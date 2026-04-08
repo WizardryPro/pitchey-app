@@ -14,6 +14,7 @@ import { configService } from '../services/config.service';
 
 import FormatDisplay from '../components/FormatDisplay';
 import HeatBadge, { getHeatScore, getHeatLevel } from '../components/HeatBadge';
+import VerificationBadge from '../components/VerificationBadge';
 import GenrePlaceholder from '@shared/components/GenrePlaceholder';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -78,6 +79,12 @@ function getTrendingScore(pitch: Pitch): number {
 }
 
 // getHeatLevel and getHeatScore imported from HeatBadge component
+
+function getCreatorTier(pitch: Pitch): string | null {
+  const pp = pitch as unknown as Record<string, unknown>;
+  return (pp.creator_verification_tier as string | null)
+    || (pitch.creator as any)?.verificationTier || null;
+}
 
 function getPitchBudgetDisplay(pitch: Pitch): string {
   const pp = pitch as unknown as Record<string, unknown>;
@@ -726,7 +733,10 @@ export default function MarketplaceEnhanced() {
           <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1 text-sm sm:text-base">
             {pitch.title}
           </h3>
-          <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2 truncate">{getCreatorDisplay(pitch)}</p>
+          <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2 truncate flex items-center gap-1">
+            {getCreatorDisplay(pitch)}
+            <VerificationBadge tier={getCreatorTier(pitch) as any} />
+          </p>
 
           <div className="flex items-center justify-between mb-1 sm:mb-2">
             <div className="flex gap-1 sm:gap-2">

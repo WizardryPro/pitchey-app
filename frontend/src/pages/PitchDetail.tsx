@@ -14,6 +14,7 @@ import SocialProofBadge from '@shared/components/SocialProofBadge';
 import { formatCurrency } from '@shared/utils/formatters';
 import FeedbackSection from '../components/feedback/FeedbackSection';
 import HeatBadge, { getHeatScore } from '../components/HeatBadge';
+import VerificationBadge from '../components/VerificationBadge';
 
 export default function PitchDetail() {
   const navigate = useNavigate();
@@ -371,6 +372,7 @@ export default function PitchDetail() {
                   >
                     {pitch.creator?.name || pitch.creator?.username || 'Unknown Creator'}
                   </span>
+                  <VerificationBadge tier={(pitch as any).creator_verification_tier || (pitch.creator as any)?.verificationTier} />
                   {isAuthenticated && !isOwner && pitch.creator?.id && (
                     <FollowButton creatorId={pitch.creator.id} variant="small" />
                   )}

@@ -146,7 +146,8 @@ export async function getPitchById(
       p.*,
       u.username as creator_username,
       COALESCE(u.profile_image_url, u.profile_image, u.avatar_url, u.image) as creator_avatar,
-      u.company_name as creator_company
+      u.company_name as creator_company,
+      u.verification_tier as creator_verification_tier
     FROM pitches p
     LEFT JOIN users u ON p.creator_id = u.id
     WHERE p.id = $1
@@ -289,6 +290,7 @@ export async function getTrendingPitches(
       u.username as creator_username,
       COALESCE(u.profile_image_url, u.profile_image, u.avatar_url, u.image) as creator_avatar,
       u.company_name as creator_company,
+      u.verification_tier as creator_verification_tier,
       (p.view_count + (p.like_count * 2) + (p.investment_count * 5)) as engagement_score
     FROM pitches p
     LEFT JOIN users u ON p.creator_id = u.id
@@ -313,7 +315,8 @@ export async function getNewPitches(
       p.*,
       u.username as creator_username,
       COALESCE(u.profile_image_url, u.profile_image, u.avatar_url, u.image) as creator_avatar,
-      u.company_name as creator_company
+      u.company_name as creator_company,
+      u.verification_tier as creator_verification_tier
     FROM pitches p
     LEFT JOIN users u ON p.creator_id = u.id
     WHERE p.status = 'published' 
@@ -367,7 +370,8 @@ export async function searchPitches(
       p.*,
       u.username as creator_username,
       COALESCE(u.profile_image_url, u.profile_image, u.avatar_url, u.image) as creator_avatar,
-      u.company_name as creator_company
+      u.company_name as creator_company,
+      u.verification_tier as creator_verification_tier
     FROM pitches p
     LEFT JOIN users u ON p.creator_id = u.id
     ${where}
@@ -611,6 +615,7 @@ export async function getPublicPitches(
       u.username as creator_username,
       COALESCE(u.profile_image_url, u.profile_image, u.avatar_url, u.image) as creator_avatar,
       u.company_name as creator_company,
+      u.verification_tier as creator_verification_tier,
       u.user_type as creator_type
     FROM pitches p
     LEFT JOIN users u ON p.creator_id = u.id OR p.user_id = u.id
@@ -634,6 +639,7 @@ export async function getPublicTrendingPitches(
       u.username as creator_username,
       COALESCE(u.profile_image_url, u.profile_image, u.avatar_url, u.image) as creator_avatar,
       u.company_name as creator_company,
+      u.verification_tier as creator_verification_tier,
       u.user_type as creator_type,
       COALESCE(p.heat_score, 0)::float as heat_score
     FROM pitches p
@@ -657,6 +663,7 @@ export async function getPublicNewPitches(
       u.username as creator_username,
       COALESCE(u.profile_image_url, u.profile_image, u.avatar_url, u.image) as creator_avatar,
       u.company_name as creator_company,
+      u.verification_tier as creator_verification_tier,
       u.user_type as creator_type
     FROM pitches p
     LEFT JOIN users u ON p.creator_id = u.id OR p.user_id = u.id
@@ -678,6 +685,7 @@ export async function getPublicFeaturedPitches(
       u.username as creator_username,
       COALESCE(u.profile_image_url, u.profile_image, u.avatar_url, u.image) as creator_avatar,
       u.company_name as creator_company,
+      u.verification_tier as creator_verification_tier,
       u.user_type as creator_type,
       (COALESCE(p.view_count, 0) + (COALESCE(p.like_count, 0) * 3)) as feature_score
     FROM pitches p
@@ -700,6 +708,7 @@ export async function getPublicPitchById(
       u.username as creator_username,
       COALESCE(u.profile_image_url, u.profile_image, u.avatar_url, u.image) as creator_avatar,
       u.company_name as creator_company,
+      u.verification_tier as creator_verification_tier,
       u.user_type as creator_type
     FROM pitches p
     LEFT JOIN users u ON p.creator_id = u.id OR p.user_id = u.id
@@ -755,6 +764,7 @@ export async function searchPublicPitches(
       u.username as creator_username,
       COALESCE(u.profile_image_url, u.profile_image, u.avatar_url, u.image) as creator_avatar,
       u.company_name as creator_company,
+      u.verification_tier as creator_verification_tier,
       u.user_type as creator_type
     FROM pitches p
     LEFT JOIN users u ON p.creator_id = u.id OR p.user_id = u.id

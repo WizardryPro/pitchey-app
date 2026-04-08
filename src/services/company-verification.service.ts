@@ -308,6 +308,9 @@ export async function submitVerification(
     RETURNING id, status
   ` as Record<string, any>[];
 
+  // Update trust badge tier on user
+  await updateUserVerificationTier(sql, submission.userId);
+
   return { id: rows[0].id, status: rows[0].status };
 }
 
@@ -377,6 +380,12 @@ export async function reviewVerification(
     WHERE id = ${verificationId}
     RETURNING id, user_id, status
   ` as Record<string, any>[];
+
+  // Update trust badge tier on user
+  if (rows.length > 0) {
+    await updateUserVerificationTier(sql, String(rows[0].user_id));
+  }
+
   return rows.length > 0 ? rows[0] : null;
 }
 
@@ -391,4 +400,42 @@ export async function isProductionVerified(
     LIMIT 1
   ` as Record<string, any>[];
   return rows.length > 0;
+}
+
+// ---------------------------------------------------------------------------
+// Trust Badge Tier
+// ---------------------------------------------------------------------------
+
+export function calculateVerificationTier(
+  status: string,
+  autoChecks: Record<string, string> | null,
+): 'gold' | 'silver' | 'grey' | null {
+  if (status === 'approved' && autoChecks) {
+    const checkValues = Object.entries(autoChecks)
+      .filter(([key]) => key !== 'checked_at')
+      .map(([, val]) => val);
+    if (checkValues.length > 0 && checkValues.every(v => v === 'pass')) {
+      return 'gold';
+    }
+    return 'silver';
+  }
+  if (status === 'auto_approved') return 'silver';
+  if (status === 'pending') return 'grey';
+  return null; // rejected or no verification
+}
+
+export async function updateUserVerificationTier(
+  sql: ReturnType<typeof neon>,
+  userId: string,
+): Promise<void> {
+  const rows = await sql`
+    SELECT status, auto_checks FROM company_verifications
+    WHERE user_id = ${userId} LIMIT 1
+  ` as Record<string, any>[];
+
+  const tier = rows.length > 0
+    ? calculateVerificationTier(rows[0].status, rows[0].auto_checks)
+    : null;
+
+  await sql`UPDATE users SET verification_tier = ${tier} WHERE id::text = ${userId}`;
 }
