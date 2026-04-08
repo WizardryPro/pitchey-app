@@ -2247,6 +2247,27 @@ class RouteRegistry {
       const { pitchHeatBreakdownHandler } = await import('./handlers/heat-score');
       return pitchHeatBreakdownHandler(req, this.env);
     });
+    // Structured Feedback — /mine must register before /feedback
+    this.register('GET', '/api/pitches/:id/feedback/mine', async (req) => {
+      const { getMyFeedback } = await import('./handlers/pitch-feedback');
+      return getMyFeedback(req, this.env);
+    });
+    this.register('GET', '/api/pitches/:id/feedback', async (req) => {
+      const { getPitchFeedbackPublic } = await import('./handlers/pitch-feedback');
+      return getPitchFeedbackPublic(req, this.env);
+    });
+    this.register('POST', '/api/pitches/:id/feedback', async (req) => {
+      const { submitPitchFeedback } = await import('./handlers/pitch-feedback');
+      return submitPitchFeedback(req, this.env);
+    });
+    this.register('PUT', '/api/pitches/:id/feedback', async (req) => {
+      const { updatePitchFeedback } = await import('./handlers/pitch-feedback');
+      return updatePitchFeedback(req, this.env);
+    });
+    this.register('DELETE', '/api/pitches/:id/feedback', async (req) => {
+      const { deletePitchFeedback } = await import('./handlers/pitch-feedback');
+      return deletePitchFeedback(req, this.env);
+    });
     this.register('GET', '/api/pitches/:id', this.getPitch.bind(this));
     this.register('GET', '/api/pitches/:id/attachments/:filename', this.getPitchAttachment.bind(this));
     this.register('GET', '/api/trending', this.getTrending.bind(this));

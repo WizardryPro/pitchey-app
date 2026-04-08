@@ -10,6 +10,7 @@ import { pitchAPI } from '@/lib/api';
 import apiClient from '@/lib/api-client';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import FormatDisplay from '@/components/FormatDisplay';
+import FeedbackDisplay from '@/components/feedback/FeedbackDisplay';
 
 interface Pitch {
   id: string;
@@ -512,8 +513,17 @@ const CreatorPitchView: React.FC = () => {
             )}
 
             {activeTab === 'feedback' && isOwner && (
+              <>
+              {/* Community Feedback */}
+              <div className="bg-white rounded-xl shadow-lg p-8 mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Community Feedback</h2>
+                <p className="text-sm text-gray-500 mb-6">Structured reviews from investors, production companies, and peers</p>
+                <FeedbackDisplay pitchId={Number(id)} />
+              </div>
+
+              {/* Production Notes */}
               <div className="bg-white rounded-xl shadow-lg p-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">Production Feedback</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Production Notes</h2>
                 <p className="text-sm text-gray-500 mb-6">Notes shared by production companies reviewing your pitch</p>
                 {feedback.length > 0 ? (
                   <div className="space-y-4">
@@ -549,6 +559,7 @@ const CreatorPitchView: React.FC = () => {
                   </div>
                 )}
               </div>
+              </>
             )}
           </div>
 

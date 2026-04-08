@@ -12,6 +12,7 @@ import FormatDisplay from '../components/FormatDisplay';
 import FollowButton from '@features/browse/components/FollowButton';
 import SocialProofBadge from '@shared/components/SocialProofBadge';
 import { formatCurrency } from '@shared/utils/formatters';
+import FeedbackSection from '../components/feedback/FeedbackSection';
 
 export default function PitchDetail() {
   const navigate = useNavigate();
@@ -790,6 +791,14 @@ export default function PitchDetail() {
                 </div>
               </div>
             )}
+
+            {/* Structured Feedback */}
+            <FeedbackSection
+              pitchId={pitch.id}
+              isOwner={isOwner}
+              isAuthenticated={isAuthenticated}
+              userType={(user as any)?.userType || (user as any)?.user_type || ''}
+            />
           </div>
 
           {/* Sidebar */}
