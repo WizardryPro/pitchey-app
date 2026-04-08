@@ -2237,8 +2237,16 @@ class RouteRegistry {
     this.register('GET', '/api/pitches/trending', this.getTrending.bind(this));  // Add trending BEFORE :id
     this.register('GET', '/api/pitches/featured', this.getPublicFeaturedPitches.bind(this));  // Alias for /api/pitches/public/featured
     this.register('GET', '/api/pitches/saved', this.getSavedPitches.bind(this));  // Alias for /api/saved-pitches
+    this.register('GET', '/api/pitches/hot', async (req) => {
+      const { hotPitchesHandler } = await import('./handlers/heat-score');
+      return hotPitchesHandler(req, this.env);
+    });
     this.register('GET', '/api/pitches/:id/like-status', (req) => pitchLikeStatusHandler(req, this.env));
     this.register('GET', '/api/pitches/:id/engagement', (req) => getPitchEngagementHandler(req, this.env));
+    this.register('GET', '/api/pitches/:id/heat', async (req) => {
+      const { pitchHeatBreakdownHandler } = await import('./handlers/heat-score');
+      return pitchHeatBreakdownHandler(req, this.env);
+    });
     this.register('GET', '/api/pitches/:id', this.getPitch.bind(this));
     this.register('GET', '/api/pitches/:id/attachments/:filename', this.getPitchAttachment.bind(this));
     this.register('GET', '/api/trending', this.getTrending.bind(this));
@@ -3262,6 +3270,12 @@ class RouteRegistry {
       return publicSlateHandler(req, this.env);
     });
 
+    // Heat Score — admin recalculate
+    this.register('POST', '/api/admin/heat-scores/recalculate', async (req) => {
+      const { recalculateHeatScoresHandler } = await import('./handlers/heat-score');
+      return recalculateHeatScoresHandler(req, this.env);
+    });
+
     this.register('GET', '/api/creator/ndas', async (req) => {
       const { creatorNdasHandler } = await import('./handlers/creator-sidebar');
       return creatorNdasHandler(req, this.env);
@@ -3777,6 +3791,7 @@ class RouteRegistry {
       '/api/pitches/public/featured',
       '/api/pitches/public/search',
       '/api/pitches/search',  // Add pitches search as public
+      '/api/pitches/hot',     // Hot pitches by heat score
       '/api/pitches/discover', // Pitch discovery/browse
       '/api/trending',  // Add trending endpoint as public
       '/api/categories', // Genre categories

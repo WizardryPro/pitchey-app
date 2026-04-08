@@ -200,6 +200,8 @@ export interface Pitch {
   tags?: string[];
   archived?: boolean;
   metadata?: any;
+  // Heat score
+  heatScore?: number;
   // Relations
   ndas?: any[];
   comments?: any[];

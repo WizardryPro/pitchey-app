@@ -76,6 +76,14 @@ function getTrendingScore(pitch: Pitch): number {
   return (pitch.viewCount || 0) * 0.7 + (pitch.likeCount || 0) * 0.3;
 }
 
+function getHeatLevel(pitch: Pitch): 'fire' | 'warm' | null {
+  const pp = pitch as unknown as Record<string, unknown>;
+  const score = Number(pp.heat_score) || Number(pp.heatScore) || pitch.heatScore || 0;
+  if (score >= 10) return 'fire';
+  if (score >= 3) return 'warm';
+  return null;
+}
+
 function getPitchBudgetDisplay(pitch: Pitch): string {
   const pp = pitch as unknown as Record<string, unknown>;
   const raw = pp.estimated_budget || pitch.estimatedBudget;
@@ -95,6 +103,7 @@ function getCreatorDisplay(pitch: Pitch): string {
 
 // Enhanced filtering and sorting options
 const SORT_OPTIONS = [
+  { value: 'hot', label: 'Hottest', icon: Zap },
   { value: 'trending', label: 'Trending Now', icon: TrendingUp },
   { value: 'newest', label: 'Newest First', icon: Clock },
   { value: 'popular', label: 'Most Popular', icon: Heart },
@@ -488,10 +497,17 @@ export default function MarketplaceEnhanced() {
       return Number(pp.totalInvestment) || Number(pp.total_investment) || 0;
     };
 
+    const getHeatScore = (p: Pitch) => {
+      const pp = p as unknown as Record<string, unknown>;
+      return Number(pp.heat_score) || Number(pp.heatScore) || p.heatScore || 0;
+    };
+
     filtered.sort((a, b) => {
       switch (sortBy) {
+        case 'hot':
+          return getHeatScore(b) - getHeatScore(a);
         case 'trending':
-          return (getViewCount(b) + getLikeCount(b)) - (getViewCount(a) + getLikeCount(a));
+          return (getHeatScore(b) || (getViewCount(b) + getLikeCount(b))) - (getHeatScore(a) || (getViewCount(a) + getLikeCount(a)));
         case 'newest':
           return new Date(getCreatedAt(b)).getTime() - new Date(getCreatedAt(a)).getTime();
         case 'popular':
@@ -693,7 +709,13 @@ export default function MarketplaceEnhanced() {
                 Featured
               </span>
             )}
-            {!((pitch as unknown as Record<string, unknown>).isFeatured) && getTrendingScore(pitch) >= 5 && (
+            {!((pitch as unknown as Record<string, unknown>).isFeatured) && getHeatLevel(pitch) === 'fire' && (
+              <span className="bg-orange-500/90 backdrop-blur-sm text-white px-2.5 py-0.5 text-xs rounded-full font-medium flex items-center gap-1">
+                <Zap className="w-3 h-3" />
+                Hot
+              </span>
+            )}
+            {!((pitch as unknown as Record<string, unknown>).isFeatured) && getHeatLevel(pitch) === 'warm' && (
               <span className="bg-brand-trending/90 backdrop-blur-sm text-white px-2.5 py-0.5 text-xs rounded-full font-medium flex items-center gap-1">
                 <TrendingUp className="w-3 h-3" />
                 Trending

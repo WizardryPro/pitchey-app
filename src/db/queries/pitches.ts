@@ -635,12 +635,12 @@ export async function getPublicTrendingPitches(
       COALESCE(u.profile_image_url, u.profile_image, u.avatar_url, u.image) as creator_avatar,
       u.company_name as creator_company,
       u.user_type as creator_type,
-      (COALESCE(p.view_count, 0) + (COALESCE(p.like_count, 0) * 2)) as engagement_score
+      COALESCE(p.heat_score, 0)::float as heat_score
     FROM pitches p
     LEFT JOIN users u ON p.creator_id = u.id OR p.user_id = u.id
     WHERE p.status = 'published'
       AND p.visibility = 'public'
-    ORDER BY engagement_score DESC, p.view_count DESC, p.created_at DESC
+    ORDER BY p.heat_score DESC NULLS LAST, p.view_count DESC, p.created_at DESC
     LIMIT ${limit} OFFSET ${offset}
   `;
   return extractMany<Pitch>(result);

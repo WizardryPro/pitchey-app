@@ -73,9 +73,9 @@ Available slash commands: `/deploy`, `/test`, `/migrate`
 - **Project Close + NDA Retention**: Close collaborations without revoking NDAs (`closed_at`, `closed_by` on collaborations)
 - **Collaboration Timeline**: 7-milestone progress timeline derived from existing tables (NDA, views, messages, collaboration status)
 - **Slate System**: Curated pitch collections — CRUD + add/remove/reorder pitches, public view, drag-and-drop editor. 10 API routes, 2 creator pages, nav wired.
+- **Heat Score Algorithm**: Bayesian + role-weighted scoring — PG function `recalculate_heat_scores()`, `heat_role_weights` config table, 3 API routes (`/pitches/hot`, `/pitches/:id/heat`, admin recalc). Marketplace "Hottest" sort + heat badges (Hot/Trending). Trending endpoint now sorts by heat_score.
 
 ### TODO
-- **Heat Score Algorithm**: Bayesian + role-weighted rating system — not started
 - **Consumption Gating**: Proof-of-watch/read before rating — not started
 - **Heat Visualisation**: Browse + detail page heat badges — not started
 - **Structured Feedback/Comments**: Hook/Pros, Viability/Cons, Suggestion sections — not started
