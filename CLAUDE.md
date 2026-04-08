@@ -74,19 +74,19 @@ Available slash commands: `/deploy`, `/test`, `/migrate`
 - **Collaboration Timeline**: 7-milestone progress timeline derived from existing tables (NDA, views, messages, collaboration status)
 - **Slate System**: Curated pitch collections — CRUD + add/remove/reorder pitches, public view, drag-and-drop editor. 10 API routes, 2 creator pages, nav wired.
 - **Heat Score Algorithm**: Bayesian + role-weighted scoring — PG function `recalculate_heat_scores()`, `heat_role_weights` config table, 3 API routes (`/pitches/hot`, `/pitches/:id/heat`, admin recalc). Marketplace "Hottest" sort + heat badges (Hot/Trending). Trending endpoint now sorts by heat_score.
+- **Structured Feedback**: 5 API routes (submit/update/delete/public/mine), structured form with star rating + strengths/weaknesses/suggestions lists + anonymous option. Integrated into PitchDetail (all viewers) and CreatorPitchView feedback tab. Uses existing `pitch_feedback` table. Watchers excluded, self-review blocked.
 
 ### TODO
 - **Consumption Gating**: Proof-of-watch/read before rating — not started
 - **Heat Visualisation**: Browse + detail page heat badges — not started
-- **Structured Feedback/Comments**: Hook/Pros, Viability/Cons, Suggestion sections — not started
 - **Trust Badges**: Grey/Silver/Gold verification badges — not started
 - **Stripe Go-Live**: Create products/prices in Stripe Dashboard, set secrets (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`), set `stripePriceId` in `src/config/subscription-plans.ts`
 - **Malware Scanning**: VirusTotal integration deferred — needs `VIRUSTOTAL_API_KEY` (free tier: 4 req/min)
 - **Full Crew Features**: Availability calendars, rate cards — deferred post-launch
 
 ### Current Numbers
-- 630+ API routes, 135+ pages, 170+ components, 28 services, 3 stores
-- 114+ backend service files, 68 handlers, 80 migrations
+- 635+ API routes, 135+ pages, 173+ components, 29 services, 3 stores
+- 114+ backend service files, 69 handlers, 80 migrations
 - 4 portals (Creator, Investor, Production, Watcher) + Admin shell
 - 13 CI/CD workflows, 7 R2 buckets, 5 KV namespaces, 2 Durable Objects
 
