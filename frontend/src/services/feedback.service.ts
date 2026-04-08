@@ -45,7 +45,22 @@ export interface FeedbackResponse {
   feedback: FeedbackEntry[];
 }
 
+export interface ConsumptionStatus {
+  eligible: boolean;
+  viewDuration: number;
+  threshold: number;
+}
+
 export class FeedbackService {
+  static async getConsumptionStatus(pitchId: number): Promise<ConsumptionStatus> {
+    try {
+      const res = await apiClient.get<{ data: ConsumptionStatus }>(`/api/pitches/${pitchId}/consumption-status`);
+      return res.data?.data ?? { eligible: false, viewDuration: 0, threshold: 30 };
+    } catch {
+      return { eligible: false, viewDuration: 0, threshold: 30 };
+    }
+  }
+
   static async getFeedback(pitchId: number): Promise<FeedbackResponse> {
     try {
       const res = await apiClient.get<{ data: FeedbackResponse }>(`/api/pitches/${pitchId}/feedback`);

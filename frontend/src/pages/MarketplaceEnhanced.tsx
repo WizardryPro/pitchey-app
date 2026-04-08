@@ -13,6 +13,7 @@ import { useResponsive } from '@/shared/hooks/useResponsive';
 import { configService } from '../services/config.service';
 
 import FormatDisplay from '../components/FormatDisplay';
+import HeatBadge, { getHeatScore, getHeatLevel } from '../components/HeatBadge';
 import GenrePlaceholder from '@shared/components/GenrePlaceholder';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -76,13 +77,7 @@ function getTrendingScore(pitch: Pitch): number {
   return (pitch.viewCount || 0) * 0.7 + (pitch.likeCount || 0) * 0.3;
 }
 
-function getHeatLevel(pitch: Pitch): 'fire' | 'warm' | null {
-  const pp = pitch as unknown as Record<string, unknown>;
-  const score = Number(pp.heat_score) || Number(pp.heatScore) || pitch.heatScore || 0;
-  if (score >= 10) return 'fire';
-  if (score >= 3) return 'warm';
-  return null;
-}
+// getHeatLevel and getHeatScore imported from HeatBadge component
 
 function getPitchBudgetDisplay(pitch: Pitch): string {
   const pp = pitch as unknown as Record<string, unknown>;
@@ -709,17 +704,8 @@ export default function MarketplaceEnhanced() {
                 Featured
               </span>
             )}
-            {!((pitch as unknown as Record<string, unknown>).isFeatured) && getHeatLevel(pitch) === 'fire' && (
-              <span className="bg-orange-500/90 backdrop-blur-sm text-white px-2.5 py-0.5 text-xs rounded-full font-medium flex items-center gap-1">
-                <Zap className="w-3 h-3" />
-                Hot
-              </span>
-            )}
-            {!((pitch as unknown as Record<string, unknown>).isFeatured) && getHeatLevel(pitch) === 'warm' && (
-              <span className="bg-brand-trending/90 backdrop-blur-sm text-white px-2.5 py-0.5 text-xs rounded-full font-medium flex items-center gap-1">
-                <TrendingUp className="w-3 h-3" />
-                Trending
-              </span>
+            {!((pitch as unknown as Record<string, unknown>).isFeatured) && (
+              <HeatBadge score={getHeatScore(pitch as unknown as Record<string, unknown>)} />
             )}
             {isNewPitch(pitch) && (
               <span className="bg-brand-new/90 backdrop-blur-sm text-white px-2.5 py-0.5 text-xs rounded-full font-medium flex items-center gap-1">

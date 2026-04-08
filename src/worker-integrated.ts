@@ -2247,6 +2247,11 @@ class RouteRegistry {
       const { pitchHeatBreakdownHandler } = await import('./handlers/heat-score');
       return pitchHeatBreakdownHandler(req, this.env);
     });
+    // Consumption gating
+    this.register('GET', '/api/pitches/:id/consumption-status', async (req) => {
+      const { getConsumptionStatus } = await import('./handlers/pitch-feedback');
+      return getConsumptionStatus(req, this.env);
+    });
     // Structured Feedback — /mine must register before /feedback
     this.register('GET', '/api/pitches/:id/feedback/mine', async (req) => {
       const { getMyFeedback } = await import('./handlers/pitch-feedback');

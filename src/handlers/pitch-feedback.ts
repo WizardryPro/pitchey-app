@@ -122,6 +122,19 @@ export async function submitPitchFeedback(request: Request, env: Env): Promise<R
       return errorResponse('Cannot review your own pitch', origin, 403);
     }
 
+    // Consumption gating — require minimum 30 seconds of view time
+    const CONSUMPTION_THRESHOLD = 30;
+    const [viewData] = await sql`
+      SELECT COALESCE(SUM(view_duration), 0)::int as total_duration
+      FROM pitch_views WHERE pitch_id = ${pitchId} AND user_id = ${Number(userId)}
+    `.catch(() => [{ total_duration: 0 }]);
+    if ((viewData?.total_duration || 0) < CONSUMPTION_THRESHOLD) {
+      return errorResponse(
+        `Please spend at least ${CONSUMPTION_THRESHOLD} seconds reviewing this pitch before leaving feedback`,
+        origin, 403
+      );
+    }
+
     const body: FeedbackBody = await request.json();
     const validationError = validateFeedback(body);
     if (validationError) return errorResponse(validationError, origin);
@@ -324,5 +337,38 @@ export async function getMyFeedback(request: Request, env: Env): Promise<Respons
     const e = err instanceof Error ? err : new Error(String(err));
     console.error('getMyFeedback error:', e.message);
     return jsonResponse({ success: true, data: null }, origin);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// GET /api/pitches/:id/consumption-status
+// ---------------------------------------------------------------------------
+export async function getConsumptionStatus(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin');
+  const userId = await getUserId(request, env);
+  if (!userId) return errorResponse('Unauthorized', origin, 401);
+
+  const pitchId = extractPitchId(request);
+  if (!pitchId) return errorResponse('Invalid pitch ID', origin);
+
+  const sql = getDb(env);
+  if (!sql) return jsonResponse({ success: true, data: { eligible: false, viewDuration: 0, threshold: 30 } }, origin);
+
+  try {
+    const THRESHOLD = 30;
+    const [viewData] = await sql`
+      SELECT COALESCE(SUM(view_duration), 0)::int as total_duration
+      FROM pitch_views WHERE pitch_id = ${pitchId} AND user_id = ${Number(userId)}
+    `.catch(() => [{ total_duration: 0 }]);
+
+    const duration = viewData?.total_duration || 0;
+    return jsonResponse({
+      success: true,
+      data: { eligible: duration >= THRESHOLD, viewDuration: duration, threshold: THRESHOLD }
+    }, origin);
+  } catch (err) {
+    const e = err instanceof Error ? err : new Error(String(err));
+    console.error('getConsumptionStatus error:', e.message);
+    return jsonResponse({ success: true, data: { eligible: false, viewDuration: 0, threshold: 30 } }, origin);
   }
 }

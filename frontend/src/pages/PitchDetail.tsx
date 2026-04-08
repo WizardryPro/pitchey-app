@@ -13,6 +13,7 @@ import FollowButton from '@features/browse/components/FollowButton';
 import SocialProofBadge from '@shared/components/SocialProofBadge';
 import { formatCurrency } from '@shared/utils/formatters';
 import FeedbackSection from '../components/feedback/FeedbackSection';
+import HeatBadge, { getHeatScore } from '../components/HeatBadge';
 
 export default function PitchDetail() {
   const navigate = useNavigate();
@@ -462,7 +463,10 @@ export default function PitchDetail() {
             <div className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex items-start justify-between mb-6">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-2">{pitch.title}</h2>
+                  <div className="flex items-center gap-2 mb-2">
+                    <h2 className="text-xl font-bold text-gray-900">{pitch.title}</h2>
+                    <HeatBadge score={getHeatScore(pitch as unknown as Record<string, unknown>)} variant="inline" />
+                  </div>
                   <div className="flex items-center gap-4 text-sm text-gray-600">
                     <div className="flex items-center gap-1">
                       <Tag className="w-4 h-4" />

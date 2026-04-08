@@ -9,6 +9,7 @@ import { useToast } from '@shared/components/feedback/ToastProvider';
 import Pagination from '../components/Pagination';
 import { configService } from '../services/config.service';
 import FormatDisplay from '../components/FormatDisplay';
+import HeatBadge, { getHeatScore } from '../components/HeatBadge';
 import { getApiUrl } from '../config';
 import { 
   Eye, 
@@ -677,6 +678,7 @@ export default function BrowseTopRated() {
                       <h3 className="font-semibold text-gray-900 line-clamp-1 group-hover:text-purple-600 transition-colors flex-1">
                         {pitch.title}
                       </h3>
+                      <HeatBadge score={getHeatScore(pitch as unknown as Record<string, unknown>)} variant="inline" />
                     </div>
                     
                     {/* Rating Stars */}
