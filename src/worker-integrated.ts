@@ -89,14 +89,19 @@ import {
 
 // Import real pitch interaction handlers
 import {
-  pitchLikeStatusHandler,
-  pitchLikeHandler as realPitchLikeHandler,
-  pitchUnlikeHandler as realPitchUnlikeHandler,
   pitchSaveHandler as realPitchSaveHandler,
   pitchUnsaveHandler as realPitchUnsaveHandler,
   pitchPublishHandler,
   pitchArchiveHandler
 } from './handlers/pitch-interactions';
+
+// Import rating + comment handlers
+import {
+  submitAnonymousRating,
+  getRatingStatus,
+  submitPitchComment,
+  getPitchComments,
+} from './handlers/pitch-feedback';
 
 import {
   productionTalentSearchHandler,
@@ -2241,7 +2246,10 @@ class RouteRegistry {
       const { hotPitchesHandler } = await import('./handlers/heat-score');
       return hotPitchesHandler(req, this.env);
     });
-    this.register('GET', '/api/pitches/:id/like-status', (req) => pitchLikeStatusHandler(req, this.env));
+    this.register('GET', '/api/pitches/:id/rating-status', (req) => getRatingStatus(req, this.env));
+    this.register('POST', '/api/pitches/:id/rate', (req) => submitAnonymousRating(req, this.env));
+    this.register('GET', '/api/pitches/:id/comments', (req) => getPitchComments(req, this.env));
+    this.register('POST', '/api/pitches/:id/comments', (req) => submitPitchComment(req, this.env));
     this.register('GET', '/api/pitches/:id/engagement', (req) => getPitchEngagementHandler(req, this.env));
     this.register('GET', '/api/pitches/:id/heat', async (req) => {
       const { pitchHeatBreakdownHandler } = await import('./handlers/heat-score');
@@ -2544,8 +2552,7 @@ class RouteRegistry {
     this.register('GET', '/api/creator/activities', (req) => creatorActivitiesHandler(req, this.env));
 
     // Pitch Like/Save endpoints (real DB handlers)
-    this.register('POST', '/api/creator/pitches/:id/like', (req) => realPitchLikeHandler(req, this.env));
-    this.register('DELETE', '/api/creator/pitches/:id/like', (req) => realPitchUnlikeHandler(req, this.env));
+    // Like routes removed — replaced by /api/pitches/:id/rate (Pitchey Score)
     this.register('POST', '/api/pitches/:id/save', (req) => realPitchSaveHandler(req, this.env));
     this.register('DELETE', '/api/pitches/:id/save', (req) => realPitchUnsaveHandler(req, this.env));
 
@@ -7409,11 +7416,10 @@ pitchey_analytics_datapoints_per_minute 1250
           const result = await this.db.query(`
             INSERT INTO nda_requests (
               requester_id, pitch_id, owner_id, status, nda_type,
-              request_message, expires_at, created_at, responded_at
+              request_message, created_at, responded_at
             ) VALUES (
               $1, $2, $3, 'approved', 'basic',
-              $4, NOW() + INTERVAL '${data.expiryDays ?? 30} days',
-              NOW(), NOW()
+              $4, NOW(), NOW()
             ) RETURNING *
           `, [authResult.user.id, this.safeParseInt(data.pitchId), creatorId as number, this.safeString(data.message) || 'NDA Request']);
           nda = result[0] as unknown as NDARecord;
@@ -7422,10 +7428,9 @@ pitchey_analytics_datapoints_per_minute 1250
           await this.db.query(`
             INSERT INTO ndas (
               signer_id, pitch_id, status, nda_type,
-              access_granted, expires_at, created_at, updated_at, signed_at
+              access_granted, created_at, updated_at, signed_at
             ) VALUES (
               $1, $2, 'signed', 'basic', true,
-              NOW() + INTERVAL '${data.expiryDays || 30} days',
               NOW(), NOW(), NOW()
             ) ON CONFLICT (pitch_id, signer_id) DO UPDATE SET
               status = 'signed',
@@ -7437,11 +7442,10 @@ pitchey_analytics_datapoints_per_minute 1250
           const result2 = await this.db.query(`
             INSERT INTO nda_requests (
               requester_id, pitch_id, owner_id, status, nda_type,
-              request_message, expires_at, created_at
+              request_message, created_at
             ) VALUES (
               $1, $2, $3, 'pending', 'basic',
-              $4, NOW() + INTERVAL '${data.expiryDays || 30} days',
-              NOW()
+              $4, NOW()
             ) RETURNING *
           `, [authResult.user.id, this.safeParseInt(data.pitchId), creatorId as number, this.safeString(data.message) || 'NDA Request']);
           nda = result2[0] as unknown as NDARecord;
@@ -7572,10 +7576,7 @@ pitchey_analytics_datapoints_per_minute 1250
         queryParams.push(customTerms);
         setClauses.push(`custom_terms = $${queryParams.length}`);
       }
-      if (expiryDays && expiryDays > 0) {
-        queryParams.push(expiryDays);
-        setClauses.push(`expires_at = NOW() + INTERVAL '1 day' * $${queryParams.length}`);
-      }
+      // NDAs don't expire — ignore expiryDays
 
       // Update the NDA in ndas table, checking ownership via pitches table
       // The ndas table stores pending NDA requests with signer_id = requester

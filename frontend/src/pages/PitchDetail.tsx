@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Share2, Eye, Calendar, User, Clock, Tag, Film, Heart, LogIn, FileText, Lock, Shield, Briefcase, DollarSign, WifiOff, RefreshCw, Bookmark } from 'lucide-react';
+import { ArrowLeft, Share2, Eye, Calendar, User, Clock, Tag, Film, LogIn, FileText, Lock, Shield, Briefcase, DollarSign, WifiOff, RefreshCw, Bookmark } from 'lucide-react';
+import PitcheyRating from '../components/PitcheyRating';
 import { pitchService } from '@features/pitches/services/pitch.service';
 import { createDownloadClickHandler } from '../utils/fileDownloads';
 import type { Pitch } from '@features/pitches/services/pitch.service';
@@ -15,6 +16,7 @@ import { formatCurrency } from '@shared/utils/formatters';
 import FeedbackSection from '../components/feedback/FeedbackSection';
 import HeatBadge, { getHeatScore } from '../components/HeatBadge';
 import VerificationBadge from '../components/VerificationBadge';
+import HumanMadeBadge from '../components/HumanMadeBadge';
 
 export default function PitchDetail() {
   const navigate = useNavigate();
@@ -23,8 +25,6 @@ export default function PitchDetail() {
   const [pitch, setPitch] = useState<Pitch | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isLiked, setIsLiked] = useState(false);
-  const [isLiking, setIsLiking] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [showEnhancedNDARequest, setShowEnhancedNDARequest] = useState(false);
   const [hasSignedNDA, setHasSignedNDA] = useState(false);
@@ -130,7 +130,6 @@ export default function PitchDetail() {
       setPitch(pitch);
       const ndaStatus = pitch.hasSignedNDA || pitch.hasNDA || hasProtectedFields;
       setHasSignedNDA(ndaStatus);
-      setIsLiked(pitch.isLiked || false);
       
       // Track view for analytics (only if not the owner)
       if (!pitch.isOwner) {
@@ -155,37 +154,6 @@ export default function PitchDetail() {
       }
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleLike = async () => {
-    if (!pitch || isLiking || !isAuthenticated) return;
-    
-    setIsLiking(true);
-    const originalLiked = isLiked;
-    const originalCount = pitch.likeCount;
-    
-    try {
-      // Toggle like state optimistically
-      if (isLiked) {
-        setPitch(prev => prev ? { ...prev, likeCount: prev.likeCount - 1 } : null);
-        setIsLiked(false);
-        await pitchService.unlikePitch(pitch.id);
-      } else {
-        setPitch(prev => prev ? { ...prev, likeCount: prev.likeCount + 1 } : null);
-        setIsLiked(true);
-        await pitchService.likePitch(pitch.id);
-      }
-    } catch (error) {
-      console.error('Error toggling like:', error);
-      // Revert on error
-      setIsLiked(originalLiked);
-      setPitch(prev => prev ? { 
-        ...prev, 
-        likeCount: originalCount 
-      } : null);
-    } finally {
-      setIsLiking(false);
     }
   };
 
@@ -363,20 +331,27 @@ export default function PitchDetail() {
 
               {/* Creator & Meta Info */}
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600">
-                <div className="flex items-center gap-1.5">
-                  <User className="w-4 h-4 text-gray-400" />
-                  <span>By</span>
-                  <span
-                    className="hover:text-purple-600 cursor-pointer font-medium text-gray-900"
-                    onClick={() => navigate(`/creator/${pitch.creator?.id}`)}
-                  >
-                    {pitch.creator?.name || pitch.creator?.username || 'Unknown Creator'}
-                  </span>
-                  <VerificationBadge tier={(pitch as any).creator_verification_tier || (pitch.creator as any)?.verificationTier} />
-                  {isAuthenticated && !isOwner && pitch.creator?.id && (
-                    <FollowButton creatorId={pitch.creator.id} variant="small" />
-                  )}
-                </div>
+                {(hasSignedNDA || isOwner) ? (
+                  <div className="flex items-center gap-1.5">
+                    <User className="w-4 h-4 text-gray-400" />
+                    <span>By</span>
+                    <span
+                      className="hover:text-purple-600 cursor-pointer font-medium text-gray-900"
+                      onClick={() => navigate(`/creator/${pitch.creator?.id}`)}
+                    >
+                      {pitch.creator?.name || pitch.creator?.username || 'Unknown Creator'}
+                    </span>
+                    <VerificationBadge tier={(pitch as any).creator_verification_tier || (pitch.creator as any)?.verificationTier} />
+                    {isAuthenticated && !isOwner && pitch.creator?.id && (
+                      <FollowButton creatorId={pitch.creator.id} variant="small" />
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <Lock className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-500 italic">Creator info hidden — NDA required</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-1.5">
                   <Tag className="w-4 h-4 text-gray-400" />
                   <span className="text-gray-700">{pitch.genre}</span>
@@ -420,18 +395,6 @@ export default function PitchDetail() {
                       NDA Signed
                     </span>
                   )}
-                  <button
-                    onClick={handleLike}
-                    disabled={isLiking}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition font-medium ${
-                      isLiked
-                        ? 'bg-red-100 text-red-600 hover:bg-red-200'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    } ${isLiking ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
-                    {isLiked ? 'Liked' : 'Like'}
-                  </button>
                   <button className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium">
                     <Share2 className="w-4 h-4" />
                     Share
@@ -474,9 +437,10 @@ export default function PitchDetail() {
                       <Tag className="w-4 h-4" />
                       {pitch.genre}
                     </div>
+                    <HumanMadeBadge aiUsed={(pitch as any).aiUsed ?? (pitch as any).ai_used} />
                     <div className="flex items-center gap-1">
                       <Film className="w-4 h-4" />
-                      <FormatDisplay 
+                      <FormatDisplay
                         formatCategory={pitch.formatCategory}
                         formatSubtype={pitch.formatSubtype}
                         format={pitch.format}
@@ -798,63 +762,68 @@ export default function PitchDetail() {
               </div>
             )}
 
-            {/* Structured Feedback */}
-            <FeedbackSection
-              pitchId={pitch.id}
-              isOwner={isOwner}
-              isAuthenticated={isAuthenticated}
-              userType={(user as any)?.userType || (user as any)?.user_type || ''}
-            />
+            {/* Structured Feedback — hidden until NDA signed */}
+            {(hasSignedNDA || isOwner) && (
+              <FeedbackSection
+                pitchId={pitch.id}
+                isOwner={isOwner}
+                isAuthenticated={isAuthenticated}
+                userType={(user as any)?.userType || (user as any)?.user_type || ''}
+              />
+            )}
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Engagement & Social Proof */}
-            <SocialProofBadge
-              pitchId={pitch.id}
-              viewCount={pitch.viewCount || 0}
-              likeCount={pitch.likeCount || 0}
-              isOwner={isOwner}
-              isAuthenticated={isAuthenticated}
-            />
+            {/* Engagement & Social Proof — hidden until NDA signed */}
+            {(hasSignedNDA || isOwner) ? (
+              <SocialProofBadge
+                pitchId={pitch.id}
+                viewCount={pitch.viewCount || 0}
+                likeCount={pitch.likeCount || 0}
+                isOwner={isOwner}
+                isAuthenticated={isAuthenticated}
+              />
+            ) : (
+              <div className="bg-white rounded-xl shadow-sm p-4">
+                <div className="flex items-center gap-2 text-gray-500 text-sm">
+                  <Lock className="w-4 h-4" />
+                  <span>Engagement data available after NDA</span>
+                </div>
+              </div>
+            )}
+
+            {/* Pitchey Score */}
+            {((pitch as any).pitchey_score_avg > 0 || (pitch as any).viewer_score_avg > 0) && (
+              <div className="bg-white rounded-xl shadow-sm p-4 space-y-2">
+                {(pitch as any).pitchey_score_avg > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600 font-medium">Pitchey Score</span>
+                    <PitcheyRating mode="compact" value={(pitch as any).pitchey_score_avg} />
+                  </div>
+                )}
+                {(pitch as any).viewer_score_avg > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600 font-medium">Viewer Score</span>
+                    <PitcheyRating mode="compact" value={(pitch as any).viewer_score_avg} />
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Engagement Actions */}
             <div className="bg-white rounded-xl shadow-sm p-4 flex flex-col gap-2">
-              {isAuthenticated ? (
-                <>
-                  <button
-                    onClick={handleLike}
-                    disabled={isLiking}
-                    className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition ${
-                      isLiked
-                        ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                    } ${isLiking ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
-                    {isLiked ? 'Liked' : 'Like'}
-                  </button>
-                  {!isOwner && (
-                    <button
-                      onClick={handleSave}
-                      className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition ${
-                        isSaved
-                          ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                          : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                      }`}
-                    >
-                      <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-current' : ''}`} />
-                      {isSaved ? 'Saved' : 'Save'}
-                    </button>
-                  )}
-                </>
-              ) : (
+              {isAuthenticated && !isOwner && (
                 <button
-                  onClick={() => navigate('/portals')}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium bg-gray-50 text-gray-400 hover:text-purple-500 transition"
+                  onClick={handleSave}
+                  className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition ${
+                    isSaved
+                      ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                  }`}
                 >
-                  <Heart className="w-5 h-5" />
-                  Sign in to like
+                  <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-current' : ''}`} />
+                  {isSaved ? 'Saved' : 'Save'}
                 </button>
               )}
             </div>
@@ -867,7 +836,11 @@ export default function PitchDetail() {
                   <User className="w-4 h-4 text-gray-400" />
                   <div>
                     <div className="font-medium">Creator</div>
-                    <div className="text-gray-500">{pitch.creator?.name || pitch.creator?.username || 'Unknown'}</div>
+                    <div className="text-gray-500">
+                      {(hasSignedNDA || isOwner)
+                        ? (pitch.creator?.name || pitch.creator?.username || 'Unknown')
+                        : 'Hidden — NDA required'}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 text-sm">

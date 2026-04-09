@@ -30,18 +30,62 @@ function extractPitchId(request: Request): number {
 function mapUserType(userType: string): string {
   if (userType === 'investor') return 'investor';
   if (userType === 'production') return 'production';
+  if (userType === 'watcher') return 'watcher';
   return 'peer';
 }
 
-/** Recalculate rating_average and rating_count on pitches from pitch_feedback */
+/** Role weight for rating — matches heat_role_weights table */
+function getRoleWeight(reviewerType: string): number {
+  switch (reviewerType) {
+    case 'production': return 4.0;
+    case 'investor': return 3.0;
+    case 'watcher': return 0.5;
+    case 'peer': return 1.0;
+    default: return 1.0;
+  }
+}
+
+/** Recalculate dual scores: pitchey_score_avg (industry) + viewer_score_avg (audience) + combined rating_average */
 async function updateRatingStats(sql: ReturnType<typeof getDb>, pitchId: number): Promise<void> {
   if (!sql) return;
   await sql`
     UPDATE pitches SET
+      -- Combined weighted average (all sources)
       rating_average = COALESCE(
-        (SELECT AVG(rating)::decimal(3,2) FROM pitch_feedback WHERE pitch_id = ${pitchId} AND rating IS NOT NULL), 0
+        (SELECT (SUM(rating * reviewer_weight) / NULLIF(SUM(reviewer_weight), 0))::decimal(4,2)
+         FROM (
+           SELECT rating, reviewer_weight FROM pitch_feedback
+           WHERE pitch_id = ${pitchId} AND rating IS NOT NULL
+           UNION ALL
+           SELECT rating, reviewer_weight FROM pitch_ratings_anonymous
+           WHERE pitch_id = ${pitchId}
+         ) combined
+        ), 0
       ),
-      rating_count = (SELECT COUNT(*)::int FROM pitch_feedback WHERE pitch_id = ${pitchId} AND rating IS NOT NULL)
+      rating_count = (
+        (SELECT COUNT(*)::int FROM pitch_feedback WHERE pitch_id = ${pitchId} AND rating IS NOT NULL) +
+        (SELECT COUNT(*)::int FROM pitch_ratings_anonymous WHERE pitch_id = ${pitchId})
+      ),
+      -- Pitchey Score: industry only (creator/investor/production)
+      pitchey_score_avg = COALESCE(
+        (SELECT (SUM(rating * reviewer_weight) / NULLIF(SUM(reviewer_weight), 0))::decimal(4,2)
+         FROM pitch_feedback
+         WHERE pitch_id = ${pitchId} AND rating IS NOT NULL
+           AND reviewer_type IN ('investor', 'production', 'peer')
+        ), 0
+      ),
+      -- Viewer Score: audience only (watcher + anonymous)
+      viewer_score_avg = COALESCE(
+        (SELECT (SUM(rating * reviewer_weight) / NULLIF(SUM(reviewer_weight), 0))::decimal(4,2)
+         FROM (
+           SELECT rating, reviewer_weight FROM pitch_feedback
+           WHERE pitch_id = ${pitchId} AND rating IS NOT NULL AND reviewer_type = 'watcher'
+           UNION ALL
+           SELECT rating, reviewer_weight FROM pitch_ratings_anonymous
+           WHERE pitch_id = ${pitchId}
+         ) viewer_combined
+        ), 0
+      )
     WHERE id = ${pitchId}
   `.catch(() => {});
 }
@@ -70,8 +114,8 @@ function validateFeedback(body: FeedbackBody): string | null {
     return 'At least one feedback field must be provided';
   }
 
-  if (hasRating && (rating! < 1 || rating! > 5 || !Number.isInteger(rating))) {
-    return 'Rating must be an integer between 1 and 5';
+  if (hasRating && (rating! < 1 || rating! > 10 || !Number.isInteger(rating))) {
+    return 'Rating must be an integer between 1 and 10';
   }
 
   for (const [name, arr] of [['strengths', strengths], ['weaknesses', weaknesses], ['suggestions', suggestions]] as const) {
@@ -102,9 +146,6 @@ export async function submitPitchFeedback(request: Request, env: Env): Promise<R
   }
 
   const { id: userId, userType } = authResult.user;
-  if (userType === 'watcher') {
-    return errorResponse('Watchers cannot leave feedback', origin, 403);
-  }
 
   const pitchId = extractPitchId(request);
   if (!pitchId) return errorResponse('Invalid pitch ID', origin);
@@ -113,6 +154,19 @@ export async function submitPitchFeedback(request: Request, env: Env): Promise<R
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
   try {
+    const body: FeedbackBody = await request.json();
+
+    // Watchers can only submit a rating — no structured feedback
+    const hasStructuredFields = (
+      (Array.isArray(body.strengths) && body.strengths.some(s => s.trim())) ||
+      (Array.isArray(body.weaknesses) && body.weaknesses.some(s => s.trim())) ||
+      (Array.isArray(body.suggestions) && body.suggestions.some(s => s.trim())) ||
+      (typeof body.overall_feedback === 'string' && body.overall_feedback.trim().length > 0)
+    );
+    if (userType === 'watcher' && hasStructuredFields) {
+      return errorResponse('Watchers can only submit a rating, not structured feedback', origin, 403);
+    }
+
     // Verify pitch exists, is published, and user is not the owner
     const [pitch] = await sql`
       SELECT id, user_id FROM pitches WHERE id = ${pitchId} AND status = 'published'
@@ -122,24 +176,26 @@ export async function submitPitchFeedback(request: Request, env: Env): Promise<R
       return errorResponse('Cannot review your own pitch', origin, 403);
     }
 
-    // Consumption gating — require minimum 30 seconds of view time
-    const CONSUMPTION_THRESHOLD = 30;
-    const [viewData] = await sql`
-      SELECT COALESCE(SUM(view_duration), 0)::int as total_duration
-      FROM pitch_views WHERE pitch_id = ${pitchId} AND user_id = ${Number(userId)}
-    `.catch(() => [{ total_duration: 0 }]);
-    if ((viewData?.total_duration || 0) < CONSUMPTION_THRESHOLD) {
-      return errorResponse(
-        `Please spend at least ${CONSUMPTION_THRESHOLD} seconds reviewing this pitch before leaving feedback`,
-        origin, 403
-      );
+    // Consumption gating — require minimum 30 seconds of view time (skip for rating-only watchers)
+    if (userType !== 'watcher') {
+      const CONSUMPTION_THRESHOLD = 30;
+      const [viewData] = await sql`
+        SELECT COALESCE(SUM(view_duration), 0)::int as total_duration
+        FROM pitch_views WHERE pitch_id = ${pitchId} AND user_id = ${Number(userId)}
+      `.catch(() => [{ total_duration: 0 }]);
+      if ((viewData?.total_duration || 0) < CONSUMPTION_THRESHOLD) {
+        return errorResponse(
+          `Please spend at least ${CONSUMPTION_THRESHOLD} seconds reviewing this pitch before leaving feedback`,
+          origin, 403
+        );
+      }
     }
 
-    const body: FeedbackBody = await request.json();
     const validationError = validateFeedback(body);
     if (validationError) return errorResponse(validationError, origin);
 
     const reviewerType = mapUserType(userType);
+    const reviewerWeight = getRoleWeight(reviewerType);
     const strengths = Array.isArray(body.strengths) ? body.strengths.filter(s => s.trim()) : [];
     const weaknesses = Array.isArray(body.weaknesses) ? body.weaknesses.filter(s => s.trim()) : [];
     const suggestions = Array.isArray(body.suggestions) ? body.suggestions.filter(s => s.trim()) : [];
@@ -149,8 +205,8 @@ export async function submitPitchFeedback(request: Request, env: Env): Promise<R
     const isAnonymous = body.is_anonymous ?? false;
 
     const result = await sql`
-      INSERT INTO pitch_feedback (pitch_id, reviewer_id, reviewer_type, rating, strengths, weaknesses, suggestions, overall_feedback, is_interested, is_anonymous)
-      VALUES (${pitchId}, ${Number(userId)}, ${reviewerType}, ${rating}, ${strengths}, ${weaknesses}, ${suggestions}, ${overallFeedback}, ${isInterested}, ${isAnonymous})
+      INSERT INTO pitch_feedback (pitch_id, reviewer_id, reviewer_type, rating, strengths, weaknesses, suggestions, overall_feedback, is_interested, is_anonymous, reviewer_weight)
+      VALUES (${pitchId}, ${Number(userId)}, ${reviewerType}, ${rating}, ${strengths}, ${weaknesses}, ${suggestions}, ${overallFeedback}, ${isInterested}, ${isAnonymous}, ${reviewerWeight})
       ON CONFLICT (pitch_id, reviewer_id) DO NOTHING
       RETURNING id, created_at
     `;
@@ -274,19 +330,28 @@ export async function getPitchFeedbackPublic(request: Request, env: Env): Promis
     const [pitch] = await sql`SELECT id FROM pitches WHERE id = ${pitchId} AND status = 'published'`;
     if (!pitch) return errorResponse('Pitch not found or not published', origin, 404);
 
-    // Rating aggregation
+    // Rating aggregation — dual scores + 10-bucket distribution
     const [ratings] = await sql`
       SELECT
-        COALESCE(AVG(rating)::decimal(3,2), 0) as avg_rating,
-        COUNT(*)::int as total_reviews,
-        COUNT(CASE WHEN rating = 5 THEN 1 END)::int as five_star,
-        COUNT(CASE WHEN rating = 4 THEN 1 END)::int as four_star,
-        COUNT(CASE WHEN rating = 3 THEN 1 END)::int as three_star,
-        COUNT(CASE WHEN rating = 2 THEN 1 END)::int as two_star,
-        COUNT(CASE WHEN rating = 1 THEN 1 END)::int as one_star
-      FROM pitch_feedback
-      WHERE pitch_id = ${pitchId} AND rating IS NOT NULL
+        COALESCE(p.pitchey_score_avg, 0) as pitchey_score,
+        COALESCE(p.viewer_score_avg, 0) as viewer_score,
+        COALESCE(p.rating_average, 0) as avg_rating,
+        COALESCE(p.rating_count, 0)::int as total_reviews
+      FROM pitches p WHERE p.id = ${pitchId}
     `;
+    // 10-bucket distribution from both tables
+    const distRows = await sql`
+      SELECT rating, COUNT(*)::int as count FROM (
+        SELECT rating FROM pitch_feedback WHERE pitch_id = ${pitchId} AND rating IS NOT NULL
+        UNION ALL
+        SELECT rating FROM pitch_ratings_anonymous WHERE pitch_id = ${pitchId}
+      ) all_ratings
+      GROUP BY rating ORDER BY rating
+    `;
+    const distribution = Array.from({ length: 10 }, (_, i) => {
+      const row = distRows.find((r: { rating: number }) => Number(r.rating) === i + 1);
+      return row ? Number(row.count) : 0;
+    });
 
     // Individual feedback with anonymization
     const feedback = await sql`
@@ -302,7 +367,7 @@ export async function getPitchFeedbackPublic(request: Request, env: Env): Promis
       ORDER BY pf.created_at DESC
     `;
 
-    return jsonResponse({ success: true, data: { ratings, feedback } }, origin);
+    return jsonResponse({ success: true, data: { ratings: { ...ratings, distribution }, feedback } }, origin);
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
     console.error('getPitchFeedbackPublic error:', e.message);
@@ -370,5 +435,211 @@ export async function getConsumptionStatus(request: Request, env: Env): Promise<
     const e = err instanceof Error ? err : new Error(String(err));
     console.error('getConsumptionStatus error:', e.message);
     return jsonResponse({ success: true, data: { eligible: false, viewDuration: 0, threshold: 30 } }, origin);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/pitches/:id/rate  (public — anonymous rating)
+// ---------------------------------------------------------------------------
+export async function submitAnonymousRating(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin');
+  const pitchId = extractPitchId(request);
+  if (!pitchId) return errorResponse('Invalid pitch ID', origin);
+
+  const sql = getDb(env);
+  if (!sql) return errorResponse('Database unavailable', origin, 503);
+
+  try {
+    const body = await request.json() as { rating?: number };
+    const rating = body.rating;
+    if (!rating || rating < 1 || rating > 10 || !Number.isInteger(rating)) {
+      return errorResponse('Rating must be an integer between 1 and 10', origin);
+    }
+
+    // Verify pitch exists and is published
+    const [pitch] = await sql`SELECT id FROM pitches WHERE id = ${pitchId} AND status = 'published'`;
+    if (!pitch) return errorResponse('Pitch not found or not published', origin, 404);
+
+    // IP-based dedup
+    const ip = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || '0.0.0.0';
+    const encoder = new TextEncoder();
+    const data = encoder.encode(`${ip}:${pitchId}`);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const ipHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+    await sql`
+      INSERT INTO pitch_ratings_anonymous (pitch_id, rating, ip_hash, reviewer_weight)
+      VALUES (${pitchId}, ${rating}, ${ipHash}, 0.25)
+      ON CONFLICT (pitch_id, ip_hash) DO UPDATE SET rating = EXCLUDED.rating
+    `;
+
+    await updateRatingStats(sql, pitchId);
+
+    return jsonResponse({ success: true, data: { rating } }, origin, 201);
+  } catch (err) {
+    const e = err instanceof Error ? err : new Error(String(err));
+    console.error('submitAnonymousRating error:', e.message);
+    return errorResponse('Failed to submit rating', origin, 500);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// GET /api/pitches/:id/rating-status  (returns user's current rating)
+// ---------------------------------------------------------------------------
+export async function getRatingStatus(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin');
+  const pitchId = extractPitchId(request);
+  if (!pitchId) return errorResponse('Invalid pitch ID', origin);
+
+  const userId = await getUserId(request, env);
+  const sql = getDb(env);
+  if (!sql) return jsonResponse({ success: true, data: { rating: null } }, origin);
+
+  try {
+    if (userId) {
+      const [row] = await sql`
+        SELECT rating FROM pitch_feedback WHERE pitch_id = ${pitchId} AND reviewer_id = ${Number(userId)}
+      `;
+      return jsonResponse({ success: true, data: { rating: row?.rating ?? null } }, origin);
+    }
+
+    // Anonymous — check by IP hash
+    const ip = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || '0.0.0.0';
+    const encoder = new TextEncoder();
+    const data = encoder.encode(`${ip}:${pitchId}`);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const ipHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+    const [row] = await sql`
+      SELECT rating FROM pitch_ratings_anonymous WHERE pitch_id = ${pitchId} AND ip_hash = ${ipHash}
+    `;
+    return jsonResponse({ success: true, data: { rating: row?.rating ?? null } }, origin);
+  } catch (err) {
+    const e = err instanceof Error ? err : new Error(String(err));
+    console.error('getRatingStatus error:', e.message);
+    return jsonResponse({ success: true, data: { rating: null } }, origin);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/pitches/:id/comments
+// ---------------------------------------------------------------------------
+export async function submitPitchComment(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin');
+  const pitchId = extractPitchId(request);
+  if (!pitchId) return errorResponse('Invalid pitch ID', origin);
+
+  const sql = getDb(env);
+  if (!sql) return errorResponse('Database unavailable', origin, 503);
+
+  try {
+    const body = await request.json() as { content?: string };
+    const content = body.content?.trim();
+    if (!content || content.length === 0) return errorResponse('Comment content is required', origin);
+    if (content.length > 2000) return errorResponse('Comment must be 2000 characters or less', origin);
+
+    const [pitch] = await sql`SELECT id, user_id FROM pitches WHERE id = ${pitchId} AND status = 'published'`;
+    if (!pitch) return errorResponse('Pitch not found or not published', origin, 404);
+
+    // Check auth (optional — anonymous can comment too)
+    const userId = await getUserId(request, env);
+    let userType: string | null = null;
+
+    if (userId) {
+      const [user] = await sql`SELECT user_type FROM users WHERE id = ${Number(userId)}`;
+      userType = user?.user_type || null;
+    }
+
+    const ip = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || '0.0.0.0';
+    const encoder = new TextEncoder();
+    const data = encoder.encode(`${ip}:comment`);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const ipHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+    const result = await sql`
+      INSERT INTO pitch_comments (pitch_id, user_id, user_type, content, ip_hash)
+      VALUES (${pitchId}, ${userId ? Number(userId) : null}, ${userType}, ${content}, ${ipHash})
+      RETURNING id, created_at
+    `;
+
+    return jsonResponse({ success: true, data: result[0] }, origin, 201);
+  } catch (err) {
+    const e = err instanceof Error ? err : new Error(String(err));
+    console.error('submitPitchComment error:', e.message);
+    return errorResponse('Failed to submit comment', origin, 500);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// GET /api/pitches/:id/comments
+// ---------------------------------------------------------------------------
+export async function getPitchComments(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin');
+  const pitchId = extractPitchId(request);
+  if (!pitchId) return errorResponse('Invalid pitch ID', origin);
+
+  const sql = getDb(env);
+  if (!sql) return jsonResponse({ success: true, data: [] }, origin);
+
+  try {
+    const [pitch] = await sql`SELECT id, user_id FROM pitches WHERE id = ${pitchId} AND status = 'published'`;
+    if (!pitch) return errorResponse('Pitch not found or not published', origin, 404);
+
+    // Check if requester has NDA access (signed NDA or is the pitch owner)
+    const userId = await getUserId(request, env);
+    let hasNda = false;
+    if (userId) {
+      if (String(pitch.user_id) === String(userId)) {
+        hasNda = true;
+      } else {
+        const [nda] = await sql`
+          SELECT 1 FROM pitch_ndas
+          WHERE pitch_id = ${pitchId} AND user_id = ${Number(userId)} AND status = 'signed'
+          LIMIT 1
+        `.catch(() => []);
+        hasNda = !!nda;
+      }
+    }
+
+    const comments = await sql`
+      SELECT
+        pc.id, pc.content, pc.created_at, pc.user_id,
+        pc.user_type,
+        u.name as user_name, u.username
+      FROM pitch_comments pc
+      LEFT JOIN users u ON u.id = pc.user_id
+      WHERE pc.pitch_id = ${pitchId}
+      ORDER BY pc.created_at DESC
+      LIMIT 100
+    `;
+
+    // Anonymize names based on NDA status
+    const anonymized = comments.map((c: Record<string, unknown>) => {
+      if (hasNda && c.user_id) {
+        return {
+          id: c.id,
+          content: c.content,
+          created_at: c.created_at,
+          display_name: c.user_name || c.username || 'User',
+          user_type: c.user_type,
+        };
+      }
+      // No NDA or anonymous — show role-based pseudonym
+      const role = c.user_type || 'viewer';
+      const suffix = c.user_id ? c.user_id : c.id;
+      return {
+        id: c.id,
+        content: c.content,
+        created_at: c.created_at,
+        display_name: `${role}${suffix}`,
+        user_type: c.user_type || 'anonymous',
+      };
+    });
+
+    return jsonResponse({ success: true, data: anonymized }, origin);
+  } catch (err) {
+    const e = err instanceof Error ? err : new Error(String(err));
+    console.error('getPitchComments error:', e.message);
+    return jsonResponse({ success: true, data: [] }, origin);
   }
 }

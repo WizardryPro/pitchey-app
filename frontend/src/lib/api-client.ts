@@ -668,13 +668,7 @@ export const pitchAPI = {
     return apiClient.post<{ viewCount: number }>('/api/views/track', { pitchId });
   },
 
-  async like(pitchId: number): Promise<TypedApiResponse<{ liked: boolean; likeCount: number }>> {
-    return apiClient.post<{ liked: boolean; likeCount: number }>(`/api/creator/pitches/${pitchId}/like`);
-  },
-
-  async unlike(pitchId: number): Promise<TypedApiResponse<{ liked: boolean; likeCount: number }>> {
-    return apiClient.delete<{ liked: boolean; likeCount: number }>(`/api/creator/pitches/${pitchId}/like`);
-  }
+  // like/unlike removed — replaced by Pitchey Score rating
 };
 
 // Info Request API

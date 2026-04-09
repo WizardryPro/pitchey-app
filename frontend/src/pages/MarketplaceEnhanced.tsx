@@ -13,15 +13,16 @@ import { useResponsive } from '@/shared/hooks/useResponsive';
 import { configService } from '../services/config.service';
 
 import FormatDisplay from '../components/FormatDisplay';
+import PitcheyRating from '../components/PitcheyRating';
 import HeatBadge, { getHeatScore, getHeatLevel } from '../components/HeatBadge';
 import VerificationBadge from '../components/VerificationBadge';
+import HumanMadeBadge from '../components/HumanMadeBadge';
 import GenrePlaceholder from '@shared/components/GenrePlaceholder';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
   TrendingUp,
   Eye,
-  Heart,
   Clock,
   User,
   Star,
@@ -75,7 +76,9 @@ function isNewPitch(pitch: Pitch): boolean {
 }
 
 function getTrendingScore(pitch: Pitch): number {
-  return (pitch.viewCount || 0) * 0.7 + (pitch.likeCount || 0) * 0.3;
+  const pp = pitch as unknown as Record<string, unknown>;
+  const rating = Number(pp.rating_average) || Number(pp.ratingAverage) || 0;
+  return (pitch.viewCount || 0) * 0.7 + rating * 0.3;
 }
 
 // getHeatLevel and getHeatScore imported from HeatBadge component
@@ -108,7 +111,7 @@ const SORT_OPTIONS = [
   { value: 'hot', label: 'Hottest', icon: Zap },
   { value: 'trending', label: 'Trending Now', icon: TrendingUp },
   { value: 'newest', label: 'Newest First', icon: Clock },
-  { value: 'popular', label: 'Most Popular', icon: Heart },
+  { value: 'popular', label: 'Most Popular', icon: Star },
   { value: 'views', label: 'Most Viewed', icon: Eye },
   { value: 'budget_high', label: 'Highest Budget', icon: DollarSign },
   { value: 'budget_low', label: 'Lowest Budget', icon: Wallet },
@@ -189,7 +192,6 @@ export default function MarketplaceEnhanced() {
   
   const debouncedSearch = useDebounce(searchQuery, 300);
 
-  const [likedPitchIds, setLikedPitchIds] = useState<Set<number>>(new Set());
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
 
@@ -333,27 +335,6 @@ export default function MarketplaceEnhanced() {
       setSearchResults([]);
     }
   }, [debouncedSearch, filters.searchType, filters.location, filters.genres]);
-
-  const handleLikePitch = async (e: React.MouseEvent, pitchId: number) => {
-    e.stopPropagation();
-    if (!isAuthenticated) return;
-    const isLiked = likedPitchIds.has(pitchId);
-    try {
-      const response = await fetch(`${API_URL}/api/pitches/${pitchId}/like`, {
-        method: isLiked ? 'DELETE' : 'POST',
-        credentials: 'include',
-      });
-      if (response.ok) {
-        setLikedPitchIds(prev => {
-          const next = new Set(prev);
-          if (isLiked) next.delete(pitchId); else next.add(pitchId);
-          return next;
-        });
-      }
-    } catch {
-      // silent fail
-    }
-  };
 
   const calculateStats = (pitchData: Pitch[]) => {
     // Ensure pitchData is an array
@@ -626,18 +607,10 @@ export default function MarketplaceEnhanced() {
                     <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
                     {pitch.viewCount || 0}
                   </span>
-                  <span className="flex items-center gap-1">
-                    <Heart className="w-3 h-3 sm:w-4 sm:h-4" />
-                    {pitch.likeCount || 0}
-                  </span>
-                  {isAuthenticated && (
-                    <button
-                      onClick={(e) => handleLikePitch(e, pitch.id)}
-                      className="flex items-center gap-1"
-                    >
-                      <Heart className={`w-3 h-3 ${likedPitchIds.has(pitch.id) ? 'fill-current text-red-400' : ''}`} />
-                    </button>
-                  )}
+                  {(() => {
+                    const r = Number((pitch as any).rating_average) || Number((pitch as any).ratingAverage) || 0;
+                    return r > 0 ? <PitcheyRating mode="compact" value={r} /> : null;
+                  })()}
                   <span className="hidden sm:flex items-center gap-1">
                     <MessageCircle className="w-4 h-4" />
                     {((pitch as unknown as Record<string, unknown>).commentCount as number | undefined) || 0}
@@ -687,18 +660,10 @@ export default function MarketplaceEnhanced() {
                   <Eye className="w-3 h-3" />
                   {pitch.viewCount || 0}
                 </span>
-                <span className="flex items-center gap-1">
-                  <Heart className="w-3 h-3" />
-                  {pitch.likeCount || 0}
-                </span>
-                {isAuthenticated && (
-                  <button
-                    onClick={(e) => handleLikePitch(e, pitch.id)}
-                    className="flex items-center gap-1"
-                  >
-                    <Heart className={`w-3 h-3 ${likedPitchIds.has(pitch.id) ? 'fill-current text-red-400' : ''}`} />
-                  </button>
-                )}
+                {(() => {
+                  const r = Number((pitch as any).rating_average) || Number((pitch as any).ratingAverage) || 0;
+                  return r > 0 ? <PitcheyRating mode="compact" value={r} /> : null;
+                })()}
               </div>
             </div>
           </div>
@@ -739,12 +704,13 @@ export default function MarketplaceEnhanced() {
           </p>
 
           <div className="flex items-center justify-between mb-1 sm:mb-2">
-            <div className="flex gap-1 sm:gap-2">
+            <div className="flex gap-1 sm:gap-2 items-center">
               {pitch.genre && (
                 <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-100 text-gray-700 text-[10px] sm:text-xs rounded">
                   {pitch.genre}
                 </span>
               )}
+              <HumanMadeBadge aiUsed={(pitch as any).aiUsed ?? (pitch as any).ai_used} />
             </div>
             {getPitchBudgetDisplay(pitch) && (
               <span className="text-xs sm:text-sm font-medium text-green-600 flex items-center gap-0.5">
@@ -758,10 +724,10 @@ export default function MarketplaceEnhanced() {
               <Eye className="w-3 h-3" />
               {pitch.viewCount || 0}
             </span>
-            <span className="flex items-center gap-1">
-              <Heart className="w-3 h-3" />
-              {pitch.likeCount || 0}
-            </span>
+            {(() => {
+              const r = Number((pitch as any).rating_average) || Number((pitch as any).ratingAverage) || 0;
+              return r > 0 ? <PitcheyRating mode="compact" value={r} /> : null;
+            })()}
           </div>
         </div>
       </motion.div>
@@ -945,7 +911,10 @@ export default function MarketplaceEnhanced() {
                       <p className="text-xs text-gray-500 truncate">{getCreatorDisplay(pitch)}</p>
                       <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
                         <span className="flex items-center gap-0.5"><Eye className="w-3 h-3" />{pitch.viewCount || 0}</span>
-                        <span className="flex items-center gap-0.5"><Heart className="w-3 h-3" />{pitch.likeCount || 0}</span>
+                        {(() => {
+                          const r = Number((pitch as any).rating_average) || Number((pitch as any).ratingAverage) || 0;
+                          return r > 0 ? <PitcheyRating mode="compact" value={r} /> : null;
+                        })()}
                         {getPitchBudgetDisplay(pitch) && <span className="text-green-600 font-medium">{getPitchBudgetDisplay(pitch)}</span>}
                       </div>
                     </div>

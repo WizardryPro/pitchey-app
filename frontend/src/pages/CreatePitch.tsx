@@ -88,7 +88,8 @@ export default function CreatePitch() {
     },
     characters: [],
     seekingInvestment: false,
-    budgetRange: undefined
+    budgetRange: undefined,
+    aiUsed: false
   };
   
   // NDA document state
@@ -165,6 +166,12 @@ export default function CreatePitch() {
       'Recorded Theatre',
       'Comedy Specials',
       'Performance Hybrids'
+    ],
+    'AI': [
+      'AI-Generated Film',
+      'AI-Assisted Production',
+      'AI Animation',
+      'AI Interactive Experience'
     ],
     'Other': [
       'Custom Format (please specify)'
@@ -1319,6 +1326,30 @@ export default function CreatePitch() {
               disabled={isSubmitting}
               className="border-t pt-6"
             />
+
+            {/* Human Made Declaration */}
+            <div className="border-t pt-6 mt-6">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.aiUsed === false}
+                  onChange={(e) => setValue('aiUsed' as any, !e.target.checked)}
+                  className="mt-1 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <div>
+                  <span className="font-medium text-gray-900 flex items-center gap-2">
+                    100% Human Made
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      Pitchey Verified
+                    </span>
+                  </span>
+                  <p className="text-xs text-gray-500 mt-1">
+                    I declare this pitch is entirely human-created with no AI-generated content.
+                    If AI-generated content is discovered, Pitchey reserves the right to remove this badge.
+                  </p>
+                </div>
+              </label>
+            </div>
           </div>
 
           {/* Validation Error Summary */}

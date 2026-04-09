@@ -6,7 +6,7 @@ interface EngagementChartProps {
   data?: Array<{
     date: string;
     views: number;
-    likes: number;
+    ratings: number;
     shares: number;
   }>;
   className?: string;
@@ -17,9 +17,9 @@ const chartConfig = {
     label: "Views",
     color: "#2563eb",
   },
-  likes: {
-    label: "Likes", 
-    color: "#dc2626",
+  ratings: {
+    label: "Ratings",
+    color: "#9333ea",
   },
   shares: {
     label: "Shares",
@@ -59,9 +59,9 @@ export const EngagementChart: React.FC<EngagementChartProps> = ({ data = [], cla
           dot={false}
         />
         <Line
-          dataKey="likes"
+          dataKey="ratings"
           type="monotone"
-          stroke="var(--color-likes)"
+          stroke="var(--color-ratings)"
           strokeWidth={2}
           dot={false}
         />

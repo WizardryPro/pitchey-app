@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Film, TrendingUp, Search, Play, Star, Eye, Heart, Calendar, ArrowRight, Sparkles, User, Building2, Wallet, LogOut } from 'lucide-react';
+import { Film, TrendingUp, Search, Play, Star, Eye, Calendar, ArrowRight, Sparkles, User, Building2, Wallet, LogOut } from 'lucide-react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { pitchService } from '@features/pitches/services/pitch.service';
 import { pitchAPI } from '../lib/api';
@@ -21,39 +21,9 @@ export default function Homepage() {
   const [trendingPitches, setTrendingPitches] = useState<Pitch[]>([]);
   const [newReleases, setNewReleases] = useState<Pitch[]>([]);
   const [loading, setLoading] = useState(true);
-  const [likedPitches, setLikedPitches] = useState<Set<number>>(new Set());
+  // likedPitches state removed — replaced by Pitchey Score
 
-  const handleLike = async (e: React.MouseEvent, pitchId: number) => {
-    e.stopPropagation();
-    if (!isAuthenticated) {
-      navigate('/portals');
-      return;
-    }
-    const isLiked = likedPitches.has(pitchId);
-    // Optimistic update
-    setLikedPitches(prev => {
-      const next = new Set(prev);
-      if (isLiked) { next.delete(pitchId); } else { next.add(pitchId); }
-      return next;
-    });
-    const updateCount = (pitches: Pitch[]) =>
-      pitches.map(p => p.id === pitchId ? { ...p, likeCount: p.likeCount + (isLiked ? -1 : 1) } : p);
-    setTrendingPitches(updateCount);
-    setNewReleases(updateCount);
-    try {
-      if (isLiked) { await pitchAPI.unlike(pitchId); } else { await pitchAPI.like(pitchId); }
-    } catch (err) {
-      console.error('Like failed:', err);
-      // Rollback
-      setLikedPitches(prev => {
-        const next = new Set(prev);
-        if (isLiked) { next.add(pitchId); } else { next.delete(pitchId); }
-        return next;
-      });
-      setTrendingPitches(prev => prev.map(p => p.id === pitchId ? { ...p, likeCount: p.likeCount + (isLiked ? 1 : -1) } : p));
-      setNewReleases(prev => prev.map(p => p.id === pitchId ? { ...p, likeCount: p.likeCount + (isLiked ? 1 : -1) } : p));
-    }
-  };
+  // Like handler removed — replaced by Pitchey Score rating system
 
   useEffect(() => {
     // Add delay to prevent rate limiting on initial page load
@@ -399,13 +369,10 @@ export default function Homepage() {
                           <Eye className="w-3 h-3" />
                           {pitch.viewCount}
                         </span>
-                        <button
-                          onClick={(e) => handleLike(e, pitch.id)}
-                          className={`flex items-center gap-1 hover:text-red-500 transition ${likedPitches.has(pitch.id) ? 'text-red-500' : ''}`}
-                        >
-                          <Heart className={`w-3 h-3 ${likedPitches.has(pitch.id) ? 'fill-current' : ''}`} />
-                          {pitch.likeCount}
-                        </button>
+                        <span className="flex items-center gap-1 text-amber-500">
+                          <Star className="w-3 h-3" />
+                          {pitch.ratingAverage ? Number(pitch.ratingAverage).toFixed(1) : '—'}
+                        </span>
                       </div>
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
@@ -482,13 +449,10 @@ export default function Homepage() {
                           <Eye className="w-3 h-3" />
                           {pitch.viewCount}
                         </span>
-                        <button
-                          onClick={(e) => handleLike(e, pitch.id)}
-                          className={`flex items-center gap-1 hover:text-red-500 transition ${likedPitches.has(pitch.id) ? 'text-red-500' : ''}`}
-                        >
-                          <Heart className={`w-3 h-3 ${likedPitches.has(pitch.id) ? 'fill-current' : ''}`} />
-                          {pitch.likeCount}
-                        </button>
+                        <span className="flex items-center gap-1 text-amber-500">
+                          <Star className="w-3 h-3" />
+                          {pitch.ratingAverage ? Number(pitch.ratingAverage).toFixed(1) : '—'}
+                        </span>
                       </div>
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />

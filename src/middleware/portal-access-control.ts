@@ -371,7 +371,7 @@ export class PortalAccessController {
           WHERE n.signer_id = ${user.id}
           AND p.user_id = ${url.searchParams.get('creatorId')}
           AND n.access_granted = true
-          AND n.expires_at > NOW()
+          AND n.access_granted = true
         `;
 
         if (ndaCheck.length === 0) {

@@ -285,38 +285,34 @@ export class SocialService {
     };
   }
 
-  // Like a pitch
-  static async likePitch(pitchId: number): Promise<void> {
-    const response = await apiClient.post<Record<string, unknown>>(
-      `/api/creator/pitches/${pitchId.toString()}/like`,
-      {}
-    );
+  // Submit a rating for a pitch
+  static async submitRating(pitchId: number, rating: number): Promise<void> {
+    const response = await fetch(`/api/pitches/${pitchId}/rate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ rating }),
+    });
 
-    if (response.success !== true) {
-      throw new Error(getErrorMessage(response.error, 'Failed to like pitch'));
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error((data as { message?: string }).message ?? 'Failed to submit rating');
     }
   }
 
-  // Unlike a pitch (uses DELETE method on the like endpoint)
-  static async unlikePitch(pitchId: number): Promise<void> {
-    const response = await apiClient.delete<Record<string, unknown>>(
-      `/api/creator/pitches/${pitchId.toString()}/like`
-    );
-
-    if (response.success !== true) {
-      throw new Error(getErrorMessage(response.error, 'Failed to unlike pitch'));
-    }
-  }
-
-  // Check if liked
-  static async checkLikeStatus(pitchId: number): Promise<boolean> {
+  // Get the current user's rating for a pitch (returns null if not rated)
+  static async getRatingStatus(pitchId: number): Promise<number | null> {
     try {
-      const response = await apiClient.get<{ liked: boolean }>(
-        `/api/pitches/${pitchId.toString()}/like-status`
-      );
-      return response.success === true && response.data?.liked === true;
+      const response = await fetch(`/api/pitches/${pitchId}/rating-status`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) return null;
+
+      const data = await response.json() as { rating?: number | null };
+      return data.rating ?? null;
     } catch {
-      return false;
+      return null;
     }
   }
 

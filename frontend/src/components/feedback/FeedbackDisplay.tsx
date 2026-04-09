@@ -1,20 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Star, ThumbsUp, AlertTriangle, Lightbulb, Briefcase, User, Sparkles } from 'lucide-react';
+import { ThumbsUp, AlertTriangle, Lightbulb, Briefcase, User, Sparkles } from 'lucide-react';
 import { FeedbackService } from '../../services/feedback.service';
 import type { FeedbackEntry, RatingStats } from '../../services/feedback.service';
-
-function StarRating({ rating }: { rating: number }) {
-  return (
-    <div className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((s) => (
-        <Star
-          key={s}
-          className={`w-4 h-4 ${s <= rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-200'}`}
-        />
-      ))}
-    </div>
-  );
-}
+import PitcheyRating from '../PitcheyRating';
+import { getRatingLabel } from '../../constants/pitchey-score';
 
 function RatingBar({ label, count, total }: { label: string; count: number; total: number }) {
   const pct = total > 0 ? (count / total) * 100 : 0;
@@ -22,7 +11,7 @@ function RatingBar({ label, count, total }: { label: string; count: number; tota
     <div className="flex items-center gap-2 text-sm">
       <span className="w-6 text-gray-500 text-right">{label}</span>
       <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-        <div className="h-full bg-yellow-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
+        <div className="h-full bg-purple-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
       </div>
       <span className="w-6 text-gray-400 text-right">{count}</span>
     </div>
@@ -34,6 +23,7 @@ function ReviewerBadge({ type }: { type: string }) {
     investor: { label: 'Investor', color: 'bg-green-100 text-green-700', icon: Briefcase },
     production: { label: 'Production', color: 'bg-blue-100 text-blue-700', icon: Briefcase },
     peer: { label: 'Creator', color: 'bg-purple-100 text-purple-700', icon: User },
+    watcher: { label: 'Watcher', color: 'bg-gray-100 text-gray-600', icon: User },
   };
   const c = config[type] || config.peer;
   const Icon = c.icon;
@@ -61,7 +51,7 @@ function FeedbackCard({ entry }: { entry: FeedbackEntry }) {
         <span className="text-xs text-gray-400">{new Date(entry.created_at).toLocaleDateString()}</span>
       </div>
 
-      {entry.rating && <StarRating rating={entry.rating} />}
+      {entry.rating && <PitcheyRating mode="display" value={entry.rating} />}
 
       {entry.strengths?.length > 0 && (
         <div className="space-y-1">
@@ -115,20 +105,47 @@ function FeedbackCard({ entry }: { entry: FeedbackEntry }) {
   );
 }
 
-function RatingSummary({ ratings }: { ratings: RatingStats }) {
+function DualScoreSummary({ ratings }: { ratings: RatingStats }) {
+  const pitcheyScore = Number(ratings.pitchey_score);
+  const viewerScore = Number(ratings.viewer_score);
+  const dist = ratings.distribution || [];
+
   return (
-    <div className="flex items-start gap-6">
-      <div className="text-center">
-        <p className="text-3xl font-bold text-gray-900">{Number(ratings.avg_rating).toFixed(1)}</p>
-        <StarRating rating={Math.round(Number(ratings.avg_rating))} />
-        <p className="text-xs text-gray-400 mt-1">{ratings.total_reviews} review{ratings.total_reviews !== 1 ? 's' : ''}</p>
+    <div className="space-y-4">
+      {/* Dual score cards */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* Pitchey Score — gold/prominent */}
+        <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-4 text-center">
+          <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">Pitchey Score</p>
+          <p className="text-3xl font-bold text-amber-900">
+            {pitcheyScore > 0 ? pitcheyScore.toFixed(1) : '—'}
+          </p>
+          {pitcheyScore > 0 && (
+            <p className="text-xs text-amber-600 mt-1">{getRatingLabel(pitcheyScore)}</p>
+          )}
+          <p className="text-xs text-amber-500 mt-1">Industry</p>
+        </div>
+        {/* Viewer Score — grey/secondary */}
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Viewer Score</p>
+          <p className="text-3xl font-bold text-gray-700">
+            {viewerScore > 0 ? viewerScore.toFixed(1) : '—'}
+          </p>
+          {viewerScore > 0 && (
+            <p className="text-xs text-gray-500 mt-1">{getRatingLabel(viewerScore)}</p>
+          )}
+          <p className="text-xs text-gray-400 mt-1">Audience</p>
+        </div>
       </div>
-      <div className="flex-1 space-y-1">
-        <RatingBar label="5" count={ratings.five_star} total={ratings.total_reviews} />
-        <RatingBar label="4" count={ratings.four_star} total={ratings.total_reviews} />
-        <RatingBar label="3" count={ratings.three_star} total={ratings.total_reviews} />
-        <RatingBar label="2" count={ratings.two_star} total={ratings.total_reviews} />
-        <RatingBar label="1" count={ratings.one_star} total={ratings.total_reviews} />
+
+      {/* Distribution bars */}
+      <div className="space-y-1">
+        <p className="text-xs font-medium text-gray-500 mb-2">
+          {ratings.total_reviews} rating{ratings.total_reviews !== 1 ? 's' : ''} total
+        </p>
+        {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((n) => (
+          <RatingBar key={n} label={String(n)} count={dist[n - 1] || 0} total={ratings.total_reviews} />
+        ))}
       </div>
     </div>
   );
@@ -158,7 +175,7 @@ export default function FeedbackDisplay({ pitchId }: { pitchId: number }) {
     );
   }
 
-  if (!feedback.length) {
+  if (!feedback.length && (!ratings || ratings.total_reviews === 0)) {
     return (
       <p className="text-sm text-gray-400 py-4 text-center">No feedback yet. Be the first to share your thoughts!</p>
     );
@@ -166,7 +183,7 @@ export default function FeedbackDisplay({ pitchId }: { pitchId: number }) {
 
   return (
     <div className="space-y-4">
-      {ratings && ratings.total_reviews > 0 && <RatingSummary ratings={ratings} />}
+      {ratings && ratings.total_reviews > 0 && <DualScoreSummary ratings={ratings} />}
       <div className="space-y-3">
         {feedback.map((entry) => (
           <FeedbackCard key={entry.id} entry={entry} />
@@ -176,5 +193,4 @@ export default function FeedbackDisplay({ pitchId }: { pitchId: number }) {
   );
 }
 
-// Export load function for parent components to trigger refresh
 export { FeedbackDisplay };

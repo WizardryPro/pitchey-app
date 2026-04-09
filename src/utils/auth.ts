@@ -42,13 +42,17 @@ export function isPublicEndpoint(path: string, method: string): boolean {
     '/api/trending'
   ];
 
+  // Pitchey Score: anonymous rating + comments are public
+  const pitcheyScorePattern = /^\/api\/pitches\/\d+\/(rate|comments|rating-status)$/;
+
   // Check exact matches and path prefixes
   return publicPaths.some(publicPath => {
     if (publicPath.endsWith('/')) {
       return path.startsWith(publicPath);
     }
     return path === publicPath;
-  }) || (method === 'GET' && path === '/api/pitches');
+  }) || (method === 'GET' && path === '/api/pitches')
+    || pitcheyScorePattern.test(path);
 }
 
 /**

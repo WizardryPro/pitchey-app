@@ -31,18 +31,24 @@ export interface FeedbackEntry {
 }
 
 export interface RatingStats {
+  pitchey_score: number;
+  viewer_score: number;
   avg_rating: number;
   total_reviews: number;
-  five_star: number;
-  four_star: number;
-  three_star: number;
-  two_star: number;
-  one_star: number;
+  distribution: number[];  // 10 buckets [1..10]
 }
 
 export interface FeedbackResponse {
   ratings: RatingStats | null;
   feedback: FeedbackEntry[];
+}
+
+export interface CommentEntry {
+  id: number;
+  content: string;
+  created_at: string;
+  display_name: string;
+  user_type: string;
 }
 
 export interface ConsumptionStatus {
@@ -92,5 +98,45 @@ export class FeedbackService {
   static async remove(pitchId: number): Promise<boolean> {
     const res = await apiClient.delete<{ success: boolean }>(`/api/pitches/${pitchId}/feedback`);
     return res.data?.success ?? false;
+  }
+
+  /** Submit a quick rating (works for anonymous + authenticated users) */
+  static async submitRating(pitchId: number, rating: number): Promise<boolean> {
+    try {
+      const res = await apiClient.post<{ success: boolean }>(`/api/pitches/${pitchId}/rate`, { rating });
+      return res.data?.success ?? false;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Get user's current rating for a pitch */
+  static async getRatingStatus(pitchId: number): Promise<number | null> {
+    try {
+      const res = await apiClient.get<{ data: { rating: number | null } }>(`/api/pitches/${pitchId}/rating-status`);
+      return res.data?.data?.rating ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Get comments for a pitch */
+  static async getComments(pitchId: number): Promise<CommentEntry[]> {
+    try {
+      const res = await apiClient.get<{ data: CommentEntry[] }>(`/api/pitches/${pitchId}/comments`);
+      return res.data?.data ?? [];
+    } catch {
+      return [];
+    }
+  }
+
+  /** Submit a comment */
+  static async submitComment(pitchId: number, content: string): Promise<boolean> {
+    try {
+      const res = await apiClient.post<{ success: boolean }>(`/api/pitches/${pitchId}/comments`, { content });
+      return res.data?.success ?? false;
+    } catch {
+      return false;
+    }
   }
 }

@@ -58,6 +58,10 @@ export interface Pitch {
   publishedAt?: string;
   viewCount: number;
   likeCount: number;
+  ratingAverage: number;
+  pitcheyScoreAvg: number;
+  viewerScoreAvg: number;
+  ratingCount: number;
   ndaCount: number;
   aiUsed?: boolean;
   requireNDA?: boolean;
@@ -878,31 +882,6 @@ export class PitchService {
     } catch (error) {
       // Silently fail for analytics
       console.error('Failed to track view:', error);
-    }
-  }
-
-  // Like a pitch
-  static async likePitch(id: number): Promise<void> {
-    const response = await apiClient.post<{ success: boolean }>(
-      `/api/creator/pitches/${id}/like`,
-      {}
-    );
-
-    if (response.success !== true) {
-      const errorMessage = typeof response.error === 'object' && response.error !== null ? response.error.message : response.error;
-      throw new Error(errorMessage ?? 'Failed to like pitch');
-    }
-  }
-
-  // Unlike a pitch
-  static async unlikePitch(id: number): Promise<void> {
-    const response = await apiClient.delete<{ success: boolean }>(
-      `/api/creator/pitches/${id}/like`
-    );
-
-    if (response.success !== true) {
-      const errorMessage = typeof response.error === 'object' && response.error !== null ? response.error.message : response.error;
-      throw new Error(errorMessage ?? 'Failed to unlike pitch');
     }
   }
 

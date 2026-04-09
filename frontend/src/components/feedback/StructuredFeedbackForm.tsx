@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Star, Plus, X, ThumbsUp, AlertTriangle, Lightbulb, EyeOff, Send, Trash2 } from 'lucide-react';
+import { Plus, X, ThumbsUp, AlertTriangle, Lightbulb, EyeOff, Send, Trash2 } from 'lucide-react';
 import { FeedbackService } from '../../services/feedback.service';
 import type { FeedbackEntry } from '../../services/feedback.service';
+import PitcheyRating from '../PitcheyRating';
 
 interface Props {
   pitchId: number;
@@ -69,7 +70,6 @@ function DynamicList({
 export default function StructuredFeedbackForm({ pitchId, onSubmitted, existingFeedback }: Props) {
   const isEditing = !!existingFeedback;
   const [rating, setRating] = useState<number>(existingFeedback?.rating ?? 0);
-  const [hoverRating, setHoverRating] = useState(0);
   const [strengths, setStrengths] = useState<string[]>(existingFeedback?.strengths?.length ? existingFeedback.strengths : ['']);
   const [weaknesses, setWeaknesses] = useState<string[]>(existingFeedback?.weaknesses?.length ? existingFeedback.weaknesses : ['']);
   const [suggestions, setSuggestions] = useState<string[]>(existingFeedback?.suggestions?.length ? existingFeedback.suggestions : ['']);
@@ -79,7 +79,7 @@ export default function StructuredFeedbackForm({ pitchId, onSubmitted, existingF
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const ratingLabels = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+  // Rating labels now handled by PitcheyRating component
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,32 +138,10 @@ export default function StructuredFeedbackForm({ pitchId, onSubmitted, existingF
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Rating */}
+      {/* Rating — branded 1-10 Pitchey Score */}
       <div>
-        <label className="text-sm font-medium text-gray-700 block mb-2">Rating</label>
-        <div className="flex items-center gap-1">
-          {[1, 2, 3, 4, 5].map((star) => (
-            <button
-              key={star}
-              type="button"
-              onMouseEnter={() => setHoverRating(star)}
-              onMouseLeave={() => setHoverRating(0)}
-              onClick={() => setRating(star === rating ? 0 : star)}
-              className="p-0.5 transition"
-            >
-              <Star
-                className={`w-6 h-6 ${
-                  star <= (hoverRating || rating)
-                    ? 'fill-yellow-400 text-yellow-400'
-                    : 'text-gray-300'
-                }`}
-              />
-            </button>
-          ))}
-          {(hoverRating || rating) > 0 && (
-            <span className="ml-2 text-sm text-gray-500">{ratingLabels[hoverRating || rating]}</span>
-          )}
-        </div>
+        <label className="text-sm font-medium text-gray-700 block mb-2">Rate this Pitch</label>
+        <PitcheyRating mode="interactive" value={rating} onChange={setRating} disabled={submitting} />
       </div>
 
       {/* Hook & Strengths */}

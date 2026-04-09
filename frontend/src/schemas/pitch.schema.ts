@@ -147,6 +147,7 @@ export const FormatCategorySchema = v.picklist([
   'Audio',
   'Digital / Emerging',
   'Stage-to-Screen',
+  'AI',
   'Other'
 ]);
 
@@ -249,7 +250,10 @@ export const PitchFormSchema = v.object({
   
   // Investment
   seekingInvestment: v.boolean(),
-  budgetRange: BudgetRangeSchema
+  budgetRange: BudgetRangeSchema,
+
+  // AI declaration
+  aiUsed: v.optional(v.boolean())
 });
 
 // ============================================

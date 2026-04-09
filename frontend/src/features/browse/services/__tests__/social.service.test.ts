@@ -319,83 +319,42 @@ describe('SocialService', () => {
     });
   });
 
-  // ─── likePitch ───────────────────────────────────────────────────
-  describe('likePitch', () => {
-    it('posts like to correct endpoint', async () => {
-      mockPost.mockResolvedValue({ success: true });
+  // ─── submitRating ─────────────────────────────────────────────────
+  describe('submitRating', () => {
+    it('posts rating to correct endpoint', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ success: true }),
+      }) as any;
 
-      await SocialService.likePitch(42);
-
-      expect(mockPost).toHaveBeenCalledWith('/api/creator/pitches/42/like', {});
-    });
-
-    it('throws on failure', async () => {
-      mockPost.mockResolvedValue({ success: false, error: { message: 'Already liked' } });
-
-      await expect(SocialService.likePitch(42)).rejects.toThrow('Already liked');
-    });
-  });
-
-  // ─── unlikePitch ─────────────────────────────────────────────────
-  describe('unlikePitch', () => {
-    it('calls delete on like endpoint', async () => {
-      mockDelete.mockResolvedValue({ success: true });
-
-      await SocialService.unlikePitch(42);
-
-      expect(mockDelete).toHaveBeenCalledWith('/api/creator/pitches/42/like');
-    });
-
-    it('throws on failure', async () => {
-      mockDelete.mockResolvedValue({ success: false, error: { message: 'Not liked' } });
-
-      await expect(SocialService.unlikePitch(42)).rejects.toThrow('Not liked');
+      await SocialService.submitRating(42, 8);
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/pitches/42/rate',
+        expect.objectContaining({ method: 'POST' })
+      );
     });
   });
 
-  // ─── checkLikeStatus ────────────────────────────────────────────
-  describe('checkLikeStatus', () => {
-    it('returns true when pitch is liked', async () => {
-      mockGet.mockResolvedValue({ success: true, data: { liked: true } });
+  // ─── getRatingStatus ────────────────────────────────────────────
+  describe('getRatingStatus', () => {
+    it('returns rating when present', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ rating: 7 }),
+      }) as any;
 
-      const result = await SocialService.checkLikeStatus(42);
-
-      expect(mockGet).toHaveBeenCalledWith('/api/pitches/42/like-status');
-      expect(result).toBe(true);
+      const result = await SocialService.getRatingStatus(42);
+      expect(result).toBe(7);
     });
 
-    it('returns false when not liked', async () => {
-      mockGet.mockResolvedValue({ success: true, data: { liked: false } });
+    it('returns null when no rating', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ rating: null }),
+      }) as any;
 
-      const result = await SocialService.checkLikeStatus(42);
-
-      expect(result).toBe(false);
-    });
-
-    it('returns false when API fails', async () => {
-      mockGet.mockResolvedValue({ success: false });
-
-      const result = await SocialService.checkLikeStatus(42);
-
-      expect(result).toBe(false);
-    });
-
-    it('returns false when API throws', async () => {
-      mockGet.mockRejectedValue(new Error('Network error'));
-
-      const result = await SocialService.checkLikeStatus(42);
-
-      expect(result).toBe(false);
-    });
-  });
-
-  // ─── getPitchLikes ───────────────────────────────────────────────
-  describe('getPitchLikes', () => {
-    it('returns empty gracefully (not yet implemented)', async () => {
-      const result = await SocialService.getPitchLikes(42);
-
-      expect(result).toEqual({ users: [], total: 0 });
-      expect(mockGet).not.toHaveBeenCalled();
+      const result = await SocialService.getRatingStatus(42);
+      expect(result).toBeNull();
     });
   });
 

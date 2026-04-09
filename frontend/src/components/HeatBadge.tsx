@@ -1,4 +1,5 @@
-import { Flame, TrendingUp } from 'lucide-react';
+import { Flame, TrendingUp, Award } from 'lucide-react';
+import { getRatingLabel } from '../constants/pitchey-score';
 
 export function getHeatLevel(score: number): 'fire' | 'warm' | null {
   if (score >= 10) return 'fire';
@@ -8,6 +9,11 @@ export function getHeatLevel(score: number): 'fire' | 'warm' | null {
 
 export function getHeatScore(pitch: Record<string, unknown>): number {
   return Number(pitch.heat_score) || Number(pitch.heatScore) || 0;
+}
+
+/** Get the Pitchey Score average (1-10) from pitch data */
+export function getPitcheyScore(pitch: Record<string, unknown>): number {
+  return Number(pitch.pitchey_score_avg) || Number(pitch.pitcheyScoreAvg) || 0;
 }
 
 interface Props {
@@ -38,6 +44,18 @@ export default function HeatBadge({ score, variant = 'pill' }: Props) {
   ) : (
     <span className="bg-amber-500/90 backdrop-blur-sm text-white px-2.5 py-0.5 text-xs rounded-full font-medium flex items-center gap-1">
       <TrendingUp className="w-3 h-3" /> Trending
+    </span>
+  );
+}
+
+/** Pitchey Score badge — shows the industry score with label */
+export function PitcheyScoreBadge({ score }: { score: number }) {
+  if (!score || score <= 0) return null;
+  const label = getRatingLabel(score);
+  return (
+    <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 px-2.5 py-0.5 text-xs rounded-full font-semibold">
+      <Award className="w-3 h-3" />
+      {score.toFixed(1)} &middot; {label}
     </span>
   );
 }

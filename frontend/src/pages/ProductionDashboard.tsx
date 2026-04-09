@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Building2, Eye, Heart, Users, Film, Plus,
+  Building2, Eye, Star, Users, Film, Plus,
   BarChart3, FileText, Shield,
   Calendar, DollarSign, UserPlus,
   BookOpen, Video, Upload, UserCheck, Clock, Activity,
@@ -450,34 +450,7 @@ function ProductionDashboard() {
     setShowNDAModal(true);
   };
 
-  // Following tab handlers
-  const handleLikePitch = async (pitchId: number) => {
-    try {
-      const isLiked = likedPitches.includes(pitchId);
-      if (isLiked) {
-        setLikedPitches(prev => prev.filter(id => id !== pitchId));
-        setFollowingPitches(prev => prev.map(p =>
-          p.id === pitchId ? { ...p, likeCount: (p.likeCount || 0) - 1 } : p
-        ));
-      } else {
-        setLikedPitches(prev => [...prev, pitchId]);
-        setFollowingPitches(prev => prev.map(p =>
-          p.id === pitchId ? { ...p, likeCount: (p.likeCount || 0) + 1 } : p
-        ));
-      }
-      try {
-        if (isLiked) {
-          await pitchAPI.unlike(pitchId);
-        } else {
-          await pitchAPI.like(pitchId);
-        }
-      } catch (apiErr) {
-        console.error('Error calling like API:', apiErr);
-      }
-    } catch (error) {
-      console.error('Error toggling like:', error);
-    }
-  };
+  // Like handler removed — replaced by Pitchey Score rating system
 
   const handleSavePitch = async (pitchId: number) => {
     try {
@@ -1051,7 +1024,7 @@ function ProductionDashboard() {
                       'bg-gray-100 text-gray-600'
                     }`}>
                       {activity.type === 'nda' && <Shield className="w-4 h-4" />}
-                      {activity.type === 'like' && <Heart className="w-4 h-4" />}
+                      {activity.type === 'like' && <Star className="w-4 h-4" />}
                       {activity.type === 'follow' && <UserPlus className="w-4 h-4" />}
                       {activity.type === 'pitch_request' && <FileText className="w-4 h-4" />}
                       {activity.type === 'view' && <Eye className="w-4 h-4" />}
@@ -1481,28 +1454,18 @@ function ProductionDashboard() {
                                 <Eye className="w-4 h-4" />
                                 {pitch.viewCount}
                               </span>
-                              <span className="flex items-center gap-1">
-                                <Heart className="w-4 h-4" />
-                                {pitch.likeCount}
+                              <span className="flex items-center gap-1 text-amber-600">
+                                <Star className="w-4 h-4" />
+                                {pitch.ratingAverage ? Number(pitch.ratingAverage).toFixed(1) : '—'}
                               </span>
                             </div>
                           </div>
                           {/* Action buttons */}
                           <div className="mt-3 flex items-center gap-3 pt-3 border-t">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleLikePitch(pitch.id);
-                              }}
-                              className={`flex items-center gap-1 px-3 py-1 rounded-lg transition-colors ${
-                                likedPitches?.includes(pitch.id) 
-                                  ? 'bg-red-100 text-red-600' 
-                                  : 'bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-600'
-                              }`}
-                            >
-                              <Heart className={`w-4 h-4 ${likedPitches?.includes(pitch.id) ? 'fill-current' : ''}`} />
-                              <span className="text-sm">Like</span>
-                            </button>
+                            <span className="flex items-center gap-1 px-3 py-1 rounded-lg bg-amber-50 text-amber-700 text-sm">
+                              <Star className="w-4 h-4" />
+                              {pitch.ratingAverage ? Number(pitch.ratingAverage).toFixed(1) : '—'}
+                            </span>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();

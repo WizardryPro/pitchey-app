@@ -47,6 +47,10 @@ function transformPitchData(pitch: any): any {
     userId: pitch.user_id ?? pitch.userId ?? pitch.creator?.id,
     viewCount: pitch.view_count ?? pitch.viewCount ?? 0,
     likeCount: pitch.like_count ?? pitch.likeCount ?? 0,
+    ratingAverage: Number(pitch.rating_average ?? pitch.ratingAverage ?? 0),
+    pitcheyScoreAvg: Number(pitch.pitchey_score_avg ?? pitch.pitcheyScoreAvg ?? 0),
+    viewerScoreAvg: Number(pitch.viewer_score_avg ?? pitch.viewerScoreAvg ?? 0),
+    ratingCount: Number(pitch.rating_count ?? pitch.ratingCount ?? 0),
     views: pitch.view_count ?? pitch.viewCount ?? pitch.views ?? 0,
     likes: pitch.like_count ?? pitch.likeCount ?? pitch.likes ?? 0,
     ndaCount: pitch.nda_count ?? pitch.ndaCount ?? 0,
@@ -135,6 +139,10 @@ export interface Pitch {
   };
   viewCount: number;
   likeCount: number;
+  ratingAverage: number;
+  pitcheyScoreAvg: number;
+  viewerScoreAvg: number;
+  ratingCount: number;
   ndaCount: number;
   commentCount?: number;
   shareCount?: number;
@@ -494,16 +502,6 @@ export const pitchAPI = {
 
   async getAnalytics(pitchId: number) {
     const response = await api.get(`/api/pitches/${pitchId}/analytics`);
-    return response.data;
-  },
-
-  async like(pitchId: number) {
-    const response = await api.post(`/api/pitches/${pitchId}/like`);
-    return response.data;
-  },
-
-  async unlike(pitchId: number) {
-    const response = await api.delete(`/api/pitches/${pitchId}/like`);
     return response.data;
   },
 

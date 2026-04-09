@@ -299,24 +299,7 @@ describe('PitchService', () => {
     })
   })
 
-  describe('likePitch / unlikePitch', () => {
-    it('likes a pitch', async () => {
-      mockApiClient.post.mockResolvedValue({ success: true })
-      await PitchService.likePitch(7)
-      expect(mockApiClient.post).toHaveBeenCalledWith('/api/creator/pitches/7/like', {})
-    })
-
-    it('unlikes a pitch', async () => {
-      mockApiClient.delete.mockResolvedValue({ success: true })
-      await PitchService.unlikePitch(7)
-      expect(mockApiClient.delete).toHaveBeenCalledWith('/api/creator/pitches/7/like')
-    })
-
-    it('throws on like failure', async () => {
-      mockApiClient.post.mockResolvedValue({ success: false, error: { message: 'Already liked' } })
-      await expect(PitchService.likePitch(7)).rejects.toThrow('Already liked')
-    })
-  })
+  // likePitch / unlikePitch tests removed — replaced by Pitchey Score rating system
 
   describe('requestNDA / signNDA', () => {
     it('requests NDA for a pitch', async () => {

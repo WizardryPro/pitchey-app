@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, Eye, Heart, Share2, Bookmark, BookmarkCheck,
+  ArrowLeft, Eye, Share2, Bookmark, BookmarkCheck,
   Shield, MessageSquare, Clock, Calendar, User, Tag,
   Film, DollarSign, Briefcase, TrendingUp, Users,
   FileText, Download, Calculator, MapPin, Camera,
@@ -48,6 +48,9 @@ interface Pitch {
   visibility: 'public' | 'private' | 'nda_only';
   views: number;
   likes: number;
+  ratingAverage: number;
+  pitcheyScoreAvg: number;
+  viewerScoreAvg: number;
   createdAt: string;
   updatedAt: string;
   hasSignedNDA?: boolean;
@@ -359,28 +362,7 @@ const ProductionPitchView: React.FC = () => {
     navigate(`/production/messages?recipient=${pitch?.userId}&pitch=${id}`);
   };
 
-  const handleLike = async () => {
-    if (!pitch || isLiking) return;
-    setIsLiking(true);
-    const originalLiked = isLiked;
-    const originalLikes = pitch.likes;
-    try {
-      if (isLiked) {
-        setPitch(prev => prev ? { ...prev, likes: prev.likes - 1 } : null);
-        setIsLiked(false);
-        await pitchService.unlikePitch(parseInt(pitch.id));
-      } else {
-        setPitch(prev => prev ? { ...prev, likes: prev.likes + 1 } : null);
-        setIsLiked(true);
-        await pitchService.likePitch(parseInt(pitch.id));
-      }
-    } catch {
-      setIsLiked(originalLiked);
-      setPitch(prev => prev ? { ...prev, likes: originalLikes } : null);
-    } finally {
-      setIsLiking(false);
-    }
-  };
+  // Like handler removed — replaced by Pitchey Score rating system
 
   const handleSharePitch = () => {
     navigator.clipboard.writeText(window.location.href).then(() => {
@@ -639,19 +621,6 @@ const ProductionPitchView: React.FC = () => {
             <span className="hidden sm:inline">{isShortlisted ? 'Shortlisted' : 'Shortlist'}</span>
           </button>
 
-          <button
-            onClick={handleLike}
-            disabled={isLiking}
-            className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${
-              isLiked
-                ? 'bg-red-100 text-red-600 hover:bg-red-200'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            } ${isLiking ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            <Heart className={`h-4 w-4 sm:mr-1.5 ${isLiked ? 'fill-current' : ''}`} />
-            <span className="hidden sm:inline">{isLiked ? 'Liked' : 'Like'}</span>
-          </button>
-
           {!isOwner && (
             <button
               onClick={handleContactCreator}
@@ -767,21 +736,12 @@ const ProductionPitchView: React.FC = () => {
                     isAuthenticated={isAuthenticated}
                   />
                   <div className="grid grid-cols-2 gap-4 mt-4">
-                    <button
-                      onClick={handleLike}
-                      disabled={isLiking}
-                      className={`rounded-lg p-3 text-center transition-colors cursor-pointer ${
-                        isLiked
-                          ? 'bg-red-50 ring-2 ring-red-200'
-                          : 'bg-gray-50 hover:bg-red-50'
-                      } ${isLiking ? 'opacity-50' : ''}`}
-                    >
-                      <p className="text-2xl font-bold text-gray-900">{pitch.likes ?? 0}</p>
-                      <p className={`text-xs flex items-center justify-center gap-1 ${isLiked ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
-                        <Heart className={`w-3 h-3 ${isLiked ? 'fill-current text-red-500' : ''}`} />
-                        {isLiked ? 'Liked' : 'Like'}
+                    <div className="bg-amber-50 rounded-lg p-3 text-center">
+                      <p className="text-2xl font-bold text-amber-900">{pitch.ratingAverage ? Number(pitch.ratingAverage).toFixed(1) : '—'}</p>
+                      <p className="text-xs text-amber-600 flex items-center justify-center gap-1">
+                        <Star className="w-3 h-3" /> Pitchey Score
                       </p>
-                    </button>
+                    </div>
                     <div className="bg-gray-50 rounded-lg p-3 text-center">
                       <p className="text-2xl font-bold text-gray-900">{pitch.ndaCount ?? 0}</p>
                       <p className="text-xs text-gray-500 flex items-center justify-center gap-1"><Shield className="w-3 h-3" /> NDAs</p>

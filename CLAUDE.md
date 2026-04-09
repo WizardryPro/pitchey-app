@@ -25,6 +25,7 @@ Movie pitch platform connecting creators, investors, and production companies. E
 - Creator: alex.creator@demo.com
 - Investor: sarah.investor@demo.com
 - Production: stellar.production@demo.com
+- Watcher: jamie.watcher@demo.com
 
 ## Code Conventions
 - TypeScript for all new code

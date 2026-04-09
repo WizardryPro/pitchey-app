@@ -22,15 +22,12 @@ triggers:
 ## Deployment Commands
 
 ### Frontend (Pages)
+**CRITICAL: Must run from `frontend/` directory, NOT repo root.**
+Running from root skips the Functions bundle (`functions/`) and breaks SPA routing (all non-root URLs 404).
 ```bash
-# Build first
+# Build + deploy (MUST be in frontend/)
 cd frontend && npm run build
-
-# Preview deploy (get unique URL for testing)
-npx wrangler pages deploy dist --project-name pitchey
-
-# Production deploy (main branch)
-npx wrangler pages deploy dist --project-name pitchey --branch main
+npx wrangler pages deploy dist/ --project-name=pitchey
 
 # Check deployment status
 npx wrangler pages deployment list --project-name pitchey
@@ -38,25 +35,22 @@ npx wrangler pages deployment list --project-name pitchey
 
 ### Backend (Workers)
 ```bash
-cd worker
+# Run from repo root (where wrangler.toml lives)
 npx wrangler deploy
 # Verify deployment
-curl -I https://pitchey-api-prod.ndlovucavelle.workers.dev/health
+curl -s https://pitchey-api-prod.ndlovucavelle.workers.dev/api/health | jq
 ```
 
 ### Full Deploy Sequence
 ```bash
-# 1. Build frontend
-cd frontend && npm run build
+# 1. Deploy Worker API (from repo root)
+npx wrangler deploy
 
-# 2. Deploy frontend to production
-npx wrangler pages deploy dist --project-name pitchey --branch main
+# 2. Build + deploy frontend (MUST cd into frontend/)
+cd frontend && npm run build && npx wrangler pages deploy dist/ --project-name=pitchey
 
-# 3. Deploy Worker API
-cd ../worker && npx wrangler deploy
-
-# 4. Verify both
-curl -s https://pitchey-api-prod.ndlovucavelle.workers.dev/health | jq
+# 3. Verify both
+curl -s https://pitchey-api-prod.ndlovucavelle.workers.dev/api/health | jq
 curl -s -o /dev/null -w "%{http_code}" https://pitchey-5o8.pages.dev
 ```
 
@@ -89,10 +83,10 @@ npx wrangler deployments list
 # Rollback to specific version
 npx wrangler rollback --version VERSION_ID
 
-# Pages rollback: redeploy previous git commit
+# Pages rollback: redeploy previous git commit (MUST be in frontend/)
 git checkout PREVIOUS_COMMIT
-npm run build
-npx wrangler pages deploy dist --project-name pitchey --branch main
+cd frontend && npm run build
+npx wrangler pages deploy dist/ --project-name=pitchey
 ```
 
 ## Common Deployment Issues
