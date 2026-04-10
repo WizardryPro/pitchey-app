@@ -10,6 +10,7 @@ import Pagination from '../components/Pagination';
 import { configService } from '../services/config.service';
 import FormatDisplay from '../components/FormatDisplay';
 import { getApiUrl } from '../config';
+import { getPortalPath } from '@/utils/navigation';
 import { 
   Eye, 
   Heart, 
@@ -329,7 +330,7 @@ export default function BrowseGenres() {
                   </div>
                   
                   <button
-                    onClick={() => navigate(userType ? `/${userType}/dashboard` : '/portals')}
+                    onClick={() => navigate(userType ? `/${getPortalPath(userType)}/dashboard` : '/portals')}
                     className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium"
                   >
                     Dashboard

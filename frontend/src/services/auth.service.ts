@@ -1,5 +1,6 @@
 // Auth Service - Better Auth Implementation (Cookie-based Sessions)
 import { authClient } from '../lib/better-auth-client';
+import { getPortalPath } from '@/utils/navigation';
 import type { 
   User, 
   LoginCredentials, 
@@ -48,7 +49,7 @@ export class AuthService {
       const response = await authClient.signIn.email({
         email: credentials.email,
         password: credentials.password,
-        callbackURL: `/${userType}/dashboard`,
+        callbackURL: `/${getPortalPath(userType)}/dashboard`,
         // Pass userType as metadata for backend routing
         fetchOptions: {
           headers: {
@@ -99,7 +100,7 @@ export class AuthService {
         email: data.email,
         password: data.password,
         name: (data as unknown as Record<string, unknown>).name as string || data.email.split('@')[0],
-        callbackURL: `/${data.userType}/dashboard`,
+        callbackURL: `/${getPortalPath(data.userType)}/dashboard`,
         // Pass additional data as metadata
         fetchOptions: {
           headers: {

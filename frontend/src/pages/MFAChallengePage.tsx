@@ -6,6 +6,7 @@ import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { sessionCache } from '@/store/sessionCache';
 import { sessionManager } from '@/lib/session-manager';
 import { API_URL } from '@/config';
+import { getPortalPath } from '@/utils/navigation';
 
 export default function MFAChallengePage() {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ export default function MFAChallengePage() {
 
   useEffect(() => {
     if (!challengeId) {
-      navigate('/login/' + userType, { replace: true });
+      navigate('/login/' + getPortalPath(userType), { replace: true });
     }
     inputRef.current?.focus();
   }, [challengeId, navigate, userType]);
@@ -59,7 +60,7 @@ export default function MFAChallengePage() {
       setUser(user);
 
       toast.success('Verified successfully');
-      navigate(`/${user.userType}/dashboard`, { replace: true });
+      navigate(`/${getPortalPath(user.userType)}/dashboard`, { replace: true });
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
       setError(e.message || 'Verification failed');
@@ -143,7 +144,7 @@ export default function MFAChallengePage() {
 
           <div className="mt-4 text-center">
             <button
-              onClick={() => navigate(`/login/${userType}`, { replace: true })}
+              onClick={() => navigate(`/login/${getPortalPath(userType)}`, { replace: true })}
               className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mx-auto"
             >
               <ArrowLeft className="w-4 h-4" />

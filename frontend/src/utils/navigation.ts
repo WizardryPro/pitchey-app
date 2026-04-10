@@ -9,7 +9,7 @@
  */
 export function getDashboardRoute(userType?: string | null): string {
   if (!userType) return '/';
-  
+
   switch (userType) {
     case 'creator':
       return '/creator/dashboard';
@@ -17,11 +17,24 @@ export function getDashboardRoute(userType?: string | null): string {
       return '/investor/dashboard';
     case 'production':
       return '/production/dashboard';
+    case 'watcher':
+    case 'viewer':
+      return '/watcher/dashboard';
     case 'admin':
       return '/admin/dashboard';
     default:
       return '/';
   }
+}
+
+/**
+ * Map a DB user_type to its portal route prefix.
+ * The DB stores 'viewer' but routes use '/watcher'.
+ */
+export function getPortalPath(userType?: string | null): string {
+  if (!userType) return '';
+  if (userType === 'viewer') return 'watcher';
+  return userType;
 }
 
 /**

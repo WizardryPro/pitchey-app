@@ -40,6 +40,7 @@ import {
 } from "@shared/components/ui/accordion";
 import { useState, useEffect } from 'react';
 import { paymentsAPI } from '@/lib/apiServices';
+import { getPortalPath } from '@/utils/navigation';
 
 interface EnhancedNavigationShadcnProps {
   user: any;
@@ -83,16 +84,7 @@ export function EnhancedNavigationShadcn({
 
   const themeColor = getThemeColor();
 
-  const getPortalPrefix = () => {
-    switch (userType) {
-      case 'creator': return '/creator';
-      case 'investor': return '/investor';
-      case 'production': return '/production';
-      default: return '';
-    }
-  };
-
-  const portalPrefix = getPortalPrefix();
+  const portalPrefix = `/${getPortalPath(userType)}`;
 
   const dashboardMenuItems = {
     creator: [

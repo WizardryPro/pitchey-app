@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { NotificationBell } from '@features/notifications/components/NotificationBell';
 import { NDANotificationBadge } from '@features/ndas/components/NDANotifications';
+import { getPortalPath } from '@/utils/navigation';
 
 interface EnhancedNavigationProps {
   user: any;
@@ -54,10 +55,10 @@ function EnhancedNavigation({
       label: 'Dashboard',
       icon: Home,
       dropdown: [
-        { label: 'Overview', href: `/${userType}/dashboard`, icon: Home },
-        { label: 'Analytics', href: `/${userType}/analytics`, icon: BarChart3 },
-        { label: 'Activity Feed', href: `/${userType}/activity`, icon: Activity },
-        { label: 'Quick Stats', href: `/${userType}/stats`, icon: TrendingUp },
+        { label: 'Overview', href: `/${getPortalPath(userType)}/dashboard`, icon: Home },
+        { label: 'Analytics', href: `/${getPortalPath(userType)}/analytics`, icon: BarChart3 },
+        { label: 'Activity Feed', href: `/${getPortalPath(userType)}/activity`, icon: Activity },
+        { label: 'Quick Stats', href: `/${getPortalPath(userType)}/stats`, icon: TrendingUp },
       ]
     },
     browse: {
@@ -121,9 +122,9 @@ function EnhancedNavigation({
       label: 'Team',
       icon: Users,
       dropdown: [
-        { label: 'Team Members', href: `/${userType}/team`, icon: Users },
-        { label: 'Roles & Permissions', href: `/${userType}/team/roles`, icon: Shield },
-        { label: 'Collaborations', href: `/${userType}/collaborations`, icon: Users },
+        { label: 'Team Members', href: `/${getPortalPath(userType)}/team`, icon: Users },
+        { label: 'Roles & Permissions', href: `/${getPortalPath(userType)}/team/roles`, icon: Shield },
+        { label: 'Collaborations', href: `/${getPortalPath(userType)}/collaborations`, icon: Users },
         { label: 'Messages', href: '/messages', icon: MessageSquare },
       ]
     } : null,

@@ -13,6 +13,7 @@ import { CollaboratorService } from '../../services/collaborator.service';
 import { ProductionService } from '@portals/production/services/production.service';
 import { useCurrentTeam } from '@/shared/hooks/useCurrentTeam';
 import { Permission } from '@features/auth/hooks/usePermissions';
+import { getPortalPath } from '@/utils/navigation';
 
 interface TeamMember {
   id: string;
@@ -294,7 +295,7 @@ export default function TeamMembers() {
           </div>
           <div className="flex gap-3 mt-4 md:mt-0">
             <button
-              onClick={() => navigate(`/${userType}/team/invite`)}
+              onClick={() => navigate(`/${getPortalPath(userType)}/team/invite`)}
               className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center gap-2"
             >
               <UserPlus className="w-5 h-5" />
@@ -587,7 +588,7 @@ export default function TeamMembers() {
                 : 'Invite collaborators to your projects or create a team to get started'}
             </p>
             <button
-              onClick={() => navigate(`/${userType}/team/invite`)}
+              onClick={() => navigate(`/${getPortalPath(userType)}/team/invite`)}
               className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
             >
               <UserPlus className="w-4 h-4" />

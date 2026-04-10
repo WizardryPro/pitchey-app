@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shar
 import { Badge } from '@shared/components/ui/badge';
 import { toast } from 'react-hot-toast';
 import { API_URL } from '../config';
+import { getPortalPath } from '@/utils/navigation';
 
 interface SearchFilters {
   query: string;
@@ -314,7 +315,7 @@ export default function AdvancedSearch() {
 
   const totalPages = Math.ceil(totalResults / resultsPerPage);
 
-  const dashboardPath = user?.userType ? `/${user.userType}/dashboard` : '/dashboard';
+  const dashboardPath = user?.userType ? `/${getPortalPath(user.userType)}/dashboard` : '/dashboard';
 
   return (
     <div className="min-h-screen bg-gray-50">

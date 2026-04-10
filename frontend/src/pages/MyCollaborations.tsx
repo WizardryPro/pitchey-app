@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Users, FolderOpen, CheckCircle, Clock, ArrowRight } from 'lucide-react';
 import { CollaboratorService, type Collaboration } from '@/services/collaborator.service';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
+import { getPortalPath } from '@/utils/navigation';
 
 const stageColors: Record<string, string> = {
   development: 'bg-blue-100 text-blue-800',
@@ -26,7 +27,7 @@ const roleLabels: Record<string, string> = {
 export default function MyCollaborations() {
   const navigate = useNavigate();
   const { user } = useBetterAuthStore();
-  const portalPrefix = `/${user?.userType || 'creator'}`;
+  const portalPrefix = `/${getPortalPath(user?.userType) || 'creator'}`;
 
   const [collaborations, setCollaborations] = useState<Collaboration[]>([]);
   const [loading, setLoading] = useState(true);

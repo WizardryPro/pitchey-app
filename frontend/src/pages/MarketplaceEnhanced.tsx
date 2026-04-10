@@ -18,6 +18,7 @@ import HeatBadge, { getHeatScore, getHeatLevel } from '../components/HeatBadge';
 import VerificationBadge from '../components/VerificationBadge';
 import HumanMadeBadge from '../components/HumanMadeBadge';
 import GenrePlaceholder from '@shared/components/GenrePlaceholder';
+import { getPortalPath } from '@/utils/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -776,7 +777,7 @@ export default function MarketplaceEnhanced() {
                   {/* Dashboard button — icon on mobile, text on sm+ */}
                   <button
                     onClick={() => {
-                      void navigate(user?.userType ? `/${user.userType}/dashboard` : '/dashboard');
+                      void navigate(user?.userType ? `/${getPortalPath(user.userType)}/dashboard` : '/dashboard');
                     }}
                     className="p-2 sm:px-4 sm:py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition flex items-center gap-1.5"
                   >

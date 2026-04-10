@@ -8,6 +8,7 @@ import { formatCurrency } from '@shared/utils/formatters';
 import { ndaService } from '@features/ndas/services/nda.service';
 import NDAWizard from '@features/ndas/components/NDAWizard';
 import FormatDisplay from '../components/FormatDisplay';
+import { getPortalPath } from '@/utils/navigation';
 
 export default function PublicPitchView() {
   const navigate = useNavigate();
@@ -237,7 +238,7 @@ export default function PublicPitchView() {
                     onClick={() => {
                       const userType = user?.userType;
                       if (userType) {
-                        void navigate(`/${userType}/dashboard`);
+                        void navigate(`/${getPortalPath(userType)}/dashboard`);
                       } else {
                         void navigate('/portals');
                       }
@@ -838,7 +839,7 @@ export default function PublicPitchView() {
                     onClick={() => {
                       const userType = user?.userType;
                       if (userType) {
-                        void navigate(`/${userType}/dashboard`);
+                        void navigate(`/${getPortalPath(userType)}/dashboard`);
                       } else {
                         void navigate('/portals');
                       }

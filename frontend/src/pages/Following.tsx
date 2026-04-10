@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import { API_URL } from '../config';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { SocialService } from '@features/browse/services/social.service';
+import { getPortalPath } from '@/utils/navigation';
 
 interface Creator {
   id: number;
@@ -570,11 +571,7 @@ const Following: React.FC = () => {
             <div className="flex items-center gap-4">
               <button 
                 onClick={() => {
-                  const dashboardRoute = userType === 'creator' ? '/creator/dashboard' :
-                                       userType === 'investor' ? '/investor/dashboard' :
-                                       userType === 'production' ? '/production/dashboard' :
-                                       '/';
-                  navigate(dashboardRoute);
+                  navigate(userType ? `/${getPortalPath(userType)}/dashboard` : '/');
                 }}
                 className="p-2 hover:bg-gray-100 rounded-lg transition"
               >

@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { UserService } from '@/services/user.service';
+import { getPortalPath } from '@/utils/navigation';
 
 const MAX_BIO_LENGTH = 500;
 
@@ -104,7 +105,7 @@ export default function OnboardingPage() {
       const name = `${firstName.trim()} ${lastName.trim()}`;
       await UserService.updateProfile({ name, bio: bio.trim() });
       await checkSession();
-      void navigate(`/${userType}/dashboard`, { replace: true });
+      void navigate(`/${getPortalPath(userType)}/dashboard`, { replace: true });
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
       setError(e.message || 'Something went wrong. Please try again.');

@@ -18,6 +18,7 @@ import { PortalLayout } from '@shared/components/layout/PortalLayout';
 import { ProfileGuard } from '@/features/auth/components/ProfileGuard';
 import { PermissionRoute } from '@features/auth/components/PermissionGuard';
 import { Permission } from '@features/auth/hooks/usePermissions';
+import { getPortalPath } from '@/utils/navigation';
 
 // Log environment on app load (dev only)
 if (import.meta.env.DEV) {
@@ -410,19 +411,19 @@ function App() {
           <Route path="/login/creator" element={
             !isAuthenticated ? <CreatorLogin /> :
             userType === 'creator' ? <Navigate to="/creator/dashboard" replace /> :
-            userType ? <Navigate to={`/${userType}/dashboard`} replace /> :
+            userType ? <Navigate to={`/${getPortalPath(userType)}/dashboard`} replace /> :
             <Navigate to="/portals" replace />
           } />
           <Route path="/login/investor" element={
             !isAuthenticated ? <InvestorLogin /> :
             userType === 'investor' ? <Navigate to="/investor/dashboard" replace /> :
-            userType ? <Navigate to={`/${userType}/dashboard`} replace /> :
+            userType ? <Navigate to={`/${getPortalPath(userType)}/dashboard`} replace /> :
             <Navigate to="/portals" replace />
           } />
           <Route path="/login/production" element={
             !isAuthenticated ? <ProductionLogin /> :
             userType === 'production' ? <Navigate to="/production/dashboard" replace /> :
-            userType ? <Navigate to={`/${userType}/dashboard`} replace /> :
+            userType ? <Navigate to={`/${getPortalPath(userType)}/dashboard`} replace /> :
             <Navigate to="/portals" replace />
           } />
           
@@ -437,7 +438,7 @@ function App() {
           <Route path="/auth/production" element={<Navigate to="/login/production" replace />} />
           <Route path="/login/watcher" element={
             !isAuthenticated ? <WatcherLogin /> :
-            userType === 'watcher' ? <Navigate to="/watcher/dashboard" /> :
+            (userType === 'watcher' || userType === 'viewer') ? <Navigate to="/watcher/dashboard" /> :
             <Navigate to="/" />
           } />
           <Route path="/login/admin" element={
@@ -449,11 +450,11 @@ function App() {
           {/* Legacy routes (backwards compatibility) - redirect to appropriate dashboard */}
           <Route path="/login" element={
             !isAuthenticated ? <Login /> : 
-            <Navigate to={userType ? `/${userType}/dashboard` : '/'} />
+            <Navigate to={userType ? `/${getPortalPath(userType)}/dashboard` : '/'} />
           } />
           <Route path="/register" element={
             !isAuthenticated ? <Register /> : 
-            <Navigate to={userType ? `/${userType}/dashboard` : '/'} />
+            <Navigate to={userType ? `/${getPortalPath(userType)}/dashboard` : '/'} />
           } />
           
           {/* MFA Challenge (during login) */}
@@ -462,7 +463,7 @@ function App() {
           {/* Passwordless Email OTP Login */}
           <Route path="/login/email" element={
             !isAuthenticated ? <EmailOTPLogin /> :
-            <Navigate to={userType ? `/${userType}/dashboard` : '/'} replace />
+            <Navigate to={userType ? `/${getPortalPath(userType)}/dashboard` : '/'} replace />
           } />
 
           {/* Referral Invite Landing (public) */}
@@ -688,7 +689,7 @@ function App() {
           {/* Legacy Protected routes */}
           <Route element={<Layout />}>
             <Route path="/dashboard" element={
-              isAuthenticated && userType ? <Navigate to={`/${userType}/dashboard`} replace /> :
+              isAuthenticated && userType ? <Navigate to={`/${getPortalPath(userType)}/dashboard`} replace /> :
               isAuthenticated ? <Dashboard /> :
               <Navigate to="/portals" />
             } />

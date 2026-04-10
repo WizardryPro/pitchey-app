@@ -5,6 +5,7 @@ import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { paymentsAPI } from '@/lib/apiServices';
 import { WebSocketStatusCompact } from '@/components/WebSocketStatus';
 import { NotificationBell } from '@features/notifications/components/NotificationBell';
+import { getPortalPath } from '@/utils/navigation';
 
 
 interface MinimalHeaderProps {
@@ -155,13 +156,13 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
               </div>
 
               <button
-                onClick={() => { navigate(`/${userType}/profile`); setIsProfileOpen(false); }}
+                onClick={() => { navigate(`/${getPortalPath(userType)}/profile`); setIsProfileOpen(false); }}
                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
               >
                 View Profile
               </button>
               <button
-                onClick={() => { navigate(`/${userType}/settings`); setIsProfileOpen(false); }}
+                onClick={() => { navigate(`/${getPortalPath(userType)}/settings`); setIsProfileOpen(false); }}
                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
               >
                 Settings

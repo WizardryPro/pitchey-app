@@ -8,6 +8,7 @@ import type { Pitch } from '@features/pitches/services/pitch.service';
 import { getGenresSync, getFormatsSync } from '@config/pitchConstants';
 import FormatDisplay from '../components/FormatDisplay';
 import GenrePlaceholder from '@shared/components/GenrePlaceholder';
+import { getPortalPath } from '@/utils/navigation';
 
 
 
@@ -136,7 +137,7 @@ export default function Homepage() {
 
                   {/* Dashboard Button */}
                   <button
-                    onClick={() => navigate(userType ? `/${userType}/dashboard` : '/portals')}
+                    onClick={() => navigate(userType ? `/${getPortalPath(userType)}/dashboard` : '/portals')}
                     className="text-button px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
                   >
                     Dashboard

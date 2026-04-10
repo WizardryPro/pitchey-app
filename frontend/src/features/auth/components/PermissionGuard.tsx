@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { usePermissions, type Permission } from '../hooks/usePermissions';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
+import { getPortalPath } from '@/utils/navigation';
 
 interface PermissionGuardProps {
   /** Single permission required to render children */
@@ -67,7 +68,7 @@ export default function PermissionGuard({
   if (!allowed) {
     if (hideIfDenied) return <>{fallback}</>;
     // Redirect to user's own dashboard if they don't have permission
-    const defaultRedirect = redirectTo || (userRole !== 'viewer' ? `/${userRole}/dashboard` : '/portals');
+    const defaultRedirect = redirectTo || `/${getPortalPath(userRole)}/dashboard`;
     return <Navigate to={defaultRedirect} replace />;
   }
 

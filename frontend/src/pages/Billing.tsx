@@ -21,6 +21,7 @@ import CreditPurchase from '@features/billing/components/CreditPurchase';
 import PaymentHistory from '@features/billing/components/PaymentHistory';
 import PaymentMethodCard from '@features/billing/components/PaymentMethodCard';
 import { getSubscriptionTier } from '../config/subscription-plans';
+import { getPortalPath } from '@/utils/navigation';
 
 export default function Billing() {
   const navigate = useNavigate();
@@ -87,13 +88,8 @@ export default function Billing() {
   };
 
   const getDefaultDashboardPath = () => {
-    switch (userType) {
-      case 'creator': return '/creator/dashboard';
-      case 'investor': return '/investor/dashboard';
-      case 'production': return '/production/dashboard';
-      case 'watcher': return '/watcher/dashboard';
-      default: return '/dashboard';
-    }
+    const portal = getPortalPath(userType);
+    return portal ? `/${portal}/dashboard` : '/dashboard';
   };
 
   const tabs = [

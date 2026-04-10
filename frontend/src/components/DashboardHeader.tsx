@@ -9,6 +9,7 @@ import { NotificationBell } from '@features/notifications/components/Notificatio
 import { NDANotificationBadge } from '@features/ndas/components/NDANotifications';
 import { getSubscriptionTier } from '../config/subscription-plans';
 import { EnhancedNavigationShadcn } from './EnhancedNavigationShadcn';
+import { getPortalPath } from '@/utils/navigation';
 import {
   Tooltip,
   TooltipContent,
@@ -80,7 +81,7 @@ export default function DashboardHeader({
   // Define navigation items based on user type
   const getNavigationItems = () => {
     const commonItems = [
-      { label: 'Dashboard', href: `/${userType}/dashboard`, icon: Home },
+      { label: 'Dashboard', href: `/${getPortalPath(userType)}/dashboard`, icon: Home },
       { label: 'Browse', href: '/marketplace', icon: Film },
       { label: 'Search', href: '/search', icon: Search },
     ];

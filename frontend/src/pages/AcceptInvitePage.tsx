@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { CheckCircle, AlertTriangle, Loader2, ArrowRight } from 'lucide-react';
 import { CollaboratorService } from '@/services/collaborator.service';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
+import { getPortalPath } from '@/utils/navigation';
 
 type Status = 'loading' | 'success' | 'error';
 
@@ -51,7 +52,7 @@ export default function AcceptInvitePage() {
     }
   };
 
-  const portalPrefix = `/${user?.userType || 'creator'}`;
+  const portalPrefix = `/${getPortalPath(user?.userType) || 'creator'}`;
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
