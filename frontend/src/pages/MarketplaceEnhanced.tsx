@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { pitchAPI } from '../lib/api';
 import type { Pitch } from '../lib/api';
 import { useBetterAuthStore } from '../store/betterAuthStore';
@@ -140,10 +140,15 @@ interface FilterState {
 
 export default function MarketplaceEnhanced() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated, user, logout } = useBetterAuthStore();
   const toast = useToast();
   const { isMobile } = useResponsive();
+
+  // When rendered inside a portal (e.g. /watcher/browse), PortalLayout
+  // already provides a header — hide the standalone one to avoid duplicates.
+  const isInsidePortal = /^\/(watcher|creator|investor|production|admin)\//.test(location.pathname);
   
   // Per-tab state management to prevent content bleeding
   interface TabState {
@@ -737,7 +742,8 @@ export default function MarketplaceEnhanced() {
 
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden">
-      {/* Navigation Header */}
+      {/* Navigation Header — hidden when inside a portal (PortalLayout has its own) */}
+      {!isInsidePortal && (
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50 overflow-hidden">
         <div className="container mx-auto px-3 sm:px-4">
           <div className="flex items-center justify-between h-14 sm:h-16">
@@ -814,6 +820,7 @@ export default function MarketplaceEnhanced() {
           </div>
         </div>
       </header>
+      )}
 
       {/* Header with stats */}
       <div className="bg-gradient-to-r from-purple-700 to-indigo-600 text-white">
