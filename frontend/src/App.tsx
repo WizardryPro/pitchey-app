@@ -550,7 +550,7 @@ function App() {
           
           {/* Watcher Portal Routes */}
           <Route path="/watcher/*" element={
-            isAuthenticated && userType === 'watcher'
+            isAuthenticated && (userType === 'watcher' || userType === 'viewer')
               ? <PortalLayout userType="watcher" />
               : <Navigate to="/login/watcher" />
           }>
