@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
-  Home, Eye, Heart, Plus, FileText,
+  Home, Library, Plus, FileText,
   CreditCard, User, Settings, Store, ExternalLink
 } from 'lucide-react';
 import { WATCHER_ROUTES } from '@/config/navigation.routes';
@@ -22,13 +22,7 @@ export const watcherNavigationSections: NavigationSection[] = [
     title: 'Dashboard',
     items: [
       { label: 'Overview', path: WATCHER_ROUTES.dashboard, icon: Home },
-    ],
-  },
-  {
-    title: 'Discover',
-    items: [
-      { label: 'Browse Pitches', path: WATCHER_ROUTES.browse, icon: Eye },
-      { label: 'Saved', path: WATCHER_ROUTES.saved, icon: Heart },
+      { label: 'My Library', path: WATCHER_ROUTES.library, icon: Library },
     ],
   },
   {

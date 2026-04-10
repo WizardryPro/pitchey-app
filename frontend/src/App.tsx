@@ -150,6 +150,7 @@ const Privacy = lazyRetry(() => import('./pages/Privacy'));
 // Watcher Pages
 const WatcherLogin = lazyRetry(() => import('./pages/WatcherLogin'));
 const WatcherDashboard = lazyRetry(() => import('@portals/watcher/pages/WatcherDashboard'));
+const WatcherLibrary = lazyRetry(() => import('@portals/watcher/pages/WatcherLibrary'));
 
 // Admin Pages
 const AdminLogin = lazyRetry(() => import('./pages/AdminLogin'));
@@ -556,8 +557,11 @@ function App() {
           }>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<WatcherDashboard />} />
-            <Route path="browse" element={<Marketplace />} />
-            <Route path="saved" element={<Marketplace />} />
+            <Route path="library" element={<WatcherLibrary />} />
+            {/* Legacy redirects — old sidebar entries now live in /watcher/library */}
+            <Route path="browse" element={<Navigate to="/watcher/library?tab=saved" replace />} />
+            <Route path="saved" element={<Navigate to="/watcher/library?tab=saved" replace />} />
+            <Route path="following" element={<Navigate to="/watcher/library?tab=following" replace />} />
             <Route path="pitch/new" element={<CreatePitch />} />
             <Route path="drafts" element={<ManagePitches />} />
             <Route path="billing" element={<Billing />} />

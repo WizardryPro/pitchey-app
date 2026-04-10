@@ -188,10 +188,12 @@ export const PUBLIC_ROUTES = {
 
 export const WATCHER_ROUTES = {
   dashboard: '/watcher/dashboard',
+  library: '/watcher/library',
   browse: '/watcher/browse',
   saved: '/watcher/saved',
   pitchNew: '/watcher/pitch/new',
   drafts: '/watcher/drafts',
+  following: '/watcher/following',
   billing: '/watcher/billing',
   profile: '/watcher/profile',
   settings: '/watcher/settings',

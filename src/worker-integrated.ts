@@ -3400,6 +3400,9 @@ class RouteRegistry {
     this.register('PUT', '/api/saved-pitches/:id', this.updateSavedPitchNotes.bind(this));
     this.register('DELETE', '/api/saved-pitches/:id', this.unsavePitch.bind(this));
 
+    // Recently viewed pitches (per-user watch history)
+    this.register('GET', '/api/users/recently-viewed', this.getRecentlyViewed.bind(this));
+
     // WebSocket upgrade - paid plan with Durable Objects
     this.register('GET', '/ws', this.handleWebSocketUpgrade.bind(this));
     this.register('GET', '/api/ws/token', this.handleWebSocketToken.bind(this));
@@ -16528,6 +16531,72 @@ Signatures: [To be completed upon signing]
       return new Response(JSON.stringify({
         success: true,
         savedPitches: [],
+        total: 0
+      }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          ...getCorsHeaders(request.headers.get('Origin'))
+        }
+      });
+    }
+  }
+
+  /**
+   * GET /api/users/recently-viewed
+   * Returns the current user's recently viewed pitches, deduped by pitch_id.
+   */
+  private async getRecentlyViewed(request: Request): Promise<Response> {
+    const { getCorsHeaders } = await import('./utils/response');
+    try {
+      const authCheck = await this.requireAuth(request);
+      if (!authCheck.authorized) return authCheck.response;
+
+      const url = new URL(request.url);
+      const limit = Math.min(parseInt(url.searchParams.get('limit') || '30', 10) || 30, 100);
+
+      const rows = await this.db.query(`
+        SELECT DISTINCT ON (pv.pitch_id)
+          pv.pitch_id,
+          pv.viewed_at,
+          p.id, p.title, p.logline, p.genre, p.format, p.status,
+          p.title_image, p.thumbnail_url, p.view_count, p.like_count,
+          p.require_nda, p.budget_bracket, p.rating_average,
+          p.user_id AS creator_id,
+          COALESCE(u.first_name || ' ' || u.last_name, u.company_name, u.username, u.email) AS creator_name,
+          COALESCE(u.verified, false) AS creator_verified,
+          u.verification_tier AS creator_verification_tier
+        FROM pitch_views pv
+        JOIN pitches p ON p.id = pv.pitch_id
+        LEFT JOIN users u ON u.id = p.user_id
+        WHERE pv.viewer_id = $1
+          AND p.status = 'published'
+          AND p.user_id != $1
+        ORDER BY pv.pitch_id, pv.viewed_at DESC
+        LIMIT $2
+      `, [authCheck.user.id, limit]);
+
+      // Re-sort by most recent view across all pitches (DISTINCT ON loses global order)
+      const sorted = (rows || []).sort((a: any, b: any) =>
+        new Date(b.viewed_at).getTime() - new Date(a.viewed_at).getTime()
+      );
+
+      return new Response(JSON.stringify({
+        success: true,
+        data: sorted,
+        total: sorted.length
+      }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          ...getCorsHeaders(request.headers.get('Origin'))
+        }
+      });
+    } catch (error) {
+      console.error('Get recently viewed error:', error);
+      return new Response(JSON.stringify({
+        success: true,
+        data: [],
         total: 0
       }), {
         status: 200,
