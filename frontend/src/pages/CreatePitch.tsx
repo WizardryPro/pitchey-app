@@ -44,6 +44,7 @@ export default function CreatePitch() {
   const [currentStep, setCurrentStep] = useState<'form' | 'creating' | 'uploading' | 'complete'>('form');
   const isOnline = useOnlineStatus();
   const [aiExtracting, setAiExtracting] = useState(false);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const aiFileInputRef = React.useRef<HTMLInputElement>(null);
 
   const [genres, setGenres] = useState<string[]>([...(getGenresSync() || [])]);
@@ -317,6 +318,7 @@ export default function CreatePitch() {
     }
 
     setIsSubmitting(true);
+    setHasAttemptedSubmit(true);
     setCurrentStep('form');
 
     // Validate NDA configuration
@@ -1343,18 +1345,21 @@ export default function CreatePitch() {
             </div>
           </div>
 
-          {/* Validation Error Summary */}
-          {Object.keys(fieldErrors).length > 0 && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4" role="alert">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <h3 className="font-medium text-red-800 mb-2">
-                    Please fix {Object.keys(fieldErrors).length} error{Object.keys(fieldErrors).length > 1 ? 's' : ''} before submitting
-                  </h3>
-                  <ul className="space-y-1">
-                    {Object.entries(fieldErrors).map(([field, errors]) => (
-                      errors && errors.length > 0 && (
+          {/* Validation Error Summary — only show after submit attempt */}
+          {hasAttemptedSubmit && (() => {
+            const visibleErrors = Object.entries(fieldErrors).filter(
+              ([, errs]) => errs && errs.length > 0
+            );
+            return visibleErrors.length > 0 ? (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4" role="alert">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-medium text-red-800 mb-2">
+                      Please fix {visibleErrors.length} error{visibleErrors.length > 1 ? 's' : ''} before submitting
+                    </h3>
+                    <ul className="space-y-1">
+                      {visibleErrors.map(([field, errors]) => (
                         <li key={field}>
                           <button
                             type="button"
@@ -1364,13 +1369,13 @@ export default function CreatePitch() {
                             {field}: {errors[0]}
                           </button>
                         </li>
-                      )
-                    ))}
-                  </ul>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            ) : null;
+          })()}
 
           {/* Submit */}
           <div className="flex justify-end gap-4">
