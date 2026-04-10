@@ -4048,7 +4048,7 @@ class RouteRegistry {
         }
 
         // For demo accounts, accept the demo password (non-production only)
-        const isDemoAccount = ['alex.creator@demo.com', 'sarah.investor@demo.com', 'stellar.production@demo.com'].includes(email);
+        const isDemoAccount = ['alex.creator@demo.com', 'sarah.investor@demo.com', 'stellar.production@demo.com', 'jamie.watcher@demo.com'].includes(email);
 
         // Password verification for demo accounts
         if (isDemoAccount && this.env.ENVIRONMENT !== 'production') {
@@ -4174,7 +4174,7 @@ class RouteRegistry {
     return this.handleLoginSimple(request, 'creator');
   }
 
-  private async handlePortalLogin(request: Request, portal: 'creator' | 'investor' | 'production'): Promise<Response> {
+  private async handlePortalLogin(request: Request, portal: 'creator' | 'investor' | 'production' | 'watcher'): Promise<Response> {
     console.log('handlePortalLogin called for portal:', portal);
     console.log('Better Auth available:', !!this.betterAuth);
     console.log('Better Auth dbAdapter available:', !!(this.betterAuth && this.betterAuth.dbAdapter));
@@ -4199,7 +4199,9 @@ class RouteRegistry {
         // Get user from database using Better Auth's adapter
         const user = await this.betterAuth.dbAdapter.findUser(email) as UserRecord | undefined;
 
-        if (!user || user.user_type !== portal) {
+        // Map portal name to DB user_type (watcher portal stores as 'viewer')
+        const expectedType = portal === 'watcher' ? 'viewer' : portal;
+        if (!user || user.user_type !== expectedType) {
           return new Response(
             JSON.stringify({
               success: false,
@@ -4219,7 +4221,7 @@ class RouteRegistry {
         }
 
         // For demo accounts, accept the demo password (non-production only)
-        const isDemoAccount = ['alex.creator@demo.com', 'sarah.investor@demo.com', 'stellar.production@demo.com'].includes(email);
+        const isDemoAccount = ['alex.creator@demo.com', 'sarah.investor@demo.com', 'stellar.production@demo.com', 'jamie.watcher@demo.com'].includes(email);
 
         // Password verification for demo accounts
         if (isDemoAccount) {
