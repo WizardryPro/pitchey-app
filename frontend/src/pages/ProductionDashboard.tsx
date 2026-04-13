@@ -8,7 +8,8 @@ import {
   BookOpen, Video, Upload, UserCheck, Clock, Activity,
   X, AlertCircle, User, Trash2, CheckCircle,
   Bookmark, Filter, Search,
-  Wifi, WifiOff, AlertTriangle, RefreshCw
+  Wifi, WifiOff, AlertTriangle, RefreshCw,
+  Inbox, Send, Sparkles, ArrowRight
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useBetterAuthStore } from '../store/betterAuthStore';
@@ -482,14 +483,22 @@ function ProductionDashboard() {
           requestMessage: 'Requesting access to full pitch materials'
         });
         if (result && result.success) {
+          const resultStatus = (result.data as any)?.status;
+          const autoApproved = resultStatus === 'approved' || resultStatus === 'signed';
           setOutgoingNDARequests(prev => [...prev, {
             id: (result.data as any)?.id || Date.now(),
             pitchId,
             pitchTitle,
-            status: 'pending',
+            status: autoApproved ? 'approved' : 'pending',
             requestDate: new Date().toISOString(),
             message: 'Requesting NDA access for full pitch materials'
           }]);
+          // Optimistically reflect the new state on the Following card.
+          setFollowingPitches(prev => prev.map(p =>
+            p.id === pitchId
+              ? { ...p, ndaPending: !autoApproved, ndaSigned: autoApproved } as any
+              : p
+          ));
         } else {
           console.error('NDA request failed:', result?.error);
         }
@@ -837,9 +846,22 @@ function ProductionDashboard() {
 
   return (
     <div className="w-full">
-      {/* Page Title - simplified since PortalLayout provides header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Production Dashboard</h1>
+      {/* Welcome Banner */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-600 to-indigo-700 rounded-2xl p-8 text-white shadow-lg shadow-blue-500/20 mb-8">
+        <div aria-hidden className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+        <div aria-hidden className="absolute -bottom-24 -left-10 w-72 h-72 bg-blue-300/20 rounded-full blur-3xl" />
+        <div className="relative">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm text-xs font-medium text-blue-50 mb-4 ring-1 ring-white/20">
+            <Sparkles className="w-3.5 h-3.5" />
+            Production
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">
+            Welcome back, {user?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'Production'}
+          </h1>
+          <p className="text-blue-50/90 max-w-lg leading-relaxed">
+            Discover pitches, manage your pipeline, and collaborate with creators.
+          </p>
+        </div>
       </div>
 
       {/* Connectivity Banners */}
@@ -967,44 +989,59 @@ function ProductionDashboard() {
             )}
 
             {/* Quick Actions */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
-                <Activity className="w-5 h-5 text-purple-500" />
+            <div>
+              <div className="flex items-baseline justify-between mb-4 px-1">
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">Quick Actions</h2>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 <button
                   onClick={() => navigate('/marketplace')}
-                  className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 hover:shadow-lg hover:from-blue-100 hover:to-indigo-100 transition-all"
+                  className="group relative overflow-hidden bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-blue-200 transition-all duration-200 text-left"
                 >
-                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                  <div className="text-left">
-                    <p className="font-medium text-gray-900">Browse Marketplace</p>
-                    <p className="text-xs text-gray-500">Find new projects</p>
+                  <div aria-hidden className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-blue-100/0 to-blue-100/0 group-hover:from-blue-100/60 group-hover:to-indigo-100/40 rounded-full blur-2xl transition-all duration-300" />
+                  <div className="relative">
+                    <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm shadow-blue-500/30 mb-4 group-hover:scale-105 group-hover:shadow-blue-500/40 transition-all duration-200">
+                      <Search className="w-5 h-5" />
+                    </div>
+                    <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-1.5">
+                      Browse Marketplace
+                      <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all duration-200" />
+                    </h3>
+                    <p className="text-sm text-gray-500 leading-relaxed">Find new projects</p>
                   </div>
                 </button>
 
                 <button
                   onClick={() => navigate('/search/advanced')}
-                  className="flex items-center gap-3 p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition"
+                  className="group relative overflow-hidden bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-blue-200 transition-all duration-200 text-left"
                 >
-                  <Search className="w-6 h-6 text-gray-600" />
-                  <div className="text-left">
-                    <p className="font-medium text-gray-900">Advanced Search</p>
-                    <p className="text-xs text-gray-500">Filter by criteria</p>
+                  <div aria-hidden className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-blue-100/0 to-blue-100/0 group-hover:from-blue-100/60 group-hover:to-indigo-100/40 rounded-full blur-2xl transition-all duration-300" />
+                  <div className="relative">
+                    <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm shadow-blue-500/30 mb-4 group-hover:scale-105 group-hover:shadow-blue-500/40 transition-all duration-200">
+                      <Filter className="w-5 h-5" />
+                    </div>
+                    <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-1.5">
+                      Advanced Search
+                      <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all duration-200" />
+                    </h3>
+                    <p className="text-sm text-gray-500 leading-relaxed">Filter by criteria</p>
                   </div>
                 </button>
 
                 <button
                   onClick={() => navigate('/production/ndas')}
-                  className="flex items-center gap-3 p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition"
+                  className="group relative overflow-hidden bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-blue-200 transition-all duration-200 text-left"
                 >
-                  <Shield className="w-6 h-6 text-gray-600" />
-                  <div className="text-left">
-                    <p className="font-medium text-gray-900">Manage NDAs</p>
-                    <p className="text-xs text-gray-500">View agreements</p>
+                  <div aria-hidden className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-blue-100/0 to-blue-100/0 group-hover:from-blue-100/60 group-hover:to-indigo-100/40 rounded-full blur-2xl transition-all duration-300" />
+                  <div className="relative">
+                    <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm shadow-blue-500/30 mb-4 group-hover:scale-105 group-hover:shadow-blue-500/40 transition-all duration-200">
+                      <Shield className="w-5 h-5" />
+                    </div>
+                    <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-1.5">
+                      Manage NDAs
+                      <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all duration-200" />
+                    </h3>
+                    <p className="text-sm text-gray-500 leading-relaxed">View agreements</p>
                   </div>
                 </button>
               </div>
@@ -1286,7 +1323,7 @@ function ProductionDashboard() {
             )}
 
             {/* Following Tab Header with Filters */}
-            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6">
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50/80 border border-blue-100/60 rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
@@ -1480,18 +1517,41 @@ function ProductionDashboard() {
                               <Bookmark className={`w-4 h-4 ${savedPitches?.includes(pitch.id) ? 'fill-current' : ''}`} />
                               <span className="text-sm">Save</span>
                             </button>
-                            {pitch.ndaStatus !== 'signed' && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRequestNDA(pitch.id, pitch.title);
-                                }}
-                                className="flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200 transition-colors"
-                              >
-                                <Shield className="w-4 h-4" />
-                                <span className="text-sm">Request NDA</span>
-                              </button>
-                            )}
+                            {(() => {
+                              const p = pitch as any;
+                              const signed = p.ndaSigned || p.ndaStatus === 'signed' || p.ndaStatus === 'approved' || p.hasSignedNDA;
+                              const pending = p.ndaPending || p.ndaStatus === 'pending';
+                              const requires = p.requireNda || p.requireNDA;
+                              if (signed) {
+                                return (
+                                  <span className="flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-lg text-sm">
+                                    <Shield className="w-4 h-4" />
+                                    NDA Signed
+                                  </span>
+                                );
+                              }
+                              if (pending) {
+                                return (
+                                  <span className="flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-lg text-sm">
+                                    <Shield className="w-4 h-4" />
+                                    NDA Pending
+                                  </span>
+                                );
+                              }
+                              if (!requires) return null;
+                              return (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRequestNDA(pitch.id, pitch.title);
+                                  }}
+                                  className="flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200 transition-colors"
+                                >
+                                  <Shield className="w-4 h-4" />
+                                  <span className="text-sm">Request NDA</span>
+                                </button>
+                              );
+                            })()}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1563,19 +1623,39 @@ function ProductionDashboard() {
                   </p>
                 </div>
                 
-                {/* Quick Stats */}
-                <div className="grid grid-cols-2 gap-4 text-center">
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                    <div className="text-2xl font-bold text-amber-700">
-                      {incomingNDARequests.length}
+                {/* Quick Stats — split by direction */}
+                <div className="grid grid-cols-2 gap-6 text-center">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      <Inbox className="w-3.5 h-3.5" />
+                      On Your Pitches
                     </div>
-                    <div className="text-sm text-amber-600">Pending Requests</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                        <div className="text-xl font-bold text-amber-700">{incomingNDARequests.length}</div>
+                        <div className="text-xs text-amber-600">Pending</div>
+                      </div>
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                        <div className="text-xl font-bold text-green-700">{incomingSignedNDAs.length}</div>
+                        <div className="text-xs text-green-600">Signed</div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <div className="text-2xl font-bold text-green-700">
-                      {signedNDAs.length + incomingSignedNDAs.length}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      <Send className="w-3.5 h-3.5" />
+                      By You on Others' Pitches
                     </div>
-                    <div className="text-sm text-green-600">Active NDAs</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                        <div className="text-xl font-bold text-amber-700">{outgoingNDARequests.length}</div>
+                        <div className="text-xs text-amber-600">Pending</div>
+                      </div>
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                        <div className="text-xl font-bold text-green-700">{signedNDAs.length}</div>
+                        <div className="text-xs text-green-600">Signed</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1592,9 +1672,21 @@ function ProductionDashboard() {
             </div>
 
             {/* NDA Management Panels */}
-            <div className="space-y-6">
-              {/* 1. Incoming NDA Requests - Others wanting to access your pitches */}
-              <NDAManagementPanel
+            <div className="space-y-8">
+              {/* SECTION: NDAs ON YOUR PITCHES (incoming — others asking/signing to see your work) */}
+              <section>
+                <div className="flex items-center gap-3 mb-4 pb-2 border-b border-gray-200">
+                  <div className="p-2 bg-blue-50 rounded-lg">
+                    <Inbox className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">NDAs on Your Pitches</h3>
+                    <p className="text-sm text-gray-600">Others requesting access to — or already accessing — your pitches</p>
+                  </div>
+                </div>
+                <div className="space-y-6">
+                  {/* 1. Incoming NDA Requests - Others wanting to access your pitches */}
+                  <NDAManagementPanel
                 category="incoming-requests"
                 items={incomingNDARequests.map(request => ({
                   id: request.id,
@@ -1617,71 +1709,87 @@ function ProductionDashboard() {
                 onViewPitch={(pitchId) => navigate(`/production/pitch/${pitchId}`)}
               />
 
-              {/* 2. NDAs Signed for Your Pitches - Who has access to your content */}
-              <NDAManagementPanel
-                category="incoming-signed"
-                items={incomingSignedNDAs.map(nda => ({
-                  id: nda.id,
-                  pitchId: nda.pitchId,
-                  pitchTitle: nda.pitchTitle,
-                  status: 'signed',
-                  ndaType: nda.ndaType || 'basic',
-                  signedDate: nda.signedDate,
-                  expiresAt: nda.expiresAt,
-                  signerName: nda.signerName,
-                  signerType: nda.signerType,
-                  signerCompany: nda.signerCompany,
-                  accessGranted: nda.accessGranted
-                }))}
-                title="NDAs Signed for Your Pitches"
-                description="Others who have signed NDAs to access your pitches"
-                emptyMessage="No one has signed NDAs for your pitches yet"
-                onViewPitch={(pitchId) => navigate(`/production/pitch/${pitchId}`)}
-              />
+                  {/* 2. NDAs Signed for Your Pitches - Who has access to your content */}
+                  <NDAManagementPanel
+                    category="incoming-signed"
+                    items={incomingSignedNDAs.map(nda => ({
+                      id: nda.id,
+                      pitchId: nda.pitchId,
+                      pitchTitle: nda.pitchTitle,
+                      status: 'signed',
+                      ndaType: nda.ndaType || 'basic',
+                      signedDate: nda.signedDate,
+                      expiresAt: nda.expiresAt,
+                      signerName: nda.signerName,
+                      signerType: nda.signerType,
+                      signerCompany: nda.signerCompany,
+                      accessGranted: nda.accessGranted
+                    }))}
+                    title="Signed NDAs on Your Pitches"
+                    description="Parties who have signed an NDA to view one of your pitches"
+                    emptyMessage="No one has signed NDAs for your pitches yet"
+                    onViewPitch={(pitchId) => navigate(`/production/pitch/${pitchId}`)}
+                  />
+                </div>
+              </section>
 
-              {/* 3. Your Signed NDAs - Pitches you have access to */}
-              <NDAManagementPanel
-                category="outgoing-signed"
-                items={signedNDAs.map(nda => ({
-                  id: nda.id,
-                  pitchId: nda.pitchId,
-                  pitchTitle: nda.pitchTitle,
-                  status: 'signed',
-                  ndaType: nda.ndaType || 'basic',
-                  signedDate: nda.signedDate,
-                  expiresAt: nda.expiresAt,
-                  expiresIn: nda.expiresIn,
-                  creator: nda.creator,
-                  creatorType: nda.creatorType,
-                  companyName: nda.companyName,
-                  accessGranted: nda.accessGranted
-                }))}
-                title="Your Signed NDAs"
-                description="Pitches you've signed NDAs to access"
-                emptyMessage="You haven't signed any NDAs yet"
-                onViewPitch={(pitchId) => navigate(`/production/pitch/${pitchId}`)}
-              />
+              {/* SECTION: NDAs YOU'VE INITIATED (outgoing — access you've asked for or signed on others' pitches) */}
+              <section>
+                <div className="flex items-center gap-3 mb-4 pb-2 border-b border-gray-200">
+                  <div className="p-2 bg-purple-50 rounded-lg">
+                    <Send className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">NDAs You've Initiated</h3>
+                    <p className="text-sm text-gray-600">Requests you've sent and NDAs you've signed to access other creators' pitches</p>
+                  </div>
+                </div>
+                <div className="space-y-6">
+                  {/* 3. Your Outgoing NDA Requests - Your pending requests */}
+                  <NDAManagementPanel
+                    category="outgoing-requests"
+                    items={outgoingNDARequests.map(request => ({
+                      id: request.id,
+                      pitchId: request.pitchId,
+                      pitchTitle: request.pitchTitle,
+                      status: 'pending',
+                      ndaType: request.ndaType || 'basic',
+                      requestedDate: request.requestedDate,
+                      creator: request.creator,
+                      creatorType: request.creatorType,
+                      companyName: request.companyName,
+                      message: request.message
+                    }))}
+                    title="Your Pending Requests"
+                    description="Requests you've sent to access other creators' pitches"
+                    emptyMessage="You have no pending requests"
+                    onViewPitch={(pitchId) => navigate(`/production/pitch/${pitchId}`)}
+                  />
 
-              {/* 4. Your Outgoing NDA Requests - Your pending requests */}
-              <NDAManagementPanel
-                category="outgoing-requests"
-                items={outgoingNDARequests.map(request => ({
-                  id: request.id,
-                  pitchId: request.pitchId,
-                  pitchTitle: request.pitchTitle,
-                  status: 'pending',
-                  ndaType: request.ndaType || 'basic',
-                  requestedDate: request.requestedDate,
-                  creator: request.creator,
-                  creatorType: request.creatorType,
-                  companyName: request.companyName,
-                  message: request.message
-                }))}
-                title="Your Pending Requests"
-                description="Your requests to access others' pitches"
-                emptyMessage="No pending requests at this time"
-                onViewPitch={(pitchId) => navigate(`/production/pitch/${pitchId}`)}
-              />
+                  {/* 4. Your Signed NDAs - Pitches you have access to */}
+                  <NDAManagementPanel
+                    category="outgoing-signed"
+                    items={signedNDAs.map(nda => ({
+                      id: nda.id,
+                      pitchId: nda.pitchId,
+                      pitchTitle: nda.pitchTitle,
+                      status: 'signed',
+                      ndaType: nda.ndaType || 'basic',
+                      signedDate: nda.signedDate,
+                      expiresAt: nda.expiresAt,
+                      expiresIn: nda.expiresIn,
+                      creator: nda.creator,
+                      creatorType: nda.creatorType,
+                      companyName: nda.companyName,
+                      accessGranted: nda.accessGranted
+                    }))}
+                    title="NDAs You've Signed"
+                    description="Other creators' pitches you have NDA access to"
+                    emptyMessage="You haven't signed any NDAs yet"
+                    onViewPitch={(pitchId) => navigate(`/production/pitch/${pitchId}`)}
+                  />
+                </div>
+              </section>
             </div>
 
             {/* NDA Summary Stats */}
@@ -1690,18 +1798,38 @@ function ProductionDashboard() {
                 <BarChart3 className="w-5 h-5 text-blue-600" />
                 <h3 className="font-semibold text-gray-900">NDA Summary</h3>
               </div>
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-2xl font-bold text-gray-900">{incomingNDARequests.length}</p>
-                  <p className="text-sm text-gray-600">Pending Requests</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-blue-50/40 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3 text-blue-700">
+                    <Inbox className="w-4 h-4" />
+                    <h4 className="text-sm font-semibold">On Your Pitches</h4>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-center">
+                    <div className="bg-white rounded-lg p-3">
+                      <p className="text-xl font-bold text-amber-700">{incomingNDARequests.length}</p>
+                      <p className="text-xs text-gray-600">Pending Requests</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3">
+                      <p className="text-xl font-bold text-green-700">{incomingSignedNDAs.length}</p>
+                      <p className="text-xs text-gray-600">Signed</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-2xl font-bold text-green-600">{signedNDAs.length + incomingSignedNDAs.length}</p>
-                  <p className="text-sm text-gray-600">Signed NDAs</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-2xl font-bold text-purple-600">{outgoingNDARequests.length}</p>
-                  <p className="text-sm text-gray-600">Your Requests</p>
+                <div className="bg-purple-50/40 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3 text-purple-700">
+                    <Send className="w-4 h-4" />
+                    <h4 className="text-sm font-semibold">By You on Others' Pitches</h4>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-center">
+                    <div className="bg-white rounded-lg p-3">
+                      <p className="text-xl font-bold text-amber-700">{outgoingNDARequests.length}</p>
+                      <p className="text-xs text-gray-600">Your Pending Requests</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3">
+                      <p className="text-xl font-bold text-green-700">{signedNDAs.length}</p>
+                      <p className="text-xs text-gray-600">NDAs You've Signed</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

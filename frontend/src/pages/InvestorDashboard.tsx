@@ -26,7 +26,10 @@ import {
   Wifi,
   WifiOff,
   AlertTriangle,
-  RefreshCw
+  RefreshCw,
+  Sparkles,
+  ArrowRight,
+  Search
 } from 'lucide-react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import api from '../lib/api';
@@ -335,9 +338,22 @@ function InvestorDashboard() {
 
   return (
     <div className="w-full">
-      {/* Page Title - simplified since PortalLayout provides header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Investor Dashboard</h1>
+      {/* Welcome Banner */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700 rounded-2xl p-8 text-white shadow-lg shadow-emerald-500/20 mb-8">
+        <div aria-hidden className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+        <div aria-hidden className="absolute -bottom-24 -left-10 w-72 h-72 bg-emerald-300/20 rounded-full blur-3xl" />
+        <div className="relative">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm text-xs font-medium text-emerald-50 mb-4 ring-1 ring-white/20">
+            <Sparkles className="w-3.5 h-3.5" />
+            Investor
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">
+            Welcome back, {user?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'Investor'}
+          </h1>
+          <p className="text-emerald-50/90 max-w-lg leading-relaxed">
+            Track your portfolio, discover new pitches, and manage your deals.
+          </p>
+        </div>
       </div>
 
       {/* Connectivity Banners */}
@@ -382,96 +398,67 @@ function InvestorDashboard() {
 
       <div className="space-y-6">
         {/* Portfolio Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Invested</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">
-                  {formatCurrency(portfolio.totalInvested)}
-                </p>
-              </div>
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <DollarSign className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-            {portfolio.totalInvested > 0 && (
-              <div className="mt-4 flex items-center text-sm">
-                <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                <span className="text-green-500 font-medium">Active</span>
-                <span className="text-gray-500 ml-1">portfolio</span>
-              </div>
-            )}
-            {portfolio.totalInvested === 0 && (
-              <div className="mt-4 flex items-center text-sm">
-                <span className="text-gray-500">Start investing today</span>
-              </div>
-            )}
+        <div>
+          <div className="flex items-baseline justify-between mb-4 px-1">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">Portfolio Overview</h2>
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
+            <div className="group relative bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-100 ring-1 ring-emerald-100/60">
+                  <DollarSign className="w-5 h-5 text-emerald-600" />
+                </div>
+              </div>
+              <p className="text-3xl font-bold tracking-tight tabular-nums text-gray-900">
+                {formatCurrency(portfolio.totalInvested)}
+              </p>
+              <p className="text-sm font-medium text-gray-600 mt-1">Total Invested</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {portfolio.totalInvested > 0 ? 'Active portfolio' : 'Start investing today'}
+              </p>
+            </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Active Deals</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">
-                  {portfolio.activeInvestments}
-                </p>
+            <div className="group relative bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-green-50 to-emerald-100 ring-1 ring-green-100/60">
+                  <Briefcase className="w-5 h-5 text-green-600" />
+                </div>
               </div>
-              <div className="p-3 bg-green-50 rounded-lg">
-                <Briefcase className="w-6 h-6 text-green-600" />
-              </div>
+              <p className="text-3xl font-bold tracking-tight tabular-nums text-gray-900">
+                {portfolio.activeInvestments}
+              </p>
+              <p className="text-sm font-medium text-gray-600 mt-1">Active Deals</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {portfolio.activeInvestments > 0 ? `${portfolio.activeInvestments} active` : 'No active investments'}
+              </p>
             </div>
-            <div className="mt-4 flex items-center text-sm">
-              {portfolio.activeInvestments > 0 ? (
-                <>
-                  <Plus className="w-4 h-4 text-blue-500 mr-1" />
-                  <span className="text-gray-600">{portfolio.activeInvestments} active</span>
-                </>
-              ) : (
-                <span className="text-gray-500">No active investments</span>
-              )}
-            </div>
-          </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Average ROI</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">
-                  {formatPercentage(portfolio.averageROI, 0)}
-                </p>
+            <div className="group relative bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-teal-50 to-emerald-100 ring-1 ring-teal-100/60">
+                  <BarChart3 className="w-5 h-5 text-teal-600" />
+                </div>
               </div>
-              <div className="p-3 bg-purple-50 rounded-lg">
-                <BarChart3 className="w-6 h-6 text-purple-600" />
-              </div>
+              <p className="text-3xl font-bold tracking-tight tabular-nums text-gray-900">
+                {formatPercentage(portfolio.averageROI, 0)}
+              </p>
+              <p className="text-sm font-medium text-gray-600 mt-1">Average ROI</p>
+              <p className="text-xs text-gray-400 mt-0.5">Industry avg: 12.3%</p>
             </div>
-            <div className="mt-4 flex items-center text-sm">
-              <Activity className="w-4 h-4 text-purple-500 mr-1" />
-              <span className="text-gray-600">Industry avg: 12.3%</span>
-            </div>
-          </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Top Performer</p>
-                <p className="text-lg font-bold text-gray-900 mt-2 truncate">
-                  {portfolio.topPerformer}
-                </p>
+            <div className="group relative bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-yellow-50 to-amber-100 ring-1 ring-yellow-100/60">
+                  <Star className="w-5 h-5 text-yellow-500" />
+                </div>
               </div>
-              <div className="p-3 bg-yellow-50 rounded-lg">
-                <Star className="w-6 h-6 text-yellow-600" />
-              </div>
-            </div>
-            <div className="mt-4 flex items-center text-sm">
-              {portfolio.topPerformer !== 'None yet' ? (
-                <>
-                  <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                  <span className="text-green-500 font-medium">Best performer</span>
-                </>
-              ) : (
-                <span className="text-gray-500">Invest to see top performers</span>
-              )}
+              <p className="text-xl font-bold tracking-tight text-gray-900 truncate">
+                {portfolio.topPerformer}
+              </p>
+              <p className="text-sm font-medium text-gray-600 mt-1">Top Performer</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {portfolio.topPerformer !== 'None yet' ? 'Best performer' : 'Invest to see top performers'}
+              </p>
             </div>
           </div>
         </div>
@@ -1270,35 +1257,61 @@ function InvestorDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4">
-          <button 
-            onClick={() => navigate('/marketplace')}
-            className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 hover:shadow-lg hover:from-blue-100 hover:to-indigo-100 transition-all text-left"
-          >
-            <svg className="w-5 h-5 text-blue-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-            <p className="font-medium text-gray-900">Marketplace</p>
-            <p className="text-sm text-gray-500">Browse all pitches</p>
-          </button>
-          
-          <button className="p-4 bg-white rounded-lg border hover:shadow-md transition-shadow text-left">
-            <Users className="w-5 h-5 text-green-600 mb-2" />
-            <p className="font-medium text-gray-900">Network</p>
-            <p className="text-sm text-gray-500">Connect with creators</p>
-          </button>
-          
-          <button className="p-4 bg-white rounded-lg border hover:shadow-md transition-shadow text-left">
-            <Calendar className="w-5 h-5 text-purple-600 mb-2" />
-            <p className="font-medium text-gray-900">Schedule</p>
-            <p className="text-sm text-gray-500">Manage meetings</p>
-          </button>
-          
-          <button className="p-4 bg-white rounded-lg border hover:shadow-md transition-shadow text-left">
-            <FileText className="w-5 h-5 text-orange-600 mb-2" />
-            <p className="font-medium text-gray-900">Documents</p>
-            <p className="text-sm text-gray-500">View contracts & NDAs</p>
-          </button>
+        <div className="mt-8">
+          <div className="flex items-baseline justify-between mb-4 px-1">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">Quick Actions</h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <button
+              onClick={() => navigate('/marketplace')}
+              className="group relative overflow-hidden bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-emerald-200 transition-all duration-200 text-left"
+            >
+              <div aria-hidden className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-emerald-100/0 to-emerald-100/0 group-hover:from-emerald-100/60 group-hover:to-teal-100/40 rounded-full blur-2xl transition-all duration-300" />
+              <div className="relative">
+                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm shadow-emerald-500/30 mb-4 group-hover:scale-105 group-hover:shadow-emerald-500/40 transition-all duration-200">
+                  <Search className="w-5 h-5" />
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-1.5">
+                  Marketplace
+                  <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all duration-200" />
+                </h3>
+                <p className="text-sm text-gray-500 leading-relaxed">Browse all pitches</p>
+              </div>
+            </button>
+
+            <button className="group relative overflow-hidden bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-emerald-200 transition-all duration-200 text-left">
+              <div aria-hidden className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-emerald-100/0 to-emerald-100/0 group-hover:from-emerald-100/60 group-hover:to-teal-100/40 rounded-full blur-2xl transition-all duration-300" />
+              <div className="relative">
+                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm shadow-emerald-500/30 mb-4 group-hover:scale-105 group-hover:shadow-emerald-500/40 transition-all duration-200">
+                  <Users className="w-5 h-5" />
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-1">Network</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">Connect with creators</p>
+              </div>
+            </button>
+
+            <button className="group relative overflow-hidden bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-emerald-200 transition-all duration-200 text-left">
+              <div aria-hidden className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-emerald-100/0 to-emerald-100/0 group-hover:from-emerald-100/60 group-hover:to-teal-100/40 rounded-full blur-2xl transition-all duration-300" />
+              <div className="relative">
+                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm shadow-emerald-500/30 mb-4 group-hover:scale-105 group-hover:shadow-emerald-500/40 transition-all duration-200">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-1">Schedule</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">Manage meetings</p>
+              </div>
+            </button>
+
+            <button className="group relative overflow-hidden bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-emerald-200 transition-all duration-200 text-left">
+              <div aria-hidden className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-emerald-100/0 to-emerald-100/0 group-hover:from-emerald-100/60 group-hover:to-teal-100/40 rounded-full blur-2xl transition-all duration-300" />
+              <div className="relative">
+                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm shadow-emerald-500/30 mb-4 group-hover:scale-105 group-hover:shadow-emerald-500/40 transition-all duration-200">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-1">Documents</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">View contracts & NDAs</p>
+              </div>
+            </button>
+          </div>
         </div>
       </div>
     </div>

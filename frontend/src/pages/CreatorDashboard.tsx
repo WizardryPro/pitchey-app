@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useNavigate } from 'react-router-dom';
-import { TrendingUp, Eye, MessageSquare, Upload, BarChart3, Calendar, Plus, Shield, CreditCard, Wifi, WifiOff, AlertTriangle, RefreshCw } from 'lucide-react';
+import { TrendingUp, Eye, MessageSquare, Upload, BarChart3, Calendar, Plus, Shield, CreditCard, Wifi, WifiOff, AlertTriangle, RefreshCw, Sparkles, ArrowRight } from 'lucide-react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { paymentsAPI } from '../lib/apiServices';
 import apiClient from '../lib/api-client';
@@ -335,9 +335,22 @@ function CreatorDashboard() {
 
   return (
     <div className="w-full">
-      {/* Page Title - simplified since PortalLayout provides header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Creator Dashboard</h1>
+      {/* Welcome Banner */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-purple-600 via-purple-600 to-indigo-700 rounded-2xl p-8 text-white shadow-lg shadow-purple-500/20 mb-8">
+        <div aria-hidden className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+        <div aria-hidden className="absolute -bottom-24 -left-10 w-72 h-72 bg-purple-300/20 rounded-full blur-3xl" />
+        <div className="relative">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm text-xs font-medium text-purple-50 mb-4 ring-1 ring-white/20">
+            <Sparkles className="w-3.5 h-3.5" />
+            Creator
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">
+            Welcome back, {safeString(user?.name) || safeString(user?.firstName) || safeString(authUser?.name)?.split(' ')[0] || 'Creator'}
+          </h1>
+          <p className="text-purple-50/90 max-w-lg leading-relaxed">
+            Here's what's happening with your pitches today.
+          </p>
+        </div>
       </div>
 
       {/* Connectivity Banners */}
@@ -382,39 +395,35 @@ function CreatorDashboard() {
 
       {/* ===== COMMAND CENTER HERO ZONE ===== */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
-        {/* Left: Welcome + Key Metrics */}
-        <div className="lg:col-span-3 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-xl p-6 text-white">
-          <h2 className="text-xl font-bold mb-1">
-            Welcome back, {safeString(user?.name) || safeString(user?.firstName) || 'Creator'}
-          </h2>
-          <p className="text-purple-200 text-sm mb-6">Here's what's happening with your pitches</p>
-
+        {/* Left: Key Metrics */}
+        <div className="lg:col-span-3 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl p-6 text-white shadow-lg shadow-purple-500/20">
+          <p className="text-sm font-semibold uppercase tracking-wider text-purple-200/80 mb-5">At a Glance</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div
               onClick={() => { void navigate('/creator/pitches'); }}
-              className="bg-white/15 hover:bg-white/25 backdrop-blur rounded-lg p-4 cursor-pointer transition"
+              className="bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl p-4 cursor-pointer transition"
             >
               <TrendingUp className="w-5 h-5 text-purple-200 mb-2" />
-              <p className="text-2xl font-bold">{formatNumber(safeAccess(stats, 'activePitches', 0))}</p>
-              <p className="text-purple-200 text-xs">Active Pitches</p>
+              <p className="text-3xl font-bold tracking-tight tabular-nums">{formatNumber(safeAccess(stats, 'activePitches', 0))}</p>
+              <p className="text-purple-200 text-xs mt-0.5">Active Pitches</p>
             </div>
 
             <div
               onClick={() => { void navigate('/creator/analytics'); }}
-              className="bg-white/15 hover:bg-white/25 backdrop-blur rounded-lg p-4 cursor-pointer transition"
+              className="bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl p-4 cursor-pointer transition"
             >
               <Eye className="w-5 h-5 text-purple-200 mb-2" />
-              <p className="text-2xl font-bold">{formatNumber(safeNumber(totalViews, 0))}</p>
-              <p className="text-purple-200 text-xs">Total Views</p>
+              <p className="text-3xl font-bold tracking-tight tabular-nums">{formatNumber(safeNumber(totalViews, 0))}</p>
+              <p className="text-purple-200 text-xs mt-0.5">Total Views</p>
             </div>
 
             <div
               onClick={() => { void navigate('/creator/ndas'); }}
-              className="bg-white/15 hover:bg-white/25 backdrop-blur rounded-lg p-4 cursor-pointer transition relative"
+              className="bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl p-4 cursor-pointer transition relative"
             >
               <Shield className="w-5 h-5 text-purple-200 mb-2" />
-              <p className="text-2xl font-bold">{formatNumber(safeAccess(stats, 'totalInterest', 0))}</p>
-              <p className="text-purple-200 text-xs">Pending NDAs</p>
+              <p className="text-3xl font-bold tracking-tight tabular-nums">{formatNumber(safeAccess(stats, 'totalInterest', 0))}</p>
+              <p className="text-purple-200 text-xs mt-0.5">Pending NDAs</p>
               {safeNumber(stats?.totalInterest) > 0 && (
                 <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-red-500 rounded-full" />
               )}
@@ -423,50 +432,68 @@ function CreatorDashboard() {
         </div>
 
         {/* Right: Quick Actions Grid */}
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <p className="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-4">Quick Actions</p>
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => { void navigate('/creator/pitch/new'); }}
-              className="flex flex-col items-center gap-2 p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition"
+              className="group relative overflow-hidden flex flex-col items-center gap-2 p-4 bg-white border border-gray-100 rounded-xl hover:border-purple-200 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
             >
-              <Plus className="w-6 h-6 text-purple-600" />
-              <span className="text-xs font-medium text-purple-900">Create Pitch</span>
+              <div aria-hidden className="absolute -top-6 -right-6 w-16 h-16 bg-gradient-to-br from-purple-100/0 to-purple-100/0 group-hover:from-purple-100/60 group-hover:to-indigo-100/40 rounded-full blur-xl transition-all duration-300" />
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-sm shadow-purple-500/30 group-hover:scale-105 transition-all duration-200">
+                <Plus className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-medium text-gray-700">Create Pitch</span>
             </button>
             <button
               onClick={() => { void navigate('/creator/pitches'); }}
-              className="flex flex-col items-center gap-2 p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition"
+              className="group relative overflow-hidden flex flex-col items-center gap-2 p-4 bg-white border border-gray-100 rounded-xl hover:border-purple-200 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
             >
-              <Upload className="w-6 h-6 text-gray-600" />
-              <span className="text-xs font-medium text-gray-900">Manage Pitches</span>
+              <div aria-hidden className="absolute -top-6 -right-6 w-16 h-16 bg-gradient-to-br from-purple-100/0 to-purple-100/0 group-hover:from-purple-100/60 group-hover:to-indigo-100/40 rounded-full blur-xl transition-all duration-300" />
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-gray-400 to-gray-500 text-white shadow-sm group-hover:scale-105 transition-all duration-200">
+                <Upload className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-medium text-gray-700">Manage Pitches</span>
             </button>
             <button
               onClick={() => { void navigate('/creator/ndas'); }}
-              className="flex flex-col items-center gap-2 p-4 bg-amber-50 hover:bg-amber-100 rounded-lg transition"
+              className="group relative overflow-hidden flex flex-col items-center gap-2 p-4 bg-white border border-gray-100 rounded-xl hover:border-amber-200 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
             >
-              <Shield className="w-6 h-6 text-amber-600" />
-              <span className="text-xs font-medium text-amber-900">NDAs</span>
+              <div aria-hidden className="absolute -top-6 -right-6 w-16 h-16 bg-gradient-to-br from-amber-100/0 to-amber-100/0 group-hover:from-amber-100/60 group-hover:to-orange-100/40 rounded-full blur-xl transition-all duration-300" />
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-sm shadow-amber-500/30 group-hover:scale-105 transition-all duration-200">
+                <Shield className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-medium text-gray-700">NDAs</span>
             </button>
             <button
               onClick={() => { void navigate('/creator/messages'); }}
-              className="flex flex-col items-center gap-2 p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition"
+              className="group relative overflow-hidden flex flex-col items-center gap-2 p-4 bg-white border border-gray-100 rounded-xl hover:border-blue-200 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
             >
-              <MessageSquare className="w-6 h-6 text-blue-600" />
-              <span className="text-xs font-medium text-blue-900">Messages</span>
+              <div aria-hidden className="absolute -top-6 -right-6 w-16 h-16 bg-gradient-to-br from-blue-100/0 to-blue-100/0 group-hover:from-blue-100/60 group-hover:to-indigo-100/40 rounded-full blur-xl transition-all duration-300" />
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm shadow-blue-500/30 group-hover:scale-105 transition-all duration-200">
+                <MessageSquare className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-medium text-gray-700">Messages</span>
             </button>
             <button
               onClick={() => { void navigate('/creator/analytics'); }}
-              className="flex flex-col items-center gap-2 p-4 bg-green-50 hover:bg-green-100 rounded-lg transition"
+              className="group relative overflow-hidden flex flex-col items-center gap-2 p-4 bg-white border border-gray-100 rounded-xl hover:border-green-200 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
             >
-              <BarChart3 className="w-6 h-6 text-green-600" />
-              <span className="text-xs font-medium text-green-900">Analytics</span>
+              <div aria-hidden className="absolute -top-6 -right-6 w-16 h-16 bg-gradient-to-br from-green-100/0 to-green-100/0 group-hover:from-green-100/60 group-hover:to-emerald-100/40 rounded-full blur-xl transition-all duration-300" />
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-sm shadow-green-500/30 group-hover:scale-105 transition-all duration-200">
+                <BarChart3 className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-medium text-gray-700">Analytics</span>
             </button>
             <button
               onClick={() => { void navigate('/creator/billing'); }}
-              className="flex flex-col items-center gap-2 p-4 bg-gradient-to-r from-green-50 to-blue-50 hover:from-green-100 hover:to-blue-100 rounded-lg transition"
+              className="group relative overflow-hidden flex flex-col items-center gap-2 p-4 bg-white border border-gray-100 rounded-xl hover:border-purple-200 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
             >
-              <CreditCard className="w-6 h-6 text-blue-600" />
-              <span className="text-xs font-medium text-blue-900">Billing</span>
+              <div aria-hidden className="absolute -top-6 -right-6 w-16 h-16 bg-gradient-to-br from-purple-100/0 to-purple-100/0 group-hover:from-purple-100/60 group-hover:to-indigo-100/40 rounded-full blur-xl transition-all duration-300" />
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-sm shadow-purple-500/30 group-hover:scale-105 transition-all duration-200">
+                <CreditCard className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-medium text-gray-700">Billing</span>
             </button>
           </div>
         </div>
@@ -626,66 +653,82 @@ function CreatorDashboard() {
       <NDANotificationPanel className="mb-8" />
 
       {/* ===== STATS GRID — 6 KPI Cards (pushed down) ===== */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-6 mb-8">
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-500 text-sm">Total Pitches</span>
-            <BarChart3 className="w-5 h-5 text-purple-500" />
+      <div className="mb-4 px-1">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">Performance</h2>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-5 mb-8">
+        <div className="group relative bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100 ring-1 ring-purple-100/60">
+              <BarChart3 className="w-5 h-5 text-purple-500" />
+            </div>
           </div>
-          <p className="text-2xl font-bold text-gray-900">{formatNumber(safeAccess(stats, 'totalPitches', 0))}</p>
-          <p className="text-xs text-gray-500 mt-1">All time</p>
+          <p className="text-3xl font-bold tracking-tight tabular-nums text-gray-900">{formatNumber(safeAccess(stats, 'totalPitches', 0))}</p>
+          <p className="text-sm font-medium text-gray-600 mt-1">Total Pitches</p>
+          <p className="text-xs text-gray-400 mt-0.5">All time</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-500 text-sm">Active Pitches</span>
-            <TrendingUp className="w-5 h-5 text-green-500" />
+        <div className="group relative bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-green-50 to-emerald-100 ring-1 ring-green-100/60">
+              <TrendingUp className="w-5 h-5 text-green-500" />
+            </div>
           </div>
-          <p className="text-2xl font-bold text-gray-900">{formatNumber(safeAccess(stats, 'activePitches', 0))}</p>
-          <p className="text-xs text-green-500 mt-1">Currently live</p>
+          <p className="text-3xl font-bold tracking-tight tabular-nums text-gray-900">{formatNumber(safeAccess(stats, 'activePitches', 0))}</p>
+          <p className="text-sm font-medium text-gray-600 mt-1">Active Pitches</p>
+          <p className="text-xs text-gray-400 mt-0.5">Currently live</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-500 text-sm">Total Views</span>
-            <Eye className="w-5 h-5 text-blue-500" />
+        <div className="group relative bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-blue-50 to-sky-100 ring-1 ring-blue-100/60">
+              <Eye className="w-5 h-5 text-blue-500" />
+            </div>
           </div>
-          <p className="text-2xl font-bold text-gray-900">{formatNumber(safeNumber(totalViews, 0))}</p>
-          <p className="text-xs text-gray-500 mt-1">All time</p>
+          <p className="text-3xl font-bold tracking-tight tabular-nums text-gray-900">{formatNumber(safeNumber(totalViews, 0))}</p>
+          <p className="text-sm font-medium text-gray-600 mt-1">Total Views</p>
+          <p className="text-xs text-gray-400 mt-0.5">All time</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-500 text-sm">Avg Rating</span>
-            <svg className="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-            </svg>
+        <div className="group relative bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-yellow-50 to-amber-100 ring-1 ring-yellow-100/60">
+              <svg className="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
+            </div>
           </div>
-          <p className="text-2xl font-bold text-gray-900">{avgRating.toFixed(1)}</p>
-          <p className="text-xs text-gray-500 mt-1">Out of 5.0</p>
+          <p className="text-3xl font-bold tracking-tight tabular-nums text-gray-900">{avgRating.toFixed(1)}</p>
+          <p className="text-sm font-medium text-gray-600 mt-1">Avg Rating</p>
+          <p className="text-xs text-gray-400 mt-0.5">Out of 5.0</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-6 cursor-pointer hover:shadow-md transition-shadow" onClick={() => { void navigate('/creator/following'); }}>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-500 text-sm">Followers</span>
-            <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
+        <div className="group relative bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer" onClick={() => { void navigate('/creator/following'); }}>
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-sky-50 to-blue-100 ring-1 ring-sky-100/60">
+              <svg className="w-5 h-5 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+            <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-purple-600 group-hover:translate-x-0.5 transition-all duration-200" />
           </div>
-          <p className="text-2xl font-bold text-gray-900">{followers}</p>
-          <p className="text-xs text-blue-500 mt-1 hover:underline">View followers →</p>
+          <p className="text-3xl font-bold tracking-tight tabular-nums text-gray-900">{followers}</p>
+          <p className="text-sm font-medium text-gray-600 mt-1">Followers</p>
+          <p className="text-xs text-gray-400 mt-0.5">View followers</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-500 text-sm">Engagement Rate</span>
-            <TrendingUp className="w-5 h-5 text-purple-500" />
+        <div className="group relative bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-50 to-purple-100 ring-1 ring-indigo-100/60">
+              <TrendingUp className="w-5 h-5 text-indigo-500" />
+            </div>
           </div>
-          <p className="text-2xl font-bold text-gray-900">
+          <p className="text-3xl font-bold tracking-tight tabular-nums text-gray-900">
             {safeNumber(stats?.totalPitches) > 0 ?
               Math.round(((safeNumber(stats?.totalInterest)) / safeNumber(stats?.totalPitches)) * 100) : 0}%
           </p>
-          <p className="text-xs text-purple-500 mt-1">Interest per pitch</p>
+          <p className="text-sm font-medium text-gray-600 mt-1">Engagement Rate</p>
+          <p className="text-xs text-gray-400 mt-0.5">Interest per pitch</p>
         </div>
       </div>
 
