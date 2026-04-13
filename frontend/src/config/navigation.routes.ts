@@ -111,6 +111,7 @@ export const PRODUCTION_ROUTES = {
   
   // Pitch Creation
   pitchNew: '/production/pitch/new',
+  pitches: '/production/pitches',
 
   // Project Management
   projects: '/production/projects',

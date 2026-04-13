@@ -503,8 +503,8 @@ export const paymentsAPI = {
     return null;
   },
 
-  // Subscribe to a plan
-  async subscribe(tier: string, billingInterval?: 'monthly' | 'yearly') {
+  // Subscribe to a plan. Backend expects 'monthly' | 'annual' (not 'yearly').
+  async subscribe(tier: string, billingInterval?: 'monthly' | 'annual') {
     const response = await apiClient.post<any>('/api/payments/subscribe', { tier, billingInterval });
     if (response.success) {
       return { success: true, ...(response.data as object || {}) };

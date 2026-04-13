@@ -226,8 +226,13 @@ export const getSubscriptionTiersByUserType = (userType: string): SubscriptionTi
   if (userType === 'investor') {
     return SUBSCRIPTION_TIERS.filter(tier => tier.userType === 'exec' || tier.userType === 'watcher');
   }
-  if (userType === 'watcher') {
-    return SUBSCRIPTION_TIERS.filter(tier => tier.userType === 'watcher');
+  // Watchers are the upgrade funnel: show them the free watcher tier (their
+  // current plan) plus the Creator ladder. The webhook flips user_type from
+  // viewer → creator when a Creator tier is purchased.
+  if (userType === 'watcher' || userType === 'viewer') {
+    return SUBSCRIPTION_TIERS.filter(
+      tier => tier.userType === 'watcher' || tier.userType === 'creator'
+    );
   }
   return SUBSCRIPTION_TIERS;
 };

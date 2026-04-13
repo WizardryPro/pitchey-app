@@ -87,7 +87,8 @@ const PLANS = {
 export default function SubscriptionCard({ subscription, onRefresh }: SubscriptionCardProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedBilling, setSelectedBilling] = useState<'monthly' | 'yearly'>('monthly');
+  // Backend expects 'monthly' | 'annual' — UI still says "Yearly" for clarity.
+  const [selectedBilling, setSelectedBilling] = useState<'monthly' | 'annual'>('monthly');
 
   const currentTier = subscription?.tier || 'free';
   const subscriptionStatus = subscription?.status || 'inactive';
@@ -247,9 +248,9 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
             Monthly
           </button>
           <button
-            onClick={() => setSelectedBilling('yearly')}
+            onClick={() => setSelectedBilling('annual')}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              selectedBilling === 'yearly'
+              selectedBilling === 'annual'
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
@@ -263,7 +264,7 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {Object.entries(PLANS).map(([planKey, plan]) => {
           const isCurrentPlan = currentTier === planKey;
-          const price = selectedBilling === 'yearly' 
+          const price = selectedBilling === 'annual' 
             ? getYearlyPrice(plan.price) 
             : plan.price;
           const originalYearlyPrice = plan.price * 12;
@@ -305,13 +306,13 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
                         ${price}
                       </span>
                       <span className="text-gray-500">
-                        /{selectedBilling === 'yearly' ? 'year' : 'month'}
+                        /{selectedBilling === 'annual' ? 'year' : 'month'}
                       </span>
                     </>
                   )}
                 </div>
                 
-                {selectedBilling === 'yearly' && plan.price > 0 && (
+                {selectedBilling === 'annual' && plan.price > 0 && (
                   <div className="text-sm text-green-600">
                     Save ${originalYearlyPrice - price}/year
                   </div>

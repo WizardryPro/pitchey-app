@@ -544,6 +544,8 @@ function App() {
             <Route path="messages/*" element={<Messages />} />
             <Route path="calendar" element={<Calendar />} />
             <Route path="ndas" element={<ProductionNDAManagement />} />
+            <Route path="pitches" element={<ManagePitches />} />
+            <Route path="pitches/:id/edit" element={<PitchEdit />} />
 
             {/* Enhanced Production Routes */}
             {AllProductionRoutes({ isAuthenticated: true, userType: 'production' })}
@@ -563,6 +565,8 @@ function App() {
             <Route path="saved" element={<Navigate to="/watcher/library?tab=saved" replace />} />
             <Route path="following" element={<Navigate to="/watcher/library?tab=following" replace />} />
             <Route path="pitch/new" element={<CreatePitch />} />
+            <Route path="pitch/:id/edit" element={<PitchEdit />} />
+            <Route path="pitches/:id/edit" element={<PitchEdit />} />
             <Route path="drafts" element={<ManagePitches />} />
             <Route path="billing" element={<Billing />} />
             <Route path="profile" element={<Profile />} />
