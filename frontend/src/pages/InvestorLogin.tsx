@@ -88,7 +88,7 @@ export default function InvestorLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-brand-portal-investor/10 via-white to-brand-portal-investor/5 flex items-center justify-center p-4">
       {/* Back Button */}
       <div className="absolute top-6 left-6">
         <BackButton variant="light" />
@@ -99,8 +99,8 @@ export default function InvestorLogin() {
           {/* Header */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
-              <div className="p-3 rounded-lg bg-green-100">
-                <DollarSign className="h-8 w-8 text-green-600" />
+              <div className="p-3 rounded-lg bg-brand-portal-investor/10">
+                <DollarSign className="h-8 w-8 text-brand-portal-investor" />
               </div>
             </div>
             <h2 className="text-2xl font-bold text-gray-900">Investor Portal</h2>
@@ -133,7 +133,7 @@ export default function InvestorLogin() {
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-portal-investor focus:border-transparent"
                   placeholder="you@example.com"
                 />
               </div>
@@ -155,7 +155,7 @@ export default function InvestorLogin() {
                   required
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-portal-investor focus:border-transparent"
                   placeholder="••••••••"
                 />
               </div>
@@ -163,7 +163,7 @@ export default function InvestorLogin() {
 
             <div className="flex items-center justify-between">
               <div className="text-sm">
-                <Link to="/forgot-password" className="font-medium text-green-600 hover:text-green-500">
+                <Link to="/forgot-password" className="font-medium text-brand-portal-investor hover:opacity-80">
                   Forgot password?
                 </Link>
               </div>
@@ -175,7 +175,7 @@ export default function InvestorLogin() {
               <button
                 type="submit"
                 disabled={loading || storeLoading}
-                className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-brand-portal-investor hover:bg-brand-portal-investor/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-portal-investor disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
                 {loading || storeLoading ? (
                   <div className="flex items-center space-x-2">
@@ -208,12 +208,12 @@ export default function InvestorLogin() {
             </Link>
 
             {/* Demo Account Button */}
-            <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
-              <p className="text-green-700 text-xs text-center mb-3">Try our demo account</p>
+            <div className="mt-4 p-4 bg-brand-portal-investor/5 rounded-lg border border-brand-portal-investor/20">
+              <p className="text-brand-portal-investor text-xs text-center mb-3">Try our demo account</p>
               <button
                 type="button"
                 onClick={() => { void setDemoCredentials(); }}
-                className="w-full py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg text-sm font-medium transition border border-green-300"
+                className="w-full py-2 bg-brand-portal-investor/10 hover:bg-brand-portal-investor/20 text-brand-portal-investor rounded-lg text-sm font-medium transition border border-brand-portal-investor/30"
               >
                 Use Demo Investor Account
               </button>

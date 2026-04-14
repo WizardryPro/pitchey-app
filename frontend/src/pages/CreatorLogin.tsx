@@ -49,7 +49,7 @@ export default function CreatorLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-brand-portal-creator/10 via-white to-brand-portal-creator/5 flex items-center justify-center p-4">
       {/* Back Button */}
       <div className="absolute top-6 left-6">
         <BackButton variant="light" />
@@ -60,8 +60,8 @@ export default function CreatorLogin() {
           {/* Header */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
-              <div className="p-3 rounded-lg bg-purple-100">
-                <Film className="h-8 w-8 text-purple-600" />
+              <div className="p-3 rounded-lg bg-brand-portal-creator/10">
+                <Film className="h-8 w-8 text-brand-portal-creator" />
               </div>
             </div>
             <h2 className="text-2xl font-bold text-gray-900">Creator Portal</h2>
@@ -94,7 +94,7 @@ export default function CreatorLogin() {
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-portal-creator focus:border-transparent"
                   placeholder="you@example.com"
                 />
               </div>
@@ -116,7 +116,7 @@ export default function CreatorLogin() {
                   required
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-portal-creator focus:border-transparent"
                   placeholder="••••••••"
                 />
               </div>
@@ -124,7 +124,7 @@ export default function CreatorLogin() {
 
             <div className="flex items-center justify-between">
               <div className="text-sm">
-                <Link to="/forgot-password" className="font-medium text-purple-600 hover:text-purple-500">
+                <Link to="/forgot-password" className="font-medium text-brand-portal-creator hover:opacity-80">
                   Forgot password?
                 </Link>
               </div>
@@ -136,7 +136,7 @@ export default function CreatorLogin() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-brand-portal-creator hover:bg-brand-portal-creator/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-portal-creator disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
@@ -164,12 +164,12 @@ export default function CreatorLogin() {
             </Link>
 
             {/* Demo Account Button */}
-            <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
-              <p className="text-purple-700 text-xs text-center mb-3">Try our demo account</p>
+            <div className="mt-4 p-4 bg-brand-portal-creator/5 rounded-lg border border-brand-portal-creator/20">
+              <p className="text-brand-portal-creator text-xs text-center mb-3">Try our demo account</p>
               <button
                 type="button"
                 onClick={() => { void setDemoCredentials(); }}
-                className="w-full py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg text-sm font-medium transition border border-purple-300"
+                className="w-full py-2 bg-brand-portal-creator/10 hover:bg-brand-portal-creator/20 text-brand-portal-creator rounded-lg text-sm font-medium transition border border-brand-portal-creator/30"
               >
                 Use Demo Creator Account
               </button>

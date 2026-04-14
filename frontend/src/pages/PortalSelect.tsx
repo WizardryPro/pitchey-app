@@ -3,6 +3,18 @@ import { ArrowLeft, Film, DollarSign, Building, ShieldCheck, Eye } from 'lucide-
 
 type PortalType = 'creator' | 'investor' | 'production' | 'watcher' | 'admin';
 
+// Single source of truth for portal colors — hex values mirror
+// `brand.portal-*` tokens in tailwind.config.js. Class names reference the
+// same tokens so the login card, the portal nav, and any other brand-portal
+// surface all stay in sync.
+const PORTAL_BRAND: Record<PortalType, { hex: string; iconText: string; iconBg: string }> = {
+  creator:    { hex: '#7B3FBF', iconText: 'text-brand-portal-creator',    iconBg: 'bg-brand-portal-creator/10' },
+  investor:   { hex: '#5B4FC7', iconText: 'text-brand-portal-investor',   iconBg: 'bg-brand-portal-investor/10' },
+  production: { hex: '#4A5FD0', iconText: 'text-brand-portal-production', iconBg: 'bg-brand-portal-production/10' },
+  watcher:    { hex: '#06B6D4', iconText: 'text-brand-portal-watcher',    iconBg: 'bg-brand-portal-watcher/10' },
+  admin:      { hex: '#DC2626', iconText: 'text-brand-portal-admin',      iconBg: 'bg-brand-portal-admin/10' },
+};
+
 export default function PortalSelect() {
   const navigate = useNavigate();
 
@@ -77,46 +89,18 @@ export default function PortalSelect() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {portals.map((portal) => {
               const Icon = getPortalIcon(portal);
-              const colors = {
-                creator: 'from-purple-400 to-purple-600 shadow-purple-500/30 hover:shadow-purple-500/50',
-                investor: 'from-green-400 to-green-600 shadow-green-500/30 hover:shadow-green-500/50',
-                production: 'from-orange-400 to-orange-600 shadow-orange-500/30 hover:shadow-orange-500/50',
-                watcher: 'from-cyan-400 to-cyan-600 shadow-cyan-500/30 hover:shadow-cyan-500/50',
-                admin: 'from-red-400 to-red-600 shadow-red-500/30 hover:shadow-red-500/50'
-              };
-              const iconColors = {
-                creator: 'text-purple-600',
-                investor: 'text-green-600',
-                production: 'text-orange-600',
-                watcher: 'text-cyan-600',
-                admin: 'text-red-600'
-              };
-              const bgColors = {
-                creator: 'bg-purple-50',
-                investor: 'bg-green-50',
-                production: 'bg-orange-50',
-                watcher: 'bg-cyan-50',
-                admin: 'bg-red-50'
-              };
-              
+              const brand = PORTAL_BRAND[portal];
+
               return (
                 <div
                   key={portal}
                   onClick={() => handlePortalSelect(portal)}
-                  className={`bg-white rounded-xl p-8 cursor-pointer transform hover:scale-105 transition-all duration-300 border border-gray-200 shadow-lg shadow-${colors[portal].split(' ')[1].split('-')[0]}-200/50 hover:shadow-2xl hover:shadow-${colors[portal].split(' ')[1].split('-')[0]}-300/50`}
-                  style={{
-                    boxShadow: `0 10px 30px -10px ${
-                      portal === 'creator' ? 'rgb(168 85 247 / 0.3)' :
-                      portal === 'investor' ? 'rgb(34 197 94 / 0.3)' :
-                      portal === 'watcher' ? 'rgb(6 182 212 / 0.3)' :
-                      portal === 'admin' ? 'rgb(239 68 68 / 0.3)' :
-                      'rgb(251 146 60 / 0.3)'
-                    }`
-                  }}
+                  className="bg-white rounded-xl p-8 cursor-pointer transform hover:scale-105 transition-all duration-300 border border-gray-200 shadow-lg hover:shadow-2xl"
+                  style={{ boxShadow: `0 10px 30px -10px ${brand.hex}4D` }}
                 >
                   <div className="text-center">
-                    <div className={`inline-flex p-4 rounded-full ${bgColors[portal]} mb-6`}>
-                      <Icon className={`h-12 w-12 ${iconColors[portal]}`} />
+                    <div className={`inline-flex p-4 rounded-full ${brand.iconBg} mb-6`}>
+                      <Icon className={`h-12 w-12 ${brand.iconText}`} />
                     </div>
                     <h2 className="text-2xl font-semibold text-gray-900 mb-3">
                       {getPortalTitle(portal)}
@@ -124,7 +108,10 @@ export default function PortalSelect() {
                     <p className="text-gray-600">
                       {getPortalDescription(portal)}
                     </p>
-                    <div className={`mt-6 w-full h-1 rounded-full bg-gradient-to-r ${colors[portal]}`}></div>
+                    <div
+                      className="mt-6 w-full h-1 rounded-full"
+                      style={{ background: `linear-gradient(to right, ${brand.hex}B3, ${brand.hex})` }}
+                    />
                   </div>
                 </div>
               );

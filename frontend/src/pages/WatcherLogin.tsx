@@ -29,7 +29,7 @@ export default function WatcherLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-white to-sky-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-brand-portal-watcher/10 via-white to-brand-portal-watcher/5 flex items-center justify-center p-4">
       <div className="absolute top-6 left-6">
         <BackButton variant="light" />
       </div>
@@ -38,8 +38,8 @@ export default function WatcherLogin() {
         <div className="bg-white py-8 px-6 shadow-xl rounded-lg border border-gray-200">
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
-              <div className="p-3 rounded-lg bg-cyan-100">
-                <Eye className="h-8 w-8 text-cyan-600" />
+              <div className="p-3 rounded-lg bg-brand-portal-watcher/10">
+                <Eye className="h-8 w-8 text-brand-portal-watcher" />
               </div>
             </div>
             <h2 className="text-2xl font-bold text-gray-900">Watcher Portal</h2>
@@ -70,7 +70,7 @@ export default function WatcherLogin() {
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-portal-watcher focus:border-transparent"
                   placeholder="you@example.com"
                 />
               </div>
@@ -92,7 +92,7 @@ export default function WatcherLogin() {
                   required
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-portal-watcher focus:border-transparent"
                   placeholder="••••••••"
                 />
               </div>
@@ -100,7 +100,7 @@ export default function WatcherLogin() {
 
             <div className="flex items-center justify-between">
               <div className="text-sm">
-                <Link to="/forgot-password" className="font-medium text-cyan-600 hover:text-cyan-500">
+                <Link to="/forgot-password" className="font-medium text-brand-portal-watcher hover:opacity-80">
                   Forgot password?
                 </Link>
               </div>
@@ -112,7 +112,7 @@ export default function WatcherLogin() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-brand-portal-watcher hover:bg-brand-portal-watcher/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-portal-watcher disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>

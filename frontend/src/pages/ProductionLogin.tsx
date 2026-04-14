@@ -45,7 +45,7 @@ export default function ProductionLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-brand-portal-production/10 via-white to-brand-portal-production/5 flex items-center justify-center p-4">
       {/* Back Button */}
       <div className="absolute top-6 left-6">
         <BackButton variant="light" />
@@ -56,8 +56,8 @@ export default function ProductionLogin() {
           {/* Header */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
-              <div className="p-3 rounded-lg bg-orange-100">
-                <Briefcase className="h-8 w-8 text-orange-600" />
+              <div className="p-3 rounded-lg bg-brand-portal-production/10">
+                <Briefcase className="h-8 w-8 text-brand-portal-production" />
               </div>
             </div>
             <h2 className="text-2xl font-bold text-gray-900">Production Portal</h2>
@@ -90,7 +90,7 @@ export default function ProductionLogin() {
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-portal-production focus:border-transparent"
                   placeholder="you@example.com"
                 />
               </div>
@@ -112,7 +112,7 @@ export default function ProductionLogin() {
                   required
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-portal-production focus:border-transparent"
                   placeholder="••••••••"
                 />
               </div>
@@ -120,7 +120,7 @@ export default function ProductionLogin() {
 
             <div className="flex items-center justify-between">
               <div className="text-sm">
-                <Link to="/forgot-password" className="font-medium text-orange-600 hover:text-orange-500">
+                <Link to="/forgot-password" className="font-medium text-brand-portal-production hover:opacity-80">
                   Forgot password?
                 </Link>
               </div>
@@ -132,7 +132,7 @@ export default function ProductionLogin() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-brand-portal-production hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-portal-production disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
@@ -160,12 +160,12 @@ export default function ProductionLogin() {
             </Link>
 
             {/* Demo Account Button */}
-            <div className="mt-4 p-4 bg-orange-50 rounded-lg border border-orange-200">
-              <p className="text-orange-700 text-xs text-center mb-3">Try our demo account</p>
+            <div className="mt-4 p-4 bg-brand-portal-production/5 rounded-lg border border-brand-portal-production/20">
+              <p className="text-brand-portal-production text-xs text-center mb-3">Try our demo account</p>
               <button
                 type="button"
                 onClick={() => { void setDemoCredentials(); }}
-                className="w-full py-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg text-sm font-medium transition border border-orange-300"
+                className="w-full py-2 bg-brand-portal-production/10 hover:bg-brand-portal-production/20 text-brand-portal-production rounded-lg text-sm font-medium transition border border-brand-portal-production/30"
               >
                 Use Demo Production Account
               </button>
