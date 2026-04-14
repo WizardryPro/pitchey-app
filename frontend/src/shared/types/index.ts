@@ -3,7 +3,10 @@
 
 // ========== USER TYPES ==========
 
-export type UserType = 'creator' | 'investor' | 'production' | 'watcher' | 'admin';
+// Note: the backend stores watchers as user_type='viewer' in the database.
+// 'watcher' is retained as a legacy alias that some older records / flows
+// still reference. Both values map to the Watcher portal on the frontend.
+export type UserType = 'creator' | 'investor' | 'production' | 'watcher' | 'viewer' | 'admin';
 
 export interface User {
   id: number;

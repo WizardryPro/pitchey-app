@@ -61,6 +61,8 @@ export default {
   				'portal-creator': '#7B3FBF',
   				'portal-investor': '#5B4FC7',
   				'portal-production': '#4A5FD0',
+  				'portal-watcher': '#06B6D4',
+  				'portal-admin': '#DC2626',
   				'empty-text': '#2D40A8',
   				'empty-icon': '#302DA8',
   			}

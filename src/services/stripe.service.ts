@@ -32,9 +32,14 @@ export class StripeService {
     userId: number;
     email: string;
     priceId: string;
+    tier: string;
     successUrl: string;
     cancelUrl: string;
   }): Promise<{ id: string; url: string }> {
+    // `tier` is stamped into metadata so the webhook can look up the plan
+    // (creator / production / exec) without having to reverse-engineer it
+    // from the Stripe price ID. Critical for the watcher→creator upgrade
+    // flow: the webhook needs the tier to know whether to flip user_type.
     return this.request('POST', '/checkout/sessions', {
       mode: 'subscription',
       'payment_method_types[0]': 'card',
@@ -45,7 +50,9 @@ export class StripeService {
       cancel_url: params.cancelUrl,
       'metadata[userId]': String(params.userId),
       'metadata[type]': 'subscription',
+      'metadata[tier]': params.tier,
       'subscription_data[metadata][userId]': String(params.userId),
+      'subscription_data[metadata][tier]': params.tier,
     });
   }
 

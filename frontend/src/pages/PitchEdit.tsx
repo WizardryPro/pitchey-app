@@ -11,6 +11,7 @@ import type { Character } from '@shared/types/character';
 import { normalizeCharacters, serializeCharacters } from '@features/pitches/utils/characterUtils';
 import { DocumentUpload } from '@features/uploads/components/DocumentUpload';
 import type { DocumentFile } from '@features/uploads/components/DocumentUpload';
+import { useBetterAuthStore } from '../store/betterAuthStore';
 
 interface PitchFormData {
   title: string;
@@ -44,6 +45,10 @@ export default function PitchEdit() {
   const [genres] = useState<readonly string[] | string[]>(getGenresSync());
   const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
   const isOnline = useOnlineStatus();
+  // Watchers (viewer user_type) editing their drafts must return to
+  // /watcher/drafts, not /creator/pitches (which they can't access).
+  const user = useBetterAuthStore((s) => s.user);
+  const pitchesListPath = user?.userType === 'viewer' ? '/watcher/drafts' : '/creator/pitches';
 
 
   const [formData, setFormData] = useState<PitchFormData>({
@@ -297,7 +302,7 @@ export default function PitchEdit() {
       }
 
       await pitchService.update(parseInt(id!), updateData);
-      navigate('/creator/pitches');
+      navigate(pitchesListPath);
     } catch (error) {
       console.error('Error updating pitch:', error);
       alert(error instanceof Error ? error.message : 'Failed to update pitch');
@@ -321,7 +326,7 @@ export default function PitchEdit() {
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => navigate('/creator/pitches')}
+                onClick={() => navigate(pitchesListPath)}
                 className="p-2 text-gray-500 hover:text-gray-700 transition rounded-lg hover:bg-gray-100"
               >
                 <ArrowLeft className="w-5 h-5" />
@@ -333,7 +338,7 @@ export default function PitchEdit() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
           <p className="text-gray-600">{error}</p>
           <button
-            onClick={() => navigate('/creator/pitches')}
+            onClick={() => navigate(pitchesListPath)}
             className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
           >
             Back to Pitches
@@ -350,7 +355,7 @@ export default function PitchEdit() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => navigate('/creator/pitches')}
+              onClick={() => navigate(pitchesListPath)}
               className="p-2 text-gray-500 hover:text-gray-700 transition rounded-lg hover:bg-gray-100"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -878,7 +883,7 @@ export default function PitchEdit() {
           <div className="flex justify-end gap-4">
             <button
               type="button"
-              onClick={() => navigate('/creator/pitches')}
+              onClick={() => navigate(pitchesListPath)}
               className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
             >
               Cancel

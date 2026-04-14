@@ -1,12 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Eye, Edit3, Trash2, BarChart3, Search, Filter, RefreshCw, Send } from 'lucide-react';
+import { ArrowLeft, Plus, Eye, Edit3, Trash2, BarChart3, Search, Filter, RefreshCw, Send, Lock } from 'lucide-react';
 import { pitchService } from '@features/pitches/services/pitch.service';
 import type { Pitch } from '@shared/types/api';
 import FormatDisplay from '../components/FormatDisplay';
+import { useBetterAuthStore } from '../store/betterAuthStore';
 
 export default function ManagePitches() {
   const navigate = useNavigate();
+  // Watchers (user_type='viewer') can draft pitches but must upgrade to a
+  // paid Creator account to publish. We render an "Upgrade to publish" CTA
+  // instead of the publish button for this tier, and swap all creator-only
+  // navigation targets to their /watcher equivalents.
+  const user = useBetterAuthStore((s) => s.user);
+  const userType = (user as { userType?: string } | null)?.userType;
+  const isWatcher = userType === 'viewer';
+  const isProduction = userType === 'production';
+  const portalPrefix = isWatcher ? '/watcher' : isProduction ? '/production' : '/creator';
   const [pitches, setPitches] = useState<Pitch[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -204,19 +214,25 @@ export default function ManagePitches() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => void navigate('/creator/dashboard')}
+                onClick={() => void navigate(`${portalPrefix}/dashboard`)}
                 className="p-2 text-gray-500 hover:text-gray-700 transition rounded-lg hover:bg-gray-100"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Manage Pitches</h1>
-                <p className="text-sm text-gray-500">View and manage all your pitch submissions</p>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {isWatcher ? 'My Drafts' : 'Manage Pitches'}
+                </h1>
+                <p className="text-sm text-gray-500">
+                  {isWatcher
+                    ? 'Draft your pitch ideas. Upgrade to a Creator account to publish.'
+                    : 'View and manage all your pitch submissions'}
+                </p>
               </div>
             </div>
-            
+
             <button
-              onClick={() => void navigate('/creator/pitch/new')}
+              onClick={() => void navigate(`${portalPrefix}/pitch/new`)}
               className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:shadow-lg transition"
             >
               <Plus className="w-4 h-4" />
@@ -368,7 +384,7 @@ export default function ManagePitches() {
               }
             </p>
             <button
-              onClick={() => void navigate('/creator/pitch/new')}
+              onClick={() => void navigate(`${portalPrefix}/pitch/new`)}
               className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
             >
               <Plus className="w-4 h-4" />
@@ -430,76 +446,97 @@ export default function ManagePitches() {
                   
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => void navigate(`/creator/pitches/${pitch.id}`)}
+                      onClick={() => void navigate(`${portalPrefix}/pitches/${pitch.id}/edit`)}
                       className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-sm"
                     >
                       <Eye className="w-4 h-4" />
                       View
                     </button>
-                    
+
                     <button
-                      onClick={() => void navigate(`/creator/pitches/${pitch.id}/edit`)}
+                      onClick={() => void navigate(`${portalPrefix}/pitches/${pitch.id}/edit`)}
                       className="flex items-center justify-center gap-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition text-sm"
                       title="Edit pitch"
                     >
                       <Edit3 className="w-4 h-4" />
                     </button>
-                    
-                    <button
-                      onClick={() => {
-                        const slug = pitch.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-                        void navigate(`/creator/pitches/${pitch.id}/${slug}/analytics`);
-                      }}
-                      className="flex items-center justify-center gap-2 px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition text-sm"
-                      title="View analytics"
-                    >
-                      <BarChart3 className="w-4 h-4" />
-                    </button>
-                    
-                    {pitch.status === 'draft' && (
+
+                    {/* Analytics and Submit-for-review are creator/production
+                        only — watchers draft offline and don't publish. */}
+                    {!isWatcher && (
+                      <>
+                        <button
+                          onClick={() => {
+                            if (isProduction) {
+                              void navigate(`/pitch/${pitch.id}/analytics`);
+                            } else {
+                              const slug = pitch.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                              void navigate(`/creator/pitches/${pitch.id}/${slug}/analytics`);
+                            }
+                          }}
+                          className="flex items-center justify-center gap-2 px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition text-sm"
+                          title="View analytics"
+                        >
+                          <BarChart3 className="w-4 h-4" />
+                        </button>
+
+                        {pitch.status === 'draft' && (
+                          <button
+                            onClick={() => void submitForReview(pitch.id)}
+                            disabled={loadingStates[pitch.id] === 'submitting'}
+                            className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition text-sm ${
+                              loadingStates[pitch.id] === 'submitting'
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                            }`}
+                            title="Submit for review"
+                          >
+                            {loadingStates[pitch.id] === 'submitting' ? (
+                              <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                              <Send className="w-4 h-4" />
+                            )}
+                          </button>
+                        )}
+                      </>
+                    )}
+
+                    {isWatcher ? (
                       <button
-                        onClick={() => void submitForReview(pitch.id)}
-                        disabled={loadingStates[pitch.id] === 'submitting'}
-                        className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition text-sm ${
-                          loadingStates[pitch.id] === 'submitting'
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
-                        }`}
-                        title="Submit for review"
+                        onClick={() => navigate('/watcher/billing')}
+                        className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition text-sm min-w-[90px] bg-cyan-100 text-cyan-700 hover:bg-cyan-200"
+                        title="Upgrade to a Creator account to publish your pitch"
                       >
-                        {loadingStates[pitch.id] === 'submitting' ? (
-                          <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                        <Lock className="w-4 h-4" />
+                        Upgrade to publish
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => void toggleStatus(pitch.id, pitch.status)}
+                        disabled={loadingStates[pitch.id] === 'publishing' || loadingStates[pitch.id] === 'unpublishing'}
+                        className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition text-sm min-w-[90px] ${
+                          loadingStates[pitch.id] === 'publishing' || loadingStates[pitch.id] === 'unpublishing'
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : pitch.status === 'published'
+                            ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                            : 'bg-green-100 text-green-700 hover:bg-green-200'
+                        }`}
+                      >
+                        {loadingStates[pitch.id] === 'publishing' ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                            Publishing...
+                          </>
+                        ) : loadingStates[pitch.id] === 'unpublishing' ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                            Unpublishing...
+                          </>
                         ) : (
-                          <Send className="w-4 h-4" />
+                          pitch.status === 'published' ? 'Unpublish' : 'Publish'
                         )}
                       </button>
                     )}
-
-                    <button
-                      onClick={() => void toggleStatus(pitch.id, pitch.status)}
-                      disabled={loadingStates[pitch.id] === 'publishing' || loadingStates[pitch.id] === 'unpublishing'}
-                      className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition text-sm min-w-[90px] ${
-                        loadingStates[pitch.id] === 'publishing' || loadingStates[pitch.id] === 'unpublishing'
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : pitch.status === 'published'
-                          ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                          : 'bg-green-100 text-green-700 hover:bg-green-200'
-                      }`}
-                    >
-                      {loadingStates[pitch.id] === 'publishing' ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                          Publishing...
-                        </>
-                      ) : loadingStates[pitch.id] === 'unpublishing' ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                          Unpublishing...
-                        </>
-                      ) : (
-                        pitch.status === 'published' ? 'Unpublish' : 'Publish'
-                      )}
-                    </button>
                     
                     <button
                       onClick={() => void handleDelete(pitch.id)}
