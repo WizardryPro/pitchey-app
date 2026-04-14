@@ -113,3 +113,6 @@ TWILIO_SETUP_GUIDE.md
 .env.notifications
 TWILIO_CREDENTIALS_SECURE.txt
 CLAUDE.local.md
+
+# Stray browser download of Claude Code skill files — install to ~/.claude/skills/ instead
+files(1)/
