@@ -65,12 +65,12 @@ export async function followsHandler(request: Request, env: Env): Promise<Respon
       SELECT
         u.id, u.username, u.email, u.first_name as "firstName", u.last_name as "lastName",
         u.profile_image as "profileImage", u.bio, u.location, u.user_type as "userType",
-        f.followed_at as "followedAt", u.created_at as "createdAt",
+        COALESCE(f.followed_at, f.created_at) as "followedAt", u.created_at as "createdAt",
         COALESCE((SELECT COUNT(*) FROM pitches WHERE user_id = u.id), 0) as "pitchCount"
       FROM follows f
       JOIN users u ON f.follower_id = u.id
       WHERE f.following_id = ${authenticatedUserId}
-      ORDER BY f.followed_at DESC
+      ORDER BY COALESCE(f.followed_at, f.created_at) DESC
       LIMIT 50
     `.catch(() => []);
 
@@ -79,12 +79,12 @@ export async function followsHandler(request: Request, env: Env): Promise<Respon
       SELECT
         u.id, u.username, u.email, u.first_name as "firstName", u.last_name as "lastName",
         u.profile_image as "profileImage", u.bio, u.location, u.user_type as "userType",
-        f.followed_at as "followedAt", u.created_at as "createdAt",
+        COALESCE(f.followed_at, f.created_at) as "followedAt", u.created_at as "createdAt",
         COALESCE((SELECT COUNT(*) FROM pitches WHERE user_id = u.id), 0) as "pitchCount"
       FROM follows f
       JOIN users u ON f.following_id = u.id
       WHERE f.follower_id = ${authenticatedUserId}
-      ORDER BY f.followed_at DESC
+      ORDER BY COALESCE(f.followed_at, f.created_at) DESC
       LIMIT 50
     `.catch(() => []);
 

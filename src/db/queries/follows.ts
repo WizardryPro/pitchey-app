@@ -38,8 +38,8 @@ export async function followUser(
 
   try {
     const result = await sql`
-      INSERT INTO follows (follower_id, following_id, created_at)
-      VALUES (${followerId}, ${followingId}, NOW())
+      INSERT INTO follows (follower_id, following_id, followed_at, created_at)
+      VALUES (${followerId}, ${followingId}, NOW(), NOW())
       ON CONFLICT (follower_id, following_id) DO NOTHING
       RETURNING *
     `;

@@ -40,6 +40,9 @@ interface ActivityUpdate {
     title: string;
     genre: string;
     logline: string;
+    requireNda?: boolean;
+    ndaSigned?: boolean;
+    ndaPending?: boolean;
   };
   createdAt: string;
 }
@@ -124,6 +127,9 @@ const Following: React.FC = () => {
               title: p.title,
               genre: p.genre || '',
               logline: p.logline || p.short_synopsis || '',
+              requireNda: Boolean(p.requireNda ?? p.require_nda),
+              ndaSigned: Boolean(p.ndaSigned ?? p.nda_signed),
+              ndaPending: Boolean(p.ndaPending ?? p.nda_pending),
             },
             createdAt: p.created_at || p.createdAt || '',
           }));
@@ -178,7 +184,10 @@ const Following: React.FC = () => {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    if (!dateString) return 'recently';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return 'recently';
+    return d.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -288,10 +297,25 @@ const Following: React.FC = () => {
                         <p className="text-gray-600 text-sm mb-2 line-clamp-2">
                           {update.pitch.logline}
                         </p>
-                        <div className="flex items-center space-x-4 text-sm text-gray-500">
+                        <div className="flex items-center flex-wrap gap-2 text-sm text-gray-500">
                           <span className="px-2 py-1 bg-gray-100 rounded-full">
                             {update.pitch.genre}
                           </span>
+                          {update.pitch.requireNda && (
+                            update.pitch.ndaSigned ? (
+                              <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                                NDA Signed
+                              </span>
+                            ) : update.pitch.ndaPending ? (
+                              <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
+                                NDA Pending
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 bg-red-50 text-red-700 rounded-full text-xs font-medium border border-red-200">
+                                NDA Required
+                              </span>
+                            )
+                          )}
                         </div>
                       </div>
                     )}

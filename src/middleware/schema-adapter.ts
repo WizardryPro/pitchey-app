@@ -172,8 +172,8 @@ export class SchemaAdapter {
     if (type === 'user') {
       return {
         query: `
-          INSERT INTO follows (follower_id, following_id, created_at)
-          VALUES ($1, $2, NOW())
+          INSERT INTO follows (follower_id, following_id, followed_at, created_at)
+          VALUES ($1, $2, NOW(), NOW())
           ON CONFLICT (follower_id, COALESCE(following_id, creator_id, pitch_id))
           DO NOTHING
           RETURNING *
@@ -183,8 +183,8 @@ export class SchemaAdapter {
     } else {
       return {
         query: `
-          INSERT INTO follows (follower_id, pitch_id, created_at)
-          VALUES ($1, $2, NOW())
+          INSERT INTO follows (follower_id, pitch_id, followed_at, created_at)
+          VALUES ($1, $2, NOW(), NOW())
           ON CONFLICT (follower_id, COALESCE(following_id, creator_id, pitch_id))
           DO NOTHING
           RETURNING *
