@@ -1852,13 +1852,21 @@ class RouteRegistry {
       // Route Better Auth sign-in to our portal login handler
       const body = await request.json() as { email?: string; password?: string; userType?: string; turnstileToken?: string };
 
-      // Verify Turnstile token
-      const turnstileResult = await verifyTurnstileToken(body.turnstileToken, this.env.TURNSTILE_SECRET_KEY, clientIP !== 'unknown' ? clientIP : undefined);
-      if (!turnstileResult.success) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: { code: 'TURNSTILE_FAILED', message: turnstileResult.error || 'Bot verification failed' }
-        }), { status: 403, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request.headers.get('Origin')) } });
+      // Verify Turnstile token (skip for known demo accounts — password is fixed, no sensitive data)
+      const DEMO_EMAILS = new Set([
+        'alex.creator@demo.com',
+        'sarah.investor@demo.com',
+        'stellar.production@demo.com',
+        'jamie.watcher@demo.com',
+      ]);
+      if (!DEMO_EMAILS.has(String(body.email || '').toLowerCase())) {
+        const turnstileResult = await verifyTurnstileToken(body.turnstileToken, this.env.TURNSTILE_SECRET_KEY, clientIP !== 'unknown' ? clientIP : undefined);
+        if (!turnstileResult.success) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: { code: 'TURNSTILE_FAILED', message: turnstileResult.error || 'Bot verification failed' }
+          }), { status: 403, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request.headers.get('Origin')) } });
+        }
       }
 
       // Validate input
@@ -2558,6 +2566,17 @@ class RouteRegistry {
 
     // Pitch Publish/Archive endpoints (with cache invalidation)
     this.register('POST', '/api/pitches/:id/publish', async (req) => {
+      // Publishing is the paywall: watchers (user_type='viewer') can create
+      // drafts but must upgrade to a Creator account to publish. The VIEWER
+      // role intentionally lacks PITCH_PUBLISH so this returns a 403 with
+      // code=PERMISSION_DENIED, which the frontend maps to an upgrade CTA.
+      const authResult = await this.requirePortalAuth(
+        req,
+        ['creator', 'production'],
+        Permission.PITCH_PUBLISH
+      );
+      if (!authResult.authorized) return authResult.response!;
+
       const response = await pitchPublishHandler(req, this.env);
       // Invalidate browse cache after publish so new pitch appears immediately
       if (response.status === 200) {
@@ -4011,15 +4030,23 @@ class RouteRegistry {
   private async handleLogin(request: Request): Promise<Response> {
     console.log('handleLogin called (generic)');
 
-    // Verify Turnstile token
+    // Verify Turnstile token (skip for known demo accounts — password is fixed, no sensitive data)
     const clonedBody = await request.clone().json() as any;
-    const clientIP = request.headers.get('CF-Connecting-IP') || undefined;
-    const turnstileResult = await verifyTurnstileToken(clonedBody.turnstileToken, this.env.TURNSTILE_SECRET_KEY, clientIP);
-    if (!turnstileResult.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: { code: 'TURNSTILE_FAILED', message: turnstileResult.error || 'Bot verification failed' }
-      }), { status: 403, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request.headers.get('Origin')) } });
+    const DEMO_EMAILS = new Set([
+      'alex.creator@demo.com',
+      'sarah.investor@demo.com',
+      'stellar.production@demo.com',
+      'jamie.watcher@demo.com',
+    ]);
+    if (!DEMO_EMAILS.has(String(clonedBody.email || '').toLowerCase())) {
+      const clientIP = request.headers.get('CF-Connecting-IP') || undefined;
+      const turnstileResult = await verifyTurnstileToken(clonedBody.turnstileToken, this.env.TURNSTILE_SECRET_KEY, clientIP);
+      if (!turnstileResult.success) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: { code: 'TURNSTILE_FAILED', message: turnstileResult.error || 'Bot verification failed' }
+        }), { status: 403, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request.headers.get('Origin')) } });
+      }
     }
 
     // First try Better Auth's raw SQL implementation if available
@@ -4182,15 +4209,23 @@ class RouteRegistry {
     console.log('Better Auth available:', !!this.betterAuth);
     console.log('Better Auth dbAdapter available:', !!(this.betterAuth && this.betterAuth.dbAdapter));
 
-    // Verify Turnstile token
+    // Verify Turnstile token (skip for known demo accounts — password is fixed, no sensitive data)
     const clonedBody = await request.clone().json() as any;
-    const clientIP = request.headers.get('CF-Connecting-IP') || undefined;
-    const turnstileResult = await verifyTurnstileToken(clonedBody.turnstileToken, this.env.TURNSTILE_SECRET_KEY, clientIP);
-    if (!turnstileResult.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: { code: 'TURNSTILE_FAILED', message: turnstileResult.error || 'Bot verification failed' }
-      }), { status: 403, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request.headers.get('Origin')) } });
+    const DEMO_EMAILS = new Set([
+      'alex.creator@demo.com',
+      'sarah.investor@demo.com',
+      'stellar.production@demo.com',
+      'jamie.watcher@demo.com',
+    ]);
+    if (!DEMO_EMAILS.has(String(clonedBody.email || '').toLowerCase())) {
+      const clientIP = request.headers.get('CF-Connecting-IP') || undefined;
+      const turnstileResult = await verifyTurnstileToken(clonedBody.turnstileToken, this.env.TURNSTILE_SECRET_KEY, clientIP);
+      if (!turnstileResult.success) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: { code: 'TURNSTILE_FAILED', message: turnstileResult.error || 'Bot verification failed' }
+        }), { status: 403, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request.headers.get('Origin')) } });
+      }
     }
 
     // First try Better Auth's raw SQL implementation
@@ -5263,8 +5298,10 @@ pitchey_analytics_datapoints_per_minute 1250
   }
 
   private async createPitch(request: Request): Promise<Response> {
-    // RBAC: Requires creator/production portal access + pitch create permission
-    const authResult = await this.requirePortalAuth(request, ['creator', 'production'], Permission.PITCH_CREATE);
+    // RBAC: creator/production can publish; watchers can only create drafts.
+    // The handler inserts with status='draft' unconditionally, so watchers
+    // never land in the marketplace via this route.
+    const authResult = await this.requirePortalAuth(request, ['creator', 'production', 'watcher'], Permission.PITCH_CREATE);
     if (!authResult.authorized) return authResult.response!;
 
     const builder = new ApiResponseBuilder(request);
@@ -5478,18 +5515,23 @@ pitchey_analytics_datapoints_per_minute 1250
       }
     }
 
-    // Try to fetch from database first
+    // Try to fetch from database first.
+    // A pitch is fetchable if it's published OR the requester is the owner.
+    // Owners need to see their own drafts for editing (critical for the
+    // watcher draft flow — watchers can't publish, so their pitches live
+    // as drafts and must still load in the editor).
     try {
       const result = await this.db.query(`
-        SELECT 
+        SELECT
           p.*,
           CONCAT(u.first_name, ' ', u.last_name) as creator_name,
           u.user_type as creator_type,
           u.company_name
         FROM pitches p
         LEFT JOIN users u ON p.user_id = u.id
-        WHERE p.id = $1 AND p.status = 'published'
-      `, [pitchId]);
+        WHERE p.id = $1
+          AND (p.status = 'published' OR p.user_id = $2)
+      `, [pitchId, userId]);
 
       if (result.length > 0) {
         const pitch = result[0];
@@ -5761,8 +5803,10 @@ pitchey_analytics_datapoints_per_minute 1250
   }
 
   private async updatePitch(request: Request): Promise<Response> {
-    // RBAC: Requires creator/production portal access + pitch edit permission
-    const authResult = await this.requirePortalAuth(request, ['creator', 'production'], Permission.PITCH_EDIT_OWN);
+    // RBAC: Watchers may edit their own draft pitches (ownership is enforced
+    // below via user_id check). This route does not touch `status`, so a
+    // watcher cannot flip a pitch to published through here.
+    const authResult = await this.requirePortalAuth(request, ['creator', 'production', 'watcher'], Permission.PITCH_EDIT_OWN);
     if (!authResult.authorized) return authResult.response!;
 
     const builder = new ApiResponseBuilder(request);
@@ -5920,8 +5964,9 @@ pitchey_analytics_datapoints_per_minute 1250
   }
 
   private async deletePitch(request: Request): Promise<Response> {
-    // RBAC: Requires creator/production portal access + pitch delete permission
-    const authResult = await this.requirePortalAuth(request, ['creator', 'production'], Permission.PITCH_DELETE_OWN);
+    // RBAC: Watchers may delete their own draft pitches (ownership enforced
+    // via user_id match in the DELETE SQL below).
+    const authResult = await this.requirePortalAuth(request, ['creator', 'production', 'watcher'], Permission.PITCH_DELETE_OWN);
     if (!authResult.authorized) return authResult.response!;
 
     const builder = new ApiResponseBuilder(request);
@@ -9588,11 +9633,16 @@ pitchey_analytics_datapoints_per_minute 1250
 
       const stripe = new StripeService(stripeKey);
       const frontendUrl = (this.env as any).FRONTEND_URL || 'https://pitchey-5o8.pages.dev';
+      // `successUrl` goes through the watcher portal Billing page first —
+      // the frontend handler there will detect ?subscription=success, force
+      // a fresh session (picks up flipped user_type), and redirect to the
+      // new portal (creator/production) once the webhook has processed.
       const session = await stripe.createSubscriptionCheckout({
         userId: authResult.user!.id,
         email: authResult.user!.email || '',
         priceId,
-        successUrl: `${frontendUrl}/billing?subscription=success`,
+        tier,
+        successUrl: `${frontendUrl}/billing?subscription=success&tier=${encodeURIComponent(tier)}`,
         cancelUrl: `${frontendUrl}/billing?subscription=cancelled`,
       });
 
@@ -9686,6 +9736,41 @@ pitchey_analytics_datapoints_per_minute 1250
       return new ApiResponseBuilder(request).error(ErrorCode.INTERNAL_ERROR, 'Database not available');
     }
 
+    // ─── Idempotency gate ───────────────────────────────────────────────
+    // Stripe retries on any non-2xx for up to 3 days, and parallel Workers
+    // can race on the same event. INSERT ... ON CONFLICT DO NOTHING serves
+    // as a distributed lock at the DB level: only the first write gets a
+    // non-empty RETURNING, so any retry/duplicate short-circuits here.
+    try {
+      const dedupRows = await sql`
+        INSERT INTO stripe_webhook_events (event_id, event_type)
+        VALUES (${event.id}, ${event.type})
+        ON CONFLICT (event_id) DO NOTHING
+        RETURNING event_id
+      `;
+      if (dedupRows.length === 0) {
+        console.log(JSON.stringify({
+          level: 'info',
+          category: 'stripe_webhook',
+          event_id: event.id,
+          event_type: event.type,
+          action: 'deduped',
+        }));
+        return new Response(JSON.stringify({ received: true, deduped: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    } catch (e) {
+      // If the idempotency table doesn't exist yet (migration not applied),
+      // log loudly but continue — better to risk a duplicate than to drop
+      // a payment event.
+      console.error('Idempotency gate failed (missing migration 076?):', e);
+    }
+
+    // Import once, used in multiple branches below
+    const { getSubscriptionTier } = await import('./config/subscription-plans');
+
     try {
       switch (event.type) {
         case 'checkout.session.completed': {
@@ -9694,7 +9779,9 @@ pitchey_analytics_datapoints_per_minute 1250
           if (!userId) break;
 
           if (session.metadata?.type === 'credits') {
-            // Credit purchase completed — grant credits
+            // Credit pack purchase — grant credits immediately. Credit packs
+            // are one-shot `mode=payment` sessions, so there's no invoice.paid
+            // follow-up and no place else to grant.
             const credits = parseInt(session.metadata.credits || '0');
             if (credits > 0) {
               const currentRows = await sql`SELECT balance FROM user_credits WHERE user_id = ${userId}`;
@@ -9715,36 +9802,95 @@ pitchey_analytics_datapoints_per_minute 1250
                   ${'Purchased ' + credits + ' credits (' + (session.metadata.package || 'custom') + ')'},
                   ${currentBalance}, ${currentBalance + credits}, ${session.id}, NOW())
               `;
+
+              console.log(JSON.stringify({
+                level: 'info',
+                category: 'stripe_webhook',
+                event_id: event.id,
+                event_type: event.type,
+                user_id: userId,
+                action: 'credits_granted',
+                credits,
+                source: 'credit_pack',
+              }));
             }
           } else if (session.metadata?.type === 'subscription' || session.mode === 'subscription') {
-            // Subscription checkout completed
+            // Subscription checkout — record history + flip user_type if the
+            // buyer is a watcher upgrading to creator/production.
+            //
+            // NOTE: credits are NOT granted here. They're granted exclusively
+            // in invoice.paid (handles both subscription_create and
+            // subscription_cycle) so we never double-grant on the first month.
             const subId = session.subscription;
             let sub = null;
             if (subId) {
               sub = await stripe.getSubscription(subId).catch(() => null);
             }
 
+            const tierId = session.metadata?.tier || 'unknown';
+
             await sql`
               INSERT INTO subscription_history (user_id, new_tier, action, stripe_subscription_id, stripe_price_id, status, amount, billing_interval, period_start, period_end, created_at)
-              VALUES (${userId}, ${session.metadata?.tier || 'unknown'}, 'create', ${subId || null},
+              VALUES (${userId}, ${tierId}, 'create', ${subId || null},
                 ${sub?.items?.data?.[0]?.price?.id || null}, 'active',
                 ${(session.amount_total || 0) / 100}, ${sub?.items?.data?.[0]?.price?.recurring?.interval || 'month'},
                 ${sub ? new Date(sub.current_period_start * 1000).toISOString() : null},
                 ${sub ? new Date(sub.current_period_end * 1000).toISOString() : null}, NOW())
             `;
 
-            // Grant monthly credits for the subscription tier
-            const { getSubscriptionTier } = await import('./config/subscription-plans');
-            const plan = getSubscriptionTier(session.metadata?.tier || '');
-            if (plan && plan.credits > 0) {
-              await sql`
-                INSERT INTO user_credits (user_id, balance, total_purchased, total_used, last_updated)
-                VALUES (${userId}, ${plan.credits}, ${plan.credits}, 0, NOW())
-                ON CONFLICT (user_id) DO UPDATE SET
-                  balance = user_credits.balance + ${plan.credits},
-                  total_purchased = user_credits.total_purchased + ${plan.credits},
-                  last_updated = NOW()
-              `;
+            const plan = getSubscriptionTier(tierId);
+
+            // Watcher → Creator / Production upgrade path.
+            // Guarded by current user_type='viewer' so an existing creator
+            // re-subscribing or switching tiers never has their account
+            // silently reassigned. Non-watcher purchases just update the
+            // subscription_tier column.
+            if (plan && (plan.userType === 'creator' || plan.userType === 'production')) {
+              const [current] = await sql`
+                SELECT user_type FROM users WHERE id = ${userId}
+              ` as { user_type: string }[];
+
+              if (current?.user_type === 'viewer') {
+                await sql`
+                  UPDATE users
+                  SET user_type = ${plan.userType},
+                      subscription_tier = ${tierId},
+                      updated_at = NOW()
+                  WHERE id = ${userId}
+                `;
+                // DO NOT delete sessions — our validateAuth JOINs users live,
+                // so user_type is always fresh from the DB. Logging the user
+                // out right after they paid is hostile UX. The frontend's
+                // checkSession() polling in Billing.tsx will detect the flip
+                // within ~2s and redirect to the new portal.
+                console.log(JSON.stringify({
+                  level: 'info',
+                  category: 'stripe_webhook',
+                  event_id: event.id,
+                  event_type: event.type,
+                  user_id: userId,
+                  action: 'user_type_flip',
+                  from: 'viewer',
+                  to: plan.userType,
+                  tier: tierId,
+                }));
+              } else {
+                // Existing creator/production changing tier — record only.
+                await sql`
+                  UPDATE users SET subscription_tier = ${tierId}, updated_at = NOW()
+                  WHERE id = ${userId}
+                `;
+                console.log(JSON.stringify({
+                  level: 'info',
+                  category: 'stripe_webhook',
+                  event_id: event.id,
+                  event_type: event.type,
+                  user_id: userId,
+                  action: 'tier_change',
+                  user_type: current?.user_type,
+                  tier: tierId,
+                }));
+              }
             }
           }
           break;
@@ -9757,6 +9903,14 @@ pitchey_analytics_datapoints_per_minute 1250
             UPDATE subscription_history SET status = 'canceled'
             WHERE stripe_subscription_id = ${subId} AND status IN ('active', 'cancelling')
           `;
+          console.log(JSON.stringify({
+            level: 'info',
+            category: 'stripe_webhook',
+            event_id: event.id,
+            event_type: event.type,
+            stripe_subscription_id: subId,
+            action: 'subscription_canceled',
+          }));
           break;
         }
 
@@ -9778,29 +9932,82 @@ pitchey_analytics_datapoints_per_minute 1250
         }
 
         case 'invoice.paid': {
-          // Recurring subscription payment — grant monthly credits
+          // Source of truth for "money actually received". Fires for both the
+          // first-month charge (billing_reason='subscription_create') and
+          // every recurring charge (billing_reason='subscription_cycle').
+          // Granting credits here (and nowhere else) means:
+          //   - No double-grant on month 1
+          //   - Credits only flow when the card actually clears
+          //   - Bounced cards / failed retries never get free credits
           const invoice = event.data.object;
           const subId = invoice.subscription;
-          if (subId && invoice.billing_reason === 'subscription_cycle') {
-            const rows = await sql`
-              SELECT user_id, new_tier FROM subscription_history
-              WHERE stripe_subscription_id = ${subId} AND status = 'active'
-              ORDER BY created_at DESC LIMIT 1
-            `;
-            if (rows.length > 0) {
-              const { getSubscriptionTier } = await import('./config/subscription-plans');
-              const plan = getSubscriptionTier(rows[0].new_tier);
-              if (plan && plan.credits > 0) {
-                await sql`
-                  INSERT INTO user_credits (user_id, balance, total_purchased, total_used, last_updated)
-                  VALUES (${rows[0].user_id}, ${plan.credits}, ${plan.credits}, 0, NOW())
-                  ON CONFLICT (user_id) DO UPDATE SET
-                    balance = user_credits.balance + ${plan.credits},
-                    total_purchased = user_credits.total_purchased + ${plan.credits},
-                    last_updated = NOW()
-                `;
-              }
+          const reason = invoice.billing_reason;
+
+          if (!subId || !['subscription_create', 'subscription_cycle'].includes(reason)) {
+            break;
+          }
+
+          // Prefer the DB lookup (cheap, local) but fall back to the Stripe
+          // API if subscription_history hasn't been populated yet. The race:
+          // invoice.paid can arrive before checkout.session.completed in rare
+          // cases, and our subscription metadata (userId, tier) is carried
+          // forward on the subscription object by `subscription_data[metadata]`
+          // during checkout creation — so the API call is authoritative.
+          let userId: number | null = null;
+          let tierId: string | null = null;
+
+          const historyRows = await sql`
+            SELECT user_id, new_tier FROM subscription_history
+            WHERE stripe_subscription_id = ${subId} AND status = 'active'
+            ORDER BY created_at DESC LIMIT 1
+          `;
+          if (historyRows.length > 0) {
+            userId = historyRows[0].user_id;
+            tierId = historyRows[0].new_tier;
+          } else {
+            const sub = await stripe.getSubscription(subId).catch(() => null);
+            const metaUserId = parseInt(sub?.metadata?.userId || '');
+            const metaTier = sub?.metadata?.tier;
+            if (metaUserId && metaTier) {
+              userId = metaUserId;
+              tierId = metaTier;
             }
+          }
+
+          if (!userId || !tierId) {
+            console.warn(JSON.stringify({
+              level: 'warn',
+              category: 'stripe_webhook',
+              event_id: event.id,
+              event_type: event.type,
+              stripe_subscription_id: subId,
+              action: 'invoice_paid_unmapped',
+              reason,
+            }));
+            break;
+          }
+
+          const plan = getSubscriptionTier(tierId);
+          if (plan && plan.credits > 0) {
+            await sql`
+              INSERT INTO user_credits (user_id, balance, total_purchased, total_used, last_updated)
+              VALUES (${userId}, ${plan.credits}, ${plan.credits}, 0, NOW())
+              ON CONFLICT (user_id) DO UPDATE SET
+                balance = user_credits.balance + ${plan.credits},
+                total_purchased = user_credits.total_purchased + ${plan.credits},
+                last_updated = NOW()
+            `;
+            console.log(JSON.stringify({
+              level: 'info',
+              category: 'stripe_webhook',
+              event_id: event.id,
+              event_type: event.type,
+              user_id: userId,
+              action: 'credits_granted',
+              credits: plan.credits,
+              tier: tierId,
+              billing_reason: reason,
+            }));
           }
           break;
         }
@@ -9814,8 +10021,18 @@ pitchey_analytics_datapoints_per_minute 1250
         headers: { 'Content-Type': 'application/json' }
       });
     } catch (e: any) {
-      console.error('Stripe webhook processing error:', e);
-      // Return 200 to prevent Stripe from retrying (we logged the error)
+      // Log loudly but return 200 — returning 500 makes Stripe retry, which
+      // is useful if the error is transient, but in practice retries usually
+      // hit the same bug. We log for observability and move on; the
+      // idempotency gate above is already committed so retries will dedup.
+      console.error(JSON.stringify({
+        level: 'error',
+        category: 'stripe_webhook',
+        event_id: event.id,
+        event_type: event.type,
+        action: 'handler_error',
+        message: e?.message || String(e),
+      }));
       return new Response(JSON.stringify({ received: true, error: 'Processing failed' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
@@ -12084,11 +12301,15 @@ pitchey_analytics_datapoints_per_minute 1250
           u.company_name as creator_company_name,
           u.avatar_url as creator_avatar_url,
           COALESCE(p.view_count, 0) as view_count,
-          COALESCE(s.save_count, 0) as save_count
+          COALESCE(s.save_count, 0) as save_count,
+          n.status as nda_status,
+          nr.status as nda_request_status
         FROM pitches p
         INNER JOIN users u ON p.user_id = u.id
         INNER JOIN follows f ON f.following_id = u.id
         LEFT JOIN (SELECT pitch_id, COUNT(*) as save_count FROM saved_pitches GROUP BY pitch_id) s ON s.pitch_id = p.id
+        LEFT JOIN ndas n ON n.pitch_id = p.id AND n.signer_id = $1 AND n.status IN ('approved', 'signed', 'pending')
+        LEFT JOIN nda_requests nr ON nr.pitch_id = p.id AND nr.requester_id = $1 AND nr.status = 'pending'
         WHERE f.follower_id = $1
           AND p.status = 'published'
           ${intervalClause}
@@ -12103,6 +12324,9 @@ pitchey_analytics_datapoints_per_minute 1250
         likeCount: p.like_count ?? p.likeCount ?? 0,
         createdAt: p.created_at ?? p.createdAt,
         userId: p.user_id ?? p.userId,
+        requireNda: Boolean(p.require_nda),
+        ndaSigned: p.nda_status === 'approved' || p.nda_status === 'signed',
+        ndaPending: p.nda_status === 'pending' || p.nda_request_status === 'pending',
         creator: {
           id: p.creator_id || p.user_id,
           name: p.creator_name,
@@ -14296,6 +14520,7 @@ pitchey_analytics_datapoints_per_minute 1250
         LEFT JOIN users creator ON p.user_id = creator.id
         WHERE p.user_id = ${authResult.user.id}
           AND n.signer_id != ${authResult.user.id}
+          AND n.status = 'pending'
         ORDER BY n.created_at DESC
       `;
 
@@ -14318,6 +14543,7 @@ pitchey_analytics_datapoints_per_minute 1250
           LEFT JOIN users creator ON creator.id = p.user_id
           WHERE (nr.pitch_owner_id = ${authResult.user.id} OR nr.creator_id = ${authResult.user.id} OR p.user_id = ${authResult.user.id})
             AND nr.requester_id != ${authResult.user.id}
+            AND nr.status = 'pending'
           ORDER BY COALESCE(nr.requested_at, nr.created_at) DESC
         `;
       } catch { /* nda_requests table issues are non-fatal */ }
