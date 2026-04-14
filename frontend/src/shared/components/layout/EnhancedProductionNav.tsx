@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, Activity, Film, FolderOpen, Upload,
   Bookmark, Users, GitBranch, DollarSign,
-  MessageSquare, Calendar, Settings, UserPlus, Shield
+  MessageSquare, Calendar, Settings, UserPlus, Shield, FileText
 } from 'lucide-react';
 import { PRODUCTION_ROUTES } from '@/config/navigation.routes';
 
@@ -45,6 +45,7 @@ export const productionNavigationSections: NavigationSection[] = [
   {
     title: 'Pitches',
     items: [
+      { label: 'My Pitches', path: PRODUCTION_ROUTES.pitches, icon: FileText },
       { label: 'Create Pitch', path: PRODUCTION_ROUTES.pitchNew, icon: Upload },
       { label: 'Saved Pitches', path: PRODUCTION_ROUTES.saved, icon: Bookmark },
       { label: 'Following', path: PRODUCTION_ROUTES.following, icon: Users },

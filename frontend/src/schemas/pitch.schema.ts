@@ -63,11 +63,10 @@ export const CharacterSchema = v.object({
     v.nonEmpty('Character name is required'),
     v.maxLength(50, 'Character name must be less than 50 characters')
   ),
-  role: v.pipe(
+  role: v.optional(v.pipe(
     v.string(),
-    v.nonEmpty('Character role is required'),
-    v.maxLength(50, 'Character role must be less than 50 characters')
-  ),
+    v.maxLength(100, 'Character role must be less than 100 characters')
+  )),
   description: v.pipe(
     v.string(),
     v.maxLength(200, 'Character description must be less than 200 characters')

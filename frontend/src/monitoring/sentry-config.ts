@@ -16,6 +16,10 @@ export function initSentry() {
 
   Sentry.init({
     dsn,
+    // Tunnel events through our own domain so ad/privacy blockers that
+    // block *.ingest.sentry.io don't drop error reports. The endpoint is a
+    // Pages Function at frontend/functions/api/monitoring/envelope.ts
+    tunnel: '/api/monitoring/envelope',
     environment: import.meta.env.MODE,
     release: (import.meta.env['VITE_APP_VERSION'] as string) || 'unknown',
 
