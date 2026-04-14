@@ -207,20 +207,27 @@ export async function followersHandler(request: Request, env: Env): Promise<Resp
     }
     
     const result = await sql`
-      SELECT 
-        u.id, u.username, u.email, u.profile_image,
-        COUNT(*) OVER() as total_count
+      SELECT
+        u.id, u.username, u.email,
+        u.first_name as "firstName", u.last_name as "lastName",
+        u.profile_image as "profileImage", u.bio, u.location,
+        u.user_type as "userType", u.company_name as "companyName",
+        COALESCE(f.followed_at, f.created_at) as "followedAt",
+        u.created_at as "createdAt",
+        COALESCE((SELECT COUNT(*) FROM pitches WHERE user_id = u.id), 0) as "pitchCount",
+        COUNT(*) OVER() as "totalCount"
       FROM follows f
       JOIN users u ON f.follower_id = u.id
       WHERE f.following_id = ${creatorId}
+      ORDER BY COALESCE(f.followed_at, f.created_at) DESC
       LIMIT 20
     `;
-    
+
     return new Response(JSON.stringify({
       success: true,
       data: {
         followers: result || [],
-        count: result[0]?.total_count || 0
+        count: result[0]?.totalCount || 0
       }
     }), {
       status: 200,
@@ -292,20 +299,27 @@ export async function followingHandler(request: Request, env: Env): Promise<Resp
     }
     
     const result = await sql`
-      SELECT 
-        u.id, u.username, u.email, u.profile_image,
-        COUNT(*) OVER() as total_count
+      SELECT
+        u.id, u.username, u.email,
+        u.first_name as "firstName", u.last_name as "lastName",
+        u.profile_image as "profileImage", u.bio, u.location,
+        u.user_type as "userType", u.company_name as "companyName",
+        COALESCE(f.followed_at, f.created_at) as "followedAt",
+        u.created_at as "createdAt",
+        COALESCE((SELECT COUNT(*) FROM pitches WHERE user_id = u.id), 0) as "pitchCount",
+        COUNT(*) OVER() as "totalCount"
       FROM follows f
       JOIN users u ON f.following_id = u.id
       WHERE f.follower_id = ${userId}
+      ORDER BY COALESCE(f.followed_at, f.created_at) DESC
       LIMIT 20
     `;
-    
+
     return new Response(JSON.stringify({
       success: true,
       data: {
         following: result || [],
-        count: result[0]?.total_count || 0
+        count: result[0]?.totalCount || 0
       }
     }), {
       status: 200,
