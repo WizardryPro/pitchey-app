@@ -17,7 +17,6 @@ import { useBetterAuthStore } from '../store/betterAuthStore';
 import Logo from '../components/Logo';
 import { paymentsAPI } from '../lib/apiServices';
 import SubscriptionCard from '@features/billing/components/SubscriptionCard';
-import WatcherUpgradeCard from '@features/billing/components/WatcherUpgradeCard';
 import CreditPurchase from '@features/billing/components/CreditPurchase';
 import PaymentHistory from '@features/billing/components/PaymentHistory';
 import PaymentMethodCard from '@features/billing/components/PaymentMethodCard';
@@ -27,7 +26,7 @@ import { getPortalPath } from '@/utils/navigation';
 export default function Billing() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, logout, checkSession } = useBetterAuthStore();
+  const { user, logout } = useBetterAuthStore();
   const validTabs = ['overview', 'subscription', 'credits', 'history', 'invoices', 'payment-methods'];
   const tabParam = searchParams.get('tab');
   // When the user lands here from Stripe with ?subscription=success, jump
@@ -39,7 +38,6 @@ export default function Billing() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [upgradeProcessing, setUpgradeProcessing] = useState(false);
 
   // Billing data states
   const [subscription, setSubscription] = useState<any>(null);
@@ -54,52 +52,8 @@ export default function Billing() {
     fetchBillingData();
   }, []);
 
-  // Stripe redirects back to /billing?subscription=success after checkout.
-  // For watchers who just bought a Creator/Production tier, the webhook
-  // flips user_type in the DB. Poll session until we see the new user_type,
-  // then redirect to the new portal dashboard.
   useEffect(() => {
-    if (subscriptionStatus !== 'success') return;
-
-    const wasWatcher = userType === 'viewer' || userType === 'watcher';
-    const purchasedTier = searchParams.get('tier') || '';
-    const upgradesUserType = /^creator|^production/.test(purchasedTier);
-
-    if (wasWatcher && upgradesUserType) {
-      setUpgradeProcessing(true);
-      toast.success('Payment received — unlocking your new account…');
-
-      let attempts = 0;
-      const maxAttempts = 20; // ~30s at 1.5s intervals
-      const poll = async () => {
-        attempts += 1;
-        try {
-          await checkSession();
-        } catch { /* session fetch transient errors are fine */ }
-
-        const fresh = useBetterAuthStore.getState().user;
-        const newType = (fresh as { userType?: string } | null)?.userType;
-
-        if (newType && newType !== 'viewer' && newType !== 'watcher') {
-          setUpgradeProcessing(false);
-          toast.success(`Welcome to your ${newType} account!`);
-          navigate(`/${newType}/dashboard`, { replace: true });
-          return;
-        }
-
-        if (attempts >= maxAttempts) {
-          setUpgradeProcessing(false);
-          toast('Your upgrade is still processing. Please refresh in a minute.', { icon: '⏳' });
-          // Clean the ?subscription=success from the URL
-          setSearchParams({ tab: 'subscription' });
-          return;
-        }
-
-        setTimeout(() => { void poll(); }, 1500);
-      };
-
-      void poll();
-    } else if (subscriptionStatus === 'success') {
+    if (subscriptionStatus === 'success') {
       toast.success('Subscription active — enjoy your new plan!');
       setSearchParams({ tab: 'subscription' });
     } else if (subscriptionStatus === 'cancelled') {
@@ -290,18 +244,22 @@ export default function Billing() {
             )}
             
             {activeTab === 'subscription' && (
-              upgradeProcessing ? (
-                <div className="bg-white border border-cyan-200 rounded-xl p-8 text-center">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-cyan-100 mb-4">
-                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-cyan-600 border-t-transparent"></div>
+              (userType === 'viewer' || userType === 'watcher') ? (
+                <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-purple-100 mb-4">
+                    <Crown className="w-6 h-6 text-purple-600" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">Activating your account…</h3>
-                  <p className="text-sm text-gray-600">
-                    Stripe confirmed your payment. We're unlocking Creator features — this usually takes a few seconds.
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Watcher accounts don't have subscriptions
+                  </h3>
+                  <p className="text-sm text-gray-600 max-w-md mx-auto">
+                    Watchers can browse, like, and comment on pitches. To create, invest in, or produce pitches, sign up separately as a Creator, Investor, or Production account at{' '}
+                    <Link to="/signup" className="text-purple-600 hover:text-purple-700 font-medium">pitchey.com</Link>.
+                  </p>
+                  <p className="text-sm text-gray-500 mt-4">
+                    You can still buy credits under the <button onClick={() => { const params = new URLSearchParams(searchParams); params.set('tab', 'credits'); navigate(`?${params.toString()}`, { replace: true }); }} className="text-purple-600 hover:text-purple-700 underline">Credits tab</button>.
                   </p>
                 </div>
-              ) : (userType === 'viewer' || userType === 'watcher') ? (
-                <WatcherUpgradeCard />
               ) : (
                 <SubscriptionCard
                   subscription={subscription}

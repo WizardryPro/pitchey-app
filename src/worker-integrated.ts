@@ -5298,10 +5298,7 @@ pitchey_analytics_datapoints_per_minute 1250
   }
 
   private async createPitch(request: Request): Promise<Response> {
-    // RBAC: creator/production can publish; watchers can only create drafts.
-    // The handler inserts with status='draft' unconditionally, so watchers
-    // never land in the marketplace via this route.
-    const authResult = await this.requirePortalAuth(request, ['creator', 'production', 'watcher'], Permission.PITCH_CREATE);
+    const authResult = await this.requirePortalAuth(request, ['creator', 'production'], Permission.PITCH_CREATE);
     if (!authResult.authorized) return authResult.response!;
 
     const builder = new ApiResponseBuilder(request);
@@ -5458,6 +5455,7 @@ pitchey_analytics_datapoints_per_minute 1250
     // Check if user is authenticated and has NDA access
     let hasNDAAccess = false;
     let userId: number | null = null;
+    let viewerUserType: string | null = null;
 
     // Check Better Auth session cookie first
     const cookieHeader = request.headers.get('Cookie');
@@ -5468,14 +5466,16 @@ pitchey_analytics_datapoints_per_minute 1250
       // Verify session with Better Auth
       try {
         const sessionResult = await this.db.query(`
-          SELECT s.*, u.* 
+          SELECT s.*, u.*
           FROM sessions s
           JOIN users u ON s.user_id = u.id
           WHERE s.id = $1 AND s.expires_at > NOW()
         `, [sessionCookie]);
 
         if (sessionResult.length > 0) {
-          userId = (sessionResult[0] as { user_id: number }).user_id;
+          const row = sessionResult[0] as { user_id: number; user_type?: string };
+          userId = row.user_id;
+          viewerUserType = row.user_type || null;
         }
       } catch (error) {
         console.error('Session verification failed:', error);
@@ -5487,6 +5487,7 @@ pitchey_analytics_datapoints_per_minute 1250
         const authResult = await this.validateAuth(request);
         if (authResult.valid && authResult.user) {
           userId = authResult.user.id;
+          viewerUserType = (authResult.user as { userType?: string }).userType || null;
         }
       }
     }
@@ -5558,6 +5559,24 @@ pitchey_analytics_datapoints_per_minute 1250
           };
         }
 
+        // Watchers and anonymous viewers see a short teaser of the synopsis
+        // so full story details stay gated behind industry signup / NDA.
+        // Logline remains full.
+        const SYNOPSIS_TEASER_CHARS = 300;
+        const isAudienceView = !hasNDAAccess
+          && String(pitch.user_id) !== String(userId)
+          && (viewerUserType === 'viewer' || !userId);
+        const teaseText = (s: unknown): unknown => {
+          if (!isAudienceView || typeof s !== 'string' || s.length <= SYNOPSIS_TEASER_CHARS) return s;
+          return s.slice(0, SYNOPSIS_TEASER_CHARS).trimEnd() + '…';
+        };
+        const shortSynopsisOut = teaseText(pitch.short_synopsis);
+        const longSynopsisOut = teaseText(pitch.long_synopsis);
+        const synopsisTruncated = isAudienceView && (
+          (typeof pitch.short_synopsis === 'string' && pitch.short_synopsis.length > SYNOPSIS_TEASER_CHARS) ||
+          (typeof pitch.long_synopsis === 'string' && pitch.long_synopsis.length > SYNOPSIS_TEASER_CHARS)
+        );
+
         // Build response with conditional protected content
         const response: any = {
           id: pitch.id,
@@ -5565,9 +5584,10 @@ pitchey_analytics_datapoints_per_minute 1250
           title: pitch.title,
           genre: pitch.genre,
           logline: pitch.logline,
-          short_synopsis: pitch.short_synopsis,
-          long_synopsis: pitch.long_synopsis,
-          synopsis: pitch.long_synopsis || pitch.short_synopsis,
+          short_synopsis: shortSynopsisOut,
+          long_synopsis: longSynopsisOut,
+          synopsis: longSynopsisOut || shortSynopsisOut,
+          synopsisTruncated,
           budget: pitch.budget_range || pitch.estimated_budget || pitch.budget,
           estimated_budget: pitch.estimated_budget,
           status: pitch.status,
@@ -5676,26 +5696,86 @@ pitchey_analytics_datapoints_per_minute 1250
       let isLiked = false;
       let isOwner = false;
       let authUserId: number | null = null;
+      let viewerUserType: string | null = null;
+      let hasNDAAccess = false;
       try {
         const authResult = await this.validateAuth(request);
         if (authResult.valid && authResult.user) {
           authUserId = authResult.user.id;
+          viewerUserType = (authResult.user as { userType?: string }).userType || null;
           isOwner = Number(pitch.user_id) === Number(authUserId);
           const likeResult = await sql`
             SELECT 1 FROM likes WHERE user_id = ${authResult.user.id} AND pitch_id = ${pitchId} LIMIT 1
           `;
           isLiked = likeResult.length > 0;
+          // NDA access — primary check via signer_id (matches engagement handler).
+          // Fallback to requester_id / user_id / pitch_access for legacy
+          // records from older schemas.
+          try {
+            const ndaRows = await sql`
+              SELECT 1 FROM ndas
+              WHERE pitch_id = ${pitchId} AND signer_id = ${authUserId}
+                AND (status = 'approved' OR status = 'signed')
+              LIMIT 1
+            `;
+            hasNDAAccess = ndaRows.length > 0;
+          } catch { /* column may not exist in all envs */ }
+          if (!hasNDAAccess) {
+            try {
+              const ndaFallback = await sql`
+                SELECT 1 FROM ndas
+                WHERE pitch_id = ${pitchId} AND requester_id = ${authUserId}
+                  AND (status = 'approved' OR status = 'signed')
+                LIMIT 1
+              `;
+              hasNDAAccess = ndaFallback.length > 0;
+            } catch { /* ignore */ }
+          }
+          if (!hasNDAAccess) {
+            try {
+              const accessRows = await sql`
+                SELECT 1 FROM pitch_access
+                WHERE pitch_id = ${pitchId} AND user_id = ${authUserId}
+                  AND (revoked_at IS NULL)
+                  AND (expires_at IS NULL OR expires_at > NOW())
+                LIMIT 1
+              `;
+              hasNDAAccess = accessRows.length > 0;
+            } catch { /* pitch_access table may not exist in all envs */ }
+          }
         }
       } catch {
         // Auth check is optional for public pitch viewing
       }
 
+      // Watchers and anonymous viewers see a 300-char teaser of the synopsis
+      // so full story details stay gated behind industry signup / NDA.
+      const SYNOPSIS_TEASER_CHARS = 300;
+      const isAudienceView = !isOwner && !hasNDAAccess && (viewerUserType === 'viewer' || !authUserId);
+      const teaseText = (s: unknown): unknown => {
+        if (!isAudienceView || typeof s !== 'string' || s.length <= SYNOPSIS_TEASER_CHARS) return s;
+        return s.slice(0, SYNOPSIS_TEASER_CHARS).trimEnd() + '…';
+      };
+      const shortSynopsisOut = teaseText(pitch.short_synopsis);
+      const longSynopsisOut = teaseText(pitch.long_synopsis);
+      const synopsisTruncated = isAudienceView && (
+        (typeof pitch.short_synopsis === 'string' && pitch.short_synopsis.length > SYNOPSIS_TEASER_CHARS) ||
+        (typeof pitch.long_synopsis === 'string' && pitch.long_synopsis.length > SYNOPSIS_TEASER_CHARS)
+      );
+
       // Combine the data with proper creator object
       // Use pitches.view_count directly (accurate, maintained by view tracking)
       const fullPitch = {
         ...pitch,
+        short_synopsis: shortSynopsisOut,
+        long_synopsis: longSynopsisOut,
+        shortSynopsis: shortSynopsisOut,
+        longSynopsis: longSynopsisOut,
+        synopsisTruncated,
         isLiked,
         isOwner,
+        hasSignedNDA: hasNDAAccess,
+        hasNDA: hasNDAAccess,
         view_count: parseInt(pitch.view_count || '0'),
         investment_count: investmentCount,
         creator: {
@@ -5803,10 +5883,7 @@ pitchey_analytics_datapoints_per_minute 1250
   }
 
   private async updatePitch(request: Request): Promise<Response> {
-    // RBAC: Watchers may edit their own draft pitches (ownership is enforced
-    // below via user_id check). This route does not touch `status`, so a
-    // watcher cannot flip a pitch to published through here.
-    const authResult = await this.requirePortalAuth(request, ['creator', 'production', 'watcher'], Permission.PITCH_EDIT_OWN);
+    const authResult = await this.requirePortalAuth(request, ['creator', 'production'], Permission.PITCH_EDIT_OWN);
     if (!authResult.authorized) return authResult.response!;
 
     const builder = new ApiResponseBuilder(request);
@@ -5964,9 +6041,7 @@ pitchey_analytics_datapoints_per_minute 1250
   }
 
   private async deletePitch(request: Request): Promise<Response> {
-    // RBAC: Watchers may delete their own draft pitches (ownership enforced
-    // via user_id match in the DELETE SQL below).
-    const authResult = await this.requirePortalAuth(request, ['creator', 'production', 'watcher'], Permission.PITCH_DELETE_OWN);
+    const authResult = await this.requirePortalAuth(request, ['creator', 'production'], Permission.PITCH_DELETE_OWN);
     if (!authResult.authorized) return authResult.response!;
 
     const builder = new ApiResponseBuilder(request);
@@ -9601,6 +9676,15 @@ pitchey_analytics_datapoints_per_minute 1250
       return new ApiResponseBuilder(request).error(ErrorCode.UNAUTHORIZED, 'Authentication required');
     }
 
+    // Watchers are audience-only. Any subscription must be taken out via
+    // a fresh signup on the Creator/Investor/Production portals.
+    if ((authResult.user as { userType?: string } | undefined)?.userType === 'viewer') {
+      return new ApiResponseBuilder(request).error(
+        ErrorCode.FORBIDDEN,
+        'Watcher accounts cannot subscribe. Sign up as a Creator, Investor, or Production account to subscribe.'
+      );
+    }
+
     try {
       const body = await request.json() as any;
       const { tier, billingInterval = 'monthly' } = body;
@@ -9633,10 +9717,6 @@ pitchey_analytics_datapoints_per_minute 1250
 
       const stripe = new StripeService(stripeKey);
       const frontendUrl = (this.env as any).FRONTEND_URL || 'https://pitchey-5o8.pages.dev';
-      // `successUrl` goes through the watcher portal Billing page first —
-      // the frontend handler there will detect ?subscription=success, force
-      // a fresh session (picks up flipped user_type), and redirect to the
-      // new portal (creator/production) once the webhook has processed.
       const session = await stripe.createSubscriptionCheckout({
         userId: authResult.user!.id,
         email: authResult.user!.email || '',
@@ -9840,42 +9920,29 @@ pitchey_analytics_datapoints_per_minute 1250
 
             const plan = getSubscriptionTier(tierId);
 
-            // Watcher → Creator / Production upgrade path.
-            // Guarded by current user_type='viewer' so an existing creator
-            // re-subscribing or switching tiers never has their account
-            // silently reassigned. Non-watcher purchases just update the
-            // subscription_tier column.
-            if (plan && (plan.userType === 'creator' || plan.userType === 'production')) {
+            // Record the tier change on the user row. Watchers (user_type='viewer')
+            // should never reach this branch — handleSubscribe rejects their
+            // subscribe requests at the API boundary. If a viewer somehow does
+            // reach it (e.g. Stripe Dashboard manual subscription), log loudly
+            // and DO NOT flip their user_type — that would bypass the portal
+            // signup flow. An operator can sort it out manually.
+            if (plan) {
               const [current] = await sql`
                 SELECT user_type FROM users WHERE id = ${userId}
               ` as { user_type: string }[];
 
               if (current?.user_type === 'viewer') {
-                await sql`
-                  UPDATE users
-                  SET user_type = ${plan.userType},
-                      subscription_tier = ${tierId},
-                      updated_at = NOW()
-                  WHERE id = ${userId}
-                `;
-                // DO NOT delete sessions — our validateAuth JOINs users live,
-                // so user_type is always fresh from the DB. Logging the user
-                // out right after they paid is hostile UX. The frontend's
-                // checkSession() polling in Billing.tsx will detect the flip
-                // within ~2s and redirect to the new portal.
-                console.log(JSON.stringify({
-                  level: 'info',
+                console.error(JSON.stringify({
+                  level: 'error',
                   category: 'stripe_webhook',
                   event_id: event.id,
                   event_type: event.type,
                   user_id: userId,
-                  action: 'user_type_flip',
-                  from: 'viewer',
-                  to: plan.userType,
+                  action: 'unexpected_watcher_subscription',
                   tier: tierId,
+                  message: 'Watcher user received a subscription checkout — skipping user_type change. Investigate manually.',
                 }));
               } else {
-                // Existing creator/production changing tier — record only.
                 await sql`
                   UPDATE users SET subscription_tier = ${tierId}, updated_at = NOW()
                   WHERE id = ${userId}

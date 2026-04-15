@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Eye, Heart, Plus, TrendingUp, CreditCard, Search, ArrowRight, Sparkles, Info } from 'lucide-react';
+import { Eye, Heart, TrendingUp, CreditCard, Search, ArrowRight, Sparkles, Info } from 'lucide-react';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { apiClient } from '@/lib/api-client';
 import { WATCHER_ROUTES } from '@/config/navigation.routes';
@@ -50,7 +50,7 @@ export default function WatcherDashboard() {
           </div>
           <h1 className="text-3xl font-bold tracking-tight mb-2">Welcome back, {firstName}</h1>
           <p className="text-cyan-50/90 max-w-lg leading-relaxed">
-            Browse pitches, save your favourites, and start drafting your own ideas.
+            Browse pitches, save your favourites, and leave feedback on stories you love.
           </p>
         </div>
       </div>
@@ -124,20 +124,20 @@ export default function WatcherDashboard() {
           </Link>
 
           <Link
-            to={WATCHER_ROUTES.pitchNew}
+            to={WATCHER_ROUTES.saved}
             className="group relative overflow-hidden bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-cyan-200 transition-all duration-200"
           >
             <div aria-hidden className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-cyan-100/0 to-cyan-100/0 group-hover:from-cyan-100/60 group-hover:to-sky-100/40 rounded-full blur-2xl transition-all duration-300" />
             <div className="relative">
               <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-sky-600 text-white shadow-sm shadow-cyan-500/30 mb-4 group-hover:scale-105 group-hover:shadow-cyan-500/40 transition-all duration-200">
-                <Plus className="w-5 h-5" />
+                <Heart className="w-5 h-5" />
               </div>
               <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-1.5">
-                Start a Draft
+                Saved Pitches
                 <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-cyan-600 group-hover:translate-x-0.5 transition-all duration-200" />
               </h3>
               <p className="text-sm text-gray-500 leading-relaxed">
-                Create and save your pitch ideas
+                Revisit pitches you bookmarked
               </p>
             </div>
           </Link>
@@ -169,9 +169,9 @@ export default function WatcherDashboard() {
           <Info className="w-4 h-4" />
         </div>
         <div className="flex-1">
-          <p className="text-sm font-semibold text-amber-900 mb-0.5">Watcher accounts are browse-only</p>
+          <p className="text-sm font-semibold text-amber-900 mb-0.5">Watcher accounts are for browsing</p>
           <p className="text-sm text-amber-800/90 leading-relaxed">
-            You can browse, like, and create draft pitches. To sign NDAs and access protected content, upgrade to a Creator, Investor, or Production account.
+            You can browse, like, and comment on pitches. To create, invest in, or produce pitches — or to sign NDAs and access protected content — sign up as a Creator, Investor, or Production account at <Link to="/signup" className="underline font-medium">pitchey.com/signup</Link>.
           </p>
         </div>
       </div>

@@ -48,20 +48,49 @@ export async function getPitchEngagementHandler(request: Request, env: Env): Pro
     const pitch = pitchResult[0];
     const userId = await getUserId(request, env);
 
+    // Liker role breakdown — aggregate counts by user_type.
+    // Safe to share with any viewer (anonymous, watcher, industry) since it's
+    // just counts, no identities. Lets watchers see social proof.
+    const likerBreakdownResult = await sql`
+      SELECT u.user_type, COUNT(DISTINCT l.user_id)::int as count
+      FROM likes l
+      JOIN users u ON u.id = l.user_id
+      WHERE l.pitch_id = ${pitchId}
+      GROUP BY u.user_type
+    `;
+    const likerBreakdown: Record<string, number> = {
+      creator: 0, investor: 0, production: 0, viewer: 0,
+    };
+    for (const row of likerBreakdownResult) {
+      likerBreakdown[row.user_type] = Number(row.count);
+    }
+
     // Base response — always returned
     const response: Record<string, unknown> = {
       success: true,
       viewCount: Number(pitch.view_count),
       likeCount: Number(pitch.like_count),
+      likerBreakdown,
       recentLikers: [],
     };
 
     if (!userId) {
-      // Anonymous: counts only
+      // Anonymous: counts + role breakdown only
       return new Response(JSON.stringify(response), { headers });
     }
 
     const isOwner = String(pitch.user_id) === String(userId);
+
+    // Named likers/viewers are restricted to owner + NDA-signed industry
+    // viewers. Watchers and non-NDA industry viewers see aggregate-only data.
+    const ndaRows = await sql`
+      SELECT 1 FROM ndas
+      WHERE pitch_id = ${pitchId} AND signer_id = ${userId}
+        AND (status = 'approved' OR status = 'signed')
+      LIMIT 1
+    `;
+    const hasNDAAccess = ndaRows.length > 0;
+    const canSeeNamedEngagement = isOwner || hasNDAAccess;
 
     // Viewer breakdown by role — for all authenticated users
     const breakdownResult = await sql`
@@ -78,8 +107,12 @@ export async function getPitchEngagementHandler(request: Request, env: Env): Pro
     }
     response.viewerBreakdown = viewerBreakdown;
 
-    // All authenticated users see named likers and viewers
-    // This is a B2B platform — knowing who's engaging is the core value
+    if (!canSeeNamedEngagement) {
+      // Watchers and non-NDA industry viewers: aggregate-only, no names.
+      return new Response(JSON.stringify(response), { headers });
+    }
+
+    // Owner + NDA-signed viewers see named likers and viewers
     const likers = await sql`
       SELECT u.id, CONCAT(u.first_name, ' ', u.last_name) as name,
              u.user_type, u.company_name, l.created_at as liked_at

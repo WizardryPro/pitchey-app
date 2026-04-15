@@ -13,11 +13,7 @@ export async function creatorPitchesHandler(request: Request, env: Env): Promise
   const origin = request.headers.get('Origin');
   const corsHeaders = getCorsHeaders(origin);
 
-  // Allow creators, production companies, and watchers (viewer user_type).
-  // Watchers can only draft — they see this list so they can manage their
-  // drafts. Ownership is scoped by user_id in the SQL queries below, so a
-  // watcher only ever sees their own pitches.
-  const roleCheck = await requireRole(request, env, ['creator', 'production', 'viewer']);
+  const roleCheck = await requireRole(request, env, ['creator', 'production']);
   if ('error' in roleCheck) {
     return roleCheck.error;
   }

@@ -11,7 +11,6 @@ import type { Character } from '@shared/types/character';
 import { normalizeCharacters, serializeCharacters } from '@features/pitches/utils/characterUtils';
 import { DocumentUpload } from '@features/uploads/components/DocumentUpload';
 import type { DocumentFile } from '@features/uploads/components/DocumentUpload';
-import { useBetterAuthStore } from '../store/betterAuthStore';
 
 interface PitchFormData {
   title: string;
@@ -45,10 +44,7 @@ export default function PitchEdit() {
   const [genres] = useState<readonly string[] | string[]>(getGenresSync());
   const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
   const isOnline = useOnlineStatus();
-  // Watchers (viewer user_type) editing their drafts must return to
-  // /watcher/drafts, not /creator/pitches (which they can't access).
-  const user = useBetterAuthStore((s) => s.user);
-  const pitchesListPath = user?.userType === 'viewer' ? '/watcher/drafts' : '/creator/pitches';
+  const pitchesListPath = '/creator/pitches';
 
 
   const [formData, setFormData] = useState<PitchFormData>({

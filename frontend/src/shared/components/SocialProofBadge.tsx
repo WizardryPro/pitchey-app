@@ -29,6 +29,7 @@ interface RecentViewer {
 
 interface EngagementData {
   viewerBreakdown?: Record<string, number> | ViewerBreakdownEntry[];
+  likerBreakdown?: Record<string, number>;
   recentLikers?: RecentLiker[];
   recentViewers?: RecentViewer[];
 }
@@ -37,6 +38,7 @@ const USER_TYPE_LABELS: Record<string, string> = {
   investor: 'Investors',
   production: 'Production Cos',
   creator: 'Creators',
+  viewer: 'Watchers',
 };
 
 function formatUserTypeLabel(userType: string): string {
@@ -95,6 +97,26 @@ function buildLikerText(likers: RecentLiker[]): string {
     ([type, count]) => `${count} ${formatUserTypeLabel(type).toLowerCase()}`
   );
   return `Liked by ${parts.join(', ')}`;
+}
+
+function buildLikerBreakdownText(
+  breakdown: Record<string, number>,
+  totalLikes: number
+): string {
+  const industryTotal =
+    (breakdown.investor || 0) + (breakdown.production || 0) + (breakdown.creator || 0);
+  if (industryTotal === 0 && (breakdown.viewer || 0) === 0) return '';
+
+  const parts: string[] = [];
+  if (breakdown.investor) parts.push(`${breakdown.investor} ${formatUserTypeLabel('investor').toLowerCase()}`);
+  if (breakdown.production) parts.push(`${breakdown.production} ${formatUserTypeLabel('production').toLowerCase()}`);
+  if (breakdown.creator) parts.push(`${breakdown.creator} ${formatUserTypeLabel('creator').toLowerCase()}`);
+
+  const accountedFor = industryTotal + (breakdown.viewer || 0);
+  const others = Math.max(0, totalLikes - accountedFor) + (breakdown.viewer || 0);
+  if (others > 0) parts.push(`${others} other${others > 1 ? 's' : ''}`);
+
+  return parts.length > 0 ? `Liked by ${parts.join(', ')}` : '';
 }
 
 function roleBadgeColor(role: string): string {
@@ -162,7 +184,15 @@ export default function SocialProofBadge({
 
   const viewerText =
     engagement?.viewerBreakdown ? buildViewerBreakdownText(engagement.viewerBreakdown) : '';
-  const likerText = engagement?.recentLikers ? buildLikerText(engagement.recentLikers) : '';
+  const namedLikerText =
+    engagement?.recentLikers && engagement.recentLikers.length > 0
+      ? buildLikerText(engagement.recentLikers)
+      : '';
+  const breakdownLikerText =
+    !namedLikerText && engagement?.likerBreakdown
+      ? buildLikerBreakdownText(engagement.likerBreakdown, likeCount)
+      : '';
+  const likerText = namedLikerText || breakdownLikerText;
   const recentViewers = engagement?.recentViewers ?? [];
 
   return (

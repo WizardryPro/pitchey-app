@@ -221,13 +221,10 @@ const rolePermissions: Record<UserRole, Permission[]> = {
   ],
 
   [UserRole.VIEWER]: [
-    // Watchers are a lightweight tier: browse, save, and draft pitch ideas.
-    // They can create/edit/delete their own drafts but intentionally cannot
-    // PUBLISH — publishing requires a paid upgrade to a Creator account.
+    // Watchers are an audience-only tier: browse, like, save, and comment.
+    // They cannot create pitches — creating/publishing requires signing up
+    // as a Creator, Investor, or Production account.
     Permission.PITCH_VIEW_PUBLIC,
-    Permission.PITCH_CREATE,
-    Permission.PITCH_EDIT_OWN,
-    Permission.PITCH_DELETE_OWN,
     Permission.DOCUMENT_VIEW_PUBLIC,
     Permission.USER_VIEW_OWN,
     Permission.USER_EDIT_OWN

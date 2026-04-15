@@ -30,8 +30,8 @@ export const PortalAccessMap: Record<string, string[]> = {
   creator: ['creator', 'admin'],
   investor: ['investor', 'admin'],
   production: ['production', 'admin'],
-  // Watchers are `viewer` user_type in the database. `watcher` is kept as a
-  // legacy alias for accounts that were created before the rename.
+  // Watchers are stored as `viewer` user_type in the database; `watcher` is
+  // a legacy alias from an earlier rename.
   watcher: ['viewer', 'watcher', 'admin'],
   admin: ['admin']
 };

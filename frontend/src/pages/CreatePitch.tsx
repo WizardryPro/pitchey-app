@@ -40,11 +40,6 @@ export default function CreatePitch() {
   const { success, error } = useToast();
   const { user } = useBetterAuthStore();
   const isProduction = user?.userType === 'production';
-  // Watchers (viewer user_type) can create drafts but all post-save nav
-  // must route under /watcher/*, not /creator/* (they can't access creator
-  // routes). isWatcher takes precedence over isProduction in the ternaries
-  // below since a watcher will never also be production.
-  const isWatcher = user?.userType === 'viewer';
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState<'form' | 'creating' | 'uploading' | 'complete'>('form');
   const isOnline = useOnlineStatus();
@@ -435,13 +430,7 @@ export default function CreatePitch() {
         success(SUCCESS_MESSAGES.PITCH_CREATED || 'Pitch created successfully', 'Your pitch has been created and is ready for review.');
 
         // PHASE 4: Navigate only after everything completes
-        navigate(
-          isWatcher
-            ? '/watcher/drafts'
-            : isProduction
-              ? '/production/pitches'
-              : '/creator/pitches'
-        );
+        navigate(isProduction ? '/production/pitches' : '/creator/pitches');
       } catch (err: any) {
         console.error('Error creating pitch:', err);
         const errorMessage = err.message || ERROR_MESSAGES?.UNEXPECTED_ERROR || 'An unexpected error occurred';
@@ -568,13 +557,7 @@ export default function CreatePitch() {
                   type: 'button',
                   ariaLabel: 'Go back'
                 })}
-                onClick={() => navigate(
-                  isWatcher
-                    ? '/watcher/dashboard'
-                    : isProduction
-                      ? '/production/dashboard'
-                      : '/creator/dashboard'
-                )}
+                onClick={() => navigate(isProduction ? '/production/dashboard' : '/creator/dashboard')}
                 className={`p-2 text-gray-500 hover:text-gray-700 transition rounded-lg hover:bg-gray-100 ${a11y.classes.focusVisible}`}
               >
                 <ArrowLeft className="w-5 h-5" aria-hidden="true" />
@@ -1403,13 +1386,7 @@ export default function CreatePitch() {
                 disabled: isSubmitting,
                 ariaLabel: 'Cancel'
               })}
-              onClick={() => navigate(
-                isWatcher
-                  ? '/watcher/dashboard'
-                  : isProduction
-                    ? '/production/dashboard'
-                    : '/creator/dashboard'
-              )}
+              onClick={() => navigate(isProduction ? '/production/dashboard' : '/creator/dashboard')}
               className={`px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition ${a11y.classes.focusVisible} ${isSubmitting ? a11y.classes.disabledElement : ''}`}
               data-testid="cancel-button"
             >

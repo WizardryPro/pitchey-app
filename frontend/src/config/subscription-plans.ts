@@ -81,23 +81,6 @@ export const CREDIT_PACKAGES = [
 ];
 
 export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
-  // Watcher (Free)
-  {
-    id: 'watcher',
-    name: 'The Watcher',
-    price: { monthly: 0, annual: 0 },
-    credits: 0,
-    analytics: 'basic',
-    features: [
-      'Browse & search projects',
-      'Like & save pitches',
-      'Create & save drafts',
-      'Buy credits',
-      'Cannot sign NDAs'
-    ],
-    userType: 'watcher'
-  },
-
   // Creator Tiers
   {
     id: 'creator',
@@ -218,21 +201,17 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
 
 export const getSubscriptionTiersByUserType = (userType: string): SubscriptionTier[] => {
   if (userType === 'creator') {
-    return SUBSCRIPTION_TIERS.filter(tier => tier.userType === 'creator' || tier.userType === 'watcher');
+    return SUBSCRIPTION_TIERS.filter(tier => tier.userType === 'creator');
   }
   if (userType === 'production') {
-    return SUBSCRIPTION_TIERS.filter(tier => tier.userType === 'production' || tier.userType === 'watcher');
+    return SUBSCRIPTION_TIERS.filter(tier => tier.userType === 'production');
   }
   if (userType === 'investor') {
-    return SUBSCRIPTION_TIERS.filter(tier => tier.userType === 'exec' || tier.userType === 'watcher');
+    return SUBSCRIPTION_TIERS.filter(tier => tier.userType === 'exec');
   }
-  // Watchers are the upgrade funnel: show them the free watcher tier (their
-  // current plan) plus the Creator ladder. The webhook flips user_type from
-  // viewer → creator when a Creator tier is purchased.
+  // Watchers have no subscription tiers (audience-only, credits-only).
   if (userType === 'watcher' || userType === 'viewer') {
-    return SUBSCRIPTION_TIERS.filter(
-      tier => tier.userType === 'watcher' || tier.userType === 'creator'
-    );
+    return [];
   }
   return SUBSCRIPTION_TIERS;
 };

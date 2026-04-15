@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Share2, Eye, Calendar, User, Clock, Tag, Film, LogIn, FileText, Lock, Shield, Briefcase, DollarSign, WifiOff, RefreshCw, Bookmark } from 'lucide-react';
 import PitcheyRating from '../components/PitcheyRating';
 import { pitchService } from '@features/pitches/services/pitch.service';
@@ -465,6 +465,15 @@ export default function PitchDetail() {
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-2">Synopsis</h3>
                   <p className="text-gray-700 whitespace-pre-wrap">{pitch.shortSynopsis}</p>
+                  {(pitch as { synopsisTruncated?: boolean }).synopsisTruncated && (
+                    <p className="mt-3 text-sm text-gray-500 italic">
+                      You're reading a teaser. Sign up as a{' '}
+                      <Link to="/signup" className="text-purple-600 hover:text-purple-700 font-medium">
+                        Creator, Investor, or Production
+                      </Link>{' '}
+                      account to read the full synopsis.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -775,8 +784,9 @@ export default function PitchDetail() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Engagement & Social Proof — hidden until NDA signed */}
-            {(hasSignedNDA || isOwner) ? (
+            {/* Engagement & Social Proof — aggregate visible to all authenticated
+                viewers; named likers/viewers only exposed to owner + NDA-signed */}
+            {isAuthenticated && (
               <SocialProofBadge
                 pitchId={pitch.id}
                 viewCount={pitch.viewCount || 0}
@@ -784,13 +794,6 @@ export default function PitchDetail() {
                 isOwner={isOwner}
                 isAuthenticated={isAuthenticated}
               />
-            ) : (
-              <div className="bg-white rounded-xl shadow-sm p-4">
-                <div className="flex items-center gap-2 text-gray-500 text-sm">
-                  <Lock className="w-4 h-4" />
-                  <span>Engagement data available after NDA</span>
-                </div>
-              </div>
             )}
 
             {/* Pitchey Score */}
