@@ -128,6 +128,62 @@ export async function checkCompaniesHouse(
 }
 
 // ---------------------------------------------------------------------------
+// Companies House search — autocomplete for the verification form
+// ---------------------------------------------------------------------------
+
+export interface CompaniesHouseSearchResult {
+  companyNumber: string;
+  title: string;
+  status: string;
+  address: string;
+  dateOfCreation: string | null;
+}
+
+export async function searchCompaniesHouse(
+  query: string,
+  apiKey: string | undefined,
+  limit = 10,
+): Promise<CompaniesHouseSearchResult[]> {
+  if (!apiKey || query.trim().length < 2) return [];
+
+  try {
+    const url = `https://api.company-information.service.gov.uk/search/companies?q=${encodeURIComponent(query.trim())}&items_per_page=${limit}`;
+    const resp = await fetch(url, {
+      headers: { Authorization: `Basic ${btoa(apiKey + ':')}` },
+    });
+
+    if (!resp.ok) {
+      console.error(`[CompaniesHouse] Search API error: ${resp.status}`);
+      return [];
+    }
+
+    const data = await resp.json() as {
+      items?: Array<{
+        company_number?: string;
+        title?: string;
+        company_status?: string;
+        date_of_creation?: string;
+        address_snippet?: string;
+      }>;
+    };
+
+    return (data.items || [])
+      .filter((item) => item.company_number && item.title)
+      .map((item) => ({
+        companyNumber: item.company_number!,
+        title: item.title!,
+        status: item.company_status || 'unknown',
+        address: item.address_snippet || '',
+        dateOfCreation: item.date_of_creation || null,
+      }));
+  } catch (err) {
+    const e = err instanceof Error ? err : new Error(String(err));
+    console.error(`[CompaniesHouse] Search fetch error: ${e.message}`);
+    return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Website Validation
 // ---------------------------------------------------------------------------
 

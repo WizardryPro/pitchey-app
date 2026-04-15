@@ -3,6 +3,9 @@ import {
   Shield, CheckCircle, XCircle, AlertTriangle, Clock,
   Upload, Building2, RefreshCw,
 } from 'lucide-react';
+import CompaniesHouseAutocomplete, {
+  type CompaniesHouseResult,
+} from '../components/CompaniesHouseAutocomplete';
 
 const API_URL = (import.meta.env['VITE_API_URL'] as string | undefined) ?? '';
 
@@ -244,6 +247,8 @@ export default function ProductionVerification() {
   const [companyName, setCompanyName] = useState('');
   const [region, setRegion] = useState<Region>('USA');
   const [registrationNumber, setRegistrationNumber] = useState('');
+  const [chSearchQuery, setChSearchQuery] = useState('');
+  const [chSelected, setChSelected] = useState<CompaniesHouseResult | null>(null);
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [noCompanyNumber, setNoCompanyNumber] = useState(false);
   const [insuranceFile, setInsuranceFile] = useState<File | null>(null);
@@ -462,6 +467,8 @@ export default function ProductionVerification() {
             onChange={(e) => {
               setRegion(e.target.value as Region);
               setRegistrationNumber('');
+              setChSelected(null);
+              setChSearchQuery('');
             }}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-portal-production/30 focus:border-brand-portal-production bg-white"
           >
@@ -471,24 +478,60 @@ export default function ProductionVerification() {
           </select>
         </div>
 
-        {/* Registration number — hidden when no company number checked */}
+        {/* Registration number — hidden when no company number checked.
+            UK uses the live Companies House autocomplete; other regions
+            stay as a plain text input (no equivalent public search API). */}
         {!noCompanyNumber && (
-          <div>
-            <label
-              htmlFor="registrationNumber"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              {regionLabel[region]}
-            </label>
-            <input
-              id="registrationNumber"
-              type="text"
-              value={registrationNumber}
-              onChange={(e) => setRegistrationNumber(e.target.value)}
-              placeholder={regionPlaceholder[region]}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-portal-production/30 focus:border-brand-portal-production"
-            />
-          </div>
+          region === 'UK' ? (
+            <div>
+              <CompaniesHouseAutocomplete
+                value={chSelected ? `${chSelected.title} (#${chSelected.companyNumber})` : chSearchQuery}
+                onChange={(v) => {
+                  setChSearchQuery(v);
+                  if (chSelected) {
+                    // user is editing again — clear the selection
+                    setChSelected(null);
+                    setRegistrationNumber('');
+                  }
+                }}
+                onSelect={(result) => {
+                  setChSelected(result);
+                  setRegistrationNumber(result.companyNumber);
+                  setCompanyName(result.title);
+                  setChSearchQuery('');
+                }}
+              />
+              {chSelected && (
+                <div className="mt-2 flex items-start gap-2 px-3 py-2 bg-brand-portal-production/5 border border-brand-portal-production/20 rounded-lg text-xs">
+                  <CheckCircle className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">{chSelected.title}</p>
+                    <p className="text-gray-600 mt-0.5">
+                      #{chSelected.companyNumber} · {chSelected.status}
+                      {chSelected.address && ` · ${chSelected.address}`}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div>
+              <label
+                htmlFor="registrationNumber"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                {regionLabel[region]}
+              </label>
+              <input
+                id="registrationNumber"
+                type="text"
+                value={registrationNumber}
+                onChange={(e) => setRegistrationNumber(e.target.value)}
+                placeholder={regionPlaceholder[region]}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-portal-production/30 focus:border-brand-portal-production"
+              />
+            </div>
+          )
         )}
 
         {/* No company number checkbox */}

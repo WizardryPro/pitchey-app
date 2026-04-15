@@ -19,6 +19,7 @@ import {
   getVerificationStatus,
   listVerifications,
   reviewVerification,
+  searchCompaniesHouse,
   type VerificationSubmission,
 } from '../services/company-verification.service';
 
@@ -271,4 +272,33 @@ export async function adminReviewVerificationHandler(
     verification: result,
     message: body.approved ? 'Verification approved.' : 'Verification rejected.',
   }, 200, origin);
+}
+
+// ---------------------------------------------------------------------------
+// GET /api/production/verify/companies-house/search?q=...
+// Proxies to the Companies House Search API so the API key stays server-side.
+// Requires authentication — prevents open-proxy abuse of our rate budget.
+// ---------------------------------------------------------------------------
+
+export async function companiesHouseSearchHandler(
+  request: Request,
+  env: Env,
+): Promise<Response> {
+  const origin = request.headers.get('Origin');
+  const userId = await getUserId(request, env);
+  if (!userId) return errorResponse('Unauthorized', 401, origin);
+
+  const url = new URL(request.url);
+  const q = url.searchParams.get('q')?.trim() || '';
+  if (q.length < 2) {
+    return jsonResponse({ results: [] }, 200, origin);
+  }
+
+  const apiKey = (env as unknown as { COMPANIES_HOUSE_API_KEY?: string }).COMPANIES_HOUSE_API_KEY;
+  if (!apiKey) {
+    return jsonResponse({ results: [], message: 'Search unavailable — API key not configured.' }, 200, origin);
+  }
+
+  const results = await searchCompaniesHouse(q, apiKey, 10);
+  return jsonResponse({ results }, 200, origin);
 }

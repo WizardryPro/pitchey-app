@@ -2951,6 +2951,10 @@ class RouteRegistry {
       const { submitVerificationHandler } = await import('./handlers/company-verification');
       return submitVerificationHandler(req, this.env);
     });
+    this.register('GET', '/api/production/verify/companies-house/search', async (req) => {
+      const { companiesHouseSearchHandler } = await import('./handlers/company-verification');
+      return companiesHouseSearchHandler(req, this.env);
+    });
     this.register('POST', '/api/production/verify/upload-insurance', async (req) => {
       const { uploadInsuranceHandler } = await import('./handlers/company-verification');
       return uploadInsuranceHandler(req, this.env);
