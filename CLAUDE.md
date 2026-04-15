@@ -79,16 +79,18 @@ Available slash commands: `/deploy`, `/test`, `/migrate`
 - **Heat Visualisation**: Shared `HeatBadge` component (pill/inline variants) on PitchDetail, BrowseTopRated, MarketplaceEnhanced. Refactored marketplace to use shared component.
 - **Consumption Gating**: 30s minimum view time before feedback submission. Backend check in `submitPitchFeedback()`, `GET /api/pitches/:id/consumption-status` endpoint. Frontend progress bar in FeedbackSection.
 - **Trust Badges**: Gold/Silver/Grey verification tiers based on auto_checks results. Migration 074 adds `verification_tier` to users, auto-updates on verify/approve/reject. `VerificationBadge` component on PitchDetail + MarketplaceEnhanced. All pitch queries include `creator_verification_tier`.
+- **Watcher Audience-Only Rework** (2026-04-15, commit `9aff8b0`): Reverted paid upgrade flow (`e45a346`). Watchers are pure audience — browse, like, save, comment; no in-app upgrade. Backend: `handleSubscribe` 403s viewers, Stripe webhook no longer mutates `user_type`, `VIEWER` role revoked `PITCH_CREATE/EDIT_OWN/DELETE_OWN`. Gating: synopsis truncated to 300 chars with `synopsisTruncated` flag for watchers + anonymous; `/api/pitches/:id/engagement` returns `likerBreakdown` (role counts) to all viewers but restricts named likers/viewers to owner + NDA-signed. `SocialProofBadge` extended with breakdown-only render variant.
+- **NDA Detection on PitchDetail** (2026-04-15, commit `9aff8b0`): Fixed silent failure where NDA-signed users saw "Request NDA Access". `getPitch` now returns `hasSignedNDA`/`hasNDA` directly from a permissive query across historical schemas (`ndas.signer_id` → `ndas.requester_id` → `pitch_access.user_id`), replacing the frontend's inference-from-protected-fields heuristic. Each query branch wrapped in `try/catch` so column/table drift in older envs can't 500 the pitch view.
 
 ### TODO
 - **Stripe Go-Live**: Create products/prices in Stripe Dashboard, set secrets (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`), set `stripePriceId` in `src/config/subscription-plans.ts`
 - **Malware Scanning**: VirusTotal integration deferred — needs `VIRUSTOTAL_API_KEY` (free tier: 4 req/min)
 - **Full Crew Features**: Availability calendars, rate cards — deferred post-launch
 
-### Current Numbers
-- 638+ API routes, 135+ pages, 175+ components, 29 services, 3 stores
-- 114+ backend service files, 69 handlers, 81 migrations
-- 4 portals (Creator, Investor, Production, Watcher) + Admin shell
+### Current Numbers (2026-04-15)
+- 664 API routes, 161 pages, 182 components, 30 frontend services, 4 stores
+- 118 backend services, 71 handlers, 85 migrations
+- 4 portals (Creator, Investor, Production, Watcher — audience-only) + Admin shell
 - 13 CI/CD workflows, 7 R2 buckets, 5 KV namespaces, 2 Durable Objects
 
 ## Observability & Analysis Stack
