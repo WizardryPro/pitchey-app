@@ -409,7 +409,7 @@ export default function ProductionVerification() {
     }
 
     if (!verification || showForm) {
-      return <VerificationForm />;
+      return VerificationForm();
     }
 
     switch (verification.status) {
@@ -427,7 +427,7 @@ export default function ProductionVerification() {
       case 'rejected':
         return <RejectedView verification={verification} onResubmit={resetForm} />;
       default:
-        return <VerificationForm />;
+        return VerificationForm();
     }
   };
 
