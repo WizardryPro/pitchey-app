@@ -189,8 +189,8 @@ export async function submitPitchFeedback(request: Request, env: Env): Promise<R
     if (userType !== 'watcher') {
       const CONSUMPTION_THRESHOLD = 30;
       const [viewData] = await sql`
-        SELECT COALESCE(SUM(view_duration), 0)::int as total_duration
-        FROM pitch_views WHERE pitch_id = ${pitchId} AND viewer_id = ${Number(userId)}
+        SELECT COALESCE(MAX(view_duration), 0)::int as total_duration
+        FROM views WHERE pitch_id = ${pitchId} AND viewer_id = ${Number(userId)}
       `.catch(() => [{ total_duration: 0 }]);
       if ((viewData?.total_duration || 0) < CONSUMPTION_THRESHOLD) {
         return errorResponse(
@@ -431,8 +431,8 @@ export async function getConsumptionStatus(request: Request, env: Env): Promise<
   try {
     const THRESHOLD = 30;
     const [viewData] = await sql`
-      SELECT COALESCE(SUM(view_duration), 0)::int as total_duration
-      FROM pitch_views WHERE pitch_id = ${pitchId} AND viewer_id = ${Number(userId)}
+      SELECT COALESCE(MAX(view_duration), 0)::int as total_duration
+      FROM views WHERE pitch_id = ${pitchId} AND viewer_id = ${Number(userId)}
     `.catch(() => [{ total_duration: 0 }]);
 
     const duration = viewData?.total_duration || 0;

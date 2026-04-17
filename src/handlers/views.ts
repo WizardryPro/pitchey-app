@@ -14,6 +14,9 @@ export async function trackViewHandler(request: Request, env: Env): Promise<Resp
   try {
     const body = await request.json() as Record<string, unknown>;
     const pitchId = typeof body.pitchId === 'number' ? body.pitchId : parseInt(String(body.pitchId), 10);
+    const duration = Number.isFinite(body.duration) && (body.duration as number) > 0
+      ? Math.floor(body.duration as number)
+      : 0;
 
     if (!pitchId || isNaN(pitchId)) {
       return new Response(JSON.stringify({ success: false, error: 'Invalid pitchId' }), {
@@ -39,9 +42,11 @@ export async function trackViewHandler(request: Request, env: Env): Promise<Resp
       `;
 
       if (existing.length > 0) {
-        // Update timestamp but don't create a new row
+        // Heartbeat — bump timestamp and accumulate duration (frontend sends cumulative)
         await sql`
-          UPDATE views SET viewed_at = NOW()
+          UPDATE views
+          SET viewed_at = NOW(),
+              view_duration = GREATEST(COALESCE(view_duration, 0), ${duration}::int)
           WHERE user_id = ${viewerId} AND pitch_id = ${pitchId}
         `;
         return new Response(JSON.stringify({ success: true, message: 'View updated', duplicate: true }), { headers });
@@ -67,8 +72,8 @@ export async function trackViewHandler(request: Request, env: Env): Promise<Resp
 
     // Insert new view
     const [view] = await sql`
-      INSERT INTO views (pitch_id, viewer_id, user_id, session_id, view_type, ip_address)
-      VALUES (${pitchId}, ${viewerId || null}, ${viewerId || null}, ${sessionId}, 'page_view', ${ipAddress})
+      INSERT INTO views (pitch_id, viewer_id, user_id, session_id, view_type, ip_address, view_duration)
+      VALUES (${pitchId}, ${viewerId || null}, ${viewerId || null}, ${sessionId}, 'page_view', ${ipAddress}, ${duration})
       RETURNING id, viewed_at
     `;
 
