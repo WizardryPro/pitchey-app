@@ -219,6 +219,17 @@ jobs:
       - name: 📦 Install dependencies
         run: npm ci
 
+      - name: 🔒 Deploy preflight (migrations + secrets)
+        uses: ./.github/actions/deploy-preflight
+        with:
+          database-url: ${{ secrets.NEON_DATABASE_URL }}
+          required-secrets: |
+            NEON_DATABASE_URL=${{ secrets.NEON_DATABASE_URL }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+            AXIOM_TOKEN=${{ secrets.AXIOM_TOKEN }}
+            CLOUDFLARE_API_TOKEN=${{ secrets.CLOUDFLARE_API_TOKEN }}
+
       - name: 🏗️ Build frontend
         working-directory: ${{ env.FRONTEND_DIR }}
         run: |
