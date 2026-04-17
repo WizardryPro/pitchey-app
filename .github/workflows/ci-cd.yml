@@ -229,6 +229,8 @@ jobs:
             SENTRY_DSN=${{ secrets.SENTRY_DSN }}
             AXIOM_TOKEN=${{ secrets.AXIOM_TOKEN }}
             CLOUDFLARE_API_TOKEN=${{ secrets.CLOUDFLARE_API_TOKEN }}
+            UPSTASH_REDIS_REST_URL=${{ secrets.UPSTASH_REDIS_REST_URL }}
+            UPSTASH_REDIS_REST_TOKEN=${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
 
       - name: 🏗️ Build frontend
         working-directory: ${{ env.FRONTEND_DIR }}
@@ -245,6 +247,18 @@ jobs:
           npx wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: 🔐 Sync Worker secrets
+        run: |
+          echo "${{ secrets.NEON_DATABASE_URL }}" | npx wrangler secret put DATABASE_URL
+          echo "${{ secrets.JWT_SECRET }}" | npx wrangler secret put JWT_SECRET
+          echo "${{ secrets.UPSTASH_REDIS_REST_URL }}" | npx wrangler secret put UPSTASH_REDIS_REST_URL
+          echo "${{ secrets.UPSTASH_REDIS_REST_TOKEN }}" | npx wrangler secret put UPSTASH_REDIS_REST_TOKEN
+          echo "${{ secrets.SENTRY_DSN }}" | npx wrangler secret put SENTRY_DSN
+          echo "${{ secrets.AXIOM_TOKEN }}" | npx wrangler secret put AXIOM_TOKEN
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: 🚀 Deploy Frontend to production
         working-directory: ${{ env.FRONTEND_DIR }}
