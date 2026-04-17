@@ -145,17 +145,14 @@ Dataset: `pitchey-logs`. Token stored as worker secret (`AXIOM_TOKEN`). Emitted 
 
 ## Layer 5 — Metrics (Analytics Engine + Postgres)
 
-7 Analytics Engine datasets configured in `wrangler.toml`:
+2 Analytics Engine datasets configured in `wrangler.toml` (pruned 2026-04-17 from 7 — see `observability-audit-2026-04-17.md` for what was removed and why):
 
 | Binding | Dataset | Purpose |
 |---------|---------|---------|
 | `ANALYTICS` | `pitchey_metrics` | General request/app metrics |
 | `PITCHEY_ANALYTICS` | `pitchey_database_metrics` | DB query timing, row counts |
-| `PITCHEY_PERFORMANCE` | `pitchey_performance_metrics` | Latency histograms, cache stats |
-| `PITCHEY_ERRORS` | `pitchey_error_tracking` | Error rate counters |
-| `TRACE_ANALYTICS` | `pitchey_trace_events` | W3C trace spans |
-| `CONTAINER_ANALYTICS` | `pitchey_container_metrics` | Container worker telemetry |
-| `JOB_ANALYTICS` | `pitchey_job_analytics` | Queue job outcomes |
+
+**Principle going forward**: don't add an AE binding without a named reader (dashboard, SQL API query, or alert rule). Error tracking lives in Sentry; request logs in Axiom; AE is for metrics that have an active consumer.
 
 Plus Postgres tables `request_logs` and `error_logs` for persistent, queryable metrics history (30-day retention).
 
