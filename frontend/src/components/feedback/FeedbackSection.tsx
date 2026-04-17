@@ -64,6 +64,17 @@ export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, use
   useEffect(() => { loadData(); }, [loadData]);
   useEffect(() => { loadComments(); }, [loadComments]);
 
+  // Poll consumption status every 10s until the gate opens — keeps the progress bar live
+  // as the backend heartbeat accumulates view_duration.
+  useEffect(() => {
+    if (!canLeaveFeedback || consumption?.eligible) return;
+    const iv = setInterval(async () => {
+      const cs = await FeedbackService.getConsumptionStatus(pitchId);
+      setConsumption(cs);
+    }, 10000);
+    return () => clearInterval(iv);
+  }, [pitchId, canLeaveFeedback, consumption?.eligible]);
+
   const handleSubmitted = () => {
     setShowForm(false);
     setRefreshKey((k) => k + 1);
