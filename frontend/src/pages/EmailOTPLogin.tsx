@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Mail, ArrowLeft, ArrowRight } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
@@ -7,11 +7,14 @@ import { sessionCache } from '@/store/sessionCache';
 import { sessionManager } from '@/lib/session-manager';
 import { API_URL } from '@/config';
 import { getPortalPath } from '@/utils/navigation';
+import { resolvePostLoginRedirect } from '@/utils/postLoginRedirect';
 
 type Step = 'email' | 'code';
 
 export default function EmailOTPLogin() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const rawFrom = (location.state as { from?: unknown } | null)?.from;
   const setUser = useBetterAuthStore((s) => s.setUser);
 
   const [step, setStep] = useState<Step>('email');
@@ -83,7 +86,7 @@ export default function EmailOTPLogin() {
       sessionManager.updateCache(user);
       setUser(user);
       toast.success('Signed in successfully');
-      navigate(`/${getPortalPath(user.userType)}/dashboard`, { replace: true });
+      navigate(resolvePostLoginRedirect(rawFrom, `/${getPortalPath(user.userType)}/dashboard`), { replace: true });
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
       setError(e.message);

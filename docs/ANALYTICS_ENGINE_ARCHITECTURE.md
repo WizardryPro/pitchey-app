@@ -1,6 +1,6 @@
 # Cloudflare Analytics Engine Integration Architecture
 
-## 🏗️ System Architecture Overview
+> **Superseded 2026-04-17**: This document describes a 5-dataset architecture (PITCHEY_PERFORMANCE, PITCHEY_ERRORS + others). Three of those datasets were pruned because they were write-only with no readers. The platform now runs on 2 AE datasets (`ANALYTICS`, `PITCHEY_ANALYTICS`). Error tracking lives in Sentry; request logs in Axiom. See `docs/observability-audit-2026-04-17.md` for the audit and rationale. The architecture patterns below remain valid if you ever re-introduce performance or error datasets — but only add them with a named reader.
 
 ### Edge-First Analytics Pipeline
 

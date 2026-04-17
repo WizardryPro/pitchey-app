@@ -14,6 +14,7 @@ import * as documentQueries from '../db/queries/documents';
 import * as notificationQueries from '../db/queries/notifications';
 import * as messagingQueries from '../db/queries/messaging';
 import * as userQueries from '../db/queries/users';
+import { safeQuery } from '../db/safe-query';
 
 // GET /api/creator/dashboard - Main creator dashboard data
 export async function creatorDashboardHandler(request: Request, env: Env): Promise<Response> {
@@ -199,15 +200,19 @@ export async function creatorRevenueHandler(request: Request, env: Env): Promise
   }
 
   try {
-    // Check if investments table exists
-    const tableCheck = await sql`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables
-        WHERE table_schema = 'public' AND table_name = 'investments'
-      ) as exists
-    `.catch(() => [{ exists: false }]);
+    // Table probe — expected to fail on envs where investments table doesn't exist,
+    // so report: false keeps Sentry quiet. The other queries below DO report.
+    const tableCheck = await safeQuery<{ exists: boolean }>(
+      () => sql`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables
+          WHERE table_schema = 'public' AND table_name = 'investments'
+        ) as exists
+      `,
+      { fallback: [{ exists: false }], context: 'creator-revenue.table-probe', report: false },
+    );
 
-    if (!tableCheck[0]?.exists) {
+    if (!tableCheck.rows[0]?.exists) {
       return new Response(JSON.stringify(emptyResponse), {
         status: 200,
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
@@ -217,54 +222,63 @@ export async function creatorRevenueHandler(request: Request, env: Env): Promise
     const startDate = new Date(Date.now() - Number(period) * 24 * 60 * 60 * 1000);
     const endDate = new Date();
 
-    // Get investment trends for creator's pitches - simplified query
-    const investmentTrends = await sql`
-      SELECT
-        DATE_TRUNC('day', i.created_at) as date,
-        COUNT(*) as deal_count,
-        COALESCE(SUM(i.amount), 0) as total_amount,
-        COALESCE(AVG(i.amount), 0) as avg_amount,
-        i.status
-      FROM investments i
-      JOIN pitches p ON i.pitch_id = p.id
-      WHERE p.user_id::text = ${userId}
-        AND i.created_at BETWEEN ${startDate} AND ${endDate}
-      GROUP BY DATE_TRUNC('day', i.created_at), i.status
-      ORDER BY date DESC
-    `.catch(() => []);
+    const trendsResult = await safeQuery(
+      () => sql`
+        SELECT
+          DATE_TRUNC('day', i.created_at) as date,
+          COUNT(*) as deal_count,
+          COALESCE(SUM(i.amount), 0) as total_amount,
+          COALESCE(AVG(i.amount), 0) as avg_amount,
+          i.status
+        FROM investments i
+        JOIN pitches p ON i.pitch_id = p.id
+        WHERE p.user_id::text = ${userId}
+          AND i.created_at BETWEEN ${startDate} AND ${endDate}
+        GROUP BY DATE_TRUNC('day', i.created_at), i.status
+        ORDER BY date DESC
+      `,
+      { fallback: [], context: 'creator-revenue.trends', tags: { userId } },
+    );
+    const investmentTrends = trendsResult.rows;
 
-    // Get revenue breakdown
-    const revenueBreakdown = await sql`
-      SELECT
-        i.status,
-        COUNT(*) as count,
-        COALESCE(SUM(i.amount), 0) as total,
-        COALESCE(AVG(i.amount), 0) as average,
-        COALESCE(MIN(i.amount), 0) as minimum,
-        COALESCE(MAX(i.amount), 0) as maximum
-      FROM investments i
-      JOIN pitches p ON i.pitch_id = p.id
-      WHERE p.user_id::text = ${userId}
-        AND i.created_at BETWEEN ${startDate} AND ${endDate}
-      GROUP BY i.status
-    `.catch(() => []);
+    const breakdownResult = await safeQuery(
+      () => sql`
+        SELECT
+          i.status,
+          COUNT(*) as count,
+          COALESCE(SUM(i.amount), 0) as total,
+          COALESCE(AVG(i.amount), 0) as average,
+          COALESCE(MIN(i.amount), 0) as minimum,
+          COALESCE(MAX(i.amount), 0) as maximum
+        FROM investments i
+        JOIN pitches p ON i.pitch_id = p.id
+        WHERE p.user_id::text = ${userId}
+          AND i.created_at BETWEEN ${startDate} AND ${endDate}
+        GROUP BY i.status
+      `,
+      { fallback: [], context: 'creator-revenue.breakdown', tags: { userId } },
+    );
+    const revenueBreakdown = breakdownResult.rows;
 
-    // Get investor demographics
-    const investorDemographics = await sql`
-      SELECT
-        u.location,
-        u.company_name,
-        COUNT(DISTINCT u.id) as investor_count,
-        COALESCE(SUM(i.amount), 0) as total_invested
-      FROM investments i
-      JOIN pitches p ON i.pitch_id = p.id
-      JOIN users u ON i.investor_id::text = u.id::text
-      WHERE p.user_id::text = ${userId}
-        AND i.status IN ('committed', 'funded', 'active')
-      GROUP BY u.location, u.company_name
-      ORDER BY total_invested DESC
-      LIMIT 20
-    `.catch(() => []);
+    const demographicsResult = await safeQuery(
+      () => sql`
+        SELECT
+          u.location,
+          u.company_name,
+          COUNT(DISTINCT u.id) as investor_count,
+          COALESCE(SUM(i.amount), 0) as total_invested
+        FROM investments i
+        JOIN pitches p ON i.pitch_id = p.id
+        JOIN users u ON i.investor_id::text = u.id::text
+        WHERE p.user_id::text = ${userId}
+          AND i.status IN ('committed', 'funded', 'active')
+        GROUP BY u.location, u.company_name
+        ORDER BY total_invested DESC
+        LIMIT 20
+      `,
+      { fallback: [], context: 'creator-revenue.investor-demographics', tags: { userId } },
+    );
+    const investorDemographics = demographicsResult.rows;
 
     // Calculate projections
     const projections = calculateRevenueProjections(investmentTrends || []);

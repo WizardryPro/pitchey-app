@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, Eye, Heart, Share2, Tag, Film, Calendar, User, Shield, Lock, DollarSign, Briefcase, LogIn, Building2, Wallet, Bookmark, UserPlus } from 'lucide-react';
 import { pitchAPI } from '../lib/api';
 import type { Pitch } from '../lib/api';
@@ -12,8 +12,10 @@ import { getPortalPath } from '@/utils/navigation';
 
 export default function PublicPitchView() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const { isAuthenticated, user, logout } = useBetterAuthStore();
+  const goToLogin = () => navigate('/portals', { state: { from: location.pathname + location.search } });
   const [pitch, setPitch] = useState<Pitch | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -261,7 +263,7 @@ export default function PublicPitchView() {
                 </>
               ) : (
                 <button
-                  onClick={() => { void navigate('/portals'); }}
+                  onClick={goToLogin}
                   className="px-5 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 font-medium shadow-sm transition-colors"
                 >
                   <LogIn className="w-4 h-4" />
@@ -594,7 +596,7 @@ export default function PublicPitchView() {
                           </div>
                         ) : (
                           <button
-                            onClick={() => { void navigate('/portals'); }}
+                            onClick={goToLogin}
                             className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
                           >
                             <LogIn className="w-5 h-5" />
@@ -827,7 +829,7 @@ export default function PublicPitchView() {
                 
                 {!isAuthenticated && (
                   <button
-                    onClick={() => { void navigate('/portals'); }}
+                    onClick={goToLogin}
                     className="w-full flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
                   >
                     Sign In to Request Access

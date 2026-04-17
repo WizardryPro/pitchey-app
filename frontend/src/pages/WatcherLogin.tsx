@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useBetterAuthStore, MFARequiredError } from '../store/betterAuthStore';
 import { Eye, LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
 import BackButton from '../components/BackButton';
 import Turnstile from '../components/Turnstile';
+import { isSafeReturnPath, resolvePostLoginRedirect } from '@/utils/postLoginRedirect';
 
 export default function WatcherLogin() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const rawFrom = (location.state as { from?: unknown } | null)?.from;
+  const mfaFromQuery = isSafeReturnPath(rawFrom) ? `&from=${encodeURIComponent(rawFrom)}` : '';
+  const resolveDest = () => resolvePostLoginRedirect(rawFrom, '/watcher/dashboard');
   const { loginWatcher, loading, error } = useBetterAuthStore();
   const [turnstileToken, setTurnstileToken] = useState<string>('');
   const [formData, setFormData] = useState({
@@ -18,10 +23,10 @@ export default function WatcherLogin() {
     e.preventDefault();
     try {
       await loginWatcher(formData.email, formData.password, turnstileToken);
-      void navigate('/watcher/dashboard');
+      void navigate(resolveDest());
     } catch (err) {
       if (err instanceof MFARequiredError) {
-        void navigate(`/mfa/challenge?challengeId=${err.challengeId}&userType=${err.user.userType}&name=${encodeURIComponent(err.user.name)}&email=${encodeURIComponent(err.user.email)}`);
+        void navigate(`/mfa/challenge?challengeId=${err.challengeId}&userType=${err.user.userType}&name=${encodeURIComponent(err.user.name)}&email=${encodeURIComponent(err.user.email)}${mfaFromQuery}`);
         return;
       }
       console.error('Watcher login failed:', err);

@@ -75,6 +75,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
         
+      - name: Check for pending migrations
+        run: npm run db:migrate:check
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+
       - name: Deploy Worker to Cloudflare
         run: |
           npm install -g wrangler
@@ -83,6 +88,19 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           
+      - name: Verify required production secrets are set
+        run: |
+          missing=()
+          [ -z "${{ secrets.NEON_DATABASE_URL }}" ] && missing+=("NEON_DATABASE_URL")
+          [ -z "${{ secrets.JWT_SECRET }}" ] && missing+=("JWT_SECRET")
+          [ -z "${{ secrets.SENTRY_DSN }}" ] && missing+=("SENTRY_DSN")
+          [ -z "${{ secrets.AXIOM_TOKEN }}" ] && missing+=("AXIOM_TOKEN")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "❌ Deploy blocked — missing required secrets: ${missing[*]}"
+            exit 1
+          fi
+          echo "✅ All required secrets configured."
+
       - name: Update Worker secrets
         run: |
           echo "${{ secrets.NEON_DATABASE_URL }}" | wrangler secret put DATABASE_URL
@@ -90,6 +108,7 @@ jobs:
           echo "${{ secrets.UPSTASH_REDIS_REST_URL }}" | wrangler secret put UPSTASH_REDIS_REST_URL
           echo "${{ secrets.UPSTASH_REDIS_REST_TOKEN }}" | wrangler secret put UPSTASH_REDIS_REST_TOKEN
           echo "${{ secrets.SENTRY_DSN }}" | wrangler secret put SENTRY_DSN
+          echo "${{ secrets.AXIOM_TOKEN }}" | wrangler secret put AXIOM_TOKEN
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

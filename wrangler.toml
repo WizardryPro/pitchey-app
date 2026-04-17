@@ -104,31 +104,21 @@ queue = "pitchey-code-execution"
 binding = "ANALYTICS"
 dataset = "pitchey_metrics"
 
-[[analytics_engine_datasets]]
-binding = "CONTAINER_ANALYTICS"
-dataset = "pitchey_container_metrics"
-
-[[analytics_engine_datasets]]
-binding = "JOB_ANALYTICS"
-dataset = "pitchey_job_analytics"
+# CONTAINER_ANALYTICS / JOB_ANALYTICS removed 2026-04-17 — no writers in codebase.
+# Re-add here if container-metrics / job-queue analytics are revived. See
+# docs/observability-audit-2026-04-17.md for the audit rationale.
 
 # Database Performance Analytics
 [[analytics_engine_datasets]]
 binding = "PITCHEY_ANALYTICS"
 dataset = "pitchey_database_metrics"
 
-[[analytics_engine_datasets]]
-binding = "PITCHEY_PERFORMANCE"
-dataset = "pitchey_performance_metrics"
-
-[[analytics_engine_datasets]]
-binding = "PITCHEY_ERRORS"
-dataset = "pitchey_error_tracking"
-
-# Distributed Tracing Analytics
-[[analytics_engine_datasets]]
-binding = "TRACE_ANALYTICS"
-dataset = "pitchey_trace_events"
+# PITCHEY_PERFORMANCE / PITCHEY_ERRORS / TRACE_ANALYTICS removed 2026-04-17.
+# Writers in `db/traced-operations.ts`, `services/database-metrics.service.ts`, and
+# `services/trace-service.ts` guard on `if (env.XXX)`, so the pruning is safe —
+# writes become no-ops. Readers were either absent or stub handlers returning empty.
+# Sentry covers error tracking; Axiom covers request logs; AE remains for metrics only.
+# See docs/observability-audit-2026-04-17.md.
 
 # ===== TRACE WORKERS CONFIGURATION =====
 # Note: Trace Workers API for distributed tracing

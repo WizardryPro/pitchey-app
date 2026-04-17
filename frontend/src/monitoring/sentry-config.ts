@@ -28,17 +28,21 @@ export function initSentry() {
       // Browser tracing for performance monitoring
       Sentry.browserTracingIntegration(),
 
-      // Session replay for debugging
+      // Session replay — default-deny masking. Pitch content is the platform's core IP
+      // and must not leak into 90-day-retained replays that escape NDA gates.
+      // See docs/observability-audit-2026-04-17.md for the full PII analysis.
+      // Add `.replay-safe` class to deliberately-visible chrome (nav, buttons, headings).
       Sentry.replayIntegration({
-        maskAllText: false,
+        maskAllText: true,
         maskAllInputs: true,
-        blockAllMedia: false,
+        blockAllMedia: true,
+        unmask: ['.replay-safe'],
         networkDetailAllowUrls: [
           'pitchey-api-prod.ndlovucavelle.workers.dev'
         ],
-        networkCaptureBodies: true,
+        networkCaptureBodies: false,
         networkRequestHeaders: ['X-Request-ID'],
-        networkResponseHeaders: ['X-Response-Time']
+        networkResponseHeaders: ['X-Response-Time', 'X-Ratelimit-Remaining']
       }),
 
       // Capture console errors (only errors, not warnings — warnings like

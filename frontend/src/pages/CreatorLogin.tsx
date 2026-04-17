@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useBetterAuthStore, MFARequiredError } from '../store/betterAuthStore';
 import { Film, LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
 import BackButton from '../components/BackButton';
 import Turnstile from '../components/Turnstile';
+import { isSafeReturnPath, resolvePostLoginRedirect } from '@/utils/postLoginRedirect';
 
 export default function CreatorLogin() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const rawFrom = (location.state as { from?: unknown } | null)?.from;
+  const mfaFromQuery = isSafeReturnPath(rawFrom) ? `&from=${encodeURIComponent(rawFrom)}` : '';
+  const resolveDest = () => resolvePostLoginRedirect(rawFrom, '/creator/dashboard');
   const { loginCreator, loading, error } = useBetterAuthStore();
   const [turnstileToken, setTurnstileToken] = useState<string>('');
   const [formData, setFormData] = useState({
@@ -18,10 +23,10 @@ export default function CreatorLogin() {
     e.preventDefault();
     try {
       await loginCreator(formData.email, formData.password, turnstileToken);
-      void navigate('/creator/dashboard');
+      void navigate(resolveDest());
     } catch (err) {
       if (err instanceof MFARequiredError) {
-        void navigate(`/mfa/challenge?challengeId=${err.challengeId}&userType=${err.user.userType}&name=${encodeURIComponent(err.user.name)}&email=${encodeURIComponent(err.user.email)}`);
+        void navigate(`/mfa/challenge?challengeId=${err.challengeId}&userType=${err.user.userType}&name=${encodeURIComponent(err.user.name)}&email=${encodeURIComponent(err.user.email)}${mfaFromQuery}`);
         return;
       }
       console.error('Creator login failed:', err);
@@ -38,10 +43,10 @@ export default function CreatorLogin() {
     // Auto-submit the form with demo credentials
     try {
       await loginCreator(demoData.email, demoData.password, turnstileToken);
-      void navigate('/creator/dashboard');
+      void navigate(resolveDest());
     } catch (err) {
       if (err instanceof MFARequiredError) {
-        void navigate(`/mfa/challenge?challengeId=${err.challengeId}&userType=${err.user.userType}&name=${encodeURIComponent(err.user.name)}&email=${encodeURIComponent(err.user.email)}`);
+        void navigate(`/mfa/challenge?challengeId=${err.challengeId}&userType=${err.user.userType}&name=${encodeURIComponent(err.user.name)}&email=${encodeURIComponent(err.user.email)}${mfaFromQuery}`);
         return;
       }
       console.error('Demo creator login failed:', err);
@@ -157,6 +162,7 @@ export default function CreatorLogin() {
 
             <Link
               to="/login/email"
+              state={isSafeReturnPath(rawFrom) ? { from: rawFrom } : undefined}
               className="w-full flex justify-center items-center py-2 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition gap-2"
             >
               <Mail className="h-4 w-4" />

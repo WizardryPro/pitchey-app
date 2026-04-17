@@ -19639,53 +19639,29 @@ Signatures: [To be completed upon signing]
   }
 
   /**
-   * Search traces by filters
+   * Search traces by filters.
+   *
+   * Disabled 2026-04-17 — this endpoint previously built a SELECT against
+   * `pitchey_trace_events` and returned `[]` with a "return empty until configured"
+   * comment, i.e. it lied to callers by returning `success: true` with no data.
+   * The TRACE_ANALYTICS binding was also pruned from wrangler.toml.
+   *
+   * Re-enable only when an actual Analytics Engine SQL API reader is wired up.
+   * If you do: the previous version interpolated user-controlled `operation`/`status`/
+   * `service` params directly into the query string — use parameterization.
    */
   private async searchTraces(request: Request): Promise<Response> {
-    try {
-      const url = new URL(request.url);
-      const operation = url.searchParams.get('operation');
-      const status = url.searchParams.get('status');
-      const service = url.searchParams.get('service');
-      const duration_min = url.searchParams.get('duration_min');
-      const duration_max = url.searchParams.get('duration_max');
-      const limit = parseInt(url.searchParams.get('limit') || '100');
-      const offset = parseInt(url.searchParams.get('offset') || '0');
-
-      // Build query for Analytics Engine
-      let query = 'SELECT * FROM pitchey_trace_events WHERE 1=1';
-      const filters = [];
-
-      if (operation) filters.push(`operation = '${operation}'`);
-      if (status) filters.push(`status = '${status}'`);
-      if (service) filters.push(`service = '${service}'`);
-      if (duration_min) filters.push(`duration >= ${duration_min}`);
-      if (duration_max) filters.push(`duration <= ${duration_max}`);
-
-      if (filters.length > 0) {
-        query += ' AND ' + filters.join(' AND ');
-      }
-
-      query += ` ORDER BY timestamp DESC LIMIT ${limit} OFFSET ${offset}`;
-
-      // Tracing requires Analytics Engine integration — return empty until configured
-      const traces: any[] = [];
-
-      const origin = request.headers.get('Origin');
-      return new Response(JSON.stringify({
-        success: true,
-        data: {
-          traces,
-          total: traces.length,
-          query: query
-        }
-      }), {
-        headers: getCorsHeaders(origin),
-        status: 200
-      });
-    } catch (error) {
-      return errorHandler(error, request);
-    }
+    const origin = request.headers.get('Origin');
+    return new Response(JSON.stringify({
+      success: false,
+      error: {
+        code: 'TRACING_NOT_CONFIGURED',
+        message: 'Trace search is not available. Use Sentry for trace inspection.',
+      },
+    }), {
+      headers: { ...getCorsHeaders(origin), 'Content-Type': 'application/json' },
+      status: 503,
+    });
   }
 
   /**
@@ -20453,8 +20429,44 @@ const workerHandler = {
  * Custom worker handler that bypasses Sentry for WebSocket requests
  * Sentry's wrapper may interfere with WebSocket responses
  */
+// One-shot guard: when running in production, AXIOM_TOKEN must be configured.
+// Optional-in-prod telemetry is how Layer 4 goes dark for weeks without anyone noticing.
+// We fire a critical Sentry event on the first prod request that's missing the token,
+// then latch so we don't spam. Returns 503 on that same request so it's impossible to
+// deploy-and-forget a missing secret.
+let axiomPreflightChecked = false;
+function checkProdAxiomTokenOnce(env: any): Response | null {
+  if (axiomPreflightChecked) return null;
+  axiomPreflightChecked = true;
+
+  const envName = (env.ENVIRONMENT || env.SENTRY_ENVIRONMENT || '').toLowerCase();
+  const isProd = envName === 'production' || envName === 'prod';
+  if (!isProd) return null;
+  if (env.AXIOM_TOKEN) return null;
+
+  try {
+    Sentry.captureMessage(
+      'AXIOM_TOKEN missing in production — request logging is disabled. Set via `wrangler secret put AXIOM_TOKEN`.',
+      'fatal',
+    );
+  } catch {
+    // Sentry not wrapped yet on this request — the 503 below will surface the problem.
+  }
+  console.error('[FATAL] AXIOM_TOKEN not configured in production. Refusing request.');
+  return new Response(
+    JSON.stringify({
+      error: 'Server misconfigured',
+      detail: 'AXIOM_TOKEN is required in production. Deploy blocked at runtime.',
+    }),
+    { status: 503, headers: { 'Content-Type': 'application/json' } },
+  );
+}
+
 const websocketSafeHandler = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const preflightFail = checkProdAxiomTokenOnce(env);
+    if (preflightFail) return preflightFail;
+
     const axiomLogger = createAxiomLogger(env);
     const startTime = Date.now();
 

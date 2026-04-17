@@ -37,7 +37,11 @@
     "perf:database": "k6 run performance/k6/database-stress-test.js",
     "perf:lighthouse": "cd performance/lighthouse && node core-web-vitals.js",
     "perf:analyze": "node performance/analysis/performance-analyzer.js",
-    "perf:setup": "cd performance/lighthouse && npm install"
+    "perf:setup": "cd performance/lighthouse && npm install",
+    "db:migrate": "node scripts/migrate.mjs apply",
+    "db:migrate:status": "node scripts/migrate.mjs status",
+    "db:migrate:check": "node scripts/migrate.mjs check",
+    "db:migrate:baseline": "node scripts/migrate.mjs baseline"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",

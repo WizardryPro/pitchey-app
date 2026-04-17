@@ -7,6 +7,7 @@ import { sessionCache } from '@/store/sessionCache';
 import { sessionManager } from '@/lib/session-manager';
 import { API_URL } from '@/config';
 import { getPortalPath } from '@/utils/navigation';
+import { resolvePostLoginRedirect } from '@/utils/postLoginRedirect';
 
 export default function MFAChallengePage() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export default function MFAChallengePage() {
   const userType = searchParams.get('userType') || 'creator';
   const userName = searchParams.get('name') || '';
   const userEmail = searchParams.get('email') || '';
+  const fromParam = searchParams.get('from');
 
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -60,7 +62,8 @@ export default function MFAChallengePage() {
       setUser(user);
 
       toast.success('Verified successfully');
-      navigate(`/${getPortalPath(user.userType)}/dashboard`, { replace: true });
+      const dest = resolvePostLoginRedirect(fromParam, `/${getPortalPath(user.userType)}/dashboard`);
+      navigate(dest, { replace: true });
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
       setError(e.message || 'Verification failed');

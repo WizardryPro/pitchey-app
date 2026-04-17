@@ -1,11 +1,21 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { UserPlus, Mail, Lock, User, Briefcase, AlertCircle, CheckCircle } from 'lucide-react';
 import Turnstile from '../components/Turnstile';
+import { setPendingReturnTo, isSafeReturnPath } from '@/utils/postLoginRedirect';
 
 
 export default function Register() {
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const stateFrom = (location.state as { from?: unknown } | null)?.from;
+  const redirectParam = searchParams.get('redirect');
+  const returnPath = isSafeReturnPath(stateFrom)
+    ? stateFrom
+    : isSafeReturnPath(redirectParam)
+      ? redirectParam
+      : null;
   const { register, loading, error } = useBetterAuthStore();
   const [turnstileToken, setTurnstileToken] = useState<string>('');
   const [registrationComplete, setRegistrationComplete] = useState(false);
@@ -38,6 +48,9 @@ export default function Register() {
 
       // Store email for verification resend if needed
       localStorage.setItem('pendingVerificationEmail', formData.email);
+
+      // Stash the return path so post-verify login lands back on the originating page
+      if (returnPath) setPendingReturnTo(returnPath);
 
       // Show verification message instead of redirecting
       setRegistrationComplete(true);

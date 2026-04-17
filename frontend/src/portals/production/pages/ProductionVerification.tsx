@@ -13,7 +13,7 @@ const API_URL = (import.meta.env['VITE_API_URL'] as string | undefined) ?? '';
 // Types
 // ---------------------------------------------------------------------------
 
-type Region = 'USA' | 'UK' | 'REST';
+type Region = 'USA' | 'UK' | 'IRE' | 'CAN' | 'AUS' | 'NZ' | 'REST';
 
 type CheckStatus = 'pass' | 'fail' | 'warn' | 'skip';
 
@@ -282,13 +282,31 @@ export default function ProductionVerification() {
   const regionLabel: Record<Region, string> = {
     USA: 'EIN',
     UK: 'Companies House Number',
+    IRE: 'CRO Number',
+    CAN: 'Corporation Number',
+    AUS: 'ACN (Australian Company Number)',
+    NZ: 'NZBN (NZ Business Number)',
     REST: 'Local Registration Number',
   };
 
   const regionPlaceholder: Record<Region, string> = {
     USA: 'XX-XXXXXXX',
     UK: '12345678',
+    IRE: 'e.g. 123456',
+    CAN: 'e.g. 1234567-8',
+    AUS: 'e.g. 123 456 789',
+    NZ: 'e.g. 9429041234567',
     REST: 'e.g. REG-123456',
+  };
+
+  const backendRegion: Record<Region, string> = {
+    USA: 'usa',
+    UK: 'uk',
+    IRE: 'other',
+    CAN: 'other',
+    AUS: 'other',
+    NZ: 'other',
+    REST: 'other',
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -343,7 +361,7 @@ export default function ProductionVerification() {
 
       const payload: Record<string, unknown> = {
         companyName: companyName.trim(),
-        region,
+        region: backendRegion[region],
         websiteUrl: websiteUrl.trim(),
         hasCompanyNumber: !noCompanyNumber,
       };
@@ -474,6 +492,10 @@ export default function ProductionVerification() {
           >
             <option value="USA">USA</option>
             <option value="UK">UK</option>
+            <option value="IRE">Ireland</option>
+            <option value="CAN">Canada</option>
+            <option value="AUS">Australia</option>
+            <option value="NZ">New Zealand</option>
             <option value="REST">Rest of World</option>
           </select>
         </div>

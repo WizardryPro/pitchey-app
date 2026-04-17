@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useBetterAuthStore, MFARequiredError } from '../store/betterAuthStore';
 import { DollarSign, LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
 import BackButton from '../components/BackButton';
 import Turnstile from '../components/Turnstile';
 import { useLoadingState } from '@/shared/hooks/useLoadingState';
 import { clearAuthenticationState } from '../utils/auth';
+import { isSafeReturnPath, resolvePostLoginRedirect } from '@/utils/postLoginRedirect';
 
 export default function InvestorLogin() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const rawFrom = (location.state as { from?: unknown } | null)?.from;
+  const mfaFromQuery = isSafeReturnPath(rawFrom) ? `&from=${encodeURIComponent(rawFrom)}` : '';
+  const resolveDest = () => resolvePostLoginRedirect(rawFrom, '/investor/dashboard');
   const { loginInvestor, error, loading: storeLoading } = useBetterAuthStore();
   const { loading, setLoading, clearLoading, loadingMessage } = useLoadingState({
     timeout: 15000,
@@ -46,12 +51,12 @@ export default function InvestorLogin() {
       // Small delay for state propagation
       setTimeout(() => {
         clearLoading();
-        void navigate('/investor/dashboard');
+        void navigate(resolveDest());
       }, 100);
     } catch (err) {
       if (err instanceof MFARequiredError) {
         clearLoading();
-        void navigate(`/mfa/challenge?challengeId=${err.challengeId}&userType=${err.user.userType}&name=${encodeURIComponent(err.user.name)}&email=${encodeURIComponent(err.user.email)}`);
+        void navigate(`/mfa/challenge?challengeId=${err.challengeId}&userType=${err.user.userType}&name=${encodeURIComponent(err.user.name)}&email=${encodeURIComponent(err.user.email)}${mfaFromQuery}`);
         return;
       }
       console.error('Investor login failed:', err);
@@ -74,12 +79,12 @@ export default function InvestorLogin() {
       // Small delay for state propagation
       setTimeout(() => {
         clearLoading();
-        void navigate('/investor/dashboard');
+        void navigate(resolveDest());
       }, 100);
     } catch (err) {
       if (err instanceof MFARequiredError) {
         clearLoading();
-        void navigate(`/mfa/challenge?challengeId=${err.challengeId}&userType=${err.user.userType}&name=${encodeURIComponent(err.user.name)}&email=${encodeURIComponent(err.user.email)}`);
+        void navigate(`/mfa/challenge?challengeId=${err.challengeId}&userType=${err.user.userType}&name=${encodeURIComponent(err.user.name)}&email=${encodeURIComponent(err.user.email)}${mfaFromQuery}`);
         return;
       }
       console.error('Demo investor login failed:', err);

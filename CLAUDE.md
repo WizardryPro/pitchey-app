@@ -53,6 +53,7 @@ Available slash commands: `/deploy`, `/test`, `/migrate`
 - **[Frontend](docs/context-frontend.md)** — React, Zustand, routing, testing patterns, dashboard architecture
 - **[Backend](docs/context-backend.md)** — Worker API, auth endpoints, database, caching, RBAC
 - **[Deployment](docs/context-deployment.md)** — CI/CD, environment setup, service URLs, deploy commands
+- **[Platform Evolution](docs/PLATFORM_EVOLUTION.md)** — historical record (Era 0 → Era 6): why we migrated, what broke, what was learned
 
 ## Platform Status
 
@@ -81,6 +82,7 @@ Available slash commands: `/deploy`, `/test`, `/migrate`
 - **Trust Badges**: Gold/Silver/Grey verification tiers based on auto_checks results. Migration 074 adds `verification_tier` to users, auto-updates on verify/approve/reject. `VerificationBadge` component on PitchDetail + MarketplaceEnhanced. All pitch queries include `creator_verification_tier`.
 - **Watcher Audience-Only Rework** (2026-04-15, commit `9aff8b0`): Reverted paid upgrade flow (`e45a346`). Watchers are pure audience — browse, like, save, comment; no in-app upgrade. Backend: `handleSubscribe` 403s viewers, Stripe webhook no longer mutates `user_type`, `VIEWER` role revoked `PITCH_CREATE/EDIT_OWN/DELETE_OWN`. Gating: synopsis truncated to 300 chars with `synopsisTruncated` flag for watchers + anonymous; `/api/pitches/:id/engagement` returns `likerBreakdown` (role counts) to all viewers but restricts named likers/viewers to owner + NDA-signed. `SocialProofBadge` extended with breakdown-only render variant.
 - **NDA Detection on PitchDetail** (2026-04-15, commit `9aff8b0`): Fixed silent failure where NDA-signed users saw "Request NDA Access". `getPitch` now returns `hasSignedNDA`/`hasNDA` directly from a permissive query across historical schemas (`ndas.signer_id` → `ndas.requester_id` → `pitch_access.user_id`), replacing the frontend's inference-from-protected-fields heuristic. Each query branch wrapped in `try/catch` so column/table drift in older envs can't 500 the pitch view.
+- **Post-Login Redirect** (2026-04-17, commit `0c65290`): `frontend/src/utils/postLoginRedirect.ts` carries intended destination through the login flow via `location.state.from` (primary) and a `pitchey:pendingReturnTo` localStorage key (fallback for MFA/OTP flows that lose router state). Open-redirect guard blocks `//`, `/\`, and auth-route loopbacks. Wired into all 4 portal logins, generic `/login`, `/register`, `/login/email`, `/mfa/challenge`. `PublicPitchView` and `PortalSelect` forward the current path on click-to-login.
 
 ### TODO
 - **Stripe Go-Live**: Create products/prices in Stripe Dashboard, set secrets (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`), set `stripePriceId` in `src/config/subscription-plans.ts`
@@ -89,9 +91,9 @@ Available slash commands: `/deploy`, `/test`, `/migrate`
 
 ### Current Numbers (2026-04-15)
 - 664 API routes, 161 pages, 182 components, 30 frontend services, 4 stores
-- 118 backend services, 71 handlers, 85 migrations
+- 118 backend services, 71 handlers, 87 migrations (tracked in `schema_migrations`, runner at `scripts/migrate.mjs`)
 - 4 portals (Creator, Investor, Production, Watcher — audience-only) + Admin shell
-- 13 CI/CD workflows, 7 R2 buckets, 5 KV namespaces, 2 Durable Objects
+- 13 CI/CD workflows, 7 R2 buckets, 5 KV namespaces, 2 Durable Objects, 2 Analytics Engine datasets
 
 ## Observability & Analysis Stack
 
@@ -102,7 +104,7 @@ Browser (chrome-devtools MCP)     — DOM, console, network, render perf, Lighth
 Edge (Cloudflare Observability)   — Worker CPU, request duration, 100% log sampling
 Errors (Sentry @sentry/cloudflare) — Exceptions, breadcrumbs, releases, 10% trace sampling
 Logs (Axiom)                      — Structured request logs, slow queries, auth events
-Metrics (Analytics Engine + PG)   — 7 datasets, request_logs/error_logs tables, health checks
+Metrics (Analytics Engine + PG)   — 2 datasets, request_logs/error_logs tables, health checks
 ```
 
 ### CLI Browser Analysis (chrome-devtools MCP)
@@ -125,7 +127,7 @@ Launch Chrome: `google-chrome-stable --remote-debugging-port=9222 --user-data-di
 - **Cloudflare**: `[observability]` enabled in `wrangler.toml`, 100% sampling. Live tail: `wrangler tail`
 - **Sentry**: `@sentry/cloudflare` with `withSentry()`, DSN in wrangler.toml. MCP server removed — use dashboard directly
 - **Axiom**: Dataset `pitchey-logs`, token via `wrangler secret put AXIOM_TOKEN`
-- **Analytics Engine**: 7 bindings — `pitchey_metrics`, `pitchey_database_metrics`, `pitchey_performance_metrics`, `pitchey_error_tracking`, `pitchey_trace_events`, `pitchey_container_metrics`, `pitchey_job_analytics`
+- **Analytics Engine**: 2 bindings — `pitchey_metrics`, `pitchey_database_metrics` (pruned from 7 on 2026-04-17; see `docs/observability-audit-2026-04-17.md`)
 - **Health**: `GET /api/health` checks DB, KV, R2, Resend, Better Auth (3s timeout each)
 - **Logging**: `src/lib/production-logger.ts` — structured JSON, auto-redaction, requestId/traceId propagation
 - **Auth**: `src/lib/auth-observability.ts` — login/signup/session events, brute force detection (5+ failures/15min)
@@ -171,19 +173,28 @@ Common patterns: `relation "X" does not exist` (missing table), `column X.Y does
 ### Live Tail (alternative)
 `wrangler tail --format=json | grep "does not exist"`
 
-### Known Drift Registry (2026-04-17)
+### Migration Tracking (2026-04-17: runner live)
 
-Production DB has no migration tracking (`schema_migrations` is empty, no runner, `npm run db:migrate` referenced in CI but undefined). A session-long audit turned up the following confirmed drift — treat this list as the checklist for a future dedicated cleanup effort:
+Runner: `scripts/migrate.mjs` (Node, uses `postgres` package). Tracks applied state in `schema_migrations` (filename-keyed, SHA-256). Commands: `npm run db:migrate[:status|:check|:baseline]`. CI gate in `deploy-production.yml` fails the deploy if any `.sql` under `src/db/migrations/` is not recorded.
 
-- **No schema_migrations table** in prod → applied state unknown for all 85 migration files
-- **Migration gaps 048–067** — numbered slots skipped entirely
-- **Duplicate migration numbers** — three `001_*.sql`, two each of `003_*`, `011_*`, `012_*`, `013_*`, `020_*`, `026_*`; four `0001_*` variants
-- **`999_consolidated_schema.sql`** claims source-of-truth but omits rating tables (`pitch_feedback`, `pitch_ratings_anonymous`, `pitch_comments`, the rating columns on `pitches`) — this was the root cause of the Pitchey Score system being invisible post-deploy
-- **`pitch_views.viewer_id` is canonical** — any code referencing `pitch_views.user_id` is a bug (migrations 073/075 heat functions already use `pv.viewer_id`). Session `78e` realigned 9 files; see commit for specifics
-- **NDA signer drift** — `ndas.signer_id` vs `ndas.requester_id` vs `pitch_access.user_id` coexist across history; `getPitch` in `worker-integrated.ts` catches each branch defensively
-- **`view_duration` never populated** — view tracker at `src/worker-modules/analytics-endpoints.ts:handleTrackView` inserts rows but ignores the `duration` field from the frontend heartbeat, so `SUM(view_duration)` is always 0 and the consumption gate can never open organically (it was hand-seeded during the Pitchey Score verification)
-- **Patch migration applied** — `078_pitchey_score_patch.sql` ran on prod 2026-04-17; it backfills `rating_average`/`rating_count`/`pitchey_score_avg`/`viewer_score_avg` on `pitches` plus `pitch_feedback` and `pitch_ratings_anonymous` tables
+**Baseline completed 2026-04-17**: 87 existing files recorded as applied (no execution — prod was hand-migrated). Going forward, every new migration file must be applied before the deploy will pass the gate.
 
-### Anti-Pattern: Silent `.catch(() => default)` on DB Queries
+**Known historical drift** (resolved or bounded — kept for context):
+- **Migration gaps 048–067** — numbered slots skipped entirely. Unfixable without re-numbering; baseline locks current state.
+- **Duplicate migration numbers** — three `001_*.sql`, two each of `003_*`, `011_*`, `012_*`, `013_*`, `020_*`, `026_*`; four `0001_*` variants. The runner uses filename (not number) as the unique key, so this no longer breaks anything.
+- **`999_consolidated_schema.sql`** claims source-of-truth but omits rating tables — **patched by `078_pitchey_score_patch.sql`** (applied to prod 2026-04-17).
+- **`pitch_views.viewer_id` is canonical** — any code referencing `pitch_views.user_id` is a bug (migrations 073/075 heat functions already use `pv.viewer_id`). Session `78e` realigned 9 files.
+- **NDA signer drift** — `ndas.signer_id` vs `ndas.requester_id` vs `pitch_access.user_id` coexist across history; `getPitch` in `worker-integrated.ts` catches each branch defensively.
+- **`view_duration` now populated** — `analytics-endpoints.ts:handleTrackView` writes the frontend heartbeat `duration` via `GREATEST(COALESCE(view_duration, 0), $1::int)`. Consumption gate can now open organically.
 
-The consumption gate drift stayed invisible for weeks because handlers use `sql\`…\`.catch(() => [{ total_duration: 0 }])` — any schema error returns a zero-ish default silently. Future work: replace these with a helper that `Sentry.captureException`s the swallowed error before returning the default. Grep `src/handlers/` for `.catch(() =>` to find candidates.
+### Anti-Pattern: Silent `.catch(() => default)` on DB Queries — helper now available
+
+The consumption-gate drift stayed invisible for weeks because handlers use `sql\`…\`.catch(() => [{ total_duration: 0 }])` — any schema error returns a zero-ish default silently. **Helper: `src/db/safe-query.ts`** — `safeQuery()` returns a discriminated union `{ ok, rows, errored, error }` and reports to Sentry by default. Exemplar patched: `creatorRevenueHandler` in `handlers/creator-dashboard.ts`. Full tier-ordered migration plan in `docs/catch-swallow-audit-2026-04-17.md` (196 sites across 26 files).
+
+### Observability Stack — Pruned 2026-04-17
+
+AE bindings went from 7 to 2 (`ANALYTICS`, `PITCHEY_ANALYTICS`). Removed: `CONTAINER_ANALYTICS`, `JOB_ANALYTICS` (zero writers), `PITCHEY_PERFORMANCE`, `PITCHEY_ERRORS`, `TRACE_ANALYTICS` (write-only — no readers). Sentry covers errors; Axiom covers logs. See `docs/observability-audit-2026-04-17.md`.
+
+Sentry Replay: `maskAllText: true`, `blockAllMedia: true`, `networkCaptureBodies: false`. `frontend/functions/api/monitoring/envelope.ts` tunnel now uses `request.arrayBuffer()` — before the fix, replay envelopes were 400'd upstream because `request.text()` corrupted binary payloads (no replay had reached Sentry since the tunnel was deployed).
+
+`AXIOM_TOKEN` is a hard requirement in production — deploy workflow fails if the secret is missing; worker returns 503 on first request if `env.ENVIRONMENT=production` and the token is absent.

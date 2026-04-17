@@ -1,5 +1,6 @@
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { ArrowLeft, Film, DollarSign, Building, ShieldCheck, Eye } from 'lucide-react';
+import { isSafeReturnPath } from '@/utils/postLoginRedirect';
 
 type PortalType = 'creator' | 'investor' | 'production' | 'watcher' | 'admin';
 
@@ -17,6 +18,9 @@ const PORTAL_BRAND: Record<PortalType, { hex: string; iconText: string; iconBg: 
 
 export default function PortalSelect() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const incomingFrom = (location.state as { from?: unknown } | null)?.from;
+  const forwardState = isSafeReturnPath(incomingFrom) ? { from: incomingFrom } : undefined;
 
   const portals: PortalType[] = ['creator', 'production', 'investor', 'watcher'];
 
@@ -28,7 +32,7 @@ export default function PortalSelect() {
       watcher: '/login/watcher',
       admin: '/login/admin',
     };
-    navigate(routes[portalType]);
+    navigate(routes[portalType], forwardState ? { state: forwardState } : undefined);
   };
 
   const getPortalIcon = (type: PortalType) => {
@@ -121,7 +125,11 @@ export default function PortalSelect() {
           <div className="text-center mt-10">
             <p className="text-gray-600">
               Don't have an account?{' '}
-              <Link to="/register" className="text-purple-600 hover:text-purple-700 font-semibold">
+              <Link
+                to="/register"
+                state={forwardState}
+                className="text-purple-600 hover:text-purple-700 font-semibold"
+              >
                 Sign up
               </Link>
             </p>
