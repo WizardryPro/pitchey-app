@@ -1,0 +1,57 @@
+name: Deploy preflight
+description: >
+  Verify schema migrations are applied and required secrets are configured before
+  a production deploy. Called by both ci-cd.yml (push-to-main auto-deploy) and
+  deploy-production.yml (manual dispatch). Single source of truth — keeps the
+  "automated happy" and "emergency manual" paths equally safe.
+
+inputs:
+  database-url:
+    required: true
+    description: Neon DATABASE_URL used for `db:migrate:check`.
+  required-secrets:
+    required: false
+    default: ""
+    description: >
+      Newline-separated list of "NAME=${{ secrets.NAME }}" entries. Any entry
+      with an empty value fails the preflight. Omit to skip the secret gate.
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+        cache: "npm"
+
+    - name: Install root deps
+      shell: bash
+      run: npm ci
+
+    - name: Check for pending migrations
+      shell: bash
+      env:
+        DATABASE_URL: ${{ inputs.database-url }}
+      run: npm run db:migrate:check
+
+    - name: Verify required secrets
+      if: inputs.required-secrets != ''
+      shell: bash
+      env:
+        REQUIRED: ${{ inputs.required-secrets }}
+      run: |
+        missing=()
+        while IFS= read -r line; do
+          [ -z "$line" ] && continue
+          name="${line%%=*}"
+          value="${line#*=}"
+          if [ -z "$value" ]; then
+            missing+=("$name")
+          fi
+        done <<< "$REQUIRED"
+        if [ ${#missing[@]} -gt 0 ]; then
+          echo "❌ Deploy blocked — missing required secrets: ${missing[*]}" >&2
+          exit 1
+        fi
+        echo "✅ All required secrets configured."
