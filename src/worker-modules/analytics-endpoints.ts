@@ -757,23 +757,47 @@ export class AnalyticsEndpointsHandler {
       // Try database update first
       let success = false;
       try {
-        // Update pitch view count
-        await this.db.query(
-          `UPDATE pitches SET view_count = view_count + 1, updated_at = $1 WHERE id = $2`,
-          [new Date().toISOString(), body.pitchId]
-        );
+        const now = new Date().toISOString();
+        const viewerId = userAuth?.userId || null;
+        const duration = Number.isFinite(body.duration) && (body.duration as number) > 0
+          ? Math.floor(body.duration as number)
+          : 0;
 
-        // Insert view tracking record into pitch_views table
-        await this.db.query(
-          `INSERT INTO pitch_views (pitch_id, viewer_id, viewed_at, session_id)
-           VALUES ($1, $2, $3, $4)`,
-          [
-            body.pitchId,
-            userAuth?.userId || null,
-            new Date().toISOString(),
-            crypto.randomUUID().substring(0, 100) // Generate a session ID for tracking
-          ]
-        );
+        if (duration > 0 && viewerId != null) {
+          // Heartbeat — update the most recent view row for this (pitch, viewer).
+          // Frontend sends cumulative duration since startViewTracking began, so overwrite.
+          const rows = await this.db.query(
+            `UPDATE pitch_views
+             SET view_duration = GREATEST(COALESCE(view_duration, 0), $1::int)
+             WHERE id = (
+               SELECT id FROM pitch_views
+               WHERE pitch_id = $2 AND viewer_id = $3
+               ORDER BY viewed_at DESC
+               LIMIT 1
+             )
+             RETURNING id`,
+            [duration, body.pitchId, viewerId]
+          );
+          // If no prior row to update (edge case), fall through to insert a fresh row.
+          if (!rows || (Array.isArray(rows) && rows.length === 0)) {
+            await this.db.query(
+              `INSERT INTO pitch_views (pitch_id, viewer_id, view_duration, viewed_at, session_id)
+               VALUES ($1, $2, $3, $4, $5)`,
+              [body.pitchId, viewerId, duration, now, crypto.randomUUID().substring(0, 100)]
+            );
+          }
+        } else {
+          // Initial view (no duration) — bump count and insert fresh row
+          await this.db.query(
+            `UPDATE pitches SET view_count = view_count + 1, updated_at = $1 WHERE id = $2`,
+            [now, body.pitchId]
+          );
+          await this.db.query(
+            `INSERT INTO pitch_views (pitch_id, viewer_id, view_duration, viewed_at, session_id)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [body.pitchId, viewerId, 0, now, crypto.randomUUID().substring(0, 100)]
+          );
+        }
         success = true;
       } catch (dbError) {
         await this.sentry.captureError(dbError as Error, { pitchId: body.pitchId, userId: userAuth?.userId });

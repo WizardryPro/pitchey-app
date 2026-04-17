@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
 import { ArrowLeft, Share2, Eye, Calendar, User, Clock, Tag, Film, LogIn, FileText, Lock, Shield, Briefcase, DollarSign, WifiOff, RefreshCw, Bookmark } from 'lucide-react';
 import PitcheyRating from '../components/PitcheyRating';
 import { pitchService } from '@features/pitches/services/pitch.service';
@@ -17,11 +17,14 @@ import FeedbackSection from '../components/feedback/FeedbackSection';
 import HeatBadge, { getHeatScore } from '../components/HeatBadge';
 import VerificationBadge from '../components/VerificationBadge';
 import HumanMadeBadge from '../components/HumanMadeBadge';
+import { viewService } from '@features/analytics/services/view.service';
 
 export default function PitchDetail() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const { isAuthenticated, user } = useBetterAuthStore();
+  const goToLogin = () => navigate('/portals', { state: { from: location.pathname + location.search } });
   const [pitch, setPitch] = useState<Pitch | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -85,6 +88,14 @@ export default function PitchDetail() {
       fetchPitch(parseInt(id));
     }
   }, [id, isAuthenticated]);
+
+  // View-duration heartbeat — drives the consumption gate on feedback submission.
+  // Only track for authenticated non-owner viewers; start once pitch is loaded.
+  useEffect(() => {
+    if (!id || !pitch || isOwner || !isAuthenticated) return;
+    viewService.startViewTracking(id);
+    return () => { viewService.stopViewTracking(id); };
+  }, [id, pitch, isOwner, isAuthenticated]);
 
 
   const hasValidSession = (): boolean => {
@@ -372,7 +383,7 @@ export default function PitchDetail() {
             <div className="flex flex-wrap items-center gap-3 lg:flex-shrink-0">
               {!isAuthenticated ? (
                 <button
-                  onClick={() => navigate('/portals')}
+                  onClick={goToLogin}
                   className="flex items-center gap-2 px-5 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium shadow-sm"
                 >
                   <LogIn className="w-4 h-4" />
@@ -914,7 +925,7 @@ export default function PitchDetail() {
                 ) : (
                   <>
                     <button
-                      onClick={() => navigate('/portals')}
+                      onClick={goToLogin}
                       className="w-full flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition"
                     >
                       <LogIn className="w-4 h-4" />
