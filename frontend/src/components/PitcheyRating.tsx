@@ -44,13 +44,14 @@ function DisplayRating({ value }: { value: number }) {
   );
 }
 
-/** Interactive: horizontal 1-10 pill selector with hover labels */
+/** Interactive: horizontal 1-10 pill selector with hover labels + full-scale legend */
 function InteractiveRating({ value, onChange, disabled }: Omit<InteractiveProps, 'mode'>) {
   const [hoverRating, setHoverRating] = useState(0);
+  const [showLegend, setShowLegend] = useState(false);
   const active = hoverRating || value;
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-2">
       <div className="flex items-center gap-1">
         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => {
           const isActive = n <= active;
@@ -61,6 +62,7 @@ function InteractiveRating({ value, onChange, disabled }: Omit<InteractiveProps,
               key={n}
               type="button"
               disabled={disabled}
+              title={RATING_LABELS[n]}
               onMouseEnter={() => setHoverRating(n)}
               onMouseLeave={() => setHoverRating(0)}
               onClick={() => onChange(n === value ? 0 : n)}
@@ -78,6 +80,29 @@ function InteractiveRating({ value, onChange, disabled }: Omit<InteractiveProps,
           {RATING_LABELS[active]}
         </p>
       )}
+      <div className="text-xs text-gray-500">
+        <button
+          type="button"
+          onClick={() => setShowLegend(v => !v)}
+          className="underline decoration-dotted hover:text-gray-700"
+        >
+          {showLegend ? 'Hide full scale' : 'What do these mean?'}
+        </button>
+        {showLegend && (
+          <ol className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+              <li key={n} className="flex items-center gap-2">
+                <span
+                  className={`inline-flex items-center justify-center w-5 h-5 rounded-full ${RATING_COLORS[n]} text-white text-[10px] font-bold shrink-0`}
+                >
+                  {n}
+                </span>
+                <span className="text-gray-700">{RATING_LABELS[n]}</span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
     </div>
   );
 }
