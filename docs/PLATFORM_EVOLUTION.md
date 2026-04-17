@@ -137,10 +137,28 @@ Pipeline went from ~10% to ~100% success rate after the token was updated.
 See root `CLAUDE.md`. High-level markers of "where we are" as of April 2026:
 
 - 664 API routes, 161 pages, 182 components, 30 frontend services
-- 118 backend services, 71 handlers, 85 migrations
+- 118 backend services, 71 handlers, 87 migrations (tracked in `schema_migrations`, runner at `scripts/migrate.mjs`)
 - 4 portals (Creator, Investor, Production, Watcher) + Admin shell
-- Slate system, heat score algorithm, structured feedback, trust badges, consumption gating, verification tiers all shipped
-- Schema drift registry is being actively maintained in `CLAUDE.md` (no migration runner in prod; 85 migration files with unknown applied state is a known-unknown)
+- Slate system, heat score algorithm, structured feedback, trust badges, consumption gating, verification tiers all shipped; 2026-04-17 observability hardening (see Era 7) closed the PII / tunnel / migration-gate gaps simultaneously
+
+---
+
+## Era 7 — Observability Hardening (2026-04-17)
+
+A single-afternoon audit resolved three interlocking classes of bug and shipped as PR #3.
+
+**1. Handlers that lied by omission.** `sql\`...\`.catch(() => [])` and `.catch(() => [{ total: 0 }])` patterns had been silently returning empty / zero-ish results on schema errors for a year+. The consumption gate was the most visible victim — `SUM(view_duration)` returning 0 because rows existed with NULL durations was indistinguishable from returning 0 because the column didn't exist. Fix: `src/db/safe-query.ts` — a `safeQuery()` helper returning a discriminated union `{ ok, rows, errored, error }` that reports to Sentry with a context tag by default. Callers check `ok` before treating rows as authoritative (gates refuse, dashboards fall back visibly, counters skip). Exemplar migration in `creator-dashboard.ts`; tier-ordered plan for the remaining 196 sites (26 files) in `docs/catch-swallow-audit-2026-04-17.md`.
+
+**2. The Sentry Replay stack was a PII trap that didn't work.** `maskAllText: false` + `networkCaptureBodies: true` captured verbatim pitch content (loglines, synopses, messages) and auth response bodies into 90-day replays — which escape the platform's NDA access controls entirely. **And**: `frontend/functions/api/monitoring/envelope.ts` used `request.text()`, which lossy-decoded binary rrweb payloads so Sentry upstream 400'd every replay segment with `"missing newline after header or payload"`. Between tunnel deployment and 2026-04-17, **zero replays reached Sentry**. Fix: masking on + `request.arrayBuffer()` in the tunnel. Validated end-to-end on staging via chrome-devtools MCP — envelopes now 200 with event IDs, plaintext portions contain zero pitch-content references.
+
+**3. Migrations had no tracking.** `schema_migrations` was empty; `npm run db:migrate` referenced in CI but undefined; 85 files of unknown applied state. Fix: `scripts/migrate.mjs` runner (filename-keyed, SHA-256, tolerates the historical number gaps and duplicates), `db:migrate[:status|:check|:baseline]` npm scripts, CI gate shared between the auto-deploy and manual-dispatch workflows via `.github/actions/deploy-preflight/`, prod baselined at 87 files.
+
+**Adjacent cleanups shipped in the same PR:**
+- **AE pruned 7 → 2 datasets.** `CONTAINER_ANALYTICS` / `JOB_ANALYTICS` had zero writers; `PITCHEY_PERFORMANCE` / `PITCHEY_ERRORS` / `TRACE_ANALYTICS` were write-only — the one apparent reader, `searchTraces()` in `worker-integrated.ts`, was a stub returning `success: true, traces: []` with a SQL-injection-shaped query builder that was never executed. Now returns `503 TRACING_NOT_CONFIGURED`.
+- **`AXIOM_TOKEN` is a hard requirement in production.** Deploy fails if the GH secret is missing; worker returns 503 on the first request if `ENVIRONMENT=production` and the token is absent. Optional-in-prod telemetry is how Layer 4 goes dark for weeks without anyone noticing.
+- **CI alerts have teeth.** `simple-health-check.yml` routes failures to Slack (if configured) and always opens / comments on a deduplicated GitHub issue. Red results used to sit in the Actions tab unseen.
+
+**Lesson preserved:** observability infrastructure is only as honest as the handlers feeding it. You can wire up Sentry + Axiom + Analytics Engine + tracing perfectly and still be blind if every handler swallows its errors into fallback data. The catch-swallow fix matters more than any of the plumbing changes around it.
 
 ---
 
@@ -148,7 +166,7 @@ See root `CLAUDE.md`. High-level markers of "where we are" as of April 2026:
 
 These came up often enough across eras to warrant their own section:
 
-**Silent `.catch(() => default)` on database queries is an anti-pattern that hides schema drift for weeks.** The consumption gate feature was broken for a long time because `sql\`...\`.catch(() => [{ total_duration: 0 }])` swallowed the error that would have surfaced the underlying `view_duration` never-populated bug. Future work: a helper that `Sentry.captureException`s the swallowed error before returning the default.
+**Silent `.catch(() => default)` on database queries is an anti-pattern that hides schema drift for weeks.** The consumption gate feature was broken for a long time because `sql\`...\`.catch(() => [{ total_duration: 0 }])` swallowed the error that would have surfaced the underlying `view_duration` never-populated bug. **Resolved 2026-04-17**: helper at `src/db/safe-query.ts` returns a discriminated union distinguishing empty-result from errored-query and reports to Sentry by default. Exemplar migration in `creator-dashboard.ts`; tier-ordered plan for the remaining call sites in `docs/catch-swallow-audit-2026-04-17.md`.
 
 **Infrastructure bugs masquerade as feature bugs.** Missing tables, unreachable env vars, and uninitialised Redis clients all presented to users as "social features don't work" — not "database connection is misconfigured". Diagnosis has to go beyond the UI-level symptom.
 
@@ -156,7 +174,7 @@ These came up often enough across eras to warrant their own section:
 
 **Response format contracts need tests.** An `items` vs `data.pitches` mismatch broke the core browse experience and took days to identify. Contract tests between frontend services and backend handlers would have caught this at CI time.
 
-**Migration hygiene is a standalone concern.** 85 migration files with no runner, empty `schema_migrations` table, duplicate numbers, and a `999_consolidated_schema.sql` that doesn't match reality — this is technical debt with compounding interest. It wasn't a problem until it was, and when it became a problem (rating tables missing post-deploy) the resolution was painful.
+**Migration hygiene is a standalone concern.** 85 migration files with no runner, empty `schema_migrations` table, duplicate numbers, and a `999_consolidated_schema.sql` that doesn't match reality — this is technical debt with compounding interest. It wasn't a problem until it was, and when it became a problem (rating tables missing post-deploy) the resolution was painful. **Resolved 2026-04-17**: runner at `scripts/migrate.mjs` (filename-keyed, tolerates historical gaps and duplicates), prod baselined at 87 files, CI gate shared via `.github/actions/deploy-preflight/` so the auto-deploy and manual-dispatch paths enforce the same invariant.
 
 ---
 

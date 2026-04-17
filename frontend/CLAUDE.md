@@ -57,11 +57,14 @@ the cookie is set with `SameSite=Lax` only, WebSocket auth may fail silently.
 
 File: `src/monitoring/sentry-config.ts`
 - 10% trace sampling in prod, 100% replay on error
+- **Replay masking (2026-04-17)**: `maskAllText: true`, `maskAllInputs: true`, `blockAllMedia: true`, `networkCaptureBodies: false`. Pitch content + auth bodies no longer leak into 90-day-retained replays. Opt specific elements back in with `className="replay-safe"` (use sparingly — only for chrome you need visible in replays for debugging, never for pitch content).
 - Filters out 401/403/404 and auth-timing noise in `beforeSend`
+- `tracePropagationTargets` is set so traces flow frontend → backend
+- WebSocket reconnection breadcrumbs are emitted from `useWebSocketAdvanced.ts`
 
-### TODO: Observability Gaps
-- [x] `tracePropagationTargets` added to `Sentry.init()` — traces flow frontend → backend
-- [x] WebSocket reconnection breadcrumbs added to `useWebSocketAdvanced.ts`
+## Sentry Tunnel
+
+`frontend/functions/api/monitoring/envelope.ts` proxies Sentry envelopes same-origin so ad/privacy blockers don't drop events. **Uses `request.arrayBuffer()`, never `request.text()`** — `.text()` lossy-decodes binary rrweb payloads and Sentry upstream returns 400 with `"missing newline after header or payload"`. Between tunnel deployment and the 2026-04-17 fix, zero replays reached Sentry; the feature was silently dark. If you ever see envelope 400s upstream, check this tunnel first.
 
 ## Deployment & Routing
 
