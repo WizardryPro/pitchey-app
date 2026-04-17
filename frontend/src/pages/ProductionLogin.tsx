@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useBetterAuthStore, MFARequiredError } from '../store/betterAuthStore';
 import { Briefcase, LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
 import BackButton from '../components/BackButton';
 import Turnstile from '../components/Turnstile';
+import { isSafeReturnPath, resolvePostLoginRedirect } from '@/utils/postLoginRedirect';
 
 export default function ProductionLogin() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const rawFrom = (location.state as { from?: unknown } | null)?.from;
+  const mfaFromQuery = isSafeReturnPath(rawFrom) ? `&from=${encodeURIComponent(rawFrom)}` : '';
+  const resolveDest = () => resolvePostLoginRedirect(rawFrom, '/production/dashboard');
   const { loginProduction, loading, error } = useBetterAuthStore();
   const [turnstileToken, setTurnstileToken] = useState<string>('');
   const [formData, setFormData] = useState({
@@ -18,10 +23,10 @@ export default function ProductionLogin() {
     e.preventDefault();
     try {
       await loginProduction(formData.email, formData.password, turnstileToken);
-      void navigate('/production/dashboard');
+      void navigate(resolveDest());
     } catch (err) {
       if (err instanceof MFARequiredError) {
-        void navigate(`/mfa/challenge?challengeId=${err.challengeId}&userType=${err.user.userType}&name=${encodeURIComponent(err.user.name)}&email=${encodeURIComponent(err.user.email)}`);
+        void navigate(`/mfa/challenge?challengeId=${err.challengeId}&userType=${err.user.userType}&name=${encodeURIComponent(err.user.name)}&email=${encodeURIComponent(err.user.email)}${mfaFromQuery}`);
         return;
       }
       console.error('Production login failed:', err);
@@ -38,7 +43,7 @@ export default function ProductionLogin() {
     // Auto-submit the form with demo credentials
     try {
       await loginProduction(demoData.email, demoData.password, turnstileToken);
-      void navigate('/production/dashboard');
+      void navigate(resolveDest());
     } catch (error) {
       console.error('Demo production login failed:', error);
     }

@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useBetterAuthStore, MFARequiredError } from '../store/betterAuthStore';
 import { Film, Briefcase, DollarSign, LogIn, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
 import Turnstile from '../components/Turnstile';
+import { isSafeReturnPath, resolvePostLoginRedirect } from '@/utils/postLoginRedirect';
 
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const verified = searchParams.get('verified');
+  const rawFrom = (location.state as { from?: unknown } | null)?.from;
+  const mfaFromQuery = isSafeReturnPath(rawFrom) ? `&from=${encodeURIComponent(rawFrom)}` : '';
   const { loginCreator, loginInvestor, loginProduction, loading, error } = useBetterAuthStore();
   const [selectedPortal, setSelectedPortal] = useState<'creator' | 'investor' | 'production' | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string>('');
@@ -27,17 +31,17 @@ export default function Login() {
     try {
       if (selectedPortal === 'creator') {
         await loginCreator(formData.email, formData.password, turnstileToken);
-        void navigate('/creator/dashboard');
+        void navigate(resolvePostLoginRedirect(rawFrom, '/creator/dashboard'));
       } else if (selectedPortal === 'investor') {
         await loginInvestor(formData.email, formData.password, turnstileToken);
-        void navigate('/investor/dashboard');
+        void navigate(resolvePostLoginRedirect(rawFrom, '/investor/dashboard'));
       } else if (selectedPortal === 'production') {
         await loginProduction(formData.email, formData.password, turnstileToken);
-        void navigate('/production/dashboard');
+        void navigate(resolvePostLoginRedirect(rawFrom, '/production/dashboard'));
       }
     } catch (err) {
       if (err instanceof MFARequiredError) {
-        void navigate(`/mfa/challenge?challengeId=${err.challengeId}&userType=${err.user.userType}&name=${encodeURIComponent(err.user.name)}&email=${encodeURIComponent(err.user.email)}`);
+        void navigate(`/mfa/challenge?challengeId=${err.challengeId}&userType=${err.user.userType}&name=${encodeURIComponent(err.user.name)}&email=${encodeURIComponent(err.user.email)}${mfaFromQuery}`);
         return;
       }
       console.error('Login failed:', err);
