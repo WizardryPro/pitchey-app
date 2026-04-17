@@ -280,7 +280,7 @@ export async function mobileGetPitchById(context: MobileRequestContext, pitchId:
     // Track view if user is authenticated
     if (context.userId && context.userId !== pitch.user_id) {
       await context.db.executeQuery(
-        'INSERT INTO pitch_views (pitch_id, user_id, viewed_at) VALUES ($1, $2, NOW()) ON CONFLICT DO NOTHING',
+        'INSERT INTO pitch_views (pitch_id, viewer_id, viewed_at) VALUES ($1, $2, NOW()) ON CONFLICT DO NOTHING',
         [pitchId, context.userId]
       );
     }

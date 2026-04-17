@@ -764,9 +764,8 @@ export class AnalyticsEndpointsHandler {
         );
 
         // Insert view tracking record into pitch_views table
-        // Note: Schema uses user_id, not viewer_id
         await this.db.query(
-          `INSERT INTO pitch_views (pitch_id, user_id, viewed_at, session_id)
+          `INSERT INTO pitch_views (pitch_id, viewer_id, viewed_at, session_id)
            VALUES ($1, $2, $3, $4)`,
           [
             body.pitchId,

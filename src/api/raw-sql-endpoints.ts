@@ -148,10 +148,8 @@ export class RawSQLAPIHandlers {
     // Track view if authenticated
     if (context.isAuthenticated && context.user) {
       await this.db.query(`
-        INSERT INTO pitch_views (pitch_id, user_id, viewed_at)
+        INSERT INTO pitch_views (pitch_id, viewer_id, viewed_at)
         VALUES ($1, $2, NOW())
-        ON CONFLICT (pitch_id, user_id) 
-        DO UPDATE SET viewed_at = NOW()
       `, [pitchId, context.user.id]);
     }
 
@@ -653,7 +651,7 @@ export class RawSQLAPIHandlers {
           (SELECT COALESCE(SUM(amount), 0) FROM investments WHERE investor_id = $1) as total_invested,
           (SELECT COUNT(*) FROM saved_pitches WHERE user_id = $1) as saved_pitches,
           (SELECT COUNT(*) FROM nda_requests WHERE requestor_id = $1 AND status = 'approved') as approved_ndas,
-          (SELECT COUNT(DISTINCT pitch_id) FROM pitch_views WHERE user_id = $1) as pitches_viewed
+          (SELECT COUNT(DISTINCT pitch_id) FROM pitch_views WHERE viewer_id = $1) as pitches_viewed
       `, [context.user!.id]);
     }
 

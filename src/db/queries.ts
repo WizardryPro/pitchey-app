@@ -426,7 +426,7 @@ export class DatabaseQueries {
     if (!existingView.length) {
       // Insert new view
       await sql`
-        INSERT INTO pitch_views (pitch_id, user_id, viewed_at)
+        INSERT INTO pitch_views (pitch_id, viewer_id, viewed_at)
         VALUES (${pitchId}, ${userId}, NOW())
       `;
 

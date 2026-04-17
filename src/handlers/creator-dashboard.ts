@@ -506,7 +506,7 @@ export async function creatorPitchAnalyticsHandler(request: Request, env: Env): 
       const summary = await sql`
         SELECT
           COALESCE(SUM(pv.view_count), 0) as total_views,
-          COALESCE(COUNT(DISTINCT pv.user_id), 0) as unique_viewers,
+          COALESCE(COUNT(DISTINCT pv.viewer_id), 0) as unique_viewers,
           COALESCE(COUNT(DISTINCT sp.user_id), 0) as total_saves,
           COALESCE(COUNT(DISTINCT nr.id), 0) as total_nda_requests
         FROM pitches p
@@ -805,11 +805,11 @@ async function getAudienceDemographics(sql: any, pitchId: string) {
     SELECT
       u.user_type,
       u.location,
-      COUNT(DISTINCT pv.user_id) as viewer_count
+      COUNT(DISTINCT pv.viewer_id) as viewer_count
     FROM pitch_views pv
-    LEFT JOIN users u ON pv.user_id = u.id
+    LEFT JOIN users u ON pv.viewer_id = u.id
     WHERE pv.pitch_id::text = ${pitchId}
-      AND pv.user_id IS NOT NULL
+      AND pv.viewer_id IS NOT NULL
     GROUP BY u.user_type, u.location
     ORDER BY viewer_count DESC
   `;

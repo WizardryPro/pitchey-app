@@ -290,7 +290,7 @@ export async function getAudienceDemographics(
           COALESCE(u.user_type, 'anonymous') as user_type,
           COUNT(*) as count
         FROM pitch_views pv
-        LEFT JOIN users u ON pv.user_id = u.id
+        LEFT JOIN users u ON pv.viewer_id = u.id
         WHERE pv.pitch_id IN (SELECT id FROM user_pitches)
         GROUP BY COALESCE(u.user_type, 'anonymous')
       ),
@@ -588,7 +588,7 @@ export async function getPitchAnalytics(
       SELECT
         ${pitchId} as pitch_id,
         COUNT(*)::int as view_count,
-        COUNT(DISTINCT COALESCE(pv.user_id::text, pv.session_id))::int as unique_viewers,
+        COUNT(DISTINCT COALESCE(pv.viewer_id::text, pv.session_id))::int as unique_viewers,
         (SELECT COUNT(*) FROM saved_pitches WHERE pitch_id = ${pitchId})::int as save_count,
         0 as share_count,
         COALESCE(AVG(pv.view_duration), 0) as avg_view_duration,
@@ -846,7 +846,7 @@ export async function getPlatformMetrics(
       (SELECT COUNT(*) FROM investments WHERE status IN ('committed', 'funded'))::int as total_investments,
       (SELECT COALESCE(SUM(amount), 0) FROM investments WHERE status = 'funded') as total_revenue,
       (
-        SELECT COUNT(*)::float / NULLIF(COUNT(DISTINCT pv.user_id), 0) * 100
+        SELECT COUNT(*)::float / NULLIF(COUNT(DISTINCT pv.viewer_id), 0) * 100
         FROM investments i
         JOIN pitch_views pv ON i.pitch_id = pv.pitch_id
         WHERE i.status IN ('committed', 'funded')

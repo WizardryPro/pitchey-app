@@ -798,17 +798,17 @@ export default function PitchDetail() {
 
             {/* Pitchey Score */}
             {((pitch as any).pitchey_score_avg > 0 || (pitch as any).viewer_score_avg > 0) && (
-              <div className="bg-white rounded-xl shadow-sm p-4 space-y-2">
+              <div className="bg-white rounded-xl shadow-sm p-4 space-y-3">
                 {(pitch as any).pitchey_score_avg > 0 && (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 font-medium">Pitchey Score</span>
-                    <PitcheyRating mode="compact" value={(pitch as any).pitchey_score_avg} />
+                  <div className="flex items-center justify-between gap-2 text-sm">
+                    <span className="text-gray-600 font-medium shrink-0">Pitchey Score</span>
+                    <PitcheyRating mode="display" value={(pitch as any).pitchey_score_avg} />
                   </div>
                 )}
                 {(pitch as any).viewer_score_avg > 0 && (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 font-medium">Viewer Score</span>
-                    <PitcheyRating mode="compact" value={(pitch as any).viewer_score_avg} />
+                  <div className="flex items-center justify-between gap-2 text-sm">
+                    <span className="text-gray-600 font-medium shrink-0">Viewer Score</span>
+                    <PitcheyRating mode="display" value={(pitch as any).viewer_score_avg} />
                   </div>
                 )}
               </div>

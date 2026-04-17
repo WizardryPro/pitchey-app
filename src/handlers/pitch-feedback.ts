@@ -30,17 +30,24 @@ function extractPitchId(request: Request): number {
 function mapUserType(userType: string): string {
   if (userType === 'investor') return 'investor';
   if (userType === 'production') return 'production';
+  if (userType === 'creator') return 'creator';
   if (userType === 'watcher') return 'watcher';
+  if (userType === 'viewer') return 'viewer';
+  if (userType === 'admin') return 'admin';
   return 'peer';
 }
 
-/** Role weight for rating — matches heat_role_weights table */
+/** Role weight for rating — aligned with heat_role_weights table */
 function getRoleWeight(reviewerType: string): number {
   switch (reviewerType) {
     case 'production': return 4.0;
     case 'investor': return 3.0;
-    case 'watcher': return 0.5;
+    case 'creator': return 1.0;
     case 'peer': return 1.0;
+    case 'viewer': return 0.5;
+    case 'watcher': return 0.5;
+    case 'anonymous': return 0.25;
+    case 'admin': return 0.0;
     default: return 1.0;
   }
 }
@@ -48,14 +55,16 @@ function getRoleWeight(reviewerType: string): number {
 /** Recalculate dual scores: pitchey_score_avg (industry) + viewer_score_avg (audience) + combined rating_average */
 async function updateRatingStats(sql: ReturnType<typeof getDb>, pitchId: number): Promise<void> {
   if (!sql) return;
+  // Admins (heat_role_weights.admin = 0) are excluded everywhere — they'd divide by zero
+  // and their ratings shouldn't count in any aggregate.
   await sql`
     UPDATE pitches SET
-      -- Combined weighted average (all sources)
+      -- Combined weighted average (all sources except admin)
       rating_average = COALESCE(
         (SELECT (SUM(rating * reviewer_weight) / NULLIF(SUM(reviewer_weight), 0))::decimal(4,2)
          FROM (
            SELECT rating, reviewer_weight FROM pitch_feedback
-           WHERE pitch_id = ${pitchId} AND rating IS NOT NULL
+           WHERE pitch_id = ${pitchId} AND rating IS NOT NULL AND reviewer_type != 'admin'
            UNION ALL
            SELECT rating, reviewer_weight FROM pitch_ratings_anonymous
            WHERE pitch_id = ${pitchId}
@@ -63,23 +72,23 @@ async function updateRatingStats(sql: ReturnType<typeof getDb>, pitchId: number)
         ), 0
       ),
       rating_count = (
-        (SELECT COUNT(*)::int FROM pitch_feedback WHERE pitch_id = ${pitchId} AND rating IS NOT NULL) +
+        (SELECT COUNT(*)::int FROM pitch_feedback WHERE pitch_id = ${pitchId} AND rating IS NOT NULL AND reviewer_type != 'admin') +
         (SELECT COUNT(*)::int FROM pitch_ratings_anonymous WHERE pitch_id = ${pitchId})
       ),
-      -- Pitchey Score: industry only (creator/investor/production)
+      -- Pitchey Score (industry): investor + production + creator + peer
       pitchey_score_avg = COALESCE(
         (SELECT (SUM(rating * reviewer_weight) / NULLIF(SUM(reviewer_weight), 0))::decimal(4,2)
          FROM pitch_feedback
          WHERE pitch_id = ${pitchId} AND rating IS NOT NULL
-           AND reviewer_type IN ('investor', 'production', 'peer')
+           AND reviewer_type IN ('investor', 'production', 'creator', 'peer')
         ), 0
       ),
-      -- Viewer Score: audience only (watcher + anonymous)
+      -- Viewer Score (audience): viewer + watcher + anonymous
       viewer_score_avg = COALESCE(
         (SELECT (SUM(rating * reviewer_weight) / NULLIF(SUM(reviewer_weight), 0))::decimal(4,2)
          FROM (
            SELECT rating, reviewer_weight FROM pitch_feedback
-           WHERE pitch_id = ${pitchId} AND rating IS NOT NULL AND reviewer_type = 'watcher'
+           WHERE pitch_id = ${pitchId} AND rating IS NOT NULL AND reviewer_type IN ('viewer', 'watcher')
            UNION ALL
            SELECT rating, reviewer_weight FROM pitch_ratings_anonymous
            WHERE pitch_id = ${pitchId}
@@ -181,7 +190,7 @@ export async function submitPitchFeedback(request: Request, env: Env): Promise<R
       const CONSUMPTION_THRESHOLD = 30;
       const [viewData] = await sql`
         SELECT COALESCE(SUM(view_duration), 0)::int as total_duration
-        FROM pitch_views WHERE pitch_id = ${pitchId} AND user_id = ${Number(userId)}
+        FROM pitch_views WHERE pitch_id = ${pitchId} AND viewer_id = ${Number(userId)}
       `.catch(() => [{ total_duration: 0 }]);
       if ((viewData?.total_duration || 0) < CONSUMPTION_THRESHOLD) {
         return errorResponse(
@@ -423,7 +432,7 @@ export async function getConsumptionStatus(request: Request, env: Env): Promise<
     const THRESHOLD = 30;
     const [viewData] = await sql`
       SELECT COALESCE(SUM(view_duration), 0)::int as total_duration
-      FROM pitch_views WHERE pitch_id = ${pitchId} AND user_id = ${Number(userId)}
+      FROM pitch_views WHERE pitch_id = ${pitchId} AND viewer_id = ${Number(userId)}
     `.catch(() => [{ total_duration: 0 }]);
 
     const duration = viewData?.total_duration || 0;

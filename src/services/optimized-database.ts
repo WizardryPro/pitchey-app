@@ -202,7 +202,7 @@ export class OptimizedDatabaseService {
           ) ORDER BY pv.viewed_at DESC) as recent_views
         FROM pitch_views pv
         INNER JOIN pitches p ON pv.pitch_id = p.id
-        INNER JOIN users u ON pv.user_id = u.id
+        INNER JOIN users u ON pv.viewer_id = u.id
         WHERE p.creator_id = $1
         AND pv.viewed_at > NOW() - INTERVAL '7 days'
         LIMIT 10

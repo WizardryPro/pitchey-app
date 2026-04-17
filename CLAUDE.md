@@ -170,3 +170,20 @@ Common patterns: `relation "X" does not exist` (missing table), `column X.Y does
 
 ### Live Tail (alternative)
 `wrangler tail --format=json | grep "does not exist"`
+
+### Known Drift Registry (2026-04-17)
+
+Production DB has no migration tracking (`schema_migrations` is empty, no runner, `npm run db:migrate` referenced in CI but undefined). A session-long audit turned up the following confirmed drift — treat this list as the checklist for a future dedicated cleanup effort:
+
+- **No schema_migrations table** in prod → applied state unknown for all 85 migration files
+- **Migration gaps 048–067** — numbered slots skipped entirely
+- **Duplicate migration numbers** — three `001_*.sql`, two each of `003_*`, `011_*`, `012_*`, `013_*`, `020_*`, `026_*`; four `0001_*` variants
+- **`999_consolidated_schema.sql`** claims source-of-truth but omits rating tables (`pitch_feedback`, `pitch_ratings_anonymous`, `pitch_comments`, the rating columns on `pitches`) — this was the root cause of the Pitchey Score system being invisible post-deploy
+- **`pitch_views.viewer_id` is canonical** — any code referencing `pitch_views.user_id` is a bug (migrations 073/075 heat functions already use `pv.viewer_id`). Session `78e` realigned 9 files; see commit for specifics
+- **NDA signer drift** — `ndas.signer_id` vs `ndas.requester_id` vs `pitch_access.user_id` coexist across history; `getPitch` in `worker-integrated.ts` catches each branch defensively
+- **`view_duration` never populated** — view tracker at `src/worker-modules/analytics-endpoints.ts:handleTrackView` inserts rows but ignores the `duration` field from the frontend heartbeat, so `SUM(view_duration)` is always 0 and the consumption gate can never open organically (it was hand-seeded during the Pitchey Score verification)
+- **Patch migration applied** — `078_pitchey_score_patch.sql` ran on prod 2026-04-17; it backfills `rating_average`/`rating_count`/`pitchey_score_avg`/`viewer_score_avg` on `pitches` plus `pitch_feedback` and `pitch_ratings_anonymous` tables
+
+### Anti-Pattern: Silent `.catch(() => default)` on DB Queries
+
+The consumption gate drift stayed invisible for weeks because handlers use `sql\`…\`.catch(() => [{ total_duration: 0 }])` — any schema error returns a zero-ish default silently. Future work: replace these with a helper that `Sentry.captureException`s the swallowed error before returning the default. Grep `src/handlers/` for `.catch(() =>` to find candidates.
