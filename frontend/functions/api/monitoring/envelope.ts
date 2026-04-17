@@ -26,13 +26,21 @@ export const onRequest: PagesFunction = async (context) => {
   }
 
   try {
-    const envelope = await request.text();
-    const firstNewline = envelope.indexOf('\n');
+    // Read as ArrayBuffer to preserve exact bytes. Replay segments contain binary
+    // rrweb data that would be corrupted by `request.text()` text-decoding
+    // (previously 400'd upstream with "missing newline after header or payload"
+    // because of lossy decode — 2026-04-17 fix).
+    const envelopeBytes = await request.arrayBuffer();
+    const envelopeView = new Uint8Array(envelopeBytes);
+
+    // Header is JSON on the first line — parse just that slice, forward raw bytes.
+    const firstNewline = envelopeView.indexOf(0x0a);
     if (firstNewline === -1) {
       return new Response('Malformed envelope', { status: 400 });
     }
 
-    const header = JSON.parse(envelope.slice(0, firstNewline));
+    const headerText = new TextDecoder().decode(envelopeView.subarray(0, firstNewline));
+    const header = JSON.parse(headerText);
     if (!header.dsn || typeof header.dsn !== 'string') {
       return new Response('Missing dsn', { status: 400 });
     }
@@ -51,7 +59,7 @@ export const onRequest: PagesFunction = async (context) => {
 
     const upstreamResponse = await fetch(upstream, {
       method: 'POST',
-      body: envelope,
+      body: envelopeBytes,
       headers: {
         'Content-Type': 'application/x-sentry-envelope',
       },
