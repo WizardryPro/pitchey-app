@@ -53,6 +53,7 @@ Available slash commands: `/deploy`, `/test`, `/migrate`
 - **[Frontend](docs/context-frontend.md)** — React, Zustand, routing, testing patterns, dashboard architecture
 - **[Backend](docs/context-backend.md)** — Worker API, auth endpoints, database, caching, RBAC
 - **[Deployment](docs/context-deployment.md)** — CI/CD, environment setup, service URLs, deploy commands
+- **[Platform Evolution](docs/PLATFORM_EVOLUTION.md)** — historical record (Era 0 → Era 6): why we migrated, what broke, what was learned
 
 ## Platform Status
 
