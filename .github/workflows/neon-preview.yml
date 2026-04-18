@@ -11,7 +11,10 @@ jobs:
     permissions:
       pull-requests: write
       contents: read
-    
+      # cloudflare/pages-action@v1 posts to /repos/:r/deployments to record a
+      # GitHub deployment for the preview; without this it 403s like quality-gates did
+      deployments: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
