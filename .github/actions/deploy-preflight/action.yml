@@ -13,8 +13,13 @@ inputs:
     required: false
     default: ""
     description: >
-      Newline-separated list of "NAME=${{ secrets.NAME }}" entries. Any entry
-      with an empty value fails the preflight. Omit to skip the secret gate.
+      Newline-separated list of "NAME=<secret value>" entries — callers should
+      pass each required secret via the expression syntax (see ci-cd.yml for an
+      example). Any entry with an empty value fails the preflight. Omit to skip
+      the secret gate. DO NOT inline GitHub Actions expression syntax here —
+      the YAML parser evaluates this description string at action-load time
+      and will fail with "Unrecognized named-value" because the secrets context
+      isn't available in action metadata scope.
 
 runs:
   using: composite
