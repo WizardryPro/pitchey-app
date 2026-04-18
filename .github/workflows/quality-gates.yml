@@ -22,6 +22,16 @@ on:
           - dependencies
           - full
 
+permissions:
+  contents: read
+  # pull-requests + issues: quality-gates-summary posts a report via
+  #   github.rest.issues.createComment (the /issues/:n/comments endpoint serves both)
+  # statuses: the same job calls github.rest.repos.createCommitStatus to publish
+  #   the "Quality Gates" check state on the PR head SHA
+  pull-requests: write
+  issues: write
+  statuses: write
+
 env:
   COVERAGE_THRESHOLD: 20  # Realistic threshold for current codebase (actual ~25%)
   SECURITY_THRESHOLD: 'medium'
