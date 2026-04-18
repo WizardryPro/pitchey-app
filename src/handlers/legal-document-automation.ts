@@ -16,7 +16,7 @@ import LegalPDFGenerator, { PDFGenerationOptions } from '../services/legal-pdf-g
 
 const generateDocumentSchema = z.object({
   template_id: z.string().uuid(),
-  variables: z.record(z.any()),
+  variables: z.record(z.string(), z.any()),
   jurisdiction: z.enum(['US', 'UK', 'EU', 'CA', 'AU']),
   parties: z.array(z.object({
     id: z.string().optional(),
@@ -44,7 +44,7 @@ const generateDocumentSchema = z.object({
 const customizeDocumentSchema = z.object({
   document_id: z.string().uuid(),
   updates: z.object({
-    variables: z.record(z.any()).optional(),
+    variables: z.record(z.string(), z.any()).optional(),
     custom_clauses: z.array(z.object({
       title: z.string(),
       content: z.string(),
@@ -58,7 +58,7 @@ const customizeDocumentSchema = z.object({
 const validateDocumentSchema = z.object({
   document_id: z.string().uuid().optional(),
   template_id: z.string().uuid().optional(),
-  variables: z.record(z.any()),
+  variables: z.record(z.string(), z.any()),
   jurisdiction: z.enum(['US', 'UK', 'EU', 'CA', 'AU']),
   validation_level: z.enum(['basic', 'compliance', 'full']).default('compliance')
 });
@@ -253,7 +253,7 @@ export class LegalDocumentHandler {
         return new Response(JSON.stringify({
           success: false,
           error: 'Invalid request data',
-          details: validation.error.errors
+          details: validation.error.issues
         }), {
           status: 400,
           headers: { 'Content-Type': 'application/json' }
@@ -481,7 +481,7 @@ export class LegalDocumentHandler {
         return new Response(JSON.stringify({
           success: false,
           error: 'Invalid request data',
-          details: validation.error.errors
+          details: validation.error.issues
         }), {
           status: 400,
           headers: { 'Content-Type': 'application/json' }

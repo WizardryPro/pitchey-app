@@ -75,7 +75,7 @@ const preferencesSchema = z.object({
   pushEnabled: z.boolean().optional(),
   smsEnabled: z.boolean().optional(),
   inAppEnabled: z.boolean().optional(),
-  typePreferences: z.record(z.boolean()).optional(),
+  typePreferences: z.record(z.string(), z.boolean()).optional(),
   quietHoursEnabled: z.boolean().optional(),
   quietHoursStart: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).optional(),
   quietHoursEnd: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).optional(),
@@ -179,7 +179,7 @@ const testNotificationSchema = z.object({
   title: z.string().optional(),
   message: z.string().optional(),
   priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
-  metadata: z.record(z.any()).optional()
+  metadata: z.record(z.string(), z.any()).optional()
 });
 
 notificationRoutes.post(
