@@ -5,6 +5,14 @@ on:
   schedule:
     - cron: '*/30 * * * *'  # Every 30 minutes
 
+permissions:
+  contents: read
+  # issues: write — the "Open GitHub issue on failure" step calls
+  # github.rest.issues.create and .createComment. Without this scope those
+  # 403 with "Resource not accessible by integration" on every failure,
+  # silently defeating the alerting-with-teeth design.
+  issues: write
+
 jobs:
   health-check:
     runs-on: ubuntu-latest
