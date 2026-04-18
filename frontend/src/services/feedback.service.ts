@@ -38,8 +38,27 @@ export interface RatingStats {
   distribution: number[];  // 10 buckets [1..10]
 }
 
+/** Per-role rating aggregate from GROUP BY reviewer_type on pitch_feedback + UNION with pitch_ratings_anonymous. */
+export interface RoleBreakdownEntry {
+  count: number;
+  avgRating: number;
+  weightedAvg: number;
+}
+
+/** Keys are reviewer_type values — production/investor/creator/peer (industry) or viewer/watcher/anonymous (audience). */
+export interface RoleBreakdown {
+  production?: RoleBreakdownEntry;
+  investor?: RoleBreakdownEntry;
+  creator?: RoleBreakdownEntry;
+  peer?: RoleBreakdownEntry;
+  viewer?: RoleBreakdownEntry;
+  watcher?: RoleBreakdownEntry;
+  anonymous?: RoleBreakdownEntry;
+}
+
 export interface FeedbackResponse {
   ratings: RatingStats | null;
+  breakdown?: RoleBreakdown;
   feedback: FeedbackEntry[];
 }
 
