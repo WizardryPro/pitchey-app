@@ -28,6 +28,10 @@ sentry.properties
 api-keys/
 tokens/
 
+# Local dev tunnel configs — contain authtokens
+ngrok.yml
+ngrok.yaml
+
 # Dependencies
 node_modules/
 vendor/
