@@ -4,6 +4,7 @@
  */
 
 import type { Env, DatabaseService, User, ApiResponse, AuthPayload, SentryLogger } from '../types/worker-types';
+import { safeQuery } from '../db/safe-query';
 import {
   getPitchViewsTimeSeries,
   getUserViewsTimeSeries,
@@ -532,39 +533,49 @@ export class AnalyticsEndpointsHandler {
 
         // Followers change: count follows gained in each half of the period
         const sqlRef = this.getSqlForQueries();
+        type HalfRow = { first_half: number; second_half: number };
         const [followersHalfResult, pitchesHalfResult, ndasHalfResult] = await Promise.all([
-          sqlRef`
-            SELECT
-              COALESCE(SUM(CASE WHEN created_at < NOW() - INTERVAL '1 day' * ${halfDays} THEN 1 ELSE 0 END), 0)::int AS first_half,
-              COALESCE(SUM(CASE WHEN created_at >= NOW() - INTERVAL '1 day' * ${halfDays} THEN 1 ELSE 0 END), 0)::int AS second_half
-            FROM follows
-            WHERE (following_id::text = ${userIdStr} OR creator_id::text = ${userIdStr})
-              AND created_at >= NOW() - INTERVAL '1 day' * ${days}
-          `.catch(() => [{ first_half: 0, second_half: 0 }]),
-          sqlRef`
-            SELECT
-              COALESCE(SUM(CASE WHEN created_at < NOW() - INTERVAL '1 day' * ${halfDays} THEN 1 ELSE 0 END), 0)::int AS first_half,
-              COALESCE(SUM(CASE WHEN created_at >= NOW() - INTERVAL '1 day' * ${halfDays} THEN 1 ELSE 0 END), 0)::int AS second_half
-            FROM pitches
-            WHERE (creator_id::text = ${userIdStr} OR user_id::text = ${userIdStr})
-              AND created_at >= NOW() - INTERVAL '1 day' * ${days}
-          `.catch(() => [{ first_half: 0, second_half: 0 }]),
-          sqlRef`
-            SELECT
-              COALESCE(SUM(CASE WHEN nr.created_at < NOW() - INTERVAL '1 day' * ${halfDays} THEN 1 ELSE 0 END), 0)::int AS first_half,
-              COALESCE(SUM(CASE WHEN nr.created_at >= NOW() - INTERVAL '1 day' * ${halfDays} THEN 1 ELSE 0 END), 0)::int AS second_half
-            FROM nda_requests nr
-            JOIN pitches p ON nr.pitch_id = p.id
-            WHERE (p.creator_id::text = ${userIdStr} OR p.user_id::text = ${userIdStr})
-              AND nr.created_at >= NOW() - INTERVAL '1 day' * ${days}
-          `.catch(() => [{ first_half: 0, second_half: 0 }])
+          safeQuery<HalfRow>(
+            () => sqlRef`
+              SELECT
+                COALESCE(SUM(CASE WHEN created_at < NOW() - INTERVAL '1 day' * ${halfDays} THEN 1 ELSE 0 END), 0)::int AS first_half,
+                COALESCE(SUM(CASE WHEN created_at >= NOW() - INTERVAL '1 day' * ${halfDays} THEN 1 ELSE 0 END), 0)::int AS second_half
+              FROM follows
+              WHERE (following_id::text = ${userIdStr} OR creator_id::text = ${userIdStr})
+                AND created_at >= NOW() - INTERVAL '1 day' * ${days}
+            `,
+            { fallback: [{ first_half: 0, second_half: 0 }], context: 'analytics-endpoints.followers-half-split', tags: { userId: userIdStr } },
+          ),
+          safeQuery<HalfRow>(
+            () => sqlRef`
+              SELECT
+                COALESCE(SUM(CASE WHEN created_at < NOW() - INTERVAL '1 day' * ${halfDays} THEN 1 ELSE 0 END), 0)::int AS first_half,
+                COALESCE(SUM(CASE WHEN created_at >= NOW() - INTERVAL '1 day' * ${halfDays} THEN 1 ELSE 0 END), 0)::int AS second_half
+              FROM pitches
+              WHERE (creator_id::text = ${userIdStr} OR user_id::text = ${userIdStr})
+                AND created_at >= NOW() - INTERVAL '1 day' * ${days}
+            `,
+            { fallback: [{ first_half: 0, second_half: 0 }], context: 'analytics-endpoints.pitches-half-split', tags: { userId: userIdStr } },
+          ),
+          safeQuery<HalfRow>(
+            () => sqlRef`
+              SELECT
+                COALESCE(SUM(CASE WHEN nr.created_at < NOW() - INTERVAL '1 day' * ${halfDays} THEN 1 ELSE 0 END), 0)::int AS first_half,
+                COALESCE(SUM(CASE WHEN nr.created_at >= NOW() - INTERVAL '1 day' * ${halfDays} THEN 1 ELSE 0 END), 0)::int AS second_half
+              FROM nda_requests nr
+              JOIN pitches p ON nr.pitch_id = p.id
+              WHERE (p.creator_id::text = ${userIdStr} OR p.user_id::text = ${userIdStr})
+                AND nr.created_at >= NOW() - INTERVAL '1 day' * ${days}
+            `,
+            { fallback: [{ first_half: 0, second_half: 0 }], context: 'analytics-endpoints.ndas-half-split', tags: { userId: userIdStr } },
+          ),
         ]);
 
-        const fh = followersHalfResult[0] || { first_half: 0, second_half: 0 };
+        const fh = followersHalfResult.rows[0] || { first_half: 0, second_half: 0 };
         const followersChange = fh.first_half > 0 ? ((fh.second_half - fh.first_half) / fh.first_half) * 100 : 0;
-        const ph = pitchesHalfResult[0] || { first_half: 0, second_half: 0 };
+        const ph = pitchesHalfResult.rows[0] || { first_half: 0, second_half: 0 };
         const pitchesChange = ph.first_half > 0 ? ((ph.second_half - ph.first_half) / ph.first_half) * 100 : 0;
-        const nh = ndasHalfResult[0] || { first_half: 0, second_half: 0 };
+        const nh = ndasHalfResult.rows[0] || { first_half: 0, second_half: 0 };
         const ndasChange = nh.first_half > 0 ? ((nh.second_half - nh.first_half) / nh.first_half) * 100 : 0;
 
         const pitchStats = userPitchResults[0] || {};

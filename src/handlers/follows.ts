@@ -6,6 +6,7 @@ import { getDb } from '../db/connection';
 import type { Env } from '../db/connection';
 import { getCorsHeaders } from '../utils/response';
 import { getUserId } from '../utils/auth-extract';
+import { safeQuery } from '../db/safe-query';
 
 /**
  * Main follows handler - returns combined followers, following, activities, and summary
@@ -41,15 +42,18 @@ export async function followsHandler(request: Request, env: Env): Promise<Respon
   }
 
   try {
-    // Check if follows table exists
-    const tableCheck = await sql`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables
-        WHERE table_name = 'follows'
-      )
-    `.catch(() => [{ exists: false }]);
+    // Table probe — expected to fail on envs without the follows table, so report: false.
+    const tableCheck = await safeQuery<{ exists: boolean }>(
+      () => sql`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables
+          WHERE table_name = 'follows'
+        )
+      `,
+      { fallback: [{ exists: false }], context: 'follows.table-probe', report: false },
+    );
 
-    if (!tableCheck[0]?.exists) {
+    if (!tableCheck.rows[0]?.exists) {
       return new Response(JSON.stringify(defaultResponse), {
         status: 200,
         headers: {
@@ -61,62 +65,74 @@ export async function followsHandler(request: Request, env: Env): Promise<Respon
     }
 
     // Get followers (people who follow the current user)
-    const followers = await sql`
-      SELECT
-        u.id, u.username, u.email, u.first_name as "firstName", u.last_name as "lastName",
-        u.profile_image as "profileImage", u.bio, u.location, u.user_type as "userType",
-        COALESCE(f.followed_at, f.created_at) as "followedAt", u.created_at as "createdAt",
-        COALESCE((SELECT COUNT(*) FROM pitches WHERE user_id = u.id), 0) as "pitchCount"
-      FROM follows f
-      JOIN users u ON f.follower_id = u.id
-      WHERE f.following_id = ${authenticatedUserId}
-      ORDER BY COALESCE(f.followed_at, f.created_at) DESC
-      LIMIT 50
-    `.catch(() => []);
+    const followersResult = await safeQuery(
+      () => sql`
+        SELECT
+          u.id, u.username, u.email, u.first_name as "firstName", u.last_name as "lastName",
+          u.profile_image as "profileImage", u.bio, u.location, u.user_type as "userType",
+          COALESCE(f.followed_at, f.created_at) as "followedAt", u.created_at as "createdAt",
+          COALESCE((SELECT COUNT(*) FROM pitches WHERE user_id = u.id), 0) as "pitchCount"
+        FROM follows f
+        JOIN users u ON f.follower_id = u.id
+        WHERE f.following_id = ${authenticatedUserId}
+        ORDER BY COALESCE(f.followed_at, f.created_at) DESC
+        LIMIT 50
+      `,
+      { fallback: [], context: 'follows.followers-list', tags: { userId: String(authenticatedUserId) } },
+    );
+    const followers = followersResult.rows;
 
     // Get following (people the current user follows)
-    const following = await sql`
-      SELECT
-        u.id, u.username, u.email, u.first_name as "firstName", u.last_name as "lastName",
-        u.profile_image as "profileImage", u.bio, u.location, u.user_type as "userType",
-        COALESCE(f.followed_at, f.created_at) as "followedAt", u.created_at as "createdAt",
-        COALESCE((SELECT COUNT(*) FROM pitches WHERE user_id = u.id), 0) as "pitchCount"
-      FROM follows f
-      JOIN users u ON f.following_id = u.id
-      WHERE f.follower_id = ${authenticatedUserId}
-      ORDER BY COALESCE(f.followed_at, f.created_at) DESC
-      LIMIT 50
-    `.catch(() => []);
+    const followingResult = await safeQuery(
+      () => sql`
+        SELECT
+          u.id, u.username, u.email, u.first_name as "firstName", u.last_name as "lastName",
+          u.profile_image as "profileImage", u.bio, u.location, u.user_type as "userType",
+          COALESCE(f.followed_at, f.created_at) as "followedAt", u.created_at as "createdAt",
+          COALESCE((SELECT COUNT(*) FROM pitches WHERE user_id = u.id), 0) as "pitchCount"
+        FROM follows f
+        JOIN users u ON f.following_id = u.id
+        WHERE f.follower_id = ${authenticatedUserId}
+        ORDER BY COALESCE(f.followed_at, f.created_at) DESC
+        LIMIT 50
+      `,
+      { fallback: [], context: 'follows.following-list', tags: { userId: String(authenticatedUserId) } },
+    );
+    const following = followingResult.rows;
 
     // Get recent activity from followed users (new pitches)
-    const activities = await sql`
-      SELECT
-        p.id,
-        'pitch_created' as type,
-        json_build_object(
-          'id', u.id,
-          'username', u.username,
-          'companyName', u.company_name,
-          'profileImage', u.profile_image,
-          'userType', u.user_type
-        ) as creator,
-        'created a new pitch' as action,
-        json_build_object(
-          'id', p.id,
-          'title', p.title,
-          'genre', p.genre,
-          'logline', p.logline
-        ) as pitch,
-        p.created_at as "createdAt"
-      FROM pitches p
-      JOIN users u ON p.user_id = u.id
-      WHERE p.user_id IN (
-        SELECT following_id FROM follows WHERE follower_id = ${authenticatedUserId}
-      )
-      AND p.created_at > NOW() - INTERVAL '30 days'
-      ORDER BY p.created_at DESC
-      LIMIT 20
-    `.catch(() => []);
+    const activitiesResult = await safeQuery(
+      () => sql`
+        SELECT
+          p.id,
+          'pitch_created' as type,
+          json_build_object(
+            'id', u.id,
+            'username', u.username,
+            'companyName', u.company_name,
+            'profileImage', u.profile_image,
+            'userType', u.user_type
+          ) as creator,
+          'created a new pitch' as action,
+          json_build_object(
+            'id', p.id,
+            'title', p.title,
+            'genre', p.genre,
+            'logline', p.logline
+          ) as pitch,
+          p.created_at as "createdAt"
+        FROM pitches p
+        JOIN users u ON p.user_id = u.id
+        WHERE p.user_id IN (
+          SELECT following_id FROM follows WHERE follower_id = ${authenticatedUserId}
+        )
+        AND p.created_at > NOW() - INTERVAL '30 days'
+        ORDER BY p.created_at DESC
+        LIMIT 20
+      `,
+      { fallback: [], context: 'follows.activity-feed', tags: { userId: String(authenticatedUserId) } },
+    );
+    const activities = activitiesResult.rows;
 
     // Calculate summary stats
     const newPitchesCount = activities.length;
@@ -186,26 +202,29 @@ export async function followersHandler(request: Request, env: Env): Promise<Resp
   }
   
   try {
-    // Check if follows table exists first
-    const tableCheck = await sql`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_name = 'follows'
-      )
-    `.catch(() => [{ exists: false }]);
-    
-    if (!tableCheck[0]?.exists) {
+    // Table probe — expected to fail on envs without the follows table, so report: false.
+    const tableCheck = await safeQuery<{ exists: boolean }>(
+      () => sql`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables
+          WHERE table_name = 'follows'
+        )
+      `,
+      { fallback: [{ exists: false }], context: 'follows.followers-table-probe', report: false },
+    );
+
+    if (!tableCheck.rows[0]?.exists) {
       // Table doesn't exist, return empty
       return new Response(JSON.stringify(defaultResponse), {
         status: 200,
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'public, max-age=300',
           ...corsHeaders
         }
       });
     }
-    
+
     const result = await sql`
       SELECT
         u.id, u.username, u.email,
@@ -279,25 +298,28 @@ export async function followingHandler(request: Request, env: Env): Promise<Resp
   }
   
   try {
-    // Check if follows table exists
-    const tableCheck = await sql`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_name = 'follows'
-      )
-    `.catch(() => [{ exists: false }]);
-    
-    if (!tableCheck[0]?.exists) {
+    // Table probe — expected to fail on envs without the follows table, so report: false.
+    const tableCheck = await safeQuery<{ exists: boolean }>(
+      () => sql`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables
+          WHERE table_name = 'follows'
+        )
+      `,
+      { fallback: [{ exists: false }], context: 'follows.following-table-probe', report: false },
+    );
+
+    if (!tableCheck.rows[0]?.exists) {
       return new Response(JSON.stringify(defaultResponse), {
         status: 200,
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'public, max-age=300',
           ...corsHeaders
         }
       });
     }
-    
+
     const result = await sql`
       SELECT
         u.id, u.username, u.email,

@@ -7,6 +7,7 @@ import { getDb } from '../db/connection';
 import type { Env as DbEnv } from '../db/connection';
 import { getUserId } from '../utils/auth-extract';
 import { sendNewFollowerEmail } from '../services/email/index';
+import * as Sentry from '@sentry/cloudflare';
 
 // Schema for follow/unfollow actions
 // Accepts both legacy {userId} and frontend {targetId, targetType} formats
@@ -126,6 +127,14 @@ export async function followActionHandler(request: Request, env: Env): Promise<R
           }, (env as Record<string, unknown>).RESEND_API_KEY as string).catch((err: unknown) => {
             const e = err instanceof Error ? err : new Error(String(err));
             console.error('Failed to send new follower email:', e.message);
+            try {
+              Sentry.withScope((scope) => {
+                scope.setTag('email.context', 'follows-enhanced.new-follower-notify');
+                scope.setTag('followerId', String(followerId));
+                scope.setTag('followingId', String(followingId));
+                Sentry.captureException(e);
+              });
+            } catch { /* Sentry hub not initialized */ }
           });
         }
       } catch (emailErr) {

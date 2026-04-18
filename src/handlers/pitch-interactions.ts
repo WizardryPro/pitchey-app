@@ -8,6 +8,8 @@ import type { Env } from '../db/connection';
 import { getCorsHeaders } from '../utils/response';
 import { getUserId } from '../utils/auth-extract';
 import { sendNewPitchFromFollowedEmail } from '../services/email/index';
+import { safeQuery } from '../db/safe-query';
+import * as Sentry from '@sentry/cloudflare';
 
 function jsonResponse(data: unknown, status: number, origin: string | null): Response {
   return new Response(JSON.stringify(data), {
@@ -255,6 +257,13 @@ export async function pitchPublishHandler(request: Request, env: Env): Promise<R
             }, resendKey).catch((err: unknown) => {
               const e = err instanceof Error ? err : new Error(String(err));
               console.error('Failed to send new pitch email to follower:', e.message);
+              try {
+                Sentry.withScope((scope) => {
+                  scope.setTag('email.context', 'pitch-interactions.new-pitch-follower-notify');
+                  scope.setTag('pitchId', String(pitchId));
+                  Sentry.captureException(e);
+                });
+              } catch { /* Sentry hub not initialized */ }
             });
           }
         }
@@ -280,23 +289,27 @@ export async function pitchPublishHandler(request: Request, env: Env): Promise<R
           || `${creatorInfo?.first_name || ''} ${creatorInfo?.last_name || ''}`.trim()
           || 'A creator';
         const pitchTitle = pitch.title || 'Untitled Pitch';
-        await sql`
-          INSERT INTO notifications (
-            user_id, type, title, message,
-            related_user_id, related_pitch_id, created_at
-          ) VALUES (
-            ${Number(referral.inviter_id)},
-            'pitch_published',
-            ${`New pitch from ${creatorName}`},
-            ${`${creatorName} published "${pitchTitle}" — they signed up through your invite`},
-            ${Number(userId)},
-            ${Number(pitchId)},
-            NOW()
-          )
-        `.catch((err: unknown) => {
-          const e = err instanceof Error ? err : new Error(String(err));
-          console.error('Failed to notify inviter of first pitch publish:', e.message);
-        });
+        await safeQuery(
+          () => sql`
+            INSERT INTO notifications (
+              user_id, type, title, message,
+              related_user_id, related_pitch_id, created_at
+            ) VALUES (
+              ${Number(referral.inviter_id)},
+              'pitch_published',
+              ${`New pitch from ${creatorName}`},
+              ${`${creatorName} published "${pitchTitle}" — they signed up through your invite`},
+              ${Number(userId)},
+              ${Number(pitchId)},
+              NOW()
+            )
+          `,
+          {
+            fallback: [],
+            context: 'pitch-interactions.inviter-first-publish-notify',
+            tags: { pitchId: String(pitchId), inviterId: String(referral.inviter_id) },
+          },
+        );
       }
     } catch (referralErr) {
       // Non-blocking — don't fail the publish if referral notification fails

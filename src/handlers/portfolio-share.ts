@@ -7,6 +7,7 @@ import { getDb } from '../db/connection';
 import type { Env } from '../db/connection';
 import { getCorsHeaders } from '../utils/response';
 import { getUserId } from '../utils/auth-extract';
+import { safeQuery } from '../db/safe-query';
 
 // ---------------------------------------------------------------------------
 // Shared helpers
@@ -181,12 +182,15 @@ export async function publicPortfolioByTokenHandler(
     const link = linkResult[0];
     const creatorId = link.creator_id;
 
-    // Increment view count (fire and forget pattern)
-    sql`
-      UPDATE portfolio_share_links
-      SET view_count = view_count + 1, updated_at = NOW()
-      WHERE id = ${link.id}
-    `.catch(() => {});
+    // Increment view count (fire and forget — failures reported to Sentry but don't block the view).
+    void safeQuery(
+      () => sql`
+        UPDATE portfolio_share_links
+        SET view_count = view_count + 1, updated_at = NOW()
+        WHERE id = ${link.id}
+      `,
+      { fallback: [], context: 'portfolio-share.view-counter', tags: { linkId: String(link.id) } },
+    );
 
     // Fetch creator profile (NO email exposed)
     const creatorResult = await sql`

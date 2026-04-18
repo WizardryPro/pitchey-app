@@ -8,6 +8,7 @@ import { getDb } from '../db/connection';
 import type { Env } from '../db/connection';
 import { getCorsHeaders } from '../utils/response';
 import { getUserId, getAuthenticatedUser } from '../utils/auth-extract';
+import { safeQuery } from '../db/safe-query';
 
 function jsonResponse(data: unknown, origin: string | null, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -57,46 +58,49 @@ async function updateRatingStats(sql: ReturnType<typeof getDb>, pitchId: number)
   if (!sql) return;
   // Admins (heat_role_weights.admin = 0) are excluded everywhere — they'd divide by zero
   // and their ratings shouldn't count in any aggregate.
-  await sql`
-    UPDATE pitches SET
-      -- Combined weighted average (all sources except admin)
-      rating_average = COALESCE(
-        (SELECT (SUM(rating * reviewer_weight) / NULLIF(SUM(reviewer_weight), 0))::decimal(4,2)
-         FROM (
-           SELECT rating, reviewer_weight FROM pitch_feedback
-           WHERE pitch_id = ${pitchId} AND rating IS NOT NULL AND reviewer_type != 'admin'
-           UNION ALL
-           SELECT rating, reviewer_weight FROM pitch_ratings_anonymous
-           WHERE pitch_id = ${pitchId}
-         ) combined
-        ), 0
-      ),
-      rating_count = (
-        (SELECT COUNT(*)::int FROM pitch_feedback WHERE pitch_id = ${pitchId} AND rating IS NOT NULL AND reviewer_type != 'admin') +
-        (SELECT COUNT(*)::int FROM pitch_ratings_anonymous WHERE pitch_id = ${pitchId})
-      ),
-      -- Pitchey Score (industry): investor + production + creator + peer
-      pitchey_score_avg = COALESCE(
-        (SELECT (SUM(rating * reviewer_weight) / NULLIF(SUM(reviewer_weight), 0))::decimal(4,2)
-         FROM pitch_feedback
-         WHERE pitch_id = ${pitchId} AND rating IS NOT NULL
-           AND reviewer_type IN ('investor', 'production', 'creator', 'peer')
-        ), 0
-      ),
-      -- Viewer Score (audience): viewer + watcher + anonymous
-      viewer_score_avg = COALESCE(
-        (SELECT (SUM(rating * reviewer_weight) / NULLIF(SUM(reviewer_weight), 0))::decimal(4,2)
-         FROM (
-           SELECT rating, reviewer_weight FROM pitch_feedback
-           WHERE pitch_id = ${pitchId} AND rating IS NOT NULL AND reviewer_type IN ('viewer', 'watcher')
-           UNION ALL
-           SELECT rating, reviewer_weight FROM pitch_ratings_anonymous
-           WHERE pitch_id = ${pitchId}
-         ) viewer_combined
-        ), 0
-      )
-    WHERE id = ${pitchId}
-  `.catch(() => {});
+  await safeQuery(
+    () => sql`
+      UPDATE pitches SET
+        -- Combined weighted average (all sources except admin)
+        rating_average = COALESCE(
+          (SELECT (SUM(rating * reviewer_weight) / NULLIF(SUM(reviewer_weight), 0))::decimal(4,2)
+           FROM (
+             SELECT rating, reviewer_weight FROM pitch_feedback
+             WHERE pitch_id = ${pitchId} AND rating IS NOT NULL AND reviewer_type != 'admin'
+             UNION ALL
+             SELECT rating, reviewer_weight FROM pitch_ratings_anonymous
+             WHERE pitch_id = ${pitchId}
+           ) combined
+          ), 0
+        ),
+        rating_count = (
+          (SELECT COUNT(*)::int FROM pitch_feedback WHERE pitch_id = ${pitchId} AND rating IS NOT NULL AND reviewer_type != 'admin') +
+          (SELECT COUNT(*)::int FROM pitch_ratings_anonymous WHERE pitch_id = ${pitchId})
+        ),
+        -- Pitchey Score (industry): investor + production + creator + peer
+        pitchey_score_avg = COALESCE(
+          (SELECT (SUM(rating * reviewer_weight) / NULLIF(SUM(reviewer_weight), 0))::decimal(4,2)
+           FROM pitch_feedback
+           WHERE pitch_id = ${pitchId} AND rating IS NOT NULL
+             AND reviewer_type IN ('investor', 'production', 'creator', 'peer')
+          ), 0
+        ),
+        -- Viewer Score (audience): viewer + watcher + anonymous
+        viewer_score_avg = COALESCE(
+          (SELECT (SUM(rating * reviewer_weight) / NULLIF(SUM(reviewer_weight), 0))::decimal(4,2)
+           FROM (
+             SELECT rating, reviewer_weight FROM pitch_feedback
+             WHERE pitch_id = ${pitchId} AND rating IS NOT NULL AND reviewer_type IN ('viewer', 'watcher')
+             UNION ALL
+             SELECT rating, reviewer_weight FROM pitch_ratings_anonymous
+             WHERE pitch_id = ${pitchId}
+           ) viewer_combined
+          ), 0
+        )
+      WHERE id = ${pitchId}
+    `,
+    { fallback: [], context: 'pitch-feedback.update-rating-stats', tags: { pitchId } },
+  );
 }
 
 interface FeedbackBody {
@@ -188,10 +192,21 @@ export async function submitPitchFeedback(request: Request, env: Env): Promise<R
     // Consumption gating — require minimum 30 seconds of view time (skip for rating-only watchers)
     if (userType !== 'watcher') {
       const CONSUMPTION_THRESHOLD = 30;
-      const [viewData] = await sql`
-        SELECT COALESCE(MAX(view_duration), 0)::int as total_duration
-        FROM views WHERE pitch_id = ${pitchId} AND viewer_id = ${Number(userId)}
-      `.catch(() => [{ total_duration: 0 }]);
+      const viewResult = await safeQuery<{ total_duration: number }>(
+        () => sql`
+          SELECT COALESCE(MAX(view_duration), 0)::int as total_duration
+          FROM views WHERE pitch_id = ${pitchId} AND viewer_id = ${Number(userId)}
+        `,
+        { fallback: [{ total_duration: 0 }], context: 'pitch-feedback.consumption-gate', tags: { pitchId, userId: String(userId) } },
+      );
+      // Fail closed on query error — don't let a schema drift let submissions through silently.
+      if (!viewResult.ok) {
+        return errorResponse(
+          'Unable to verify view duration — please refresh and try again',
+          origin, 503
+        );
+      }
+      const viewData = viewResult.rows[0];
       if ((viewData?.total_duration || 0) < CONSUMPTION_THRESHOLD) {
         return errorResponse(
           `Please spend at least ${CONSUMPTION_THRESHOLD} seconds reviewing this pitch before leaving feedback`,
@@ -430,12 +445,15 @@ export async function getConsumptionStatus(request: Request, env: Env): Promise<
 
   try {
     const THRESHOLD = 30;
-    const [viewData] = await sql`
-      SELECT COALESCE(MAX(view_duration), 0)::int as total_duration
-      FROM views WHERE pitch_id = ${pitchId} AND viewer_id = ${Number(userId)}
-    `.catch(() => [{ total_duration: 0 }]);
+    const viewResult = await safeQuery<{ total_duration: number }>(
+      () => sql`
+        SELECT COALESCE(MAX(view_duration), 0)::int as total_duration
+        FROM views WHERE pitch_id = ${pitchId} AND viewer_id = ${Number(userId)}
+      `,
+      { fallback: [{ total_duration: 0 }], context: 'pitch-feedback.consumption-status', tags: { pitchId, userId: String(userId) } },
+    );
 
-    const duration = viewData?.total_duration || 0;
+    const duration = viewResult.rows[0]?.total_duration || 0;
     return jsonResponse({
       success: true,
       data: { eligible: duration >= THRESHOLD, viewDuration: duration, threshold: THRESHOLD }
@@ -601,12 +619,15 @@ export async function getPitchComments(request: Request, env: Env): Promise<Resp
       if (String(pitch.user_id) === String(userId)) {
         hasNda = true;
       } else {
-        const [nda] = await sql`
-          SELECT 1 FROM pitch_ndas
-          WHERE pitch_id = ${pitchId} AND user_id = ${Number(userId)} AND status = 'signed'
-          LIMIT 1
-        `.catch(() => []);
-        hasNda = !!nda;
+        const ndaResult = await safeQuery(
+          () => sql`
+            SELECT 1 FROM pitch_ndas
+            WHERE pitch_id = ${pitchId} AND user_id = ${Number(userId)} AND status = 'signed'
+            LIMIT 1
+          `,
+          { fallback: [], context: 'pitch-feedback.nda-access-check', tags: { pitchId, userId: String(userId) } },
+        );
+        hasNda = ndaResult.rows.length > 0;
       }
     }
 

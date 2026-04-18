@@ -7,6 +7,15 @@ import { getDb } from '../db/connection';
 import type { Env } from '../db/connection';
 import { getCorsHeaders } from '../utils/response';
 import { getUserId } from '../utils/auth-extract';
+import { safeQuery } from '../db/safe-query';
+
+// Fire-and-forget updated_at bump — failures reported to Sentry, don't block the caller.
+function bumpSlateUpdatedAt(sql: NonNullable<ReturnType<typeof getDb>>, slateId: number): void {
+  void safeQuery(
+    () => sql`UPDATE slates SET updated_at = NOW() WHERE id = ${slateId}`,
+    { fallback: [], context: 'slates.bump-updated-at', tags: { slateId } },
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Shared helpers
@@ -387,7 +396,7 @@ export async function addPitchToSlateHandler(
     }
 
     // Bump slate updated_at
-    sql!`UPDATE slates SET updated_at = NOW() WHERE id = ${slateId}`.catch(() => {});
+    bumpSlateUpdatedAt(sql!, slateId);
 
     return jsonResponse({ success: true, data: result[0] }, origin, 201);
   } catch (err) {
@@ -436,7 +445,7 @@ export async function removePitchFromSlateHandler(
     }
 
     // Bump slate updated_at
-    sql!`UPDATE slates SET updated_at = NOW() WHERE id = ${slateId}`.catch(() => {});
+    bumpSlateUpdatedAt(sql!, slateId);
 
     return jsonResponse({ success: true }, origin);
   } catch (err) {
@@ -490,7 +499,7 @@ export async function reorderSlatePitchesHandler(
     }
 
     // Bump slate updated_at
-    sql!`UPDATE slates SET updated_at = NOW() WHERE id = ${slateId}`.catch(() => {});
+    bumpSlateUpdatedAt(sql!, slateId);
 
     return jsonResponse({ success: true }, origin);
   } catch (err) {
