@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { ThumbsUp, AlertTriangle, Lightbulb, Briefcase, User, Sparkles } from 'lucide-react';
+import { ThumbsUp, AlertTriangle, Lightbulb, Sparkles } from 'lucide-react';
 import { FeedbackService } from '../../services/feedback.service';
-import type { FeedbackEntry, RatingStats } from '../../services/feedback.service';
+import type { FeedbackEntry, RatingStats, RoleBreakdown as RoleBreakdownData } from '../../services/feedback.service';
 import PitcheyRating from '../PitcheyRating';
 import { getRatingLabel } from '../../constants/pitchey-score';
+import { ReviewerBadge } from './ReviewerBadge';
+import { RoleBreakdown } from './RoleBreakdown';
 
 function RatingBar({ label, count, total }: { label: string; count: number; total: number }) {
   const pct = total > 0 ? (count / total) * 100 : 0;
@@ -15,23 +17,6 @@ function RatingBar({ label, count, total }: { label: string; count: number; tota
       </div>
       <span className="w-6 text-gray-400 text-right">{count}</span>
     </div>
-  );
-}
-
-function ReviewerBadge({ type }: { type: string }) {
-  const config: Record<string, { label: string; color: string; icon: typeof User }> = {
-    investor: { label: 'Investor', color: 'bg-green-100 text-green-700', icon: Briefcase },
-    production: { label: 'Production', color: 'bg-blue-100 text-blue-700', icon: Briefcase },
-    peer: { label: 'Creator', color: 'bg-purple-100 text-purple-700', icon: User },
-    watcher: { label: 'Watcher', color: 'bg-gray-100 text-gray-600', icon: User },
-  };
-  const c = config[type] || config.peer;
-  const Icon = c.icon;
-  return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${c.color}`}>
-      <Icon className="w-3 h-3" />
-      {c.label}
-    </span>
   );
 }
 
@@ -153,6 +138,7 @@ function DualScoreSummary({ ratings }: { ratings: RatingStats }) {
 
 export default function FeedbackDisplay({ pitchId }: { pitchId: number }) {
   const [ratings, setRatings] = useState<RatingStats | null>(null);
+  const [breakdown, setBreakdown] = useState<RoleBreakdownData | undefined>(undefined);
   const [feedback, setFeedback] = useState<FeedbackEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -160,6 +146,7 @@ export default function FeedbackDisplay({ pitchId }: { pitchId: number }) {
     setLoading(true);
     const data = await FeedbackService.getFeedback(pitchId);
     setRatings(data.ratings);
+    setBreakdown(data.breakdown);
     setFeedback(data.feedback);
     setLoading(false);
   };
@@ -184,6 +171,7 @@ export default function FeedbackDisplay({ pitchId }: { pitchId: number }) {
   return (
     <div className="space-y-4">
       {ratings && ratings.total_reviews > 0 && <DualScoreSummary ratings={ratings} />}
+      <RoleBreakdown breakdown={breakdown} />
       <div className="space-y-3">
         {feedback.map((entry) => (
           <FeedbackCard key={entry.id} entry={entry} />

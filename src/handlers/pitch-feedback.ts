@@ -377,6 +377,51 @@ export async function getPitchFeedbackPublic(request: Request, env: Env): Promis
       return row ? Number(row.count) : 0;
     });
 
+    // Per-role breakdown — optional field; if the query errors we keep the rest of the
+    // response intact. safeQuery reports to Sentry with context tag so schema drift here
+    // doesn't go silent (see catch-swallow audit).
+    const breakdownResult = await safeQuery<{
+      reviewer_type: string;
+      count: number;
+      avg_rating: string | null;
+      weighted_avg: string | null;
+    }>(
+      () => sql`
+        SELECT
+          reviewer_type,
+          COUNT(*)::int AS count,
+          ROUND(AVG(rating)::numeric, 2) AS avg_rating,
+          ROUND((SUM(rating * reviewer_weight) / NULLIF(SUM(reviewer_weight), 0))::numeric, 2) AS weighted_avg
+        FROM pitch_feedback
+        WHERE pitch_id = ${pitchId} AND rating IS NOT NULL
+        GROUP BY reviewer_type
+
+        UNION ALL
+
+        SELECT 'anonymous' AS reviewer_type,
+               COUNT(*)::int,
+               ROUND(AVG(rating)::numeric, 2),
+               ROUND(AVG(rating)::numeric, 2)
+        FROM pitch_ratings_anonymous
+        WHERE pitch_id = ${pitchId}
+      `,
+      { fallback: [], context: 'pitch-feedback.role-breakdown', tags: { pitchId } },
+    );
+
+    const breakdown: Record<string, { count: number; avgRating: number; weightedAvg: number }> | undefined =
+      breakdownResult.ok
+        ? breakdownResult.rows.reduce((acc, row) => {
+            if (row.count > 0) {
+              acc[row.reviewer_type] = {
+                count: Number(row.count),
+                avgRating: Number(row.avg_rating ?? 0),
+                weightedAvg: Number(row.weighted_avg ?? 0),
+              };
+            }
+            return acc;
+          }, {} as Record<string, { count: number; avgRating: number; weightedAvg: number }>)
+        : undefined;
+
     // Individual feedback with anonymization
     const feedback = await sql`
       SELECT
@@ -391,7 +436,14 @@ export async function getPitchFeedbackPublic(request: Request, env: Env): Promis
       ORDER BY pf.created_at DESC
     `;
 
-    return jsonResponse({ success: true, data: { ratings: { ...ratings, distribution }, feedback } }, origin);
+    return jsonResponse({
+      success: true,
+      data: {
+        ratings: { ...ratings, distribution },
+        ...(breakdown && Object.keys(breakdown).length > 0 ? { breakdown } : {}),
+        feedback,
+      },
+    }, origin);
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
     console.error('getPitchFeedbackPublic error:', e.message);
