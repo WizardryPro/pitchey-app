@@ -44,45 +44,54 @@ cat > "$RESULTS_FILE" << EOF
 }
 EOF
 
-# Test critical API endpoints
+# Public endpoints only — the script has no session, so anything auth-gated returns 401
+# in ~40ms (middleware short-circuit), which measures the auth check, not the feature.
+# Want to add a new endpoint here? Confirm it works without Authorization first.
 API_ENDPOINTS=(
-    "GET /api/auth/me"
-    "GET /api/users/profile"
+    "GET /api/health"
     "GET /api/pitches"
-    "POST /api/pitches"
-    "GET /api/ndas"
+    "GET /api/pitches/hot"
 )
 
 echo "Testing API endpoints..."
 
 API_RESULTS=()
 
+# Warm-up request — Cloudflare Workers cold-start can add 500ms+ to the first hit,
+# which inflates p95 artificially. Discard the timing.
+if command -v curl >/dev/null 2>&1; then
+    echo "  Warming worker..."
+    curl -s -o /dev/null -X GET "$API_BASE_URL/api/health" --max-time 10 2>/dev/null || true
+fi
+
 for endpoint in "${API_ENDPOINTS[@]}"; do
     method=$(echo $endpoint | cut -d' ' -f1)
     path=$(echo $endpoint | cut -d' ' -f2)
-    
-    echo "  Testing $endpoint..."
-    
-    # Use curl to measure response time (simplified for demo)
-    if command -v curl >/dev/null 2>&1; then
-        # Measure response time with curl (fallback 5.000s on any failure — connection refused, DNS, timeout)
-        response_time=$(curl -w '%{time_total}' -s -o /dev/null -X $method "$API_BASE_URL$path" -H "Authorization: Bearer test-token" 2>/dev/null || echo "5.000")
-        response_time_ms=$(echo "$response_time * 1000" | bc 2>/dev/null | cut -d. -f1)
-        # Normalize — bc can emit empty on parse errors; default to worst-case so we fail loud, not silently
-        [[ "$response_time_ms" =~ ^[0-9]+$ ]] || response_time_ms=9999
 
-        # Status check — curl emits "000" on connection failure (not an HTTP status)
-        status_code=$(curl -s -o /dev/null -w '%{http_code}' -X $method "$API_BASE_URL$path" -H "Authorization: Bearer test-token" 2>/dev/null || echo "000")
-        [[ "$status_code" =~ ^[0-9]+$ ]] || status_code=000
+    echo "  Testing $endpoint..."
+
+    if command -v curl >/dev/null 2>&1; then
+        # Single curl invocation returns both time and status — don't double-hit (timing drifts).
+        curl_out=$(curl -s -o /dev/null -w '%{time_total}:%{http_code}' -X $method "$API_BASE_URL$path" --max-time 10 2>/dev/null || echo "5.000:000")
+        response_time=$(echo "$curl_out" | cut -d: -f1)
+        status_code=$(echo "$curl_out" | cut -d: -f2)
+
+        # awk for s→ms conversion — portable across runners regardless of whether bc is present.
+        response_time_ms=$(awk -v t="$response_time" 'BEGIN { printf "%d", t * 1000 }' 2>/dev/null)
+        [[ "$response_time_ms" =~ ^[0-9]+$ ]] || response_time_ms=9999
+        [[ "$status_code"      =~ ^[0-9]+$ ]] || status_code=000
 
         API_RESULTS+=("$endpoint:$response_time_ms:$status_code")
 
+        # Distinguish the three failure modes so the error message tells the truth.
         if [ "$status_code" = "000" ]; then
             echo -e "    ${YELLOW}⚠️  $endpoint: unreachable at $API_BASE_URL (skipped)${NC}"
-        elif [ "$response_time_ms" -lt "$MAX_API_P95_MS" ] && [ "$status_code" -lt "400" ]; then
-            echo -e "    ${GREEN}✅ $endpoint: ${response_time_ms}ms (${status_code})${NC}"
+        elif [ "$status_code" -ge "400" ]; then
+            echo -e "    ${RED}❌ $endpoint: HTTP ${status_code} (${response_time_ms}ms) — unexpected status${NC}"
+        elif [ "$response_time_ms" -ge "$MAX_API_P95_MS" ]; then
+            echo -e "    ${RED}❌ $endpoint: ${response_time_ms}ms (${status_code}) — slower than ${MAX_API_P95_MS}ms threshold${NC}"
         else
-            echo -e "    ${RED}❌ $endpoint: ${response_time_ms}ms (${status_code}) > ${MAX_API_P95_MS}ms threshold${NC}"
+            echo -e "    ${GREEN}✅ $endpoint: ${response_time_ms}ms (${status_code})${NC}"
         fi
     else
         echo -e "    ${YELLOW}⚠️  curl not available, skipping $endpoint${NC}"
