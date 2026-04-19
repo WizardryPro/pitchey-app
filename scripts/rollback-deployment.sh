@@ -17,7 +17,7 @@ NC='\033[0m'
 WORKER_NAME="pitchey-production"
 FRONTEND_PROJECT="pitchey"
 WORKER_URL="https://pitchey-api-prod.ndlovucavelle.workers.dev"
-FRONTEND_URL="https://pitchey-5o8.pages.dev"
+FRONTEND_URL="https://pitchey.pages.dev"
 
 # Rollback options
 ROLLBACK_WORKER=false

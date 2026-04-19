@@ -31,7 +31,7 @@ REQUEST -> Tracing -> CORS Preflight -> WebSocket Upgrade Detection -> Health Ch
 2. Trace the request through the lifecycle above — identify which stage fails
 3. Check wrangler.toml for binding configuration (KV, R2, Durable Objects, Hyperdrive)
 4. For auth issues: trace cookie -> KV session lookup -> Better Auth validation -> RBAC check
-5. For CORS: verify allowed origins include pitchey-5o8.pages.dev, pitchey.com, www.pitchey.com
+5. For CORS: verify allowed origins include pitchey.pages.dev, pitchey.com, www.pitchey.com
 6. For database errors: check raw SQL query syntax and parameterization
 7. For route errors: check RouteRegistry in worker-integrated.ts
 8. Implement fix and verify with `npx wrangler dev`
@@ -50,7 +50,7 @@ REQUEST -> Tracing -> CORS Preflight -> WebSocket Upgrade Detection -> Health Ch
 
 ## Common Issues
 - CORS: Worker must return Access-Control-Allow-Origin matching the requesting origin
-- CORS must allow: pitchey-5o8.pages.dev, pitchey.com, www.pitchey.com
+- CORS must allow: pitchey.pages.dev, pitchey.com, www.pitchey.com
 - CORS credentials: Access-Control-Allow-Credentials: true required for cookie auth
 - Session cookie: pitchey-session must be HttpOnly, Secure, SameSite=None
 - Hyperdrive: connection string format differs from direct Neon connection

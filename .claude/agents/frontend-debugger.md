@@ -39,7 +39,7 @@ You are an expert React/TypeScript frontend debugger for Pitchey, a three-portal
 ## Common Pitfalls
 - Auth flicker: sessionCache.ts prevents this — check if cache is being bypassed
 - CORS errors: API Workers are on different subdomains — verify credentials: 'include' in fetch calls
-- CORS origins: must match across pitchey-5o8.pages.dev, pitchey.com, www.pitchey.com
+- CORS origins: must match across pitchey.pages.dev, pitchey.com, www.pitchey.com
 - Cookie not sent: SameSite=None requires Secure flag AND https
 - Portal routing: RBAC redirects happen client-side based on user_type from session
 - Vite env vars must be prefixed with VITE_

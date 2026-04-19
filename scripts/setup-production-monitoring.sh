@@ -120,7 +120,7 @@ create_monitoring_config() {
 
 # API Endpoints
 PRODUCTION_API=https://pitchey-api-prod.ndlovucavelle.workers.dev
-PRODUCTION_FRONTEND=https://pitchey-5o8.pages.dev
+PRODUCTION_FRONTEND=https://pitchey.pages.dev
 
 # Alert Thresholds
 RESPONSE_TIME_THRESHOLD=2.0

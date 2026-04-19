@@ -18,7 +18,7 @@ readonly PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
 # Test environment configuration
 TEST_ENVIRONMENT="${TEST_ENVIRONMENT:-production}"
 TARGET_URL="${TARGET_URL:-https://pitchey-api-prod.ndlovucavelle.workers.dev}"
-FRONTEND_URL="${FRONTEND_URL:-https://pitchey-5o8-66n.pages.dev}"
+FRONTEND_URL="${FRONTEND_URL:-https://pitchey.pages.dev}"
 CONTAINERS_URL="${CONTAINERS_URL:-https://containers.pitchey.com}"
 
 # Test execution configuration

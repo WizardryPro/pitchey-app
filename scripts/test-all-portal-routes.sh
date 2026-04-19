@@ -11,7 +11,7 @@ echo ""
 
 # Configuration
 API_URL="https://pitchey-api-prod.ndlovucavelle.workers.dev"
-FRONTEND_URL="https://pitchey-5o8.pages.dev"
+FRONTEND_URL="https://pitchey.pages.dev"
 
 # Colors
 RED='\033[0;31m'
@@ -170,7 +170,7 @@ fi
 
 # Test CORS headers
 CORS_HEADER=$(curl -sI "$API_URL/api/health" | grep -i "access-control-allow-origin" | head -1)
-if [[ "$CORS_HEADER" == *"https://pitchey-5o8.pages.dev"* ]]; then
+if [[ "$CORS_HEADER" == *"https://pitchey.pages.dev"* ]]; then
     echo -e "  CORS configuration: ${GREEN}✅${NC}"
     ((PASSED_TESTS++))
 else

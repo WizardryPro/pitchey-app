@@ -74,7 +74,7 @@
       "Bash(python3 -c:*)",
       "WebSearch",
       "WebFetch(domain:localhost)",
-      "WebFetch(domain:pitchey-5o8.pages.dev)",
+      "WebFetch(domain:pitchey.pages.dev)",
       "WebFetch(domain:www.pitchey.com)",
       "Skill(test)",
       "Skill(deploy)",

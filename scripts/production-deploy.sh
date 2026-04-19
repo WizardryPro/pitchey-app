@@ -28,7 +28,7 @@ CURRENT_SLOT_FILE="${DEPLOY_DIR}/current_slot"
 
 # Production URLs
 PROD_WORKER_URL="${PROD_WORKER_URL:-https://pitchey-api-prod.ndlovucavelle.workers.dev}"
-PROD_FRONTEND_URL="${PROD_FRONTEND_URL:-https://pitchey-5o8-66n.pages.dev}"
+PROD_FRONTEND_URL="${PROD_FRONTEND_URL:-https://pitchey.pages.dev}"
 STAGING_WORKER_URL="${STAGING_WORKER_URL:-https://pitchey-api-staging.ndlovucavelle.workers.dev}"
 
 # Health check configuration

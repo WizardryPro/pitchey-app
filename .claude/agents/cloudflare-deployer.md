@@ -30,7 +30,7 @@ You are a Cloudflare deployment specialist for the Pitchey platform. Your expert
 ## Critical Configuration
 
 - **API URL**: https://pitchey-api-prod.ndlovucavelle.workers.dev
-- **Frontend**: https://pitchey-5o8.pages.dev
+- **Frontend**: https://pitchey.pages.dev
 - **Database**: Neon via Hyperdrive (raw SQL, no ORM)
 - **Cache**: Upstash Redis
 - **Storage**: Cloudflare R2

@@ -78,7 +78,7 @@ check_frontend_server() {
     if [ "$ENVIRONMENT" = "local" ]; then
         base_url="http://127.0.0.1:5173"
     else
-        base_url="https://pitchey-5o8-66n.pages.dev"
+        base_url="https://pitchey.pages.dev"
     fi
     
     log "INFO" "Checking frontend server at $base_url..."
@@ -108,7 +108,7 @@ run_monitoring() {
     if [ "$ENVIRONMENT" = "local" ]; then
         base_url="http://127.0.0.1:5173"
     else
-        base_url="https://pitchey-5o8-66n.pages.dev"
+        base_url="https://pitchey.pages.dev"
     fi
     
     # Set timeout based on route type
@@ -274,7 +274,7 @@ show_usage() {
     echo ""
     echo "Environments:"
     echo "  local      - Local development (http://127.0.0.1:5173)"
-    echo "  production - Production site (https://pitchey-5o8-66n.pages.dev)"
+    echo "  production - Production site (https://pitchey.pages.dev)"
     echo ""
     echo "Route Types:"
     echo "  critical   - Critical routes only (default)"

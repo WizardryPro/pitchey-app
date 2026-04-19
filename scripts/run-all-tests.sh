@@ -9,7 +9,7 @@ set -e
 TEST_DIR="./scripts"
 RESULTS_DIR="./test_results_$(date +%Y%m%d_%H%M%S)"
 API_URL="${API_URL:-https://pitchey-api-prod.ndlovucavelle.workers.dev}"
-FRONTEND_URL="${FRONTEND_URL:-https://pitchey-5o8.pages.dev}"
+FRONTEND_URL="${FRONTEND_URL:-https://pitchey.pages.dev}"
 
 # Colors for output
 RED='\033[0;31m'

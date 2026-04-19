@@ -16,7 +16,7 @@ NC='\033[0m'
 
 # Configuration
 API_URL="${API_URL:-https://pitchey-api-prod.ndlovucavelle.workers.dev}"
-FRONTEND_URL="${FRONTEND_URL:-https://pitchey-5o8.pages.dev}"
+FRONTEND_URL="${FRONTEND_URL:-https://pitchey.pages.dev}"
 ALERT_THRESHOLD="${ALERT_THRESHOLD:-3}" # seconds
 LOG_FILE="${LOG_FILE:-./monitoring/logs/health-monitor.log}"
 ALERT_LOG="${ALERT_LOG:-./monitoring/logs/alerts.log}"
