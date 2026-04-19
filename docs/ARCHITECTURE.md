@@ -68,7 +68,7 @@ Pitchey is a comprehensive movie pitch marketplace platform connecting creators,
 
 ### Frontend (React on Cloudflare Pages)
 
-**URL**: https://pitchey-5o8.pages.dev
+**URL**: https://pitchey.pages.dev
 
 - **Technology Stack**: React 18, TypeScript, Vite, Tailwind CSS
 - **Deployment**: Cloudflare Pages with automatic CI/CD
@@ -410,7 +410,7 @@ cd frontend && npm run dev
 
 ## Production URLs
 
-- **Frontend**: https://pitchey-5o8.pages.dev
+- **Frontend**: https://pitchey.pages.dev
 - **API**: https://pitchey-api-prod.ndlovucavelle.workers.dev
 
 ## Key Architectural Patterns

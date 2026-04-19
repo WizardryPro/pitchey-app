@@ -397,7 +397,7 @@ id = "your-kv-namespace-id"
 
 ### Production Deployment
 - **Worker**: `https://pitchey-api-prod.ndlovucavelle.workers.dev` ✅
-- **Frontend**: `https://pitchey-5o8.pages.dev` ✅
+- **Frontend**: `https://pitchey.pages.dev` ✅
 - **Database**: Neon PostgreSQL with business logic ✅
 - **Cache**: Upstash Redis configured ✅
 - **Storage**: R2 bucket configured ✅
@@ -406,7 +406,7 @@ id = "your-kv-namespace-id"
 ```bash
 DATABASE_URL=postgresql://neondb_owner:***@ep-old-snow-abpr94lc-pooler.eu-west-2.aws.neon.tech/neondb
 JWT_SECRET=vYGh89KjLmNpQrStUwXyZ123456789ABCDEFGHIJKLMNOPQRSTuvwxyz
-FRONTEND_URL=https://pitchey-5o8.pages.dev
+FRONTEND_URL=https://pitchey.pages.dev
 CACHE_ENABLED=true
 UPSTASH_REDIS_REST_URL=https://chief-anteater-20186.upstash.io
 ```

@@ -1,4 +1,4 @@
-uid=19_0 RootWebArea "Pitchey - Where Ideas Meet Investment" url="https://pitchey-5o8.pages.dev/production/dashboard"
+uid=19_0 RootWebArea "Pitchey - Where Ideas Meet Investment" url="https://pitchey.pages.dev/production/dashboard"
   uid=21_0 ignored
     uid=21_1 ignored [selected in the DevTools Elements panel]
       uid=21_2 generic
@@ -6,17 +6,17 @@ uid=19_0 RootWebArea "Pitchey - Where Ideas Meet Investment" url="https://pitche
           uid=20_0 banner
             uid=21_4 ignored
               uid=20_1 button "Toggle menu"
-              uid=20_2 link "Pitchey" url="https://pitchey-5o8.pages.dev/"
+              uid=20_2 link "Pitchey" url="https://pitchey.pages.dev/"
                 uid=21_5 ignored
                   uid=20_3 StaticText "Pitchey"
                     uid=21_6 InlineTextBox "Pitchey"
               uid=21_7 ignored
               uid=20_4 navigation
-                uid=20_5 link "Home" url="https://pitchey-5o8.pages.dev/"
+                uid=20_5 link "Home" url="https://pitchey.pages.dev/"
                   uid=21_8 ignored
                     uid=20_6 StaticText "Home"
                       uid=21_6 InlineTextBox "Home"
-                uid=20_7 link "Marketplace" url="https://pitchey-5o8.pages.dev/marketplace"
+                uid=20_7 link "Marketplace" url="https://pitchey.pages.dev/marketplace"
                   uid=21_9 ignored
                     uid=20_8 StaticText "Marketplace"
                       uid=21_6 InlineTextBox "Marketplace"
@@ -303,7 +303,7 @@ uid=19_0 RootWebArea "Pitchey - Where Ideas Meet Investment" url="https://pitche
                               uid=20_77 heading "Recent Notifications" level="3"
                                 uid=21_178 StaticText "Recent Notifications"
                                   uid=21_6 InlineTextBox "Recent Notifications"
-                            uid=20_78 link "View all" url="https://pitchey-5o8.pages.dev/notifications"
+                            uid=20_78 link "View all" url="https://pitchey.pages.dev/notifications"
                               uid=21_179 ignored
                                 uid=20_79 StaticText "View all"
                                   uid=21_6 InlineTextBox "View all"

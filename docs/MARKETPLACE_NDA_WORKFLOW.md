@@ -2,7 +2,7 @@
 
 ## 🎬 Overview
 
-The Pitchey marketplace implements a comprehensive NDA (Non-Disclosure Agreement) workflow that protects creators' intellectual property while enabling investors and production companies to access detailed pitch information. This document outlines the complete NDA workflow as implemented on **pitchey-main.pages.dev** and **pitchey-5o8.pages.dev**.
+The Pitchey marketplace implements a comprehensive NDA (Non-Disclosure Agreement) workflow that protects creators' intellectual property while enabling investors and production companies to access detailed pitch information. This document outlines the complete NDA workflow as implemented on **pitchey-main.pages.dev** and **pitchey.pages.dev**.
 
 ## 🔐 NDA Workflow Architecture
 
@@ -458,4 +458,4 @@ The NDA workflow is fully responsive:
 
 *Last Updated: December 31, 2024*
 *Version: 1.0.0*
-*Status: Production Ready on pitchey-main.pages.dev and pitchey-5o8.pages.dev*
+*Status: Production Ready on pitchey-main.pages.dev and pitchey.pages.dev*

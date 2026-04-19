@@ -45,14 +45,14 @@ export interface Env extends ConnectionEnv {
 // CORS configuration
 function getCorsHeaders(origin?: string | null): Record<string, string> {
   const allowedOrigins = [
-    'https://pitchey-5o8.pages.dev',
-    'https://pitchey-5o8.pages.dev',
+    'https://pitchey.pages.dev',
+    'https://pitchey.pages.dev',
     'https://pitchey-frontend-ndlovu.pages.dev',
     'http://localhost:5173',
     'http://localhost:3000'
   ];
 
-  let allowOrigin = 'https://pitchey-5o8.pages.dev'; // Default
+  let allowOrigin = 'https://pitchey.pages.dev'; // Default
   
   if (origin) {
     // Allow any subdomain of pages.dev for Cloudflare deployments

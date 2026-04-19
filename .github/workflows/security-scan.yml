@@ -14,6 +14,10 @@ permissions:
   contents: read
   security-events: write
   actions: read
+  # pull-requests: required by security-report job to post scan-summary comments on PRs
+  # issues: required by the "Create issue for failures" step on main-branch / scheduled runs
+  pull-requests: write
+  issues: write
 
 jobs:
   # Secret scanning

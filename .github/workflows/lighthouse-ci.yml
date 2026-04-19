@@ -32,9 +32,9 @@ jobs:
       - name: Run Lighthouse (Desktop)
         run: |
           lhci collect \
-            --url="https://pitchey-5o8.pages.dev" \
-            --url="https://pitchey-5o8.pages.dev/marketplace" \
-            --url="https://pitchey-5o8.pages.dev/portals" \
+            --url="https://pitchey.pages.dev" \
+            --url="https://pitchey.pages.dev/marketplace" \
+            --url="https://pitchey.pages.dev/portals" \
             --settings.preset=desktop \
             --settings.chromeFlags="--no-sandbox --disable-gpu" \
             --numberOfRuns=3

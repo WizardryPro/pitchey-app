@@ -279,7 +279,7 @@ This document describes the comprehensive CI/CD pipeline for the Pitchey platfor
 
 ### Production
 - **API**: `https://pitchey-api-prod.ndlovucavelle.workers.dev`
-- **Frontend**: `https://pitchey-5o8.pages.dev`
+- **Frontend**: `https://pitchey.pages.dev`
 - **Database**: Neon PostgreSQL (production)
 - **Cache**: Upstash Redis (production)
 

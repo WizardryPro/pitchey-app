@@ -225,7 +225,7 @@ export default defineConfig({
       testMatch: /pitch-upload-with-media\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
-        baseURL: 'https://pitchey-5o8.pages.dev',
+        baseURL: 'https://pitchey.pages.dev',
         viewport: { width: 1400, height: 900 },
         video: 'on',
         trace: 'on'

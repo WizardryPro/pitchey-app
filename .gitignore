@@ -120,3 +120,6 @@ CLAUDE.local.md
 
 # Stray browser download of Claude Code skill files — install to ~/.claude/skills/ instead
 files(1)/
+
+# Claude Code runtime artifacts — lock files from the scheduled-tasks skill; keep config (settings.json etc) tracked
+.claude/scheduled_tasks.lock

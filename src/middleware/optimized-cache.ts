@@ -288,7 +288,7 @@ export async function preloadCache(env: any, paths: string[]): Promise<void> {
   const kv = env.KV || env.CACHE;
   if (!kv) return;
   
-  const baseUrl = env.FRONTEND_URL || 'https://pitchey-5o8.pages.dev';
+  const baseUrl = env.FRONTEND_URL || 'https://pitchey.pages.dev';
   
   await Promise.all(
     paths.map(async (path) => {

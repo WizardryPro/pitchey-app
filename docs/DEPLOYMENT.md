@@ -25,7 +25,7 @@
 
 | Service | URL | Description |
 |---------|-----|-------------|
-| **Frontend** | https://pitchey-5o8.pages.dev | React application (Cloudflare Pages) |
+| **Frontend** | https://pitchey.pages.dev | React application (Cloudflare Pages) |
 | **API** | https://pitchey-api-prod.ndlovucavelle.workers.dev | Cloudflare Worker API |
 | **WebSocket** | wss://pitchey-api-prod.ndlovucavelle.workers.dev/ws | Real-time communications |
 
@@ -305,7 +305,7 @@ npx wrangler pages deploy dist \
   --branch=main
 
 # Verify deployment
-curl -I https://pitchey-5o8.pages.dev
+curl -I https://pitchey.pages.dev
 ```
 
 ### Method 2: Direct Upload
@@ -502,7 +502,7 @@ ws.onmessage = (e) => console.log('Message:', e.data);
 
 ```bash
 # Load test with Apache Bench
-ab -n 100 -c 10 https://pitchey-5o8.pages.dev/
+ab -n 100 -c 10 https://pitchey.pages.dev/
 
 # API performance test
 ab -n 100 -c 10 https://pitchey-api-prod.ndlovucavelle.workers.dev/api/health
@@ -569,7 +569,7 @@ wrangler tail --env production
 
 # Test CORS headers
 curl -I -X OPTIONS https://pitchey-api-prod.ndlovucavelle.workers.dev/api/health \
-  -H "Origin: https://pitchey-5o8.pages.dev"
+  -H "Origin: https://pitchey.pages.dev"
 
 # Verify secrets are set
 wrangler secret list

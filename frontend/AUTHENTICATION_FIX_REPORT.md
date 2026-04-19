@@ -1,6 +1,6 @@
 # Authentication & R2 Storage Fix Report
 **Date**: December 29, 2024
-**Deployment**: https://42a9952d.pitchey-5o8.pages.dev
+**Deployment**: https://42a9952d.pitchey.pages.dev
 
 ## Issues Fixed
 
@@ -72,7 +72,7 @@ localStorage.getItem('authToken')
 ## Deployment Status
 - Build: ✅ Successful (6.94s)
 - Deploy: ✅ Successful to Cloudflare Pages
-- URL: https://42a9952d.pitchey-5o8.pages.dev
+- URL: https://42a9952d.pitchey.pages.dev
 - Files: 467 uploaded
 
 ## Summary

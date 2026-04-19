@@ -24,7 +24,7 @@ google-chrome-stable --remote-debugging-port=9222 --user-data-dir=/tmp/chrome-de
 ```
 
 **Targets:**
-- Staging: `https://pitchey-5o8.pages.dev`
+- Staging: `https://pitchey.pages.dev`
 - Production: `https://pitchey.com`
 
 **Key MCP tools:**

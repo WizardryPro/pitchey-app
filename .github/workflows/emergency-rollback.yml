@@ -365,7 +365,7 @@ jobs:
           if [ -n "${{ secrets.CLOUDFLARE_ZONE_ID }}" ]; then
             # Check main domain
             MAIN_RECORD=$(curl -s -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
-              "$CLOUDFLARE_API_BASE/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/dns_records?name=pitchey-5o8.pages.dev")
+              "$CLOUDFLARE_API_BASE/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/dns_records?name=pitchey.pages.dev")
             
             echo "Current DNS configuration validated"
           fi
@@ -447,7 +447,7 @@ jobs:
         run: |
           echo "🔍 Health checking rolled back frontend..."
           
-          FRONTEND_URL="https://pitchey-5o8.pages.dev"
+          FRONTEND_URL="https://pitchey.pages.dev"
           MAX_ATTEMPTS=10
           RETRY_INTERVAL=30
           
@@ -567,7 +567,7 @@ jobs:
               "healthCheck": "${{ needs.post-rollback-health.result }}"
             },
             "urls": {
-              "frontend": "https://pitchey-5o8.pages.dev",
+              "frontend": "https://pitchey.pages.dev",
               "api": "https://pitchey-api-prod.ndlovucavelle.workers.dev",
               "health": "https://pitchey-api-prod.ndlovucavelle.workers.dev/api/health"
             }

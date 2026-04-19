@@ -21,7 +21,7 @@ interface AuthEnv {
 export function createAuth(env: AuthEnv) {
   const auth = betterAuth({
     appName: "Pitchey",
-    baseURL: env.FRONTEND_URL || "https://pitchey-5o8.pages.dev",
+    baseURL: env.FRONTEND_URL || "https://pitchey.pages.dev",
     secret: env.JWT_SECRET,
     
     // Database configuration - use direct PostgreSQL connection
@@ -104,7 +104,7 @@ export function createAuth(env: AuthEnv) {
 
     // Trusted origins
     trustedOrigins: [
-      "https://pitchey-5o8.pages.dev",
+      "https://pitchey.pages.dev",
       "https://pitchey-api-prod.ndlovucavelle.workers.dev",
       "https://pitchey-api-prod.ndlovucavelle.workers.dev",
       env.NODE_ENV === "development" ? "http://localhost:5173" : null,

@@ -364,7 +364,7 @@ export class AlertingService {
           }
         },
         client: 'Pitchey Monitoring',
-        client_url: `https://pitchey-5o8.pages.dev/monitoring/alerts/${alert.id}`
+        client_url: `https://pitchey.pages.dev/monitoring/alerts/${alert.id}`
       };
 
       const response = await fetch('https://events.pagerduty.com/v2/enqueue', {
@@ -632,7 +632,7 @@ export class AlertingService {
           </ul>
           
           <p>
-            <a href="https://pitchey-5o8.pages.dev/monitoring/alerts/${alert.id}" 
+            <a href="https://pitchey.pages.dev/monitoring/alerts/${alert.id}" 
                style="background: #0284c7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
               View Alert
             </a>

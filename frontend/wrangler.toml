@@ -1,9 +1,9 @@
 # Cloudflare Pages configuration for the frontend only
 # This ensures all deployments go to your original project domain
-# Domain: https://pitchey-5o8-66n.pages.dev
+# Domain: https://pitchey.pages.dev
 
 # Name of the Cloudflare Pages project (your original project)
-name = "pitchey-5o8"
+name = "pitchey"
 
 # Directory to deploy for Pages (relative to this file)
 pages_build_output_dir = "dist"

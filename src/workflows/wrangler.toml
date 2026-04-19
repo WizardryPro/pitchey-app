@@ -61,7 +61,7 @@ max_batch_timeout = 30
 # Environment variables
 [vars]
 ENVIRONMENT = "production"
-FRONTEND_URL = "https://pitchey-5o8.pages.dev"
+FRONTEND_URL = "https://pitchey.pages.dev"
 API_VERSION = "v1"
 MAX_WORKFLOW_RETRIES = "3"
 WORKFLOW_TIMEOUT_DAYS = "30"
@@ -91,7 +91,7 @@ vars.FRONTEND_URL = "http://localhost:5173"
 name = "pitchey-workflows-staging"
 route = "staging.pitchey-api.ndlovucavelle.workers.dev/*"
 vars.ENVIRONMENT = "staging"
-vars.FRONTEND_URL = "https://staging.pitchey-5o8.pages.dev"
+vars.FRONTEND_URL = "https://staging.pitchey.pages.dev"
 
 # Analytics and observability
 [observability]

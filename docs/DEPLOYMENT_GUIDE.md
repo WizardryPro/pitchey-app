@@ -76,7 +76,7 @@ Environment variables are configured via `wrangler.toml` `[vars]` section or Clo
 
 ```bash
 # Key variables (set via wrangler secret)
-FRONTEND_URL=https://pitchey-5o8.pages.dev
+FRONTEND_URL=https://pitchey.pages.dev
 UPSTASH_REDIS_REST_URL=<upstash-redis-url>
 UPSTASH_REDIS_REST_TOKEN=<upstash-token>
 SENTRY_DSN=<sentry-dsn>
@@ -379,7 +379,7 @@ DATABASE_URL=postgresql://neondb_owner:npg_xyz@ep-xyz.neon.tech/neondb?sslmode=r
 JWT_SECRET=<64-character-random-string>
 
 # CORS
-FRONTEND_URL=https://pitchey-5o8.pages.dev
+FRONTEND_URL=https://pitchey.pages.dev
 
 # Redis (Upstash)
 REDIS_URL=redis://default:password@redis-host:port
@@ -409,7 +409,7 @@ openssl rand -hex 32
 const corsOptions = {
   origin: [
     'http://localhost:5173',  // Development
-    'https://pitchey-5o8.pages.dev',  // Production
+    'https://pitchey.pages.dev',  // Production
   ],
   credentials: true,
   optionsSuccessStatus: 200

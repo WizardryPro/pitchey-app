@@ -5,7 +5,7 @@
 The Cloudflare Containers implementation for Pitchey has been successfully deployed and integrated with the production platform.
 
 ### Production URLs
-- **Frontend**: https://pitchey-5o8-66n.pages.dev
+- **Frontend**: https://pitchey.pages.dev
 - **API & Containers**: https://pitchey-api-prod.ndlovucavelle.workers.dev
 - **Container Endpoints**: `/api/containers/*`
 

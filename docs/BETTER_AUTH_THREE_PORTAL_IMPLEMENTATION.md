@@ -2,7 +2,7 @@
 
 ## 🎯 Overview
 
-This document describes the Better Auth implementation for Pitchey's three-portal authentication system, deployed at **https://pitchey-5o8.pages.dev**. The system provides secure, session-based authentication for three distinct user types:
+This document describes the Better Auth implementation for Pitchey's three-portal authentication system, deployed at **https://pitchey.pages.dev**. The system provides secure, session-based authentication for three distinct user types:
 - **Creator Portal**: For content creators pitching their projects
 - **Investor Portal**: For investors reviewing and funding projects  
 - **Production Portal**: For production companies managing projects
@@ -282,7 +282,7 @@ VITE_WS_URL=ws://localhost:8001
 npm run build
 
 # Deploy to Cloudflare Pages
-wrangler pages deploy frontend/dist --project-name=pitchey-5o8
+wrangler pages deploy frontend/dist --project-name=pitchey
 
 # Deploy Worker API
 wrangler deploy
@@ -332,7 +332,7 @@ curl -X POST https://pitchey-api-prod.ndlovucavelle.workers.dev/api/auth/sign-ou
 ### 3. CORS Configuration
 ```typescript
 const corsHeaders = {
-  'Access-Control-Allow-Origin': 'https://pitchey-5o8.pages.dev',
+  'Access-Control-Allow-Origin': 'https://pitchey.pages.dev',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
   'Access-Control-Allow-Credentials': 'true'

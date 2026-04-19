@@ -31,7 +31,7 @@ const DEFAULT_CONFIG = {
   sessionDuration: 30 * 24 * 60 * 60 * 1000, // 30 days
   environment: 'development' as const,
   trustedOrigins: [
-    'https://pitchey-5o8.pages.dev',
+    'https://pitchey.pages.dev',
     'https://pitchey-frontend-ndlovu.pages.dev',
     'https://pitchey-api-prod.ndlovucavelle.workers.dev',
     'http://localhost:5173',

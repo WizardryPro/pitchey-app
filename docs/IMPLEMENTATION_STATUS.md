@@ -25,7 +25,7 @@ Pitchey is a comprehensive movie pitch platform connecting creators, investors, 
 ```
 
 ### Production URLs
-- **Frontend**: https://pitchey-5o8-66n.pages.dev
+- **Frontend**: https://pitchey.pages.dev
 - **API**: https://pitchey-api-prod.ndlovucavelle.workers.dev
 - **WebSocket**: wss://pitchey-api-prod.ndlovucavelle.workers.dev/ws
 

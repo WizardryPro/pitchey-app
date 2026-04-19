@@ -124,7 +124,7 @@ account_id = "$CLOUDFLARE_ACCOUNT_ID"
 ENVIRONMENT = "$ENVIRONMENT"
 REGION = "$REGION"
 DATA_CENTER = "$DATA_CENTER"
-FRONTEND_URL = "https://$SUBDOMAIN_PREFIX.pitchey-5o8.pages.dev"
+FRONTEND_URL = "https://$SUBDOMAIN_PREFIX.pitchey.pages.dev"
 
 # Regional KV namespace
 [[kv_namespaces]]

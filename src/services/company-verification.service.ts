@@ -323,7 +323,7 @@ export function shouldAutoApprove(checks: AutoCheckResults, hasCompanyNumber: bo
 // ---------------------------------------------------------------------------
 
 export async function submitVerification(
-  sql: ReturnType<typeof neon>,
+  sql: ReturnType<typeof neon<false, false>>,
   submission: VerificationSubmission,
   autoChecks: AutoCheckResults,
   autoApproved: boolean,
@@ -371,7 +371,7 @@ export async function submitVerification(
 }
 
 export async function getVerificationStatus(
-  sql: ReturnType<typeof neon>,
+  sql: ReturnType<typeof neon<false, false>>,
   userId: string,
 ): Promise<Record<string, unknown> | null> {
   const rows = await sql`
@@ -386,7 +386,7 @@ export async function getVerificationStatus(
 }
 
 export async function listVerifications(
-  sql: ReturnType<typeof neon>,
+  sql: ReturnType<typeof neon<false, false>>,
   statusFilter?: string,
   limit = 50,
   offset = 0,
@@ -420,7 +420,7 @@ export async function listVerifications(
 }
 
 export async function reviewVerification(
-  sql: ReturnType<typeof neon>,
+  sql: ReturnType<typeof neon<false, false>>,
   verificationId: string,
   reviewerId: string,
   approved: boolean,
@@ -446,7 +446,7 @@ export async function reviewVerification(
 }
 
 export async function isProductionVerified(
-  sql: ReturnType<typeof neon>,
+  sql: ReturnType<typeof neon<false, false>>,
   userId: string,
 ): Promise<boolean> {
   const rows = await sql`
@@ -481,7 +481,7 @@ export function calculateVerificationTier(
 }
 
 export async function updateUserVerificationTier(
-  sql: ReturnType<typeof neon>,
+  sql: ReturnType<typeof neon<false, false>>,
   userId: string,
 ): Promise<void> {
   const rows = await sql`

@@ -29,7 +29,7 @@ export class EnhancedNDAEndpointsHandler {
 
   async handleNDARequest(request: Request, path: string, method: string, userAuth?: AuthPayload): Promise<Response> {
     const corsHeaders = {
-      'Access-Control-Allow-Origin': this.env.FRONTEND_URL || 'https://pitchey-5o8.pages.dev',
+      'Access-Control-Allow-Origin': this.env.FRONTEND_URL || 'https://pitchey.pages.dev',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Cookie',
       'Access-Control-Allow-Credentials': 'true',

@@ -21,7 +21,7 @@ Revenue model: subscription tiers + credit system (Stripe-backed, but see gaps b
 [User Browser]
      │
      ▼
-[Cloudflare Pages]  ←── React + Vite frontend (pitchey-5o8.pages.dev)
+[Cloudflare Pages]  ←── React + Vite frontend (pitchey.pages.dev)
      │
      │  /api/* requests proxied via Pages Functions
      ▼

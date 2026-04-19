@@ -60,7 +60,7 @@ Several migrations happened in overlapping waves:
 
 **Portal access control breach.** Systematic vulnerability — any authenticated user could hit any portal's API. A creator could `GET /api/investor/dashboard` with their own token and receive investor data. Fixed by `PortalAccessController.validatePortalAccess()` middleware (now at `src/middleware/portal-access-control.ts`) that inspects `userType` against per-portal allowlists and logs security violations. This predates the current role-based RBAC system but was the first meaningful access control layer.
 
-**CORS violations.** Frontend at `pitchey-5o8.pages.dev` calling the worker directly hit `Access-Control-Allow-Origin` failures. Solved first with a comprehensive CORS header helper, later obsoleted entirely by the Pages Functions proxy (Era 3).
+**CORS violations.** Frontend at `pitchey.pages.dev` calling the worker directly hit `Access-Control-Allow-Origin` failures. Solved first with a comprehensive CORS header helper, later obsoleted entirely by the Pages Functions proxy (Era 3).
 
 **Lesson preserved:** a custom JWT implementation buys you nothing and costs you real time when you also need 2FA, password reset, session revocation, and brute-force protection. Better Auth with plugins replaced hundreds of lines of bespoke auth code including the MFA implementation. The `twoFactor()` plugin replaced a hand-rolled version entirely.
 

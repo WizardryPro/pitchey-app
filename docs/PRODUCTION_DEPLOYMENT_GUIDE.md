@@ -2,7 +2,7 @@
 
 ## 🌐 Production Environment
 
-**Frontend**: https://pitchey-5o8-66n.pages.dev/  
+**Frontend**: https://pitchey.pages.dev/  
 **Backend API**: https://pitchey-api-prod.ndlovucavelle.workers.dev  
 **GitHub Repository**: Connected to Cloudflare Pages for automatic deployments
 
@@ -216,7 +216,7 @@ Database (Neon PostgreSQL)
 ## 📞 Support Contacts
 
 **Repository**: Connected to GitHub for automatic deployments  
-**Frontend URL**: https://pitchey-5o8-66n.pages.dev/  
+**Frontend URL**: https://pitchey.pages.dev/  
 **API URL**: https://pitchey-api-prod.ndlovucavelle.workers.dev  
 
 **Last Updated**: January 5, 2026  

@@ -84,15 +84,19 @@ Available slash commands: `/deploy`, `/test`, `/migrate`
 - **NDA Detection on PitchDetail** (2026-04-15, commit `9aff8b0`): Fixed silent failure where NDA-signed users saw "Request NDA Access". `getPitch` now returns `hasSignedNDA`/`hasNDA` directly from a permissive query across historical schemas (`ndas.signer_id` → `ndas.requester_id` → `pitch_access.user_id`), replacing the frontend's inference-from-protected-fields heuristic. Each query branch wrapped in `try/catch` so column/table drift in older envs can't 500 the pitch view.
 - **Post-Login Redirect** (2026-04-17, commit `0c65290`): `frontend/src/utils/postLoginRedirect.ts` carries intended destination through the login flow via `location.state.from` (primary) and a `pitchey:pendingReturnTo` localStorage key (fallback for MFA/OTP flows that lose router state). Open-redirect guard blocks `//`, `/\`, and auth-route loopbacks. Wired into all 4 portal logins, generic `/login`, `/register`, `/login/email`, `/mfa/challenge`. `PublicPitchView` and `PortalSelect` forward the current path on click-to-login.
 - **Observability Hardening** (2026-04-17, PR #3): Closed three interlocking gaps in one pass. **Migration runner** (`scripts/migrate.mjs`) with `schema_migrations` tracking + shared CI gate (`.github/actions/deploy-preflight/`); prod baselined at 87 files. **`safeQuery` helper** (`src/db/safe-query.ts`) — discriminated union splitting "query returned empty" from "query exploded"; fixes the category of bug that hid the consumption-gate failure for weeks. **Sentry Replay masking** — `maskAllText: true`, `blockAllMedia: true`, `networkCaptureBodies: false`; closed the PII/NDA liability from 90-day replay retention. **Sentry tunnel fix** (`frontend/functions/api/monitoring/envelope.ts`) — switched to `arrayBuffer()`; discovered during masking validation that zero replays had reached Sentry since the tunnel deployed. **AE pruned** 7 → 2 datasets (kept `ANALYTICS`, `PITCHEY_ANALYTICS`; the other five had no readers). **`AXIOM_TOKEN`** is now a hard requirement in production — deploy fails if missing, worker returns 503 on first request if absent. **CI alerts have teeth** — `simple-health-check.yml` routes failures to Slack + opens a deduplicated GitHub issue. Full audit in `docs/observability-audit-2026-04-17.md`; catch-swallow migration plan in `docs/catch-swallow-audit-2026-04-17.md`.
+- **CI Permissions Sweep** (2026-04-18, PR #14): workflow-level `permissions` blocks added to 4 workflows (`security-scan`, `quality-gates`, `neon-preview`, `simple-health-check`); created missing `health-check-failure` + `incident` labels. Closed silent 403s on PR comments, issue creation, Pages deploy recording, and health-check alerting.
+- **Drizzle Subgraph Retirement** (2026-04-18, PR #14, commit `4d61b37`): -9.4k LOC / 13 files of Era 2 drizzle code deleted (3 schemas, 5 notification/transaction services, 3 background workers, `connection-manager`, `better-auth-neon-config`). Zero first-party `drizzle-orm` imports remain; "Raw SQL only" rule fully honored in the live path.
+- **URL Consolidation** (2026-04-18, PR #14, commit `002e905`): retired the `pitchey-5o8.pages.dev` Pages project, swept 87 source/config/doc references to `pitchey.pages.dev`; fixed `frontend/wrangler.toml` project name and CORS allowed-origins. Simple Health Check (which previously alerted on every run against the orphan URL) now passes.
+- **Zod v4 Migration** (2026-04-18, PR #16 — draft, pending auth smoke test): root→`zod@^4.3.4` aligning with frontend; `better-auth-cloudflare@^0.3.0` closes GHSA-gpj5-g38j-94v9 (drizzle-orm SQLi) transitively. Mechanical fixes: 19× `z.record(X) → z.record(z.string(), X)`, 2× `.error.errors → .error.issues`, 4× `z.nativeEnum → z.enum`. Transitive `better-auth` 1.4.9 → 1.6.5 requires 4-portal login + MFA smoke test before merge.
 
 ### TODO
 - **Stripe Go-Live**: Create products/prices in Stripe Dashboard, set secrets (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`), set `stripePriceId` in `src/config/subscription-plans.ts`
 - **Malware Scanning**: VirusTotal integration deferred — needs `VIRUSTOTAL_API_KEY` (free tier: 4 req/min)
 - **Full Crew Features**: Availability calendars, rate cards — deferred post-launch
 
-### Current Numbers (2026-04-17)
+### Current Numbers (2026-04-18)
 - 664 API routes, 161 pages, 182 components, 30 frontend services, 4 stores
-- 118 backend services, 71 handlers, 87 migrations (tracked in `schema_migrations`, runner at `scripts/migrate.mjs`)
+- 112 backend services, 71 handlers, 88 migrations (tracked in `schema_migrations`, runner at `scripts/migrate.mjs`)
 - 4 portals (Creator, Investor, Production, Watcher — audience-only) + Admin shell
 - 13 CI/CD workflows, 7 R2 buckets, 5 KV namespaces, 2 Durable Objects, 2 Analytics Engine datasets
 
@@ -112,7 +116,7 @@ Metrics (Analytics Engine + PG)   — 2 datasets, request_logs/error_logs tables
 
 Launch Chrome: `google-chrome-stable --remote-debugging-port=9222 --user-data-dir=/tmp/chrome-debug`
 
-**Staging**: `https://pitchey-5o8.pages.dev` | **Production**: `https://pitchey.com`
+**Staging**: `https://pitchey.pages.dev` | **Production**: `https://pitchey.com`
 
 | Tool | Purpose |
 |------|---------|
