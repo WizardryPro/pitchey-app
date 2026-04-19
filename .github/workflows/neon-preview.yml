@@ -47,8 +47,11 @@ jobs:
           cd frontend
           npm run build
         env:
-          VITE_API_URL: https://pitchey-pr-${{ github.event.pull_request.number }}.workers.dev
-          VITE_WS_URL: wss://pitchey-pr-${{ github.event.pull_request.number }}.workers.dev
+          # Worker URLs must include the account subdomain (ndlovucavelle.workers.dev),
+          # not the bare workers.dev which doesn't resolve. Matches the production pattern
+          # used by the live deploy (see worker routes in wrangler.toml).
+          VITE_API_URL: https://pitchey-pr-${{ github.event.pull_request.number }}.ndlovucavelle.workers.dev
+          VITE_WS_URL: wss://pitchey-pr-${{ github.event.pull_request.number }}.ndlovucavelle.workers.dev
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
       
       - name: Deploy preview to Cloudflare Pages
@@ -63,7 +66,7 @@ jobs:
           deploymentName: pr-${{ github.event.pull_request.number }}
           wranglerVersion: '3'
         env:
-          VITE_API_URL: https://pitchey-pr-${{ github.event.pull_request.number }}.workers.dev
+          VITE_API_URL: https://pitchey-pr-${{ github.event.pull_request.number }}.ndlovucavelle.workers.dev
           DATABASE_URL: ${{ steps.create-branch.outputs.db_url_with_pooler }}
           
       - name: Deploy Worker preview
