@@ -134,12 +134,16 @@ jobs:
             
             ### Useful Commands
             \`\`\`bash
-            # Connect to preview database
-            psql "${{ steps.create-branch.outputs.db_url_with_pooler }}"
-            
+            # Connect to preview database — password in Neon console or via:
+            #   neonctl cs <branch-id> --project-id $NEON_PROJECT_ID --role-name neondb_owner
+            psql --host=${dbHost} --username=neondb_owner --dbname=neondb
+
             # View logs
             wrangler tail --name pitchey-pr-${prNumber}
             \`\`\`
+
+            > **Note:** The connection password is intentionally NOT printed in this comment.
+            > A prior version of this workflow leaked the full DSN — fixed in commit after.
             
             ---
             *This preview will be automatically deleted when the PR is merged or closed.*`;
