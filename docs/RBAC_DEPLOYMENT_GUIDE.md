@@ -64,7 +64,7 @@ cd frontend
 npm run build
 
 # 2. Deploy to Cloudflare Pages
-npx wrangler pages deploy dist --project-name pitchey-5o8 --branch main
+npx wrangler pages deploy dist --project-name=pitchey --branch main
 ```
 
 ### Phase 4: Verification

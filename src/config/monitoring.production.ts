@@ -521,7 +521,7 @@ export const productionMonitoringConfig: MonitoringConfig = {
         'Non-Error promise rejection captured'
       ],
       allowedDomains: [
-        'pitchey-5o8.pages.dev',
+        'pitchey.pages.dev',
         'pitchey.com',
         'ndlovucavelle.workers.dev'
       ],

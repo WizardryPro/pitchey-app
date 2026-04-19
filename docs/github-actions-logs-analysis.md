@@ -178,7 +178,7 @@ gh secret list --repo CavellTopDev/pitchey-app
 - name: Health Check with Retry
   run: |
     for i in {1..3}; do
-      if curl -f https://pitchey-5o8.pages.dev/health; then
+      if curl -f https://pitchey.pages.dev/health; then
         echo "Health check passed"
         break
       fi

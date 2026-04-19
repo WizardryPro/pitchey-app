@@ -6,8 +6,8 @@ Loads automatically when working in `src/`. For general architecture see root CL
 
 File: `utils/response.ts` — `getCorsHeaders()` (line 82)
 
-Allowed origins: `pitchey-5o8.pages.dev`, `pitchey.com`, `localhost:5173/3000`
-Plus dynamic: any `*.pitchey-5o8.pages.dev` Cloudflare preview deployment.
+Allowed origins: `pitchey.pages.dev`, `pitchey.com`, `localhost:5173/3000`
+Plus dynamic: any `*.pitchey.pages.dev` Cloudflare preview deployment.
 
 Allowed headers (line 102):
 ```

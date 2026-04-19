@@ -122,7 +122,7 @@ Sentry.replayIntegration({
 
 ### Staging replay validation — 2026-04-17
 
-Procedure (via chrome-devtools MCP against staging preview deploy `28c057bb.pitchey-5o8.pages.dev`):
+Procedure (via chrome-devtools MCP against staging preview deploy `28c057bb.pitchey.pages.dev`):
 1. Deployed the new replay config + tunnel fix to a preview branch
 2. Logged in as demo creator, navigated to `/creator/pitch/262` (pitch with real synopsis content: "Dr. Maya Chen", NASA, solar storm, etc.)
 3. Fired an unhandled `throw new Error(...)` to trigger the error-sampled replay flush

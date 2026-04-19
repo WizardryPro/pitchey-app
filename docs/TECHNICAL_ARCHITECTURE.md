@@ -484,7 +484,7 @@ Redis:    localhost:6379 (Docker container)
 #### Production Environment
 ```bash
 # Production deployment
-Frontend: https://pitchey-5o8.pages.dev (cloudflare-pages)
+Frontend: https://pitchey.pages.dev (cloudflare-pages)
 Backend:  https://pitchey-api-prod.ndlovucavelle.workers.dev (Cloudflare Workers)
 Database: Neon PostgreSQL (cloud-hosted)
 Redis:    Upstash Redis (cloud-hosted)
@@ -495,7 +495,7 @@ Redis:    Upstash Redis (cloud-hosted)
 # Required environment variables
 DATABASE_URL=postgresql://user:pass@host:port/db?sslmode=require
 JWT_SECRET=your-secret-key
-FRONTEND_URL=https://pitchey-5o8.pages.dev
+FRONTEND_URL=https://pitchey.pages.dev
 REDIS_URL=redis://localhost:6379
 PORT=8001
 ```

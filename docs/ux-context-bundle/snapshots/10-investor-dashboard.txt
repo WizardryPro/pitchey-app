@@ -1,4 +1,4 @@
-uid=35_0 RootWebArea "Pitchey - Where Ideas Meet Investment" url="https://pitchey-5o8.pages.dev/investor/dashboard"
+uid=35_0 RootWebArea "Pitchey - Where Ideas Meet Investment" url="https://pitchey.pages.dev/investor/dashboard"
   uid=37_0 ignored
     uid=37_1 ignored [selected in the DevTools Elements panel]
       uid=37_2 generic
@@ -6,17 +6,17 @@ uid=35_0 RootWebArea "Pitchey - Where Ideas Meet Investment" url="https://pitche
           uid=36_0 banner
             uid=37_4 ignored
               uid=36_1 button "Toggle menu"
-              uid=36_2 link "Pitchey" url="https://pitchey-5o8.pages.dev/"
+              uid=36_2 link "Pitchey" url="https://pitchey.pages.dev/"
                 uid=37_5 ignored
                   uid=36_3 StaticText "Pitchey"
                     uid=37_6 InlineTextBox "Pitchey"
               uid=37_7 ignored
               uid=36_4 navigation
-                uid=36_5 link "Home" url="https://pitchey-5o8.pages.dev/"
+                uid=36_5 link "Home" url="https://pitchey.pages.dev/"
                   uid=37_8 ignored
                     uid=36_6 StaticText "Home"
                       uid=37_6 InlineTextBox "Home"
-                uid=36_7 link "Marketplace" url="https://pitchey-5o8.pages.dev/marketplace"
+                uid=36_7 link "Marketplace" url="https://pitchey.pages.dev/marketplace"
                   uid=37_9 ignored
                     uid=36_8 StaticText "Marketplace"
                       uid=37_6 InlineTextBox "Marketplace"

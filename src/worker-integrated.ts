@@ -1930,7 +1930,7 @@ class RouteRegistry {
     this.register('GET', '/api/auth/verify-email', async (request: Request) => {
       const url = new URL(request.url);
       const token = url.searchParams.get('token');
-      const frontendUrl = this.env.FRONTEND_URL || 'https://pitchey-5o8.pages.dev';
+      const frontendUrl = this.env.FRONTEND_URL || 'https://pitchey.pages.dev';
 
       if (!token) {
         return Response.redirect(`${frontendUrl}/login?verified=false`, 302);
@@ -9306,7 +9306,7 @@ pitchey_analytics_datapoints_per_minute 1250
       // If Stripe is configured, create a Checkout Session
       if (stripeKey) {
         const stripe = new StripeService(stripeKey);
-        const frontendUrl = (this.env as any).FRONTEND_URL || 'https://pitchey-5o8.pages.dev';
+        const frontendUrl = (this.env as any).FRONTEND_URL || 'https://pitchey.pages.dev';
         const session = await stripe.createCreditPurchaseCheckout({
           userId: authResult.user!.id,
           email: authResult.user!.email || '',
@@ -9720,7 +9720,7 @@ pitchey_analytics_datapoints_per_minute 1250
       }
 
       const stripe = new StripeService(stripeKey);
-      const frontendUrl = (this.env as any).FRONTEND_URL || 'https://pitchey-5o8.pages.dev';
+      const frontendUrl = (this.env as any).FRONTEND_URL || 'https://pitchey.pages.dev';
       const session = await stripe.createSubscriptionCheckout({
         userId: authResult.user!.id,
         email: authResult.user!.email || '',

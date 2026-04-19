@@ -86,7 +86,7 @@ jobs:
             const prNumber = context.issue.number;
             const neonBranch = 'preview/pr-' + prNumber;
             const dbHost = '${{ steps.create-branch.outputs.host }}';
-            const previewUrl = 'https://pr-' + prNumber + '.pitchey-5o8.pages.dev';
+            const previewUrl = 'https://pr-' + prNumber + '.pitchey.pages.dev';
             const apiUrl = 'https://pitchey-pr-' + prNumber + '.workers.dev';
             
             const comment = `## 🚀 Preview Environment Ready!

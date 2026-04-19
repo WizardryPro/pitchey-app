@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Sitemap: https://pitchey-5o8.pages.dev/sitemap.xml
+Sitemap: https://pitchey.pages.dev/sitemap.xml

@@ -1,4 +1,4 @@
-uid=15_0 RootWebArea "Pitchey - Where Ideas Meet Investment" url="https://pitchey-5o8.pages.dev/portals"
+uid=15_0 RootWebArea "Pitchey - Where Ideas Meet Investment" url="https://pitchey.pages.dev/portals"
   uid=16_0 ignored
     uid=16_1 ignored [selected in the DevTools Elements panel]
       uid=16_2 generic
@@ -63,7 +63,7 @@ uid=15_0 RootWebArea "Pitchey - Where Ideas Meet Investment" url="https://pitche
                     uid=16_6 InlineTextBox "Don't have an account?"
                   uid=15_13 StaticText " "
                     uid=16_6 InlineTextBox " "
-                  uid=15_14 link "Sign up" url="https://pitchey-5o8.pages.dev/register"
+                  uid=15_14 link "Sign up" url="https://pitchey.pages.dev/register"
                     uid=15_15 StaticText "Sign up"
                       uid=16_6 InlineTextBox "Sign up"
       uid=16_39 generic

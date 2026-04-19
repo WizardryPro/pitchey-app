@@ -4,7 +4,7 @@ echo "🔍 COMPREHENSIVE END-TO-END FRONTEND-BACKEND CORRELATION TEST"
 echo "=============================================================="
 
 # Configuration
-FRONTEND_URL="https://48a55f89.pitchey-5o8.pages.dev"
+FRONTEND_URL="https://48a55f89.pitchey.pages.dev"
 BACKEND_URL="https://pitchey-api-prod.ndlovucavelle.workers.dev"
 
 echo -e "\n1. 📋 ENVIRONMENT CONFIGURATION CHECK"

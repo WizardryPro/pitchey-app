@@ -217,7 +217,7 @@ const tests = [
       
       // Check CORS headers
       const corsHeader = response.headers['access-control-allow-origin'];
-      return corsHeader === '*' || corsHeader === 'http://localhost:5173' || corsHeader === 'https://pitchey-5o8.pages.dev';
+      return corsHeader === '*' || corsHeader === 'http://localhost:5173' || corsHeader === 'https://pitchey.pages.dev';
     }
   }
 ];

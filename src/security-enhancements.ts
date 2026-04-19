@@ -44,7 +44,7 @@ export function secureResponse(request: Request, data: any, statusCode: number =
 function getAllowedOrigin(request: Request): string {
   const origin = request.headers.get('Origin');
   const allowedOrigins = [
-    'https://pitchey-5o8.pages.dev',
+    'https://pitchey.pages.dev',
     'https://pitchey-frontend.pages.dev',
     'http://localhost:5173',
     'http://localhost:3000',
@@ -66,7 +66,7 @@ function getAllowedOrigin(request: Request): string {
     return origin;
   }
   
-  return 'https://pitchey-5o8.pages.dev';
+  return 'https://pitchey.pages.dev';
 }
 
 // Input sanitization and validation

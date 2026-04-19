@@ -34,7 +34,7 @@ VITE_WS_URL=ws://localhost:8001
 ```
 VITE_API_URL=
 VITE_WS_URL=wss://pitchey-api-prod.ndlovucavelle.workers.dev
-VITE_FRONTEND_URL=https://pitchey-5o8.pages.dev
+VITE_FRONTEND_URL=https://pitchey.pages.dev
 VITE_DISABLE_WEBSOCKET=false
 VITE_ENABLE_REALTIME=true
 VITE_ENABLE_ANALYTICS=true
@@ -55,7 +55,7 @@ Frontend env vars require a restart to take effect.
 - Worker dev: http://localhost:8787
 
 ### Production
-- Frontend: https://pitchey-5o8.pages.dev
+- Frontend: https://pitchey.pages.dev
 - API: https://pitchey-api-prod.ndlovucavelle.workers.dev
 - WebSocket: wss://pitchey-api-prod.ndlovucavelle.workers.dev/ws
 

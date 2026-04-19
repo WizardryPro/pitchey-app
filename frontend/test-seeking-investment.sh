@@ -3,7 +3,7 @@
 set -e
 
 API_URL="https://pitchey-api-prod.ndlovucavelle.workers.dev"
-FRONTEND_URL="https://bf53246c.pitchey-5o8.pages.dev"
+FRONTEND_URL="https://bf53246c.pitchey.pages.dev"
 
 echo "===================================="
 echo "Testing Seeking Investment Feature"

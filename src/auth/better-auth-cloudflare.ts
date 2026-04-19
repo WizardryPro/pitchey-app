@@ -97,7 +97,7 @@ export async function initBetterAuth(env: Env, request?: Request) {
       {
         // Core configuration
         appName: "Pitchey",
-        baseURL: env.FRONTEND_URL || "https://pitchey-5o8.pages.dev",
+        baseURL: env.FRONTEND_URL || "https://pitchey.pages.dev",
         secret: env.JWT_SECRET,
         
         // Database configuration
@@ -199,7 +199,7 @@ export async function initBetterAuth(env: Env, request?: Request) {
           useSecureCookies: env.NODE_ENV === "production",
           crossSubDomainCookies: {
             enabled: true,
-            domain: ".pitchey-5o8.pages.dev"
+            domain: ".pitchey.pages.dev"
           },
           ipAddress: {
             ipAddressHeaders: ["cf-connecting-ip", "x-forwarded-for"]
@@ -208,7 +208,7 @@ export async function initBetterAuth(env: Env, request?: Request) {
         
         // Trusted origins
         trustedOrigins: [
-          "https://pitchey-5o8.pages.dev",
+          "https://pitchey.pages.dev",
           "https://pitchey-api-prod.ndlovucavelle.workers.dev",
           "https://pitchey-api-prod.ndlovucavelle.workers.dev",
           env.NODE_ENV === "development" ? "http://localhost:5173" : "",
@@ -301,8 +301,8 @@ export async function initBetterAuth(env: Env, request?: Request) {
           // Passkey/WebAuthn support
           passkey({
             rpName: "Pitchey",
-            rpID: "pitchey-5o8.pages.dev",
-            origin: env.FRONTEND_URL || "https://pitchey-5o8.pages.dev"
+            rpID: "pitchey.pages.dev",
+            origin: env.FRONTEND_URL || "https://pitchey.pages.dev"
           }),
           
           // OpenAPI documentation

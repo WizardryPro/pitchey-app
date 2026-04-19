@@ -63,7 +63,7 @@ export default {
     // CORS headers for cross-origin requests from frontend
     const corsHeaders = {
       'Access-Control-Allow-Origin': env.ENVIRONMENT === 'production' 
-        ? 'https://pitchey-5o8.pages.dev'
+        ? 'https://pitchey.pages.dev'
         : '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-User-ID, X-User-Type',

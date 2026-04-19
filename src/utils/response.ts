@@ -30,7 +30,7 @@ export interface ErrorDetails {
 
 // CORS configuration - centralized
 const ALLOWED_ORIGINS = [
-  'https://pitchey-5o8.pages.dev',     // Primary production (Cloudflare Pages)
+  'https://pitchey.pages.dev',     // Primary production (Cloudflare Pages)
   'https://pitchey.com',               // Custom domain (future)
   'http://localhost:5173',             // Local development (Vite)
   'http://127.0.0.1:5173',            // Local development (Vite via IP)
@@ -51,16 +51,16 @@ function isOriginAllowed(origin: string | null): boolean {
   }
   
   // Allow all Cloudflare Pages preview deployments
-  // Pattern 1: [hash].pitchey-5o8.pages.dev (e.g., 01750dbc.pitchey-5o8.pages.dev)
-  // Pattern 2: [hash].pitchey-[id].pages.dev (e.g., 01750dbc.pitchey-5o8.pages.dev)
+  // Pattern 1: [hash].pitchey.pages.dev (e.g., 01750dbc.pitchey.pages.dev)
+  // Pattern 2: [hash].pitchey-[id].pages.dev (e.g., 01750dbc.pitchey.pages.dev)
   // Pattern 3: pitchey-[anything].pages.dev (e.g., pitchey-frontend.pages.dev)
-  // Pattern 4: [anything].pitchey-5o8.pages.dev (e.g., preview.pitchey-5o8.pages.dev)
-  // Pattern 5: Main deployment (pitchey-5o8.pages.dev)
-  if (cleanOrigin.match(/^https:\/\/[a-f0-9]+\.pitchey-5o8\.pages\.dev$/) ||       // Hash-based preview
+  // Pattern 4: [anything].pitchey.pages.dev (e.g., preview.pitchey.pages.dev)
+  // Pattern 5: Main deployment (pitchey.pages.dev)
+  if (cleanOrigin.match(/^https:\/\/[a-f0-9]+\.pitchey\.pages\.dev$/) ||       // Hash-based preview
       cleanOrigin.match(/^https:\/\/[a-f0-9]+\.pitchey-[a-z0-9-]+\.pages\.dev$/) || // Hash with project ID
       cleanOrigin.match(/^https:\/\/pitchey-[a-zA-Z0-9-]+\.pages\.dev$/) ||       // Named deployments
-      cleanOrigin.match(/^https:\/\/[a-zA-Z0-9-]+\.pitchey-5o8\.pages\.dev$/) ||  // Subdomains
-      cleanOrigin === 'https://pitchey-5o8.pages.dev' ||                          // Main deployment
+      cleanOrigin.match(/^https:\/\/[a-zA-Z0-9-]+\.pitchey\.pages\.dev$/) ||  // Subdomains
+      cleanOrigin === 'https://pitchey.pages.dev' ||                          // Main deployment
       cleanOrigin === 'https://pitchey-main.pages.dev') {                         // Main branch
     return true;
   }
@@ -94,7 +94,7 @@ export function getCorsHeaders(origin?: string | null): Record<string, string> {
   // For security, we still set specific origins when possible
   const allowOrigin = isAllowedOrigin && requestOrigin 
     ? requestOrigin 
-    : ALLOWED_ORIGINS[0]; // defaults to pitchey-5o8.pages.dev
+    : ALLOWED_ORIGINS[0]; // defaults to pitchey.pages.dev
   
   return {
     "Access-Control-Allow-Origin": allowOrigin,

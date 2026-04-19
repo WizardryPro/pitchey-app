@@ -316,7 +316,7 @@ jobs:
         run: npx playwright test --project=critical-user-journeys --project=portal-functionality
         env:
           CI: true
-          PLAYWRIGHT_BASE_URL: https://pitchey-5o8.pages.dev
+          PLAYWRIGHT_BASE_URL: https://pitchey.pages.dev
 
       - name: 📊 Upload Playwright report
         uses: actions/upload-artifact@v4
@@ -343,7 +343,7 @@ jobs:
           echo "🏥 Running daily health monitoring..."
           
           API_URL="https://pitchey-api-prod.ndlovucavelle.workers.dev"
-          FRONTEND_URL="https://pitchey-5o8.pages.dev"
+          FRONTEND_URL="https://pitchey.pages.dev"
           
           # Test API health
           echo "🔍 Testing API health..."

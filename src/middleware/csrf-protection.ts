@@ -20,8 +20,8 @@ const TOKEN_MAX_AGE = 7200; // 2 hours
 
 // Allowed origins for CSRF validation
 const ALLOWED_ORIGINS = [
-  'https://pitchey-5o8.pages.dev',
-  'https://pitchey-5o8-66n.pages.dev',
+  'https://pitchey.pages.dev',
+  'https://pitchey.pages.dev',
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:3000'

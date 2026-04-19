@@ -4,7 +4,7 @@
 
 **Date**: January 5, 2026  
 **Status**: CRITICAL ISSUES IDENTIFIED  
-**Environment**: Production (https://pitchey-5o8-66n.pages.dev/)  
+**Environment**: Production (https://pitchey.pages.dev/)  
 **Impact**: Partial service degradation despite 100% health endpoint status  
 
 ## 🔍 Issue Discovery

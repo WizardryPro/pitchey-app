@@ -1,4 +1,4 @@
-uid=17_0 RootWebArea "Pitchey - Where Ideas Meet Investment" url="https://pitchey-5o8.pages.dev/pitch/229"
+uid=17_0 RootWebArea "Pitchey - Where Ideas Meet Investment" url="https://pitchey.pages.dev/pitch/229"
   uid=18_0 ignored
     uid=18_1 ignored [selected in the DevTools Elements panel]
       uid=18_2 generic

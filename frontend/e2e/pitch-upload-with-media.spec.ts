@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 const TEST_PITCH = TEST_PITCHES.actionThriller;
 
 // Production URL
-const PROD_URL = 'https://pitchey-5o8.pages.dev';
+const PROD_URL = 'https://pitchey.pages.dev';
 
 // ES module compatible paths
 const __filename = fileURLToPath(import.meta.url);

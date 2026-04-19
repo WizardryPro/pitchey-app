@@ -105,7 +105,7 @@ git push origin main
 After the workflow completes:
 
 1. Check the GitHub Actions logs for the deployment URL
-2. Visit your site at: https://pitchey-5o8.pages.dev
+2. Visit your site at: https://pitchey.pages.dev
 3. Alternative URL: https://[project-name].pages.dev
 
 ## Troubleshooting

@@ -838,7 +838,7 @@ Common error codes:
 ## CORS Configuration
 
 The API supports CORS with the following configuration:
-- **Allowed Origins**: https://pitchey-5o8.pages.dev, http://localhost:5173
+- **Allowed Origins**: https://pitchey.pages.dev, http://localhost:5173
 - **Allowed Methods**: GET, POST, PUT, DELETE, PATCH, OPTIONS
 - **Allowed Headers**: Content-Type, Authorization, X-Requested-With
 - **Credentials**: Supported (for cookie-based sessions)

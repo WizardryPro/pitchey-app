@@ -31,8 +31,8 @@ export interface Env {
 
 // CORS configuration
 const ALLOWED_ORIGINS = [
-  'https://pitchey-5o8.pages.dev',
-  'https://pitchey-5o8.pages.dev',
+  'https://pitchey.pages.dev',
+  'https://pitchey.pages.dev',
   'https://pitchey-frontend-ndlovu.pages.dev',
   'http://localhost:5173',
   'http://localhost:3000'
@@ -40,17 +40,17 @@ const ALLOWED_ORIGINS = [
 
 function getCorsHeaders(origin?: string | null): Record<string, string> {
   // SIMPLIFIED CORS LOGIC - Direct check for the frontend domain
-  let allowOrigin = 'https://pitchey-5o8.pages.dev'; // Default fallback
+  let allowOrigin = 'https://pitchey.pages.dev'; // Default fallback
   
   if (origin && origin.endsWith('.pitchey-frontend-ndlovu.pages.dev')) {
     // Allow any subdomain of pitchey-frontend-ndlovu.pages.dev (for dynamic Cloudflare deployments)
     allowOrigin = origin;
   } else if (origin === 'https://pitchey-frontend-ndlovu.pages.dev') {
     allowOrigin = origin;
-  } else if (origin === 'https://pitchey-5o8.pages.dev') {
-    allowOrigin = 'https://pitchey-5o8.pages.dev';
-  } else if (origin === 'https://pitchey-5o8.pages.dev') {
-    allowOrigin = 'https://pitchey-5o8.pages.dev';
+  } else if (origin === 'https://pitchey.pages.dev') {
+    allowOrigin = 'https://pitchey.pages.dev';
+  } else if (origin === 'https://pitchey.pages.dev') {
+    allowOrigin = 'https://pitchey.pages.dev';
   } else if (origin && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
     allowOrigin = origin; // Allow localhost for development
   }

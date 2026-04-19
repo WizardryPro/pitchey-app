@@ -60,7 +60,7 @@ export class EmailTemplateService {
       currentYear: new Date().getFullYear(),
       companyName: 'Pitchey',
       supportEmail: 'support@pitchey.com',
-      baseUrl: process.env.FRONTEND_URL || 'https://pitchey-5o8-66n.pages.dev',
+      baseUrl: process.env.FRONTEND_URL || 'https://pitchey.pages.dev',
     };
 
     // Render subject and content

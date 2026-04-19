@@ -171,7 +171,7 @@ jobs:
           
       - name: Health check - Frontend
         run: |
-          response=$(curl -s -o /dev/null -w "%{http_code}" https://pitchey-5o8.pages.dev)
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://pitchey.pages.dev)
           if [ $response -ne 200 ]; then
             echo "Frontend health check failed with status $response"
             exit 1
@@ -217,7 +217,7 @@ jobs:
                 repo: context.repo.repo,
                 deployment_id: deployment.data.id,
                 state: '${{ needs.smoke-test.result }}' === 'success' ? 'success' : 'failure',
-                environment_url: 'https://pitchey-5o8.pages.dev',
+                environment_url: 'https://pitchey.pages.dev',
                 description: `Deployment ${status}`,
               });
             } catch (error) {
@@ -245,7 +245,7 @@ jobs:
                       {
                         type: 'button',
                         text: 'View Site',
-                        url: 'https://pitchey-5o8.pages.dev'
+                        url: 'https://pitchey.pages.dev'
                       },
                       {
                         type: 'button', 
