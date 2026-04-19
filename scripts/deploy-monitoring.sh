@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 API_URL="https://pitchey-api-prod.ndlovucavelle.workers.dev"
-FRONTEND_URL="https://pitchey-5o8.pages.dev"
+FRONTEND_URL="https://pitchey.pages.dev"
 MONITORING_DIR="./monitoring/logs"
 ALERT_WEBHOOK="${ALERT_WEBHOOK:-}" # Set via environment variable
 

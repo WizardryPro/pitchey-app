@@ -16,7 +16,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 PROJECT_NAME="pitchey"
-PROD_URL="https://pitchey-5o8.pages.dev"
+PROD_URL="https://pitchey.pages.dev"
 DEMO_CREATOR_EMAIL="alex.creator@demo.com"
 DEMO_CREATOR_PASS="Demo123"
 

@@ -25,7 +25,7 @@ Visit http://localhost:5173
 
 ## Production URLs
 
-- **Frontend**: https://pitchey-5o8.pages.dev
+- **Frontend**: https://pitchey.pages.dev
 - **API**: https://pitchey-api-prod.ndlovucavelle.workers.dev
 
 ## Tech Stack

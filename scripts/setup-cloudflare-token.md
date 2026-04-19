@@ -74,5 +74,5 @@ curl -X GET "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_
 - Need to create it first: `wrangler pages project create pitchey`
 
 ## Current Production URLs
-- Frontend: https://pitchey-5o8-66n.pages.dev
+- Frontend: https://pitchey.pages.dev
 - API: https://pitchey-api-prod.ndlovucavelle.workers.dev

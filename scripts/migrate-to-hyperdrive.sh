@@ -175,7 +175,7 @@ compatibility_flags = ["nodejs_compat"]
 account_id = "e16d3bf549153de23459a6c6a06a431b"
 
 [vars]
-FRONTEND_URL = "https://pitchey-5o8.pages.dev"
+FRONTEND_URL = "https://pitchey.pages.dev"
 ENVIRONMENT = "test"
 
 [[hyperdrive]]

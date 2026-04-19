@@ -11,7 +11,7 @@ echo ""
 
 # Configuration
 API_URL="https://pitchey-api-prod.ndlovucavelle.workers.dev"
-FRONTEND_URL="https://pitchey-5o8.pages.dev"
+FRONTEND_URL="https://pitchey.pages.dev"
 TEST_RESULTS="./test-results-$(date +%Y%m%d-%H%M%S).log"
 
 # Colors

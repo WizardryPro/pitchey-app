@@ -593,7 +593,7 @@ EMERGENCY CONTACTS:
 - Infrastructure: [Add infra contact]
 
 CRITICAL ENDPOINTS:
-- Frontend: https://pitchey-5o8.pages.dev
+- Frontend: https://pitchey.pages.dev
 - API: https://pitchey-api-prod.ndlovucavelle.workers.dev
 - Health Check: https://pitchey-api-prod.ndlovucavelle.workers.dev/api/health
 EOF

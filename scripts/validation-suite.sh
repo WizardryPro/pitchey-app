@@ -9,7 +9,7 @@ set -euo pipefail
 PROJECT_ROOT="${PROJECT_ROOT:-/home/supremeisbeing/pitcheymovie/pitchey_v0.2}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 API_BASE_URL="${API_BASE_URL:-https://pitchey-api-prod.ndlovucavelle.workers.dev}"
-FRONTEND_URL="${FRONTEND_URL:-https://pitchey-5o8-66n.pages.dev}"
+FRONTEND_URL="${FRONTEND_URL:-https://pitchey.pages.dev}"
 TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-30}"
 MAX_RETRIES="${MAX_RETRIES:-3}"
 PARALLEL_TESTS="${PARALLEL_TESTS:-5}"
