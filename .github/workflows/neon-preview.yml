@@ -72,7 +72,16 @@ jobs:
       - name: Deploy Worker preview
         run: |
           npm install -g wrangler
-          wrangler deploy --name pitchey-pr-${{ github.event.pull_request.number }} --env preview
+          # Previously: `--env preview` — but no [env.preview] block exists in
+          # wrangler.toml, so wrangler silently fell back to top-level config
+          # where ENVIRONMENT="production". That tripped the AXIOM_TOKEN
+          # hard-require gate in worker-integrated.ts and 503'd every request.
+          # Override ENVIRONMENT via --var so the gate sees "preview" and skips
+          # the check. Axiom logging is a no-op without the token, which is fine
+          # for an ephemeral preview that tears down on PR close.
+          wrangler deploy \
+            --name pitchey-pr-${{ github.event.pull_request.number }} \
+            --var ENVIRONMENT:preview
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
