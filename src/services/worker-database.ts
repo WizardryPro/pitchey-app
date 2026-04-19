@@ -534,5 +534,5 @@ export const DatabaseSchemas = {
   id: z.number().int().positive(),
   email: z.string().email(),
   url: z.string().url(),
-  jsonObject: z.record(z.unknown()),
+  jsonObject: z.record(z.string(), z.unknown()),
 };

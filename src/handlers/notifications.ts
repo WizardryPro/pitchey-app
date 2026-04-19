@@ -25,7 +25,7 @@ const SendNotificationSchema = z.object({
   actionUrl: z.string().url().optional(),
   actionText: z.string().max(100).optional(),
   expiresAt: z.string().datetime().optional(),
-  variables: z.record(z.any()).default({}),
+  variables: z.record(z.string(), z.any()).default({}),
   channels: z.object({
     email: z.boolean().optional(),
     push: z.boolean().optional(),

@@ -26,7 +26,7 @@ const featureFlagSchema = z.object({
     operator: z.enum(['equals', 'contains', 'greater_than', 'less_than', 'in', 'not_in']),
     value: z.any()
   })).optional(),
-  metadata: z.record(z.any()).optional()
+  metadata: z.record(z.string(), z.any()).optional()
 });
 
 const evaluateRequestSchema = z.object({
@@ -36,7 +36,7 @@ const evaluateRequestSchema = z.object({
     email: z.string().email().optional(),
     role: z.string().optional(),
     subscription: z.string().optional(),
-    attributes: z.record(z.any()).optional(),
+    attributes: z.record(z.string(), z.any()).optional(),
     segment: z.string().optional()
   }).optional()
 });

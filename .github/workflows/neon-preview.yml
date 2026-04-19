@@ -47,8 +47,11 @@ jobs:
           cd frontend
           npm run build
         env:
-          VITE_API_URL: https://pitchey-pr-${{ github.event.pull_request.number }}.workers.dev
-          VITE_WS_URL: wss://pitchey-pr-${{ github.event.pull_request.number }}.workers.dev
+          # Worker URLs must include the account subdomain (ndlovucavelle.workers.dev),
+          # not the bare workers.dev which doesn't resolve. Matches the production pattern
+          # used by the live deploy (see worker routes in wrangler.toml).
+          VITE_API_URL: https://pitchey-pr-${{ github.event.pull_request.number }}.ndlovucavelle.workers.dev
+          VITE_WS_URL: wss://pitchey-pr-${{ github.event.pull_request.number }}.ndlovucavelle.workers.dev
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
       
       - name: Deploy preview to Cloudflare Pages
@@ -63,13 +66,36 @@ jobs:
           deploymentName: pr-${{ github.event.pull_request.number }}
           wranglerVersion: '3'
         env:
-          VITE_API_URL: https://pitchey-pr-${{ github.event.pull_request.number }}.workers.dev
+          VITE_API_URL: https://pitchey-pr-${{ github.event.pull_request.number }}.ndlovucavelle.workers.dev
           DATABASE_URL: ${{ steps.create-branch.outputs.db_url_with_pooler }}
           
       - name: Deploy Worker preview
         run: |
           npm install -g wrangler
-          wrangler deploy --name pitchey-pr-${{ github.event.pull_request.number }} --env preview
+          # GH Actions `env:` passes vars to the wrangler PROCESS, not to the
+          # deployed Worker's runtime bindings. For the Worker to see these at
+          # runtime we pass them via `--var` at deploy time. Everything is
+          # plaintext in the CF dashboard, which is acceptable for an ephemeral
+          # preview that tears down on PR close — DATABASE_URL is a preview Neon
+          # branch (not prod data), and JWT/UPSTASH are isolated to the preview
+          # worker's name. No --env flag (no [env.preview] block exists, and the
+          # fallback to top-level config is what we want).
+          # BETTER_AUTH_SECRET is NOT in GH secrets — on production it's set via
+          # `wrangler secret put BETTER_AUTH_SECRET` directly on the prod worker.
+          # For preview we use a fixed throwaway value since each preview worker
+          # is ephemeral (torn down on PR close) and only reaches a preview Neon
+          # branch with demo data. Real prod sessions can't be forged with this
+          # because they sign against the real BETTER_AUTH_SECRET on pitchey-api-prod.
+          wrangler deploy \
+            --name pitchey-pr-${{ github.event.pull_request.number }} \
+            --var ENVIRONMENT:preview \
+            --var DATABASE_URL:"$DATABASE_URL" \
+            --var JWT_SECRET:"$JWT_SECRET" \
+            --var BETTER_AUTH_SECRET:"preview-only-throwaway-secret-32chars-min-abc123xyz789" \
+            --var UPSTASH_REDIS_REST_URL:"$UPSTASH_REDIS_REST_URL" \
+            --var UPSTASH_REDIS_REST_TOKEN:"$UPSTASH_REDIS_REST_TOKEN" \
+            --var ENCRYPTION_KEY:"$ENCRYPTION_KEY" \
+            --var MFA_SECRET:"$MFA_SECRET"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -77,6 +103,8 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+          MFA_SECRET: ${{ secrets.MFA_SECRET }}
       
       - name: Comment PR with preview links
         uses: actions/github-script@v7
@@ -106,12 +134,16 @@ jobs:
             
             ### Useful Commands
             \`\`\`bash
-            # Connect to preview database
-            psql "${{ steps.create-branch.outputs.db_url_with_pooler }}"
-            
+            # Connect to preview database — password in Neon console or via:
+            #   neonctl cs <branch-id> --project-id $NEON_PROJECT_ID --role-name neondb_owner
+            psql --host=${dbHost} --username=neondb_owner --dbname=neondb
+
             # View logs
             wrangler tail --name pitchey-pr-${prNumber}
             \`\`\`
+
+            > **Note:** The connection password is intentionally NOT printed in this comment.
+            > A prior version of this workflow leaked the full DSN — fixed in commit after.
             
             ---
             *This preview will be automatically deleted when the PR is merged or closed.*`;

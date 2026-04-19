@@ -12,7 +12,7 @@ const CreateConversationSchema = z.object({
   participantIds: z.array(z.string().uuid()),
   type: z.enum(['direct', 'group', 'pitch_discussion', 'investment_chat']).default('direct'),
   name: z.string().optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 const SendMessageSchema = z.object({
@@ -27,7 +27,7 @@ const SendMessageSchema = z.object({
     thumbnailUrl: z.string().url().optional(),
   })).optional(),
   replyTo: z.string().uuid().optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 const EditMessageSchema = z.object({

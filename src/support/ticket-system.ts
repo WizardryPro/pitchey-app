@@ -37,11 +37,11 @@ export enum TicketStatus {
 // Ticket schema
 export const TicketSchema = z.object({
   id: z.string().uuid(),
-  userType: z.nativeEnum(UserType),
+  userType: z.enum(UserType),
   userId: z.string(),
-  category: z.nativeEnum(TicketCategory),
-  priority: z.nativeEnum(TicketPriority),
-  status: z.nativeEnum(TicketStatus),
+  category: z.enum(TicketCategory),
+  priority: z.enum(TicketPriority),
+  status: z.enum(TicketStatus),
   title: z.string().min(5).max(200),
   description: z.string().min(10).max(2000),
   attachments: z.array(z.string()).optional(),

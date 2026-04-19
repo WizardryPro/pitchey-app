@@ -32,10 +32,10 @@ const createExperimentSchema = z.object({
     name: z.string().min(1).max(255),
     description: z.string().optional(),
     trafficAllocation: z.number().min(0).max(1),
-    config: z.record(z.any())
+    config: z.record(z.string(), z.any())
   })).min(2),
   trafficAllocation: z.number().min(0).max(1),
-  targetingRules: z.record(z.any()).default({}),
+  targetingRules: z.record(z.string(), z.any()).default({}),
   userSegments: z.array(z.string()).default([]),
   primaryMetric: z.string().min(1).max(100),
   secondaryMetrics: z.array(z.string()).default([]),
@@ -56,7 +56,7 @@ const assignmentRequestSchema = z.object({
     userAgent: z.string().optional(),
     ipAddress: z.string().optional(),
     referrer: z.string().optional(),
-    customProperties: z.record(z.any()).optional()
+    customProperties: z.record(z.string(), z.any()).optional()
   })
 });
 
@@ -73,7 +73,7 @@ const trackEventSchema = z.object({
   eventData: z.object({
     eventName: z.string().optional(),
     eventValue: z.number().optional(),
-    properties: z.record(z.any()).optional(),
+    properties: z.record(z.string(), z.any()).optional(),
     url: z.string().optional(),
     elementId: z.string().optional(),
     elementText: z.string().optional()
@@ -86,7 +86,7 @@ const featureFlagRequestSchema = z.object({
     userId: z.number().optional(),
     sessionId: z.string().optional(),
     userType: z.string().optional(),
-    customProperties: z.record(z.any()).optional()
+    customProperties: z.record(z.string(), z.any()).optional()
   }),
   defaultValue: z.any()
 });

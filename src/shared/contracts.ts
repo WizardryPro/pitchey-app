@@ -134,7 +134,7 @@ export const InvestmentSchema = z.object({
 export const ApiSuccessSchema = <T extends z.ZodType>(dataSchema: T) => z.object({
   success: z.literal(true),
   data: dataSchema,
-  meta: z.record(z.any()).optional()
+  meta: z.record(z.string(), z.any()).optional()
 });
 
 export const ApiErrorSchema = z.object({
@@ -196,7 +196,7 @@ export const NotificationSchema = z.object({
   ]),
   title: z.string(),
   message: z.string(),
-  data: z.record(z.any()).optional(),
+  data: z.record(z.string(), z.any()).optional(),
   read: z.boolean().default(false),
   createdAt: z.string().datetime()
 });
@@ -212,9 +212,9 @@ export const PitchAnalyticsSchema = z.object({
   averageViewTime: z.number(), // in seconds
   conversionRate: z.number(), // percentage
   demographics: z.object({
-    byUserType: z.record(z.number()),
-    byLocation: z.record(z.number()),
-    byDevice: z.record(z.number())
+    byUserType: z.record(z.string(), z.number()),
+    byLocation: z.record(z.string(), z.number()),
+    byDevice: z.record(z.string(), z.number())
   }),
   engagement: z.object({
     clickThroughRate: z.number(),

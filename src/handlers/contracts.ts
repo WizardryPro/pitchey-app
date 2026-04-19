@@ -17,8 +17,8 @@ const CreateContractSchema = z.object({
     role: z.enum(['creator', 'investor', 'production', 'platform']),
     signatureRequired: z.boolean().default(true),
   })),
-  variables: z.record(z.any()).default({}),
-  metadata: z.record(z.any()).optional(),
+  variables: z.record(z.string(), z.any()).default({}),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 const SignContractSchema = z.object({
