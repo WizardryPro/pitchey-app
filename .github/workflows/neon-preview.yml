@@ -72,16 +72,21 @@ jobs:
       - name: Deploy Worker preview
         run: |
           npm install -g wrangler
-          # Previously: `--env preview` — but no [env.preview] block exists in
-          # wrangler.toml, so wrangler silently fell back to top-level config
-          # where ENVIRONMENT="production". That tripped the AXIOM_TOKEN
-          # hard-require gate in worker-integrated.ts and 503'd every request.
-          # Override ENVIRONMENT via --var so the gate sees "preview" and skips
-          # the check. Axiom logging is a no-op without the token, which is fine
-          # for an ephemeral preview that tears down on PR close.
+          # GH Actions `env:` passes vars to the wrangler PROCESS, not to the
+          # deployed Worker's runtime bindings. For the Worker to see these at
+          # runtime we pass them via `--var` at deploy time. Everything is
+          # plaintext in the CF dashboard, which is acceptable for an ephemeral
+          # preview that tears down on PR close — DATABASE_URL is a preview Neon
+          # branch (not prod data), and JWT/UPSTASH are isolated to the preview
+          # worker's name. No --env flag (no [env.preview] block exists, and the
+          # fallback to top-level config is what we want).
           wrangler deploy \
             --name pitchey-pr-${{ github.event.pull_request.number }} \
-            --var ENVIRONMENT:preview
+            --var ENVIRONMENT:preview \
+            --var DATABASE_URL:"$DATABASE_URL" \
+            --var JWT_SECRET:"$JWT_SECRET" \
+            --var UPSTASH_REDIS_REST_URL:"$UPSTASH_REDIS_REST_URL" \
+            --var UPSTASH_REDIS_REST_TOKEN:"$UPSTASH_REDIS_REST_TOKEN"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
