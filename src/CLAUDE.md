@@ -19,11 +19,19 @@ Content-Type, Authorization, X-Request-Id, X-Client-Id
 
 ## Cookie Configuration
 
-File: `auth/better-auth-cloudflare-config.ts` — `createBetterAuth()` (line 44)
+Live login writes the `pitchey-session` cookie from `handlePortalLogin()` in
+`worker-integrated.ts`. `pitchey-session` holds a UUID, is keyed to a row in the
+legacy `sessions` table, and is validated by the custom session handler —
+**not** by Better Auth. `auth/better-auth-cloudflare-config.ts` exists but its
+`createBetterAuth()` output is never wired into the live request path (issue
+#19 tracks the cleanup decision).
+
 - Name: `pitchey-session`
 - `SameSite=None`, `Secure`, `HttpOnly`, 30-day expiry, `path=/`
-- Session update age: 24 hours (avoids DB writes on every request)
-- Cookie cache: 5min (Better Auth built-in)
+- Session lookup: legacy `sessions` table, UUID key, refresh-on-use
+- Sign-out theatre: the sign-out handler also returns `Set-Cookie: better-auth-session=; Max-Age=0`
+  but nothing ever sets that cookie — it's a leftover from an earlier BA attempt
+  and can be removed in the issue #19 rip-out/migrate/document decision
 
 **Gotcha**: The Pages Functions proxy (`frontend/functions/api/[[path]].ts`) rewrites
 `SameSite=None` to `Lax` and strips `Domain`. This is correct for same-origin API calls
@@ -75,5 +83,5 @@ File: `db/logged-connection.ts` — `LoggedDatabase` wrapper
 
 ## Health & waitUntil
 
-- `GET /api/health` checks DB, KV, R2, Resend, Better Auth (3s timeout each) → `healthy | degraded | unhealthy`
+- `GET /api/health` checks DB, KV, R2, Resend, Better Auth (3s timeout each) → `healthy | degraded | unhealthy`. The Better Auth check only verifies the module imports; the adapter is not wired into live auth (see Cookie Configuration above and issue #19).
 - All `ctx.waitUntil()` promises catch internally, never break requests (fire-and-forget telemetry)

@@ -6,7 +6,7 @@ Movie pitch platform connecting creators, investors, and production companies. E
 - **Frontend**: Cloudflare Pages — React 18 + Vite + Zustand + TailwindCSS
 - **Backend**: Cloudflare Worker (`src/worker-integrated.ts`) — single entry point for all API routing
 - **Database**: Neon PostgreSQL — raw SQL, no ORM
-- **Auth**: Better Auth — session cookies only, no JWT
+- **Auth**: Custom handlers on the legacy `users`/`sessions` tables, `pitchey-session` UUID cookie. Better Auth is imported but the `createAuthAdapter` call in `src/worker-integrated.ts` has been commented out since commit `41850ea1` (2025-12-18); BA's `session`/`user`/`account`/`verification` tables are empty in prod. No JWT. Decision on rip-out vs migrate tracked in issue #19.
 - **Cache**: Upstash Redis (global)
 - **Storage**: Cloudflare R2
 
@@ -30,7 +30,7 @@ Movie pitch platform connecting creators, investors, and production companies. E
 ## Code Conventions
 - TypeScript for all new code
 - Raw SQL only (no ORM)
-- Better Auth sessions only (no JWT)
+- Sessions live in the legacy `sessions` table; cookie is `pitchey-session` (UUID). No JWT. Better Auth imports are vestigial — see root "Auth" section and issue #19 before touching.
 - `credentials: 'include'` on all API calls
 - Defensive utils (`safeAccess`, `safeNumber`, `safeArray`) for runtime safety
 - In `catch` blocks: `const e = err instanceof Error ? err : new Error(String(err))`
@@ -133,7 +133,7 @@ Launch Chrome: `google-chrome-stable --remote-debugging-port=9222 --user-data-di
 - **Sentry**: `@sentry/cloudflare` with `withSentry()`, DSN in wrangler.toml. MCP server removed — use dashboard directly
 - **Axiom**: Dataset `pitchey-logs`, token via `wrangler secret put AXIOM_TOKEN`
 - **Analytics Engine**: 2 bindings — `pitchey_metrics`, `pitchey_database_metrics` (pruned from 7 on 2026-04-17; see `docs/observability-audit-2026-04-17.md`)
-- **Health**: `GET /api/health` checks DB, KV, R2, Resend, Better Auth (3s timeout each)
+- **Health**: `GET /api/health` checks DB, KV, R2, Resend, Better Auth (3s timeout each). Note: the Better Auth health probe returns healthy as long as the module is importable — it does not verify the adapter is wired into the live request path (it isn't; see Auth section and issue #19).
 - **Logging**: `src/lib/production-logger.ts` — structured JSON, auto-redaction, requestId/traceId propagation
 - **Auth**: `src/lib/auth-observability.ts` — login/signup/session events, brute force detection (5+ failures/15min)
 - **Tracing**: W3C Trace Context, 10% sampling, 30-day retention in R2 + Analytics Engine

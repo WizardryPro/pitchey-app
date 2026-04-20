@@ -14,10 +14,10 @@ Key file: `src/config.ts` — lazy-initialized Proxy, exports `API_URL`, `WS_URL
 
 ## Auth Session Flow
 
-Cookie: `pitchey-session` (HttpOnly, Secure, 30-day expiry on backend)
+Cookie: `pitchey-session` (HttpOnly, Secure, 30-day expiry on backend). Despite the file naming, the live backend auth is **custom handlers on the legacy `sessions` table**, not Better Auth — see root CLAUDE.md "Auth" section and issue #19. The `better-auth-*` files named below still work on the frontend because they're thin wrappers around `fetch(/api/auth/...)` with `credentials: 'include'`; they never call Better Auth's server APIs. Rename deferred to avoid a noisy refactor while issue #19's decision is pending.
 
-1. `src/lib/better-auth-client.tsx` — Better Auth client, `baseURL` is empty in prod, `credentials: 'include'`
-2. `src/store/betterAuthStore.ts` — primary auth state (Zustand)
+1. `src/lib/better-auth-client.tsx` — session-fetch client (name is legacy), `baseURL` is empty in prod, `credentials: 'include'`
+2. `src/store/betterAuthStore.ts` — primary auth state (Zustand), talks to the custom backend handlers
 3. `src/store/sessionCache.ts` — localStorage cache (5min TTL), invalidated when cookie fingerprint changes
 4. `src/lib/session-manager.ts` — deduplicates session checks (30s min interval), returns in-progress promise to prevent races
 
