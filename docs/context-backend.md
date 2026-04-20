@@ -7,11 +7,41 @@ Cloudflare Worker handling all API routing, auth, database, caching, and storage
 - **Build**: esbuild (`esbuild.config.js` at root)
 - **Runtime**: Cloudflare Workers (V8 isolates, not Node.js)
 
-## Authentication — Better Auth ONLY
-- **Cookie-Based Sessions**: Secure HTTP-only cookies (`pitchey-session`)
-- **No JWT Headers**: Authorization headers are NOT used
-- **Unified Auth Flow**: Single system for all portal types
-- Migrated from JWT to Better Auth in December 2024
+## Authentication — Custom Handlers on Legacy Sessions
+
+The header used to say "Better Auth ONLY." It wasn't true. The live path is:
+
+- **Login**: `handlePortalLogin()` in `worker-integrated.ts` — direct SQL against `users`, writes a row to the legacy `sessions` table, returns a `pitchey-session` UUID cookie.
+- **Session lookup**: custom middleware reads `pitchey-session`, joins `sessions`.
+- **Sign-out**: deletes the `sessions` row; cookie-clear header also zeros a stray `better-auth-session` cookie name that nothing ever sets (theatre).
+- **No JWT headers**: `Authorization: Bearer …` is not used anywhere in the live flow.
+
+Better Auth is imported but the `createAuthAdapter` call in
+`src/worker-integrated.ts` has been commented out since commit `41850ea1`
+(2025-12-18). Grep to find the current site:
+
+```typescript
+// Initialize Better Auth adapter (commented out - causing runtime error)
+// this.authAdapter = createAuthAdapter(env);
+```
+
+BA's `user`, `session`, `account`, and `verification` tables are empty in prod;
+the `src/auth/better-auth-*.ts` files are code that doesn't execute. Some
+imports still compile-check against your handler shapes, which is where the
+"Better Auth is live" docs drift came from — types validated against BA's API
+surface even though no runtime call reached it.
+
+**Known side-effect**: `src/auth/auth-adapter.ts` returns 503 "Authentication
+system is being upgraded" for any non-demo email from its `authenticate()`
+fallback branch. `UserProfileRoutes` calls this adapter's `requireAuth()` in
+five handlers, so user-profile endpoints 503 for real (non-demo) users. Either
+the endpoints aren't hit by anyone real yet, or there's a bigger-than-BA bug
+hiding here. Flagged in issue #19.
+
+**Decision pending** (issue #19):
+1. Rip BA out entirely (smallest diff, requires grep sweep)
+2. Find the Dec 2025 runtime error, fix it, actually wire BA in (2–4 weeks)
+3. Document and leave (what this doc update does — least work, most honest)
 
 ### Primary Endpoints
 - `POST /api/auth/sign-in` — unified sign-in
