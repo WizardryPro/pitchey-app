@@ -283,10 +283,12 @@ This document describes the comprehensive CI/CD pipeline for the Pitchey platfor
 - **Database**: Neon PostgreSQL (production)
 - **Cache**: Upstash Redis (production)
 
+<!--
 ### Staging
-- **API**: `https://pitchey-api-staging.ndlovucavelle.workers.dev`
-- **Frontend**: `https://pitchey-staging.pages.dev`
-- **Database**: Neon PostgreSQL (staging branch)
+Staging env removed 2026-04-20 (issue #27): neither `pitchey-api-staging.ndlovucavelle.workers.dev`
+nor `pitchey-staging.pages.dev` exist on the account. If staging infrastructure returns, document it
+here along with the corresponding `wrangler.toml` / `security.production.ts` entries.
+-->
 
 ## Required GitHub Secrets
 

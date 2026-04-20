@@ -86,12 +86,9 @@ route = ""
 vars.ENVIRONMENT = "development"
 vars.FRONTEND_URL = "http://localhost:5173"
 
-# Staging environment
-[env.staging]
-name = "pitchey-workflows-staging"
-route = "staging.pitchey-api.ndlovucavelle.workers.dev/*"
-vars.ENVIRONMENT = "staging"
-vars.FRONTEND_URL = "https://staging.pitchey.pages.dev"
+# [env.staging] block removed 2026-04-20 (issue #27): no `pitchey-workflows-staging`
+# Worker exists on the account and `staging.pitchey.pages.dev` is unclaimed. If a real
+# staging environment comes back, reintroduce pointing at whatever subdomain it serves.
 
 # Analytics and observability
 [observability]
