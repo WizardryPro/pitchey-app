@@ -2,6 +2,8 @@
 
 Movie pitch platform connecting creators, investors, and production companies. Edge-first serverless architecture on Cloudflare.
 
+See `docs/roadmap-post-launch-2026-04-20.md` for the post-launch execution plan.
+
 ## Architecture
 - **Frontend**: Cloudflare Pages — React 18 + Vite + Zustand + TailwindCSS
 - **Backend**: Cloudflare Worker (`src/worker-integrated.ts`) — single entry point for all API routing
