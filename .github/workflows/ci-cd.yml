@@ -254,7 +254,6 @@ jobs:
           echo "${{ secrets.JWT_SECRET }}" | npx wrangler secret put JWT_SECRET
           echo "${{ secrets.UPSTASH_REDIS_REST_URL }}" | npx wrangler secret put UPSTASH_REDIS_REST_URL
           echo "${{ secrets.UPSTASH_REDIS_REST_TOKEN }}" | npx wrangler secret put UPSTASH_REDIS_REST_TOKEN
-          echo "${{ secrets.SENTRY_DSN }}" | npx wrangler secret put SENTRY_DSN
           echo "${{ secrets.AXIOM_TOKEN }}" | npx wrangler secret put AXIOM_TOKEN
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
