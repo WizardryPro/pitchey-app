@@ -102,7 +102,6 @@ jobs:
           echo "${{ secrets.JWT_SECRET }}" | wrangler secret put JWT_SECRET
           echo "${{ secrets.UPSTASH_REDIS_REST_URL }}" | wrangler secret put UPSTASH_REDIS_REST_URL
           echo "${{ secrets.UPSTASH_REDIS_REST_TOKEN }}" | wrangler secret put UPSTASH_REDIS_REST_TOKEN
-          echo "${{ secrets.SENTRY_DSN }}" | wrangler secret put SENTRY_DSN
           echo "${{ secrets.AXIOM_TOKEN }}" | wrangler secret put AXIOM_TOKEN
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
