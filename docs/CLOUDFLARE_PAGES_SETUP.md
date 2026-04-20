@@ -11,7 +11,14 @@ The project uses a **single** Cloudflare Pages project:
 - **Deployment Method**: GitHub Actions (automated) via `wrangler pages deploy ... --project-name=pitchey`
 - **Status**: ✅ ACTIVE — where all CI/CD deploys land
 
-> **Historical note (2026-04):** A second project `pitchey-5o8` (URL `pitchey-5o8-66n.pages.dev`) existed from an earlier manual setup. It was retired in this refactor — all source, config, and workflow references were consolidated onto the `pitchey` project. The old `pitchey-5o8` project may still show in the Cloudflare dashboard and can be safely deleted there. Any lingering external references to `pitchey-5o8.pages.dev` will 500 (Cloudflare error 1101) since its last deploy is broken.
+> **Hostname model (corrected 2026-04-20):** The single `pitchey` Pages project is served at **two hostnames simultaneously**:
+>
+> - **`pitchey.pages.dev`** — canonical native hostname derived from the project name. Returns 200. Target of all source references, CI deploys, and the `FRONTEND_URL` env var.
+> - **`pitchey-5o8.pages.dev`** — a legacy random-suffix alias CF auto-assigns to projects for collision-avoidance. Currently returns 500 for unrelated routing reasons (Cloudflare error 1101); harmless now that no first-party code references it. External cached links that still hit it will fail and fade over time.
+>
+> Both hostnames serve the **same** underlying Pages project. **Do NOT attempt to "delete the `pitchey-5o8` project" in the Cloudflare dashboard — it will prompt to delete the live `pitchey` project and take the production frontend down.**
+>
+> PR #14 (2026-04-18, commit `002e905`) and PR #21 (2026-04-19, commit `d3b18d1`) together swept all source/config/doc references from the legacy subdomain to the canonical one. Earlier versions of this document framed `pitchey-5o8` as a "retired orphan project"; that framing was based on a wrong mental model (discovered when the dashboard "delete" dialog identified it as the live project) and has been corrected here. See issue #18's [rescoping comment](https://github.com/WizardryPro/pitchey-app/issues/18#issuecomment-4277084326) for the full correction.
 
 ## How It Works
 
