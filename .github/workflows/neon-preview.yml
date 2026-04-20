@@ -53,7 +53,45 @@ jobs:
           VITE_API_URL: https://pitchey-pr-${{ github.event.pull_request.number }}.ndlovucavelle.workers.dev
           VITE_WS_URL: wss://pitchey-pr-${{ github.event.pull_request.number }}.ndlovucavelle.workers.dev
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
-      
+
+      - name: Inject preview Worker origin into CSP (issue #18 gap 2)
+        run: |
+          # frontend/public/_headers ships a production-only CSP with
+          # pitchey-api-prod.ndlovucavelle.workers.dev hardcoded. Preview deploys
+          # hit pitchey-pr-<N>.ndlovucavelle.workers.dev for both HTTPS calls
+          # (when the Pages Functions proxy is unavailable) and WebSocket
+          # connections (which always bypass the proxy). Without this step
+          # every preview login silently fails in-browser with
+          # "Content Security Policy directive: connect-src" violations.
+          #
+          # We intentionally DO NOT wildcard *.ndlovucavelle.workers.dev — that
+          # would expose every Worker under the account. Only this preview's
+          # exact hostname is added.
+          PR_NUM="${{ github.event.pull_request.number }}"
+          PREVIEW_ORIGIN="pitchey-pr-${PR_NUM}.ndlovucavelle.workers.dev"
+          HEADERS_FILE="frontend/dist/_headers"
+
+          if [ ! -f "$HEADERS_FILE" ]; then
+            echo "❌ Expected $HEADERS_FILE after vite build; file missing"
+            exit 1
+          fi
+
+          sed -i -E \
+            "s|(connect-src 'self')|\1 https://${PREVIEW_ORIGIN} wss://${PREVIEW_ORIGIN}|" \
+            "$HEADERS_FILE"
+
+          # Verify the substitution landed — if connect-src was refactored
+          # upstream and the anchor regex no longer matches, fail loudly
+          # rather than silently shipping a broken preview CSP.
+          if ! grep -q "https://${PREVIEW_ORIGIN}" "$HEADERS_FILE"; then
+            echo "❌ Preview origin not injected into $HEADERS_FILE — did 'connect-src '\''self'\''' anchor change?"
+            echo "--- current $HEADERS_FILE contents ---"
+            cat "$HEADERS_FILE"
+            exit 1
+          fi
+
+          echo "✅ Injected ${PREVIEW_ORIGIN} into preview CSP"
+
       - name: Deploy preview to Cloudflare Pages
         id: cloudflare
         uses: cloudflare/pages-action@v1
