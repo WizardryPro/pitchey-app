@@ -452,18 +452,13 @@ export const getSecurityConfig = (environment: string = 'production'): SecurityC
         }
       };
     
-    case 'staging':
-      return {
-        ...productionSecurityConfig,
-        cors: {
-          ...productionSecurityConfig.cors,
-          origin: [
-            'https://staging-pitchey.pages.dev',
-            'https://pitchey-staging.pages.dev'
-          ]
-        }
-      };
-    
+    // 'staging' case removed 2026-04-20 (issue #27): the account has no staging
+    // Pages project. Both `staging-pitchey.pages.dev` and `pitchey-staging.pages.dev`
+    // were references to subdomains that don't resolve, and leaving them in the
+    // config both lied about the environment topology and kept potential CORS
+    // entries alive for names a third party could plausibly register. If a real
+    // staging environment returns later, add the case back pointing at whatever
+    // subdomain that env actually serves.
     default:
       return productionSecurityConfig;
   }

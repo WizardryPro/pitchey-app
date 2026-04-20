@@ -38,33 +38,39 @@ const ALLOWED_ORIGINS = [
   'http://127.0.0.1:3000'             // Local development (alternative via IP)
 ];
 
-// Function to check if origin is allowed (includes Cloudflare Pages subdomains)
+// Function to check if origin is allowed (includes Cloudflare Pages preview subdomains).
+//
+// Scoped to what the single `pitchey` Pages project can actually serve:
+// - pitchey.pages.dev (canonical; also matched in ALLOWED_ORIGINS above)
+// - pitchey-5o8.pages.dev (legacy alias that Cloudflare auto-assigned to the same project)
+// - [hash].pitchey.pages.dev and [name].pitchey.pages.dev (per-branch previews auto-generated
+//   under the canonical project)
+//
+// Removed (2026-04-20, issue #27): the previous `pitchey-[a-zA-Z0-9-]+\.pages\.dev` regex
+// accepted any subdomain matching that shape regardless of whether a project with that name
+// existed on the account. If CF Pages project names are globally claimable rather than
+// account-scoped, an attacker could register `pitchey-main`, `pitchey-staging`, etc. and
+// make authenticated cross-origin calls. The 2026-04-20 account enumeration confirmed
+// none of those projects exist under our account, so allowing them was pure attack surface.
 function isOriginAllowed(origin: string | null): boolean {
   if (!origin) return false;
-  
+
   // Remove trailing period if present (some browsers add it)
   const cleanOrigin = origin.endsWith('.') ? origin.slice(0, -1) : origin;
-  
+
   // Check exact matches first
   if (ALLOWED_ORIGINS.includes(cleanOrigin)) {
     return true;
   }
-  
-  // Allow all Cloudflare Pages preview deployments
-  // Pattern 1: [hash].pitchey.pages.dev (e.g., 01750dbc.pitchey.pages.dev)
-  // Pattern 2: [hash].pitchey-[id].pages.dev (e.g., 01750dbc.pitchey.pages.dev)
-  // Pattern 3: pitchey-[anything].pages.dev (e.g., pitchey-frontend.pages.dev)
-  // Pattern 4: [anything].pitchey.pages.dev (e.g., preview.pitchey.pages.dev)
-  // Pattern 5: Main deployment (pitchey.pages.dev)
+
+  // Per-branch Cloudflare Pages previews under the canonical `pitchey` project:
+  // hash-prefixed (01750dbc.pitchey.pages.dev) and name-prefixed (pr-42.pitchey.pages.dev).
   if (cleanOrigin.match(/^https:\/\/[a-f0-9]+\.pitchey\.pages\.dev$/) ||       // Hash-based preview
-      cleanOrigin.match(/^https:\/\/[a-f0-9]+\.pitchey-[a-z0-9-]+\.pages\.dev$/) || // Hash with project ID
-      cleanOrigin.match(/^https:\/\/pitchey-[a-zA-Z0-9-]+\.pages\.dev$/) ||       // Named deployments
-      cleanOrigin.match(/^https:\/\/[a-zA-Z0-9-]+\.pitchey\.pages\.dev$/) ||  // Subdomains
-      cleanOrigin === 'https://pitchey.pages.dev' ||                          // Main deployment
-      cleanOrigin === 'https://pitchey-main.pages.dev') {                         // Main branch
+      cleanOrigin.match(/^https:\/\/[a-zA-Z0-9-]+\.pitchey\.pages\.dev$/) ||   // Named per-branch preview
+      cleanOrigin === 'https://pitchey-5o8.pages.dev') {                        // Legacy project alias
     return true;
   }
-  
+
   return false;
 }
 
