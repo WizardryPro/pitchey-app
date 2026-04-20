@@ -47,7 +47,6 @@
     "src/auth/better-auth-session-handler.ts",
     "src/auth/better-auth-worker-handler.ts",
     "src/auth/better-auth-worker-integration.ts",
-    "src/auth/raw-sql-auth-config.ts",
     "src/auth/raw-sql-auth.ts",
     "src/db/**/*.ts",
     "src/utils/validation.ts",
