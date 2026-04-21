@@ -358,17 +358,6 @@ jobs:
           
           echo "✅ Health monitoring completed"
 
-      - name: 📊 Performance monitoring
-        env:
-          API_BASE_URL: https://pitchey-api-prod.ndlovucavelle.workers.dev
-        run: |
-          if [ -f "scripts/performance-check.sh" ]; then
-            chmod +x scripts/performance-check.sh
-            ./scripts/performance-check.sh
-          else
-            echo "⚠️ Performance check script not found"
-          fi
-
       - name: 🔍 Security monitoring
         run: |
           echo "🔒 Running security monitoring..."
