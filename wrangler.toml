@@ -156,7 +156,7 @@ crons = [
 # ===== ENVIRONMENT VARIABLES =====
 [vars]
 # Platform Configuration
-FRONTEND_URL = "https://pitchey.pages.dev"
+FRONTEND_URL = "https://pitchey-5o8.pages.dev"
 BACKEND_URL = "https://pitchey-api-prod.ndlovucavelle.workers.dev"
 ENVIRONMENT = "production"
 VERSION = "2.0-integrated"
