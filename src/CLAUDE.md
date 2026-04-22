@@ -73,6 +73,15 @@ File: `db/logged-connection.ts` — `LoggedDatabase` wrapper
 - Sentry breadcrumbs on every query (slow queries get `level: 'warning'`)
 - Metrics: totalQueries, slowQueries, failedQueries, totalDuration
 
+### Neon client call convention (2026-04-22)
+
+Two call shapes are valid; the third is not:
+- ✅ Tagged template: `` sql`SELECT * FROM users WHERE id = ${id}` `` — preferred for static queries.
+- ✅ Parameterized: `sql.query('SELECT * FROM users WHERE id = $1', [id])` — use when the query string is assembled dynamically (e.g. `WhereBuilder`).
+- ❌ Call-form: `sql('SELECT $1', [id])` — **throws at runtime**. The Neon `postgres` client rejects it with "This function can now be called only as a tagged-template function... use sql.query(...)".
+
+The `SqlQuery` type in `db/queries/base.ts` no longer advertises the call-form overload, so any remaining misuse is a type error. 27 pre-existing sites were migrated 2026-04-22 (commit `a99ac28`) — see root CLAUDE.md "Error cluster" entry.
+
 ### SQLCommenter + Trace ID — DONE (wired end-to-end)
 - [x] `db/trace-context.ts` — `AsyncLocalStorage<TraceContext>` carries per-request trace context
 - [x] `WorkerDatabase.executeQuery()` calls `annotateQueryWithTrace()` on every query

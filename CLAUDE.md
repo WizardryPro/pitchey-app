@@ -96,11 +96,18 @@ Available slash commands: `/deploy`, `/test`, `/migrate`
 - **Malware Scanning**: VirusTotal integration deferred — needs `VIRUSTOTAL_API_KEY` (free tier: 4 req/min)
 - **Full Crew Features**: Availability calendars, rate cards — deferred post-launch
 
-### Current Numbers (2026-04-18)
+### Current Numbers (2026-04-22)
 - 664 API routes, 161 pages, 182 components, 30 frontend services, 4 stores
-- 112 backend services, 71 handlers, 88 migrations (tracked in `schema_migrations`, runner at `scripts/migrate.mjs`)
+- 112 backend services, 71 handlers, 89 migrations (tracked in `schema_migrations`, runner at `scripts/migrate.mjs`)
 - 4 portals (Creator, Investor, Production, Watcher — audience-only) + Admin shell
 - 13 CI/CD workflows, 7 R2 buckets, 5 KV namespaces, 2 Durable Objects, 2 Analytics Engine datasets
+
+### Session 2026-04-22 — shipped
+- **Marketplace nav refresh** (`ba8aff3`) — pill-tab sort replacing `<select>`, genre quick-chips, mobile hamburger + slide-down menu; color-coded active states (`brand.featured` Hot, `brand.trending` Trending, `brand.new` New); homepage parity (adds "How It Works").
+- **CI hygiene — deploy-staging retired** (`36a0bda`, closes #36) — removed a dormant `deploy-staging` job that would have run `wrangler deploy` against production if triggered (no `--env` flag + referenced the deleted `pitchey` Pages project). Trimmed `staging, develop` from `push.branches`.
+- **Dashboard SQL drift fix** (`a99ac28` + `5ef44e8`, closes #40) — four prod error fingerprints cleared in one sweep: Neon `sql(str, params)` → `sql.query(...)` migration across 27 sites in 7 query modules (with `SqlQuery` type corrected so the old call-form can no longer type-check), `getRevenueMetrics` JOIN alias qualification, `u.avatar` → `u.avatar_url`, migration 081 backfilling `subscription_history.new_tier` and friends. Post-deploy observability confirms all six fingerprints at zero events.
+- **Test drift cleanup** (`4d89f89`) — 19 → 0 pre-existing failures. 14 fixes were stale assertions vs. current components (dashboard "Welcome back" refactor, `/watcher/dashboard` viewer redirect, `navigate()` 2-arg shape, NDA-gated creator name, DocumentUploadHub relocation). 5 `PitchForm` NDA tests *moved* to `src/features/ndas/components/__tests__/NDAUploadSection.test.tsx` (7 tests) — tighter unit boundary, each deletion cites the replacement test name.
+- **ZAP dedup** (`3be1c10`, closes #37 + #41) — `.zap/rules.tsv` IGNOREs the five rule IDs that opened an issue per push (cloud-metadata probes, UUID-matched-as-Base64, Sec-Fetch-* request-headers-on-server confusion, marketing-route cacheability). Workflow now `allow_issue_writing: false` + `fail_action: true` — routine runs file no issue; genuine new Med/High tripping the fail threshold route through the existing CI-failure alert path.
 
 ## Observability & Analysis Stack
 
@@ -194,13 +201,13 @@ Runner: `scripts/migrate.mjs` (Node, uses `postgres` package). Tracks applied st
 - **NDA signer drift** — `ndas.signer_id` vs `ndas.requester_id` vs `pitch_access.user_id` coexist across history; `getPitch` in `worker-integrated.ts` catches each branch defensively.
 - **`view_duration` now populated** — `analytics-endpoints.ts:handleTrackView` writes the frontend heartbeat `duration` via `GREATEST(COALESCE(view_duration, 0), $1::int)`. Consumption gate can now open organically.
 
-**Active error clusters** (2026-04-22 Cloudflare Observability sweep, `pitchey-api-prod` worker, 2h window):
-- **Neon client API misuse** — handler calls `sql("SELECT $1", [value])` (function-call form); the `postgres` client only accepts tagged templates (``sql`SELECT ${value}` ``) or explicit `sql.query(...)`. Fires on `GET /api/creator/dashboard` from 3 subqueries (notifications, investments, NDA). Not schema drift — API misuse.
-- **`column reference "status" is ambiguous`** — `GET /api/creator/dashboard` revenue metrics; missing table alias in a JOIN.
-- **`column "new_tier" does not exist`** — `GET /api/payments/subscription-status`; schema drift, code expects a column not present in prod.
-- **`column u.avatar does not exist`** — `GET /api/user/notifications`; schema drift, likely should be `u.avatar_url`.
+**Error cluster — 2026-04-22 Cloudflare Observability sweep, resolved same day** (commits `a99ac28` + `5ef44e8`, closed #40):
+- **Neon client API misuse** — handler calls `sql("SELECT $1", [value])` (function-call form); the `postgres` client only accepts tagged templates (``sql`SELECT ${value}` ``) or explicit `sql.query(...)`. Fired on `GET /api/creator/dashboard` from 3 subqueries (notifications, investments, NDA). **Fix**: 27-site migration to `sql.query(...)` across 7 query modules; `SqlQuery` type in `base.ts` rewritten so the old call-form no longer type-checks.
+- **`column reference "status" is ambiguous`** — `GET /api/creator/dashboard` revenue metrics; missing table alias in a JOIN. **Fix**: qualified 5 references as `i.status` / `i.amount` / `i.investor_id` in `getRevenueMetrics`.
+- **`column "new_tier" does not exist`** — `GET /api/payments/subscription-status`; schema drift because `047_fix_schema_drift.sql` uses `CREATE TABLE IF NOT EXISTS` and was a silent no-op against a pre-existing partial table. **Fix**: migration `081_subscription_history_column_backfill.sql` with `ADD COLUMN IF NOT EXISTS` for every expected column.
+- **`column u.avatar does not exist`** — `GET /api/user/notifications`; lone typo. **Fix**: `u.avatar` → `u.avatar_url`.
 
-Likely root cause for open incident **#40** (`health-check-failure` + `incident` labels, 11 comments of bot noise). Schema-drift entries (`new_tier`, `u.avatar`) are fresh instances of the pattern tracked in **#20**.
+Post-deploy observability verified zero events across all six fingerprints in the 7-minute post-deploy window, including manually-exercised dashboard traffic. Schema-drift entries (`new_tier`, `u.avatar`) were fresh instances of the pattern tracked in **#20**; the silent-`CREATE TABLE IF NOT EXISTS` mechanism is a specific variant worth watching for in future migration audits.
 
 ### Anti-Pattern: Silent `.catch(() => default)` on DB Queries — helper now available
 
