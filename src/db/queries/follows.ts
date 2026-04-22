@@ -153,7 +153,7 @@ export async function getFollowers(
   `;
 
   const params = currentUserId ? [userId, currentUserId] : [userId];
-  const result = await sql(query, params);
+  const result = await sql.query(query, params);
   return extractMany<FollowWithUser>(result);
 }
 
@@ -202,7 +202,7 @@ export async function getFollowing(
   `;
 
   const params = currentUserId ? [userId, currentUserId] : [userId];
-  const result = await sql(query, params);
+  const result = await sql.query(query, params);
   return extractMany<FollowWithUser>(result);
 }
 

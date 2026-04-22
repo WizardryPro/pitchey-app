@@ -736,13 +736,15 @@ export async function creatorInvestorsHandler(request: Request, env: Env): Promi
 
 // Helper functions
 async function getRevenueMetrics(sql: any, userId: string) {
+  // `status` exists on both investments (i) and pitches (p); qualify or Postgres
+  // throws `column reference "status" is ambiguous`.
   const result = await sql`
-    SELECT 
-      SUM(CASE WHEN status = 'funded' THEN amount ELSE 0 END) as total_revenue,
-      SUM(CASE WHEN status = 'committed' THEN amount ELSE 0 END) as committed_funds,
-      SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) as pipeline_value,
-      COUNT(DISTINCT CASE WHEN status IN ('funded', 'committed') THEN investor_id END) as active_investors,
-      AVG(CASE WHEN status = 'funded' THEN amount END) as avg_deal_size
+    SELECT
+      SUM(CASE WHEN i.status = 'funded' THEN i.amount ELSE 0 END) as total_revenue,
+      SUM(CASE WHEN i.status = 'committed' THEN i.amount ELSE 0 END) as committed_funds,
+      SUM(CASE WHEN i.status = 'pending' THEN i.amount ELSE 0 END) as pipeline_value,
+      COUNT(DISTINCT CASE WHEN i.status IN ('funded', 'committed') THEN i.investor_id END) as active_investors,
+      AVG(CASE WHEN i.status = 'funded' THEN i.amount END) as avg_deal_size
     FROM investments i
     JOIN pitches p ON i.pitch_id = p.id
     WHERE p.user_id::text = ${userId}

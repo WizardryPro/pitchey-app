@@ -135,7 +135,7 @@ export async function createBatchNotifications(
     RETURNING *
   `;
 
-  const result = await sql(query, params);
+  const result = await sql.query(query, params);
   return extractMany<Notification>(result);
 }
 
@@ -179,7 +179,7 @@ export async function getUserNotifications(
     ${options?.offset ? `OFFSET ${options.offset}` : ''}
   `;
   
-  const result = await sql(query, params);
+  const result = await sql.query(query, params);
   return extractMany<Notification>(result);
 }
 
@@ -369,7 +369,7 @@ export async function getNotificationStats(
     ${where}
   `;
   
-  const overall = await sql(overallQuery, params);
+  const overall = await sql.query(overallQuery, params);
   const stats = extractFirst<any>(overall) || {};
   
   // By type
@@ -380,7 +380,7 @@ export async function getNotificationStats(
     GROUP BY n.type
   `;
   
-  const typeResults = await sql(typeQuery, params);
+  const typeResults = await sql.query(typeQuery, params);
   const byType: Record<string, number> = {};
   typeResults.forEach((r: any) => {
     byType[r.type] = Number(r.count);
@@ -395,7 +395,7 @@ export async function getNotificationStats(
     GROUP BY nd.channel
   `;
   
-  const channelResults = await sql(channelQuery, params);
+  const channelResults = await sql.query(channelQuery, params);
   const byChannel: Record<string, number> = {};
   channelResults.forEach((r: any) => {
     byChannel[r.channel] = Number(r.count);

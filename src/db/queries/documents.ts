@@ -184,7 +184,7 @@ export async function getPitchDocuments(
   `;
 
   const params = userId ? [pitchId, userId] : [pitchId];
-  const result = await sql(query, params);
+  const result = await sql.query(query, params);
   return extractMany<Document>(result);
 }
 
@@ -205,7 +205,7 @@ export async function getDocumentById(
     WHERE d.id = $1
   `;
   
-  const result = await sql(query, [documentId]);
+  const result = await sql.query(query, [documentId]);
   const document = extractFirst<Document & { pitch_creator_id: string }>(result);
   
   if (!document) return null;
@@ -283,7 +283,7 @@ export async function updateDocument(
     RETURNING *
   `;
 
-  const result = await sql(query, [documentId, userId, ...values]);
+  const result = await sql.query(query, [documentId, userId, ...values]);
   return extractFirst<Document>(result);
 }
 
@@ -453,7 +453,7 @@ export async function getUserNDARequests(
     ORDER BY n.created_at DESC
   `;
 
-  const result = await sql(query, params);
+  const result = await sql.query(query, params);
   return extractMany<NDARequest>(result);
 }
 

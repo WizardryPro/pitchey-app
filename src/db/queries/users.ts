@@ -166,7 +166,7 @@ export async function updateUser(
     RETURNING *
   `;
 
-  const result = await sql(query, [userId, ...values]);
+  const result = await sql.query(query, [userId, ...values]);
   return extractFirst<User>(result);
 }
 
@@ -229,7 +229,7 @@ export async function getUsersByType(
     ${options?.offset ? `OFFSET ${options.offset}` : ''}
   `;
   
-  const result = await sql(query, params);
+  const result = await sql.query(query, params);
   return extractMany<User>(result);
 }
 
@@ -275,7 +275,7 @@ export async function searchUsers(
     ${options?.offset ? `OFFSET ${options.offset}` : ''}
   `;
   
-  const result = await sql(query, [searchTerm, ...params]);
+  const result = await sql.query(query, [searchTerm, ...params]);
   return extractMany<User>(result);
 }
 

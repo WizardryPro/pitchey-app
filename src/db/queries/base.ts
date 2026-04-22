@@ -5,10 +5,14 @@
 
 import { neon, NeonQueryFunction } from '@neondatabase/serverless';
 
-// Export the query function type for use in services
+// Export the query function type for use in services.
+// Runtime reality (Neon serverless client): the call-form
+// `sql(queryString, params)` throws; use tagged template or `sql.query(...)`.
+// Keeping the old overload here let 26 callers ship broken queries for weeks
+// (see #20 + CLAUDE.md "Active error clusters").
 export type SqlQuery = {
   (strings: TemplateStringsArray, ...values: any[]): Promise<any[]>;
-  (query: string, params?: any[]): Promise<any[]>;
+  query(query: string, params?: any[]): Promise<any[]>;
 };
 
 /**

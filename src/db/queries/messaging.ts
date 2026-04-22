@@ -109,7 +109,7 @@ export async function createConversation(
       userId === creatorId ? 'admin' : 'member'
     ]);
 
-    await txSql(
+    await txSql.query(
       `INSERT INTO conversation_participants (
         conversation_id, user_id, role, joined_at
       ) VALUES ${participantValues}`,
@@ -296,7 +296,7 @@ export async function getConversationMessages(
     LIMIT ${options?.limit || 50} OFFSET ${options?.offset || 0}
   `;
   
-  const result = await sql(query, params);
+  const result = await sql.query(query, params);
   return extractMany<Message>(result);
 }
 
@@ -572,6 +572,6 @@ export async function searchMessages(
     LIMIT ${limit}
   `;
   
-  const result = await sql(query, [userId, ...params]);
+  const result = await sql.query(query, [userId, ...params]);
   return extractMany<Message>(result);
 }

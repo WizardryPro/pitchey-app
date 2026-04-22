@@ -155,7 +155,7 @@ export async function getPitchById(
     SELECT * FROM pitches WHERE id = $1
   `;
   
-  const result = await sql(query, [pitchId]);
+  const result = await sql.query(query, [pitchId]);
   return extractFirst<Pitch>(result);
 }
 
@@ -201,7 +201,7 @@ export async function updatePitch(
     RETURNING *
   `;
 
-  const result = await sql(query, [pitchId, creatorId, ...values]);
+  const result = await sql.query(query, [pitchId, creatorId, ...values]);
   return extractFirst<Pitch>(result);
 }
 
@@ -385,7 +385,7 @@ export async function searchPitches(
     LIMIT ${limit} OFFSET ${offset}
   `;
   
-  const result = await sql(query, [filters.search || '', ...params]);
+  const result = await sql.query(query, [filters.search || '', ...params]);
   return extractMany<Pitch>(result);
 }
 
@@ -445,7 +445,7 @@ export async function getCreatorPitches(
     LIMIT ${limit} OFFSET ${offset}
   `;
   
-  const result = await sql(query, params);
+  const result = await sql.query(query, params);
   return extractMany<Pitch>(result);
 }
 
@@ -624,7 +624,7 @@ export async function getPublicPitches(
     LIMIT ${limit} OFFSET ${offset}
   `;
 
-  const result = await sql(query, params);
+  const result = await sql.query(query, params);
   return extractMany<Pitch>(result);
 }
 
@@ -780,7 +780,7 @@ export async function searchPublicPitches(
     LIMIT ${limit} OFFSET ${offset}
   `;
 
-  const result = await sql(query, [searchTerm || '', ...params]);
+  const result = await sql.query(query, [searchTerm || '', ...params]);
   return extractMany<Pitch>(result);
 }
 

@@ -196,7 +196,7 @@ export async function updateInvestmentStatus(
       RETURNING *
     `;
 
-  const result = await sql(query, [status, investmentId, userId]);
+  const result = await sql.query(query, [status, investmentId, userId]);
   return extractFirst<Investment>(result);
 }
 
@@ -233,7 +233,7 @@ export async function getInvestorPortfolio(
     ORDER BY i.created_at DESC
   `;
   
-  const result = await sql(query, params);
+  const result = await sql.query(query, params);
   return extractMany<Investment>(result);
 }
 
@@ -306,7 +306,7 @@ export async function getPitchInvestments(
     ORDER BY i.amount DESC, i.created_at DESC
   `;
   
-  const result = await sql(query, params);
+  const result = await sql.query(query, params);
   return extractMany<Investment>(result);
 }
 
@@ -429,7 +429,7 @@ export async function getInvestmentInterests(
       ii.created_at DESC
   `;
   
-  const result = await sql(query, params);
+  const result = await sql.query(query, params);
   return extractMany<InvestmentInterest>(result);
 }
 
