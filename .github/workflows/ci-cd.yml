@@ -2,7 +2,7 @@ name: 🚀 Pitchey Platform CI/CD
 
 on:
   push:
-    branches: [ main, staging, develop ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
   schedule:
@@ -149,52 +149,6 @@ jobs:
           else
             echo "⚠️ Schema alignment file missing"
           fi
-
-  # =================================================================
-  # STAGING DEPLOYMENT
-  # =================================================================
-  deploy-staging:
-    name: 🚀 Deploy to Staging
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/develop'
-    needs: [security-scan, frontend-test, worker-test]
-    environment: staging
-
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: ⚙️ Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: 📦 Install dependencies
-        run: npm ci
-
-      - name: 🏗️ Build frontend
-        working-directory: ${{ env.FRONTEND_DIR }}
-        run: |
-          npm ci
-          npm run build
-        env:
-          VITE_API_URL: ''
-          VITE_WS_URL: wss://pitchey-api-staging.ndlovucavelle.workers.dev
-          VITE_DISABLE_WEBSOCKET: 'false'
-
-      - name: 🚀 Deploy Worker to staging
-        run: |
-          npx wrangler deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-
-      - name: 🚀 Deploy Frontend to staging
-        working-directory: ${{ env.FRONTEND_DIR }}
-        run: |
-          npx wrangler pages deploy dist/ --project-name=pitchey
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
   # =================================================================
   # PRODUCTION DEPLOYMENT
