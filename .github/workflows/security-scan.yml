@@ -218,6 +218,24 @@ jobs:
           target: 'https://pitchey-api-prod.ndlovucavelle.workers.dev'
           rules_file_name: '.zap/rules.tsv'
           cmd_options: '-a'
+          # Stop auto-filing a GitHub issue per run. Prior behavior spammed
+          # duplicate issues (#17 / #22 / #41) with identical noise — see #37.
+          # Findings land as the workflow-run artifact; genuine High/Medium
+          # alerts trip fail_action below and route through the standard
+          # CI-failure alert path.
+          allow_issue_writing: false
+          fail_action: true
+
+      - name: Upload ZAP report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-api-scan-report
+          path: |
+            report_html.html
+            report_json.json
+            report_md.md
+          if-no-files-found: ignore
 
       - name: Newman API Tests with Security Checks
         run: |

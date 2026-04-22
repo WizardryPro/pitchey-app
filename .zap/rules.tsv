@@ -1,0 +1,34 @@
+# ZAP API Scan rules — suppress known false positives for pitchey-api-prod.
+#
+# Format: <rule-id>\t<IGNORE|WARN|FAIL>\t<comment>
+# Reference: https://www.zaproxy.org/docs/automate/automation-framework/
+#
+# Every rule listed here was observed as a false positive in issue #41
+# (2026-04-22 ZAP API Scan Report). Details: issue #37.
+#
+# IMPORTANT: adding a rule here only silences ZAP's classification of that
+# alert as failing. New rule IDs not in this list still surface normally.
+# Review periodically — do not grow this list to hide real findings.
+
+# ── Cloud-metadata probes ───────────────────────────────────────────────
+# ZAP probes `/computeMetadata/v1/`, `/latest/meta-data/`, `/metadata/instance`,
+# `/metadata/v1`, `/opc/v1/instance/` — paths the Worker correctly 404s.
+# Returning 4xx JSON for a cloud-metadata path is the intended behavior;
+# ZAP flags the response Content-Type mismatch as "unexpected."
+100001	IGNORE	Unexpected Content-Type on deliberate 4xx JSON responses to cloud-metadata probes
+100000	IGNORE	A Client Error response is correct behavior for unauth/missing routes
+
+# ── Session cookie format ───────────────────────────────────────────────
+# `pitchey-session` is a UUID v4 cookie. Base64-decodable by coincidence of
+# UUID's character set; not an encoded secret.
+10094	IGNORE	pitchey-session UUID cookie matched as Base64 by pattern heuristic
+
+# ── Sec-Fetch-* "missing" ────────────────────────────────────────────────
+# Sec-Fetch-Dest / Mode / Site / User are REQUEST headers the browser sends
+# to the server, not response headers. ZAP is flagging that ZAP's own scanner
+# didn't send them. Not actionable by the server.
+90005	IGNORE	Sec-Fetch-* are request headers (client-sent), not server response headers
+
+# ── Cacheability ─────────────────────────────────────────────────────────
+# Root / is public marketing content; cacheability is intentional.
+10049	IGNORE	Storable/cacheable public content is intentional on marketing routes
