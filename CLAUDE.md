@@ -69,7 +69,7 @@ Available slash commands: `/deploy`, `/test`, `/migrate`
 - **Data Quality**: Follow system (user + pitch), NDA messaging gate, snake_case normalization
 - **Notifications**: Email (new follower, pitch publish), WebSocket push, 401 auto-redirect
 - **Production Portal**: 26-issue remediation complete (uploads, dead buttons, stubs, settings, calendar)
-- **Tests**: 192 files, 3639+ tests, zero failures
+- **Tests**: 192 files, 3603 tests. As of 2026-04-22: **19 failures across 9 files** (pre-existing drift, not a regression from the marketplace nav work). Failing suites cluster around `PitchForm`, `PortalSelect`, `CreatorDashboard` / `ProductionDashboard` / `InvestorDashboard` (dashboard title + offline-banner assertions), `PitchDetail`, `CreatePitch`, `PermissionGuard`. MarketplaceEnhanced (11 tests) passes. Another instance of #20 — prior docs claimed "zero failures" while reality had drifted.
 - **Watcher Portal**: Browse-only portal (like/save/drafts/credits, no NDAs)
 - **Company Verification**: Region-adaptive (USA EIN, UK Companies House, insurance fallback), auto-checks, admin review panel
 - **Portfolio Sharing**: Token-based share links with labels, view tracking, revocation (`/portfolio/s/:token`)
@@ -193,6 +193,14 @@ Runner: `scripts/migrate.mjs` (Node, uses `postgres` package). Tracks applied st
 - **`pitch_views.viewer_id` is canonical** — any code referencing `pitch_views.user_id` is a bug (migrations 073/075 heat functions already use `pv.viewer_id`). Session `78e` realigned 9 files.
 - **NDA signer drift** — `ndas.signer_id` vs `ndas.requester_id` vs `pitch_access.user_id` coexist across history; `getPitch` in `worker-integrated.ts` catches each branch defensively.
 - **`view_duration` now populated** — `analytics-endpoints.ts:handleTrackView` writes the frontend heartbeat `duration` via `GREATEST(COALESCE(view_duration, 0), $1::int)`. Consumption gate can now open organically.
+
+**Active error clusters** (2026-04-22 Cloudflare Observability sweep, `pitchey-api-prod` worker, 2h window):
+- **Neon client API misuse** — handler calls `sql("SELECT $1", [value])` (function-call form); the `postgres` client only accepts tagged templates (``sql`SELECT ${value}` ``) or explicit `sql.query(...)`. Fires on `GET /api/creator/dashboard` from 3 subqueries (notifications, investments, NDA). Not schema drift — API misuse.
+- **`column reference "status" is ambiguous`** — `GET /api/creator/dashboard` revenue metrics; missing table alias in a JOIN.
+- **`column "new_tier" does not exist`** — `GET /api/payments/subscription-status`; schema drift, code expects a column not present in prod.
+- **`column u.avatar does not exist`** — `GET /api/user/notifications`; schema drift, likely should be `u.avatar_url`.
+
+Likely root cause for open incident **#40** (`health-check-failure` + `incident` labels, 11 comments of bot noise). Schema-drift entries (`new_tier`, `u.avatar`) are fresh instances of the pattern tracked in **#20**.
 
 ### Anti-Pattern: Silent `.catch(() => default)` on DB Queries — helper now available
 
