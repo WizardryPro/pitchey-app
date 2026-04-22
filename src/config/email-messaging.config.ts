@@ -512,7 +512,7 @@ export function createEmailMessagingConfig(env: any): EmailMessagingConfig {
       authSecret: validatedEnv.BETTER_AUTH_SECRET,
       jwtSecret: validatedEnv.JWT_SECRET,
       corsOrigins: [
-        validatedEnv.FRONTEND_URL || 'https://pitchey.pages.dev',
+        validatedEnv.FRONTEND_URL || 'https://pitchey-5o8.pages.dev',
         'https://localhost:3000',
         'http://localhost:5173',
       ],

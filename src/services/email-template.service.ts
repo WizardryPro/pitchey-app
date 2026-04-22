@@ -60,7 +60,12 @@ export class EmailTemplateService {
       currentYear: new Date().getFullYear(),
       companyName: 'Pitchey',
       supportEmail: 'support@pitchey.com',
-      baseUrl: process.env.FRONTEND_URL || 'https://pitchey.pages.dev',
+      // `process.env.FRONTEND_URL` is always undefined on Cloudflare Workers
+      // (Workers don't expose process.env). Threading `env` through the
+      // EmailTemplateService constructor is tracked as separate tech debt —
+      // for now this fallback is effectively the only path, so make sure it
+      // points at the live canonical host.
+      baseUrl: process.env.FRONTEND_URL || 'https://pitchey-5o8.pages.dev',
     };
 
     // Render subject and content
