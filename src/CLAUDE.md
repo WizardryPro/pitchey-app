@@ -12,7 +12,7 @@ Allowed origins (canonical model as of 2026-04-22):
 - `localhost:5173/3000` (+ `127.0.0.1` equivalents) — local dev
 - Dynamic: `^https://[a-f0-9]+\.pitchey-5o8\.pages\.dev$` (hash-prefixed previews) and `^https://[a-zA-Z0-9-]+\.pitchey-5o8\.pages\.dev$` (branch/PR-prefixed previews)
 
-**Do not reintroduce `pitchey.pages.dev` as an origin** — it NXDOMAINs since the Cavelltheleaddev project was deleted 2026-04-21. Reverting to the old model was PR #14/#21's mistake; flipped back to reality in commit `<flip>`.
+**Do not reintroduce `pitchey.pages.dev` as an origin** — it NXDOMAINs since the Cavelltheleaddev project was deleted 2026-04-21. Reverting to the old model was PR #14/#21's mistake; flipped back to reality in commit `697de63`.
 
 Allowed headers (line 102):
 ```
