@@ -9,6 +9,11 @@
  *
  * Frontend calls: /api/auth/login
  * This proxies to: https://pitchey-api-prod.ndlovucavelle.workers.dev/api/auth/login
+ *
+ * Named `_middleware.ts` (not `[[path]].ts`) to avoid a wrangler Pages
+ * Functions bundler bug where `[[name]].ts` → `routePath: "/:name*"` is
+ * emitted in v6 path-to-regexp syntax but compiled against v8 at runtime
+ * (CF error 1101). See docs/sessions/2026-04-21-URGENT-status.md.
  */
 
 interface Env {
@@ -19,16 +24,27 @@ interface Env {
 // Default backend URL
 const DEFAULT_BACKEND_URL = 'https://pitchey-api-prod.ndlovucavelle.workers.dev';
 
-export const onRequest: PagesFunction<Env> = async (context) => {
-  const { request, env, params } = context;
+// Paths served by specific Pages Functions (not proxied to backend).
+// Middleware runs before specific routes in CF Pages, so we must pass these
+// through via context.next() or they'll be shadowed.
+const SPECIFIC_ROUTES = new Set([
+  '/api/monitoring/envelope', // Sentry tunnel (frontend-only)
+]);
 
-  // Get the path segments after /api/
-  const pathSegments = params.path as string[];
-  const apiPath = pathSegments ? pathSegments.join('/') : '';
+export const onRequest: PagesFunction<Env> = async (context) => {
+  const { request, env } = context;
+
+  const url = new URL(request.url);
+  if (SPECIFIC_ROUTES.has(url.pathname)) {
+    return context.next();
+  }
+
+  // Middleware doesn't receive named route params — derive apiPath from the URL.
+  // Requests hit this middleware because it's mounted at /api.
+  const apiPath = url.pathname.replace(/^\/api\/?/, '');
 
   // Build the backend URL
   const backendUrl = env.API_BACKEND_URL || DEFAULT_BACKEND_URL;
-  const url = new URL(request.url);
   const targetUrl = `${backendUrl}/api/${apiPath}${url.search}`;
 
   console.log(`[API Proxy] ${request.method} /api/${apiPath} -> ${targetUrl}`);
