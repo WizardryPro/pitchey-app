@@ -47,7 +47,9 @@ import {
   MapPin,
   Calendar as CalendarIcon,
   UserPlus,
-  Building2
+  Building2,
+  Menu,
+  ChevronRight
 } from 'lucide-react';
 import { API_URL } from '../config';
 import { formatBudgetCompact } from '@shared/utils/formatters';
@@ -107,18 +109,29 @@ function getCreatorDisplay(pitch: Pitch): string {
     || 'Unknown';
 }
 
-// Enhanced filtering and sorting options
+// Enhanced filtering and sorting options.
+// `shortLabel` is used in the compact pill row; `label` stays in the a11y/title.
 const SORT_OPTIONS = [
-  { value: 'hot', label: 'Hottest', icon: Zap },
-  { value: 'trending', label: 'Trending Now', icon: TrendingUp },
-  { value: 'newest', label: 'Newest First', icon: Clock },
-  { value: 'popular', label: 'Most Popular', icon: Star },
-  { value: 'views', label: 'Most Viewed', icon: Eye },
-  { value: 'budget_high', label: 'Highest Budget', icon: DollarSign },
-  { value: 'budget_low', label: 'Lowest Budget', icon: Wallet },
-  { value: 'alphabetical', label: 'A-Z', icon: BookOpen },
-  { value: 'investment_ready', label: 'Investment Ready', icon: Zap }
+  { value: 'hot', label: 'Hottest', shortLabel: 'Hot', icon: Zap },
+  { value: 'trending', label: 'Trending Now', shortLabel: 'Trending', icon: TrendingUp },
+  { value: 'newest', label: 'Newest First', shortLabel: 'New', icon: Clock },
+  { value: 'popular', label: 'Most Popular', shortLabel: 'Popular', icon: Star },
+  { value: 'views', label: 'Most Viewed', shortLabel: 'Most Viewed', icon: Eye },
+  { value: 'budget_high', label: 'Highest Budget', shortLabel: 'High Budget', icon: DollarSign },
+  { value: 'budget_low', label: 'Lowest Budget', shortLabel: 'Low Budget', icon: Wallet },
+  { value: 'alphabetical', label: 'A-Z', shortLabel: 'A–Z', icon: BookOpen },
+  { value: 'investment_ready', label: 'Investment Ready', shortLabel: 'Inv. Ready', icon: Zap }
 ];
+
+// Active-state brand colors per sort mode. Hot/Trending/New get semantic accents
+// that echo HeatBadge + the existing brand tokens; everything else anchors to the
+// primary brand purple so the eye lands on the three marquee discovery modes first.
+const SORT_ACTIVE_BG: Record<string, string> = {
+  hot: 'bg-brand-featured',
+  trending: 'bg-brand-trending',
+  newest: 'bg-brand-new',
+};
+const SORT_DEFAULT_ACTIVE_BG = 'bg-brand-anchor';
 
 const VIEW_MODES = {
   grid: { icon: Grid, label: 'Grid View', cols: 'grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4' },
@@ -162,6 +175,7 @@ export default function MarketplaceEnhanced() {
   const [tabStates, setTabStates] = useState<Record<string, TabState>>({});
   const [viewMode, setViewMode] = useState<keyof typeof VIEW_MODES>('grid');
   const [showFilters, setShowFilters] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'popular');
   const [currentPage, setCurrentPage] = useState(1);
@@ -755,13 +769,19 @@ export default function MarketplaceEnhanced() {
               <nav className="hidden md:flex items-center gap-6">
                 <button
                   onClick={() => { void navigate('/marketplace'); }}
-                  className="text-purple-600 font-medium"
+                  className="text-nav-link text-brand-anchor font-medium"
                 >
                   Marketplace
                 </button>
                 <button
+                  onClick={() => { void navigate('/how-it-works'); }}
+                  className="text-nav-link text-gray-700 hover:text-brand-anchor transition"
+                >
+                  How It Works
+                </button>
+                <button
                   onClick={() => { void navigate('/about'); }}
-                  className="text-gray-700 hover:text-purple-600 transition"
+                  className="text-nav-link text-gray-700 hover:text-brand-anchor transition"
                 >
                   About
                 </button>
@@ -770,6 +790,17 @@ export default function MarketplaceEnhanced() {
 
             {/* Auth buttons */}
             <div className="flex items-center gap-2 sm:gap-3">
+              {/* Mobile hamburger — only below md, and only when there are links to show */}
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(v => !v)}
+                aria-label="Open navigation menu"
+                aria-expanded={mobileMenuOpen}
+                className="md:hidden p-2 text-gray-700 hover:text-brand-anchor transition"
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+
               {isAuthenticated ? (
                 <>
                   {/* User info — desktop only */}
@@ -818,6 +849,43 @@ export default function MarketplaceEnhanced() {
               )}
             </div>
           </div>
+
+          {/* Mobile nav panel — below md only. Links mirror the desktop nav
+              so mobile users aren't stranded when the md:flex bar is hidden. */}
+          <AnimatePresence>
+            {mobileMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="md:hidden overflow-hidden border-t border-gray-100"
+              >
+                <nav className="flex flex-col py-2">
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); void navigate('/marketplace'); }}
+                    className="flex items-center justify-between px-2 py-3 text-nav-link text-brand-anchor font-medium hover:bg-purple-50 rounded-lg"
+                  >
+                    Marketplace
+                    <ChevronRight className="w-4 h-4 opacity-60" />
+                  </button>
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); void navigate('/how-it-works'); }}
+                    className="flex items-center justify-between px-2 py-3 text-nav-link text-gray-700 hover:text-brand-anchor hover:bg-purple-50 rounded-lg"
+                  >
+                    How It Works
+                    <ChevronRight className="w-4 h-4 opacity-60" />
+                  </button>
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); void navigate('/about'); }}
+                    className="flex items-center justify-between px-2 py-3 text-nav-link text-gray-700 hover:text-brand-anchor hover:bg-purple-50 rounded-lg"
+                  >
+                    About
+                    <ChevronRight className="w-4 h-4 opacity-60" />
+                  </button>
+                </nav>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </header>
       )}
@@ -937,8 +1005,9 @@ export default function MarketplaceEnhanced() {
       {/* Search and controls bar */}
       <div className="bg-white border-b">
         <div className="container mx-auto px-4 py-3 sm:py-4">
-          <div className="flex gap-2 sm:gap-4 mb-3">
-            {/* Search */}
+          {/* Row 1: search + filters toggle + view mode — combined so secondary controls
+              share the row and the sort pills (row 2) get the full horizontal canvas */}
+          <div className="flex gap-2 sm:gap-3 mb-3">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
@@ -953,49 +1022,33 @@ export default function MarketplaceEnhanced() {
               />
             </div>
 
-            {/* Filter toggle */}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`px-3 sm:px-4 py-2 border rounded-lg flex items-center gap-2 flex-shrink-0 ${showFilters ? 'bg-purple-600 text-white' : 'hover:bg-gray-100'}`}
+              className={`px-3 sm:px-4 py-2 border rounded-lg flex items-center gap-2 flex-shrink-0 transition ${showFilters ? 'bg-brand-anchor text-white border-brand-anchor' : 'hover:bg-gray-100'}`}
             >
               <SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="hidden sm:inline">Filters</span>
               {hasActiveFilters && (
-                <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                <span className="bg-brand-nda text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                   {filters.genres.length + filters.formats.length + filters.status.length + (searchQuery ? 1 : 0)}
                 </span>
               )}
             </button>
-          </div>
 
-          {/* Sort + View controls */}
-          <div className="flex items-center justify-between gap-2">
-            {/* Sort dropdown */}
-            <select
-              id="marketplace-sort"
-              name="sortBy"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="max-w-[150px] sm:max-w-none px-2 sm:px-4 py-1.5 sm:py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 text-xs sm:text-sm"
-              aria-label="Sort pitches by"
-            >
-              {SORT_OPTIONS.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-
-            {/* View mode toggle */}
-            <div className="flex border rounded-lg flex-shrink-0">
-              {Object.entries(VIEW_MODES).map(([mode, config]) => {
-                const Icon = config.icon;
+            {/* View mode toggle — moved up from row 2; it's a display preference,
+                not a discovery axis, so it doesn't need its own row */}
+            <div className="hidden sm:flex border rounded-lg flex-shrink-0" role="group" aria-label="View mode">
+              {Object.entries(VIEW_MODES).map(([mode, cfg]) => {
+                const Icon = cfg.icon;
+                const active = viewMode === mode;
                 return (
                   <button
                     key={mode}
                     onClick={() => setViewMode(mode as keyof typeof VIEW_MODES)}
-                    className={`p-1.5 sm:p-2 ${viewMode === mode ? 'bg-purple-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-                    title={config.label}
+                    className={`p-2 transition ${active ? 'bg-brand-anchor text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                    title={cfg.label}
+                    aria-label={cfg.label}
+                    aria-pressed={active}
                   >
                     <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
@@ -1003,6 +1056,86 @@ export default function MarketplaceEnhanced() {
               })}
             </div>
           </div>
+
+          {/* Row 2: sort pills — primary discovery axis, promoted from a <select>
+              so the three marquee modes (Hot/Trending/New) are visible at a glance.
+              Color-coded active states echo brand.featured/trending/new */}
+          <div
+            className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1"
+            role="tablist"
+            aria-label="Sort pitches by"
+          >
+            {SORT_OPTIONS.map(option => {
+              const Icon = option.icon;
+              const active = sortBy === option.value;
+              const activeBg = SORT_ACTIVE_BG[option.value] || SORT_DEFAULT_ACTIVE_BG;
+              return (
+                <button
+                  key={option.value}
+                  role="tab"
+                  aria-selected={active}
+                  title={option.label}
+                  onClick={() => setSortBy(option.value)}
+                  className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium border transition ${
+                    active
+                      ? `${activeBg} text-white border-transparent shadow-sm`
+                      : 'bg-white text-gray-700 border-gray-200 hover:border-brand-anchor hover:text-brand-anchor'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{option.shortLabel}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Row 3: genre quick-chips — softer tinted palette signals "secondary
+              filter" below sort. Config-driven with a sensible fallback list.
+              Multi-select shares state with the sidebar's genre checkboxes. */}
+          {(() => {
+            const genreList = config?.genres?.length
+              ? config.genres
+              : ['Action', 'Comedy', 'Drama', 'Horror', 'Sci-Fi', 'Thriller'];
+            const noGenreActive = filters.genres.length === 0;
+            return (
+              <div
+                className="flex gap-2 overflow-x-auto scrollbar-hide mt-2 -mx-1 px-1"
+                role="group"
+                aria-label="Quick genre filter"
+              >
+                <button
+                  onClick={() => setFilters(f => ({ ...f, genres: [] }))}
+                  className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium border transition ${
+                    noGenreActive
+                      ? 'bg-purple-100 text-purple-700 border-purple-300'
+                      : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                  }`}
+                >
+                  All
+                </button>
+                {genreList.map((genre) => {
+                  const active = filters.genres.includes(genre);
+                  return (
+                    <button
+                      key={`chip-${genre}`}
+                      onClick={() => setFilters(f => ({
+                        ...f,
+                        genres: active ? f.genres.filter(g => g !== genre) : [...f.genres, genre],
+                      }))}
+                      aria-pressed={active}
+                      className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium border transition ${
+                        active
+                          ? 'bg-purple-100 text-purple-700 border-purple-300'
+                          : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                      }`}
+                    >
+                      {genre}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
 
           {/* Active filters display */}
           {hasActiveFilters && (
