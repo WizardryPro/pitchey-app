@@ -34,7 +34,7 @@ This document outlines the required GitHub secrets for the CI/CD pipeline.
 | Secret Name | Description | Example |
 |-------------|-------------|---------|
 | `PRODUCTION_URL` | Production Worker API URL | `https://pitchey-api-prod.ndlovucavelle.workers.dev` |
-| `FRONTEND_URL` | Production frontend URL | `https://pitchey.pages.dev` |
+| `FRONTEND_URL` | Production frontend URL | `https://pitchey-5o8.pages.dev` |
 
 ## Setting Up Secrets
 
@@ -67,7 +67,7 @@ gh secret set UPSTASH_REDIS_REST_TOKEN --body "your_upstash_token"
 
 # Set environment URLs
 gh secret set PRODUCTION_URL --body "https://pitchey-api-prod.ndlovucavelle.workers.dev"
-gh secret set FRONTEND_URL --body "https://pitchey.pages.dev"
+gh secret set FRONTEND_URL --body "https://pitchey-5o8.pages.dev"
 ```
 
 ## Environment-Specific Configuration

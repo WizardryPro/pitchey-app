@@ -61,9 +61,9 @@ jobs:
       - name: ✅ Deployment Complete
         run: |
           echo "✅ Frontend deployed successfully!"
-          echo "🌐 Production URL: https://pitchey.pages.dev"
+          echo "🌐 Production URL: https://pitchey-5o8.pages.dev"
           echo "🌐 Pages Project: pitchey"
           echo "🔄 Deployment ID: ${{ github.sha }}"
           echo ""
           echo "The deployment may take 1-2 minutes to propagate globally."
-          echo "Note: Individual deployments are available at https://[deployment-id].pitchey.pages.dev"
+          echo "Note: Individual deployments are available at https://[deployment-id].pitchey-5o8.pages.dev"

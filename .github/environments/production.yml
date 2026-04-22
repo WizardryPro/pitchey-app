@@ -37,8 +37,8 @@ required_secrets:
 required_variables:
   - ENVIRONMENT_NAME: production
   - API_URL: https://pitchey-api-prod.ndlovucavelle.workers.dev
-  - FRONTEND_URL: https://pitchey.pages.dev
-  - ALLOWED_ORIGINS: https://pitchey.pages.dev,https://www.pitchey.com
+  - FRONTEND_URL: https://pitchey-5o8.pages.dev
+  - ALLOWED_ORIGINS: https://pitchey-5o8.pages.dev,https://www.pitchey.com
   - LOG_LEVEL: info
   - RATE_LIMIT_ENABLED: true
   - RATE_LIMIT_MAX_REQUESTS: 500

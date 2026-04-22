@@ -20,7 +20,7 @@ jobs:
       - name: Check Frontend
         id: frontend
         run: |
-          if curl -f https://pitchey.pages.dev/ > /dev/null 2>&1; then
+          if curl -f https://pitchey-5o8.pages.dev/ > /dev/null 2>&1; then
             echo "✅ Frontend is healthy"
           else
             echo "❌ Frontend is down"

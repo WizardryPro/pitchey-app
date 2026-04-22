@@ -23,7 +23,7 @@ assignees: ''
 - [ ] Data integrity issues
 
 **Affected Components:**
-- [ ] Frontend (pitchey.pages.dev)
+- [ ] Frontend (pitchey-5o8.pages.dev)
 - [ ] API (pitchey-api-prod.ndlovucavelle.workers.dev)
 - [ ] Database
 - [ ] Authentication
