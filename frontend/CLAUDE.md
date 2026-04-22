@@ -4,7 +4,7 @@ Loads automatically when working in `frontend/`. For general architecture see ro
 
 ## API Communication Path
 
-All API calls go through the **Pages Functions proxy** (`functions/api/[[path]].ts`).
+All API calls go through the **Pages Functions proxy** (`functions/api/_middleware.ts`).
 - Production `API_URL` is `''` (empty string) — requests are same-origin via the proxy
 - The proxy rewrites cookies: removes `Domain`, changes `SameSite=None` to `Lax`
 - The proxy strips all CORS headers from backend responses (unnecessary when same-origin)
@@ -69,6 +69,7 @@ File: `src/monitoring/sentry-config.ts`
 ## Deployment & Routing
 
 - `wrangler pages deploy dist/` **must run from `frontend/`** not repo root — otherwise `functions/` isn't detected and the Functions bundle silently doesn't compile (no error shown)
-- `_redirects` is **ignored** when Pages Functions exist — SPA fallback is handled by `functions/[[catchall]].ts` which serves `index.html` for all non-API, non-asset routes
-- `functions/api/[[path]].ts` has higher specificity than `functions/[[catchall]].ts` due to directory depth — this is what makes API proxying work alongside the SPA fallback
-- If the catchall is removed or renamed, every direct URL navigation or page refresh will 404
+- `_redirects` is **ignored** when Pages Functions exist — SPA fallback is handled by `functions/_middleware.ts` which serves `index.html` for non-API, non-asset routes. It calls `context.next()` for `/api/*` to pass through to the api middleware.
+- `functions/api/_middleware.ts` handles the API proxy. **Middleware runs BEFORE specific routes in CF Pages** (opposite of catchall priority) — so it has an explicit passthrough list (`SPECIFIC_ROUTES` Set) for paths that need to hit their own handler. Currently only `/api/monitoring/envelope` (Sentry tunnel).
+- Filenames avoid `[[name]].ts` catchall syntax: wrangler's bundler translates `[[name]]` → `routePath: "/:name*"` (v6 syntax) but ships path-to-regexp v8 which rejects it → CF 1101 on every route. See `docs/sessions/2026-04-21-URGENT-status.md`.
+- If middleware is removed or renamed, every direct URL navigation or page refresh will 404.

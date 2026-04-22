@@ -17,7 +17,7 @@ triggers:
 - Frontend Project: `pitchey` (Cloudflare Pages)
 - Worker Name: `pitchey-api-prod`
 - Production API: https://pitchey-api-prod.ndlovucavelle.workers.dev
-- Production Frontend: https://pitchey.pages.dev
+- Production Frontend: https://pitchey-5o8.pages.dev (ndlovucavelle account; `pitchey.pages.dev` was deleted 2026-04-21)
 
 ## Deployment Commands
 
@@ -51,7 +51,7 @@ cd frontend && npm run build && npx wrangler pages deploy dist/ --project-name=p
 
 # 3. Verify both
 curl -s https://pitchey-api-prod.ndlovucavelle.workers.dev/api/health | jq
-curl -s -o /dev/null -w "%{http_code}" https://pitchey.pages.dev
+curl -s -o /dev/null -w "%{http_code}" https://pitchey-5o8.pages.dev
 ```
 
 ## Pre-Deploy Checklist

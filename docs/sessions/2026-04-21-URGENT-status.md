@@ -87,3 +87,7 @@ Reverting the flip tonight would only re-point emails at the 1101 URL. The hones
 3. File the upstream wrangler issue.
 4. Revert the `FRONTEND_URL` change in `wrangler.toml` once a real production URL is decided, and redeploy the Worker.
 5. Decide whether to commit or revert the `wrangler@4.84.1` bump left in the working tree.
+
+## UPDATE — fix proven (2026-04-22)
+
+Option 1 from §"Workarounds to evaluate tomorrow" (rename to `_middleware.ts`) was implemented and tested on preview deployment `75854fcc.pitchey-5o8.pages.dev`. All five acceptance tests passed: root load, login (session cookie set + all authenticated endpoints 200), navigation, console clean (zero errors/warnings), hard-refresh SPA fallback. Sentry envelope tunnel required an explicit passthrough in `api/_middleware.ts` (via a `SPECIFIC_ROUTES` Set calling `context.next()`) because middleware shadows specific routes in CF Pages — the inverse of catchall route precedence. Not yet promoted to `--branch=main` as of this update. Once promoted, the remaining Worker-side followup is `FRONTEND_URL` in `wrangler.toml:159` (still points at the NXDOMAIN'd `pitchey.pages.dev`).
