@@ -28,23 +28,30 @@ export interface ErrorDetails {
   details?: any;
 }
 
-// CORS configuration - centralized
+// CORS configuration — centralized.
+//
+// Canonical production hostname is `pitchey-5o8.pages.dev`. Cloudflare auto-
+// suffixes the global subdomain because `pitchey.pages.dev` is claimed by the
+// separate `pitchey-coming-soon` marketing project on a different account.
+// Per CLAUDE.md "URL Consolidation — corrected model" (2026-04-21): the old
+// `pitchey` Pages project on Cavelltheleaddev's account was deleted and
+// `pitchey.pages.dev` now NXDOMAINs — do not reintroduce it as an origin.
 const ALLOWED_ORIGINS = [
-  'https://pitchey.pages.dev',     // Primary production (Cloudflare Pages)
-  'https://pitchey.com',               // Custom domain (future)
+  'https://pitchey-5o8.pages.dev',     // Primary production (Ndlovucavelle's `pitchey` Pages project)
+  'https://pitchey.com',               // Marketing stub (pitchey-coming-soon, separate account)
   'http://localhost:5173',             // Local development (Vite)
-  'http://127.0.0.1:5173',            // Local development (Vite via IP)
+  'http://127.0.0.1:5173',             // Local development (Vite via IP)
   'http://localhost:3000',             // Local development (alternative)
-  'http://127.0.0.1:3000'             // Local development (alternative via IP)
+  'http://127.0.0.1:3000',             // Local development (alternative via IP)
 ];
 
 // Function to check if origin is allowed (includes Cloudflare Pages preview subdomains).
 //
-// Scoped to what the single `pitchey` Pages project can actually serve:
-// - pitchey.pages.dev (canonical; also matched in ALLOWED_ORIGINS above)
-// - pitchey-5o8.pages.dev (legacy alias that Cloudflare auto-assigned to the same project)
-// - [hash].pitchey.pages.dev and [name].pitchey.pages.dev (per-branch previews auto-generated
-//   under the canonical project)
+// Scoped to what the single live `pitchey` Pages project can actually serve.
+// Preview deployments under that project get hostnames like
+// `<hash>.pitchey-5o8.pages.dev` (hash-prefixed) and `<branch>.pitchey-5o8.pages.dev`
+// (per-branch aliases) — the project stem is `pitchey-5o8`, not `pitchey`,
+// because of the CF auto-suffix explained above.
 //
 // Removed (2026-04-20, issue #27): the previous `pitchey-[a-zA-Z0-9-]+\.pages\.dev` regex
 // accepted any subdomain matching that shape regardless of whether a project with that name
@@ -63,11 +70,12 @@ function isOriginAllowed(origin: string | null): boolean {
     return true;
   }
 
-  // Per-branch Cloudflare Pages previews under the canonical `pitchey` project:
-  // hash-prefixed (01750dbc.pitchey.pages.dev) and name-prefixed (pr-42.pitchey.pages.dev).
-  if (cleanOrigin.match(/^https:\/\/[a-f0-9]+\.pitchey\.pages\.dev$/) ||       // Hash-based preview
-      cleanOrigin.match(/^https:\/\/[a-zA-Z0-9-]+\.pitchey\.pages\.dev$/) ||   // Named per-branch preview
-      cleanOrigin === 'https://pitchey-5o8.pages.dev') {                        // Legacy project alias
+  // Per-branch Cloudflare Pages previews under the live `pitchey` project
+  // (public stem `pitchey-5o8.pages.dev`): hash-prefixed (e.g.
+  // 52e5fc15.pitchey-5o8.pages.dev) and branch/PR-prefixed (e.g.
+  // pr-42.pitchey-5o8.pages.dev).
+  if (cleanOrigin.match(/^https:\/\/[a-f0-9]+\.pitchey-5o8\.pages\.dev$/) ||       // Hash-based preview
+      cleanOrigin.match(/^https:\/\/[a-zA-Z0-9-]+\.pitchey-5o8\.pages\.dev$/)) {   // Named per-branch preview
     return true;
   }
 
@@ -96,11 +104,12 @@ export function getCorsHeaders(origin?: string | null): Record<string, string> {
   
   const isAllowedOrigin = isOriginAllowed(requestOrigin);
   
-  // If origin is allowed, use it; otherwise use the wildcard for public endpoints
-  // For security, we still set specific origins when possible
-  const allowOrigin = isAllowedOrigin && requestOrigin 
-    ? requestOrigin 
-    : ALLOWED_ORIGINS[0]; // defaults to pitchey.pages.dev
+  // If origin is allowed, echo it back; otherwise fall back to the canonical
+  // production hostname so cross-origin requests from unrecognized origins
+  // still receive a valid ACAO (browser will enforce the mismatch).
+  const allowOrigin = isAllowedOrigin && requestOrigin
+    ? requestOrigin
+    : ALLOWED_ORIGINS[0]; // canonical: pitchey-5o8.pages.dev
   
   return {
     "Access-Control-Allow-Origin": allowOrigin,

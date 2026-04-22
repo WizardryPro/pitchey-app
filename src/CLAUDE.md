@@ -6,12 +6,17 @@ Loads automatically when working in `src/`. For general architecture see root CL
 
 File: `utils/response.ts` — `getCorsHeaders()` (line 82)
 
-Allowed origins: `pitchey.pages.dev`, `pitchey.com`, `localhost:5173/3000`
-Plus dynamic: any `*.pitchey.pages.dev` Cloudflare preview deployment.
+Allowed origins (canonical model as of 2026-04-22):
+- `pitchey-5o8.pages.dev` — live production frontend (Ndlovucavelle's `pitchey` Pages project; CF auto-suffixes because the global `pitchey.pages.dev` slot is held by the separate `pitchey-coming-soon` marketing project)
+- `pitchey.com` — marketing stub (separate account, unlikely to hit the Worker API)
+- `localhost:5173/3000` (+ `127.0.0.1` equivalents) — local dev
+- Dynamic: `^https://[a-f0-9]+\.pitchey-5o8\.pages\.dev$` (hash-prefixed previews) and `^https://[a-zA-Z0-9-]+\.pitchey-5o8\.pages\.dev$` (branch/PR-prefixed previews)
+
+**Do not reintroduce `pitchey.pages.dev` as an origin** — it NXDOMAINs since the Cavelltheleaddev project was deleted 2026-04-21. Reverting to the old model was PR #14/#21's mistake; flipped back to reality in commit `<flip>`.
 
 Allowed headers (line 102):
 ```
-Content-Type, Authorization, X-Request-Id, X-Client-Id
+Content-Type, Authorization, X-Request-Id, X-Client-Id, sentry-trace, baggage, traceparent
 ```
 
 ### Trace Headers — DONE
