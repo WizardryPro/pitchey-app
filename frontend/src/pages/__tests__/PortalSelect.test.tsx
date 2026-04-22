@@ -63,22 +63,26 @@ describe('PortalSelect', () => {
     expect(screen.getByText('Find and develop exciting content')).toBeInTheDocument()
   })
 
+  // PortalSelect forwards post-login redirect state as the second arg to
+  // navigate() (see `forwardState` in PortalSelect.tsx). Without a state prop,
+  // the second arg is explicitly `undefined` rather than omitted — match that
+  // exact call shape.
   it('navigates to creator login when Creator Portal is clicked', () => {
     renderComponent()
     fireEvent.click(screen.getByText('Creator Portal'))
-    expect(mockNavigate).toHaveBeenCalledWith('/login/creator')
+    expect(mockNavigate).toHaveBeenCalledWith('/login/creator', undefined)
   })
 
   it('navigates to investor login when Investor Portal is clicked', () => {
     renderComponent()
     fireEvent.click(screen.getByText('Investor Portal'))
-    expect(mockNavigate).toHaveBeenCalledWith('/login/investor')
+    expect(mockNavigate).toHaveBeenCalledWith('/login/investor', undefined)
   })
 
   it('navigates to production login when Production Portal is clicked', () => {
     renderComponent()
     fireEvent.click(screen.getByText('Production Portal'))
-    expect(mockNavigate).toHaveBeenCalledWith('/login/production')
+    expect(mockNavigate).toHaveBeenCalledWith('/login/production', undefined)
   })
 
   it('navigates back to home when Back button is clicked', () => {

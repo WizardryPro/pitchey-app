@@ -371,12 +371,16 @@ describe('CreatePitch', () => {
   })
 
   it('renders NDA upload section', () => {
+    // NDAUploadSection is now rendered inside DocumentUploadHub rather than
+    // directly by CreatePitch (DocumentUploadHub.tsx:483). At this level we
+    // verify the upload hub is present — the hub's own tests cover the NDA
+    // sub-section.
     render(
       <MemoryRouter>
         <CreatePitch />
       </MemoryRouter>
     )
-    expect(screen.getByTestId('nda-upload-section')).toBeInTheDocument()
+    expect(screen.getByTestId('document-upload-hub')).toBeInTheDocument()
   })
 
   it('renders Media and Assets section', () => {

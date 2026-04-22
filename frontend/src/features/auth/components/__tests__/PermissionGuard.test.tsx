@@ -159,13 +159,16 @@ describe('PermissionGuard', () => {
       expect(screen.getByTestId('navigate')).toHaveAttribute('data-to', '/production/dashboard');
     });
 
-    it('redirects to /portals for viewer role', () => {
+    it('redirects viewer role to the watcher dashboard', () => {
+      // Viewer IS the watcher role per CLAUDE.md (Watcher Portal = browse-only
+      // audience). PermissionGuard sends them to their own dashboard, not the
+      // portal picker.
       setRole('viewer');
       renderGuard({
         requires: Permission.PITCH_CREATE,
         children: <div>Protected</div>,
       });
-      expect(screen.getByTestId('navigate')).toHaveAttribute('data-to', '/portals');
+      expect(screen.getByTestId('navigate')).toHaveAttribute('data-to', '/watcher/dashboard');
     });
 
     it('admin can access anything', () => {

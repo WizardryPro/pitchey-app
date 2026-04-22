@@ -364,9 +364,10 @@ describe('PitchForm (CreatePitch)', () => {
         expect(screen.getByText('Create New Pitch')).toBeInTheDocument()
         expect(screen.getByText('Basic Information')).toBeInTheDocument()
         expect(screen.getByText('Themes & World Building')).toBeInTheDocument()
-        // Check that at least one NDA section exists
-        const ndaHeaders = screen.getAllByText('Non-Disclosure Agreement (NDA)')
-        expect(ndaHeaders.length).toBeGreaterThan(0)
+        // NDA section heading coverage moved to
+        // src/features/ndas/components/__tests__/NDAUploadSection.test.tsx
+        // → "renders the NDA section heading". This outer test verifies only
+        // the CreatePitch form shell (top-level section headings).
         expect(screen.getByText('Media & Assets')).toBeInTheDocument()
       })
     })
@@ -655,102 +656,19 @@ describe('PitchForm (CreatePitch)', () => {
     })
   })
 
-  describe('NDA Configuration', () => {
-    it('should show NDA options', async () => {
-      render(<CreatePitch />)
-
-      await waitFor(() => {
-        // Use getAllByText since there might be multiple elements with this text
-        const ndaHeaders = screen.getAllByText('Non-Disclosure Agreement (NDA)')
-        expect(ndaHeaders.length).toBeGreaterThan(0)
-      }, { timeout: 3000 })
-
-      // Use getAllByText for elements that might appear multiple times
-      const noNDAOptions = screen.getAllByText('No NDA Required')
-      expect(noNDAOptions.length).toBeGreaterThan(0)
-      
-      const standardNDAOptions = screen.getAllByText('Use Platform Standard NDA')
-      expect(standardNDAOptions.length).toBeGreaterThan(0)
-      
-      const customNDAOptions = screen.getAllByText('Upload Custom NDA')
-      expect(customNDAOptions.length).toBeGreaterThan(0)
-    })
-
-    it('should show custom NDA upload when selected', async () => {
-      render(<CreatePitch />)
-
-      // Wait for NDA section to load
-      await waitFor(() => {
-        const ndaHeaders = screen.getAllByText('Non-Disclosure Agreement (NDA)')
-        expect(ndaHeaders.length).toBeGreaterThan(0)
-      }, { timeout: 3000 })
-
-      // Find and click the Upload Custom NDA option
-      const customNDATexts = screen.getAllByText('Upload Custom NDA')
-      const customNDALabel = customNDATexts[0].closest('label')
-      const customNDARadio = customNDALabel?.querySelector('input[type="radio"]')
-      
-      if (customNDARadio) {
-        await user.click(customNDARadio)
-      }
-
-      await waitFor(() => {
-        expect(screen.getByText('Choose PDF File')).toBeInTheDocument()
-      }, { timeout: 3000 })
-    })
-
-    it('should handle custom NDA file upload', async () => {
-      render(<CreatePitch />)
-
-      // Wait for NDA section to load
-      await waitFor(() => {
-        const ndaHeaders = screen.getAllByText('Non-Disclosure Agreement (NDA)')
-        expect(ndaHeaders.length).toBeGreaterThan(0)
-      }, { timeout: 3000 })
-
-      // Find and click the Upload Custom NDA option
-      const customNDATexts = screen.getAllByText('Upload Custom NDA')
-      const customNDALabel = customNDATexts[0].closest('label')
-      const customNDARadio = customNDALabel?.querySelector('input[type="radio"]')
-      
-      if (customNDARadio) {
-        await user.click(customNDARadio)
-      }
-
-      await waitFor(() => {
-        const uploadButton = screen.getByText('Choose PDF File')
-        expect(uploadButton).toBeInTheDocument()
-      }, { timeout: 3000 })
-    })
-
-    it('should show NDA protection info when NDA is required', async () => {
-      render(<CreatePitch />)
-
-      // Wait for NDA section to load
-      await waitFor(() => {
-        const ndaHeaders = screen.getAllByText('Non-Disclosure Agreement (NDA)')
-        expect(ndaHeaders.length).toBeGreaterThan(0)
-      }, { timeout: 3000 })
-
-      // Find the standard NDA option
-      const standardNDATexts = screen.getAllByText('Use Platform Standard NDA')
-      expect(standardNDATexts.length).toBeGreaterThan(0)
-      
-      // Try to find and interact with the radio button
-      const standardNDALabel = standardNDATexts[0].closest('label')
-      const standardNDARadio = standardNDALabel?.querySelector('input[type="radio"]') as HTMLInputElement | null
-
-      if (standardNDARadio && !standardNDARadio.checked) {
-        await user.click(standardNDARadio)
-        // Give it time to update, but don't require it to be checked
-        // The form logic may prevent immediate checking due to validation
-        await new Promise(resolve => setTimeout(resolve, 100))
-      }
-
-      // Verify that NDA components are present and functional
-      expect(standardNDATexts.length).toBeGreaterThan(0)
-    })
-  })
+  // NDA Configuration tests that used to live here were removed in favor of
+  // direct NDAUploadSection tests. Coverage moved to
+  // src/features/ndas/components/__tests__/NDAUploadSection.test.tsx:
+  //   - "renders the NDA section heading"
+  //   - "renders all four NDA type options"
+  //   - "fires onChange with ndaType=standard when Platform Standard NDA is picked"
+  //   - "fires onChange with ndaType=custom when Upload Custom NDA is picked"
+  //   - "reveals the custom upload area ('Choose PDF File') when ndaType is custom..."
+  //   - "fires onChange(null) when No NDA Required is picked"
+  //   - "marks 'No NDA Required' as disabled when required prop is true"
+  // The original tests reached three layers deep (CreatePitch → DocumentUploadHub →
+  // NDAUploadSection) which proved unreliable in isolation. Direct component
+  // tests are both more robust and a more honest unit boundary.
 
   describe('Character Management', () => {
     it('should render character management section', async () => {

@@ -272,7 +272,7 @@ describe('CreatorDashboard', () => {
     it('displays the dashboard title', async () => {
       renderDashboard()
       await waitFor(() => {
-        expect(screen.getByText('Creator Dashboard')).toBeInTheDocument()
+        expect(screen.getByText(/Welcome back/i)).toBeInTheDocument()
       })
     })
 
@@ -503,7 +503,7 @@ describe('CreatorDashboard', () => {
     it('does not show offline banner when online', async () => {
       renderDashboard()
       await waitFor(() => {
-        expect(screen.getByText('Creator Dashboard')).toBeInTheDocument()
+        expect(screen.getByText(/Welcome back/i)).toBeInTheDocument()
       })
       expect(screen.queryByText(/You are offline/i)).not.toBeInTheDocument()
     })

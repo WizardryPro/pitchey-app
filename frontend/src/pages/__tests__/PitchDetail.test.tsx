@@ -174,7 +174,12 @@ describe('PitchDetail', () => {
       })
 
       await u.click(screen.getAllByText('Sign In to Interact')[0])
-      expect(mockNavigate).toHaveBeenCalledWith('/portals')
+      // PitchDetail now carries post-login return path via router state so the
+      // user lands back on this pitch after auth (postLoginRedirect.ts).
+      expect(mockNavigate).toHaveBeenCalledWith(
+        '/portals',
+        { state: { from: '/pitch/1' } },
+      )
     })
   })
 
@@ -498,6 +503,15 @@ describe('PitchDetail', () => {
 
   describe('Creator Navigation', () => {
     it('navigates to creator profile on click', async () => {
+      // Creator name is NDA-gated in the PitchDetail markup
+      // (PitchDetail.tsx:345 — `hasSignedNDA || isOwner`), so the test needs
+      // an authenticated user with a signed NDA before "Test Creator" renders.
+      mockAuthStore.isAuthenticated = true
+      mockAuthStore.user = { id: 3, email: 'user@test.com', name: 'User' }
+      mockPitchService.getByIdAuthenticated.mockResolvedValue(
+        createMockPitch({ hasSignedNDA: true })
+      )
+
       const u = userEvent.setup()
       renderPitchDetail()
 

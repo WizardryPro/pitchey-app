@@ -280,7 +280,7 @@ describe('ProductionDashboard', () => {
     it('displays the Production Dashboard title', async () => {
       renderDashboard()
       await waitFor(() => {
-        expect(screen.getByText('Production Dashboard')).toBeInTheDocument()
+        expect(screen.getByText(/Welcome back/i)).toBeInTheDocument()
       })
     })
 
@@ -387,7 +387,7 @@ describe('ProductionDashboard', () => {
     it('does NOT show offline banner when online', async () => {
       renderDashboard()
       await waitFor(() => {
-        expect(screen.getByText('Production Dashboard')).toBeInTheDocument()
+        expect(screen.getByText(/Welcome back/i)).toBeInTheDocument()
       })
       expect(screen.queryByText(/You are offline/i)).not.toBeInTheDocument()
     })

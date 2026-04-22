@@ -161,7 +161,7 @@ describe('InvestorDashboard', () => {
     it('displays the dashboard title', async () => {
       renderDashboard()
       await waitFor(() => {
-        expect(screen.getByText('Investor Dashboard')).toBeInTheDocument()
+        expect(screen.getByText(/Welcome back/i)).toBeInTheDocument()
       })
     })
 
