@@ -20551,7 +20551,8 @@ const websocketSafeHandler = {
         case "0 0 * * *": // Daily
           await Promise.all([
             exportAuditLogs(env, ctx),
-            archiveOldJobs(env, ctx)
+            archiveOldJobs(env, ctx),
+            sweepExpiredSubscriptionGrants(env, ctx),
           ]);
           break;
 
@@ -20620,6 +20621,58 @@ async function cleanupDatabase(env: any, ctx: ExecutionContext): Promise<void> {
 
 async function updateTrendingAlgorithm(env: any, ctx: ExecutionContext): Promise<void> {
   console.log("Updating trending algorithm...");
+}
+
+/**
+ * Daily sweep to expire the founding-user 6-month grants (migration 082).
+ *
+ * Scope is intentionally narrow: only downgrades rows where the matching
+ * subscription_history action='founding_grant' has period_end < NOW() AND
+ * stripe_subscription_id IS NULL. Real Stripe subs are never touched here —
+ * those expire via customer.subscription.deleted webhooks.
+ */
+async function sweepExpiredSubscriptionGrants(env: any, ctx: ExecutionContext): Promise<void> {
+  try {
+    const { getDb } = await import('./db');
+    const sql = getDb(env);
+    if (!sql) {
+      console.log('sweepExpiredSubscriptionGrants: no DB, skipping');
+      return;
+    }
+
+    // Find active grants whose period_end has passed. Flip tier back to basic,
+    // mark the history row expired, and clear the users.subscription_ends_at
+    // stamp so the next check won't re-process them.
+    const expired = await sql`
+      WITH expired_grants AS (
+        UPDATE subscription_history
+        SET status = 'expired'
+        WHERE action = 'founding_grant'
+          AND status = 'active'
+          AND stripe_subscription_id IS NULL
+          AND period_end < NOW()
+        RETURNING user_id
+      )
+      UPDATE users
+      SET subscription_tier = 'basic',
+          subscription_status = 'expired',
+          subscription_ends_at = NULL,
+          updated_at = NOW()
+      WHERE id IN (SELECT user_id FROM expired_grants)
+      RETURNING id
+    `;
+
+    console.log(JSON.stringify({
+      level: 'info',
+      category: 'subscription_sweep',
+      action: 'sweep_founding_grants',
+      downgraded: Array.isArray(expired) ? expired.length : 0,
+    }));
+  } catch (err) {
+    const e = err instanceof Error ? err : new Error(String(err));
+    console.error('sweepExpiredSubscriptionGrants error:', e.message);
+    // Don't throw — scheduled handlers should stay resilient.
+  }
 }
 
 
