@@ -189,8 +189,11 @@ export async function submitPitchFeedback(request: Request, env: Env): Promise<R
       return errorResponse('Cannot review your own pitch', origin, 403);
     }
 
-    // Consumption gating — require minimum 30 seconds of view time (skip for rating-only watchers)
-    if (userType !== 'watcher') {
+    // Consumption gating — require minimum 30 seconds of view time.
+    // Skipped for: watchers (rating-only audience tier, no deep access to gate)
+    // and production users (evaluating at scale; the 30s floor is more friction
+    // than signal for production decision-making).
+    if (userType !== 'watcher' && userType !== 'production') {
       const CONSUMPTION_THRESHOLD = 30;
       const viewResult = await safeQuery<{ total_duration: number }>(
         () => sql`
@@ -486,17 +489,31 @@ export async function getMyFeedback(request: Request, env: Env): Promise<Respons
 // ---------------------------------------------------------------------------
 export async function getConsumptionStatus(request: Request, env: Env): Promise<Response> {
   const origin = request.headers.get('Origin');
-  const userId = await getUserId(request, env);
-  if (!userId) return errorResponse('Unauthorized', origin, 401);
+  const authResult = await getAuthenticatedUser(request, env);
+  if (!authResult.authenticated || !authResult.user) {
+    return errorResponse('Unauthorized', origin, 401);
+  }
+  const { id: userId, userType } = authResult.user;
 
   const pitchId = extractPitchId(request);
   if (!pitchId) return errorResponse('Invalid pitch ID', origin);
 
+  const THRESHOLD = 30;
+
+  // Mirrors submitPitchFeedback's skip list — production and watcher users
+  // aren't subject to the 30s floor, so report eligible upfront so the UI
+  // doesn't render a progress bar that will never complete.
+  if (userType === 'production' || userType === 'watcher') {
+    return jsonResponse({
+      success: true,
+      data: { eligible: true, viewDuration: THRESHOLD, threshold: THRESHOLD, exempt: true },
+    }, origin);
+  }
+
   const sql = getDb(env);
-  if (!sql) return jsonResponse({ success: true, data: { eligible: false, viewDuration: 0, threshold: 30 } }, origin);
+  if (!sql) return jsonResponse({ success: true, data: { eligible: false, viewDuration: 0, threshold: THRESHOLD } }, origin);
 
   try {
-    const THRESHOLD = 30;
     const viewResult = await safeQuery<{ total_duration: number }>(
       () => sql`
         SELECT COALESCE(MAX(view_duration), 0)::int as total_duration
@@ -513,7 +530,7 @@ export async function getConsumptionStatus(request: Request, env: Env): Promise<
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
     console.error('getConsumptionStatus error:', e.message);
-    return jsonResponse({ success: true, data: { eligible: false, viewDuration: 0, threshold: 30 } }, origin);
+    return jsonResponse({ success: true, data: { eligible: false, viewDuration: 0, threshold: THRESHOLD } }, origin);
   }
 }
 

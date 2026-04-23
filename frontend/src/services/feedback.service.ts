@@ -77,10 +77,15 @@ export interface ConsumptionStatus {
 }
 
 export class FeedbackService {
+  // Note: apiClient.get returns { success, data } where `data` is ALREADY the
+  // server's `.data` field unwrapped (see api-client.ts makeRequest). Consumers
+  // used to read `res.data?.data` (double-unwrap) which always fell through to
+  // the default — feedback UI looked broken across the board even when the
+  // backend returned valid data. Fixed 2026-04-23.
   static async getConsumptionStatus(pitchId: number): Promise<ConsumptionStatus> {
     try {
-      const res = await apiClient.get<{ data: ConsumptionStatus }>(`/api/pitches/${pitchId}/consumption-status`);
-      return res.data?.data ?? { eligible: false, viewDuration: 0, threshold: 30 };
+      const res = await apiClient.get<ConsumptionStatus>(`/api/pitches/${pitchId}/consumption-status`);
+      return res.data ?? { eligible: false, viewDuration: 0, threshold: 30 };
     } catch {
       return { eligible: false, viewDuration: 0, threshold: 30 };
     }
@@ -88,8 +93,8 @@ export class FeedbackService {
 
   static async getFeedback(pitchId: number): Promise<FeedbackResponse> {
     try {
-      const res = await apiClient.get<{ data: FeedbackResponse }>(`/api/pitches/${pitchId}/feedback`);
-      return res.data?.data ?? { ratings: null, feedback: [] };
+      const res = await apiClient.get<FeedbackResponse>(`/api/pitches/${pitchId}/feedback`);
+      return res.data ?? { ratings: null, feedback: [] };
     } catch {
       return { ratings: null, feedback: [] };
     }
@@ -97,16 +102,16 @@ export class FeedbackService {
 
   static async getMyFeedback(pitchId: number): Promise<FeedbackEntry | null> {
     try {
-      const res = await apiClient.get<{ data: FeedbackEntry | null }>(`/api/pitches/${pitchId}/feedback/mine`);
-      return res.data?.data ?? null;
+      const res = await apiClient.get<FeedbackEntry | null>(`/api/pitches/${pitchId}/feedback/mine`);
+      return res.data ?? null;
     } catch {
       return null;
     }
   }
 
   static async submit(pitchId: number, data: FeedbackSubmission): Promise<{ id: number } | null> {
-    const res = await apiClient.post<{ data: { id: number } }>(`/api/pitches/${pitchId}/feedback`, data);
-    return res.data?.data ?? null;
+    const res = await apiClient.post<{ id: number }>(`/api/pitches/${pitchId}/feedback`, data);
+    return res.data ?? null;
   }
 
   static async update(pitchId: number, data: FeedbackSubmission): Promise<boolean> {
@@ -132,8 +137,8 @@ export class FeedbackService {
   /** Get user's current rating for a pitch */
   static async getRatingStatus(pitchId: number): Promise<number | null> {
     try {
-      const res = await apiClient.get<{ data: { rating: number | null } }>(`/api/pitches/${pitchId}/rating-status`);
-      return res.data?.data?.rating ?? null;
+      const res = await apiClient.get<{ rating: number | null }>(`/api/pitches/${pitchId}/rating-status`);
+      return res.data?.rating ?? null;
     } catch {
       return null;
     }
@@ -142,8 +147,8 @@ export class FeedbackService {
   /** Get comments for a pitch */
   static async getComments(pitchId: number): Promise<CommentEntry[]> {
     try {
-      const res = await apiClient.get<{ data: CommentEntry[] }>(`/api/pitches/${pitchId}/comments`);
-      return res.data?.data ?? [];
+      const res = await apiClient.get<CommentEntry[]>(`/api/pitches/${pitchId}/comments`);
+      return res.data ?? [];
     } catch {
       return [];
     }
