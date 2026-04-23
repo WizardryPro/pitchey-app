@@ -18,13 +18,17 @@ const CSRF_FORM_FIELD = 'csrf_token';
 const TOKEN_LENGTH = 32;
 const TOKEN_MAX_AGE = 7200; // 2 hours
 
-// Allowed origins for CSRF validation
+// Allowed origins for CSRF validation.
+// NOTE: This list lived alongside a duplicate `pitchey.pages.dev` entry for
+// long enough that nothing caught it — the file has zero current importers
+// (CSRF is not in the live request path as of 2026-04-23). Collapsed to a
+// single canonical entry during the URL-consolidation sweep; if/when CSRF
+// is rewired, keep this list aligned with `utils/response.ts` ALLOWED_ORIGINS.
 const ALLOWED_ORIGINS = [
-  'https://pitchey.pages.dev',
-  'https://pitchey.pages.dev',
+  'https://pitchey-5o8.pages.dev',
   'http://localhost:5173',
   'http://localhost:5174',
-  'http://localhost:3000'
+  'http://localhost:3000',
 ];
 
 /**
