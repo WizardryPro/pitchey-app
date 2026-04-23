@@ -26,17 +26,21 @@ Content-Type, Authorization, X-Request-Id, X-Client-Id, sentry-trace, baggage, t
 
 Live login writes the `pitchey-session` cookie from `handlePortalLogin()` in
 `worker-integrated.ts`. `pitchey-session` holds a UUID, is keyed to a row in the
-legacy `sessions` table, and is validated by the custom session handler —
-**not** by Better Auth. `auth/better-auth-cloudflare-config.ts` exists but its
-`createBetterAuth()` output is never wired into the live request path (issue
-#19 tracks the cleanup decision).
+legacy `sessions` table, and is validated by the custom session handler.
+
+Better Auth ALSO runs alongside, not instead: `src/auth/better-auth-config.ts`
+line 51 invokes `betterAuth({...})`, and that instance is live on
+`/api/users/profile` + `/api/users/settings` (via `routes/user-profile.ts` →
+`auth-adapter.ts`) and on WebSocket session auth (via `worker-realtime.service.ts`
+→ `better-auth-session-handler.ts`). Mixed model is deliberate for now;
+full rip-or-migrate tracked in issue #19.
 
 - Name: `pitchey-session`
 - `SameSite=None`, `Secure`, `HttpOnly`, 30-day expiry, `path=/`
 - Session lookup: legacy `sessions` table, UUID key, refresh-on-use
-- Sign-out theatre: the sign-out handler also returns `Set-Cookie: better-auth-session=; Max-Age=0`
-  but nothing ever sets that cookie — it's a leftover from an earlier BA attempt
-  and can be removed in the issue #19 rip-out/migrate/document decision
+- Legacy cookie name `better-auth-session` is still *read* on sign-in
+  (backward-compat fallback in `utils/auth.ts`, `utils/auth-extract.ts`)
+  and cleared on sign-out. Writers are the BA paths mentioned above.
 
 **Gotcha**: The Pages Functions proxy (`frontend/functions/api/[[path]].ts`) rewrites
 `SameSite=None` to `Lax` and strips `Domain`. This is correct for same-origin API calls
@@ -97,5 +101,5 @@ The `SqlQuery` type in `db/queries/base.ts` no longer advertises the call-form o
 
 ## Health & waitUntil
 
-- `GET /api/health` checks DB, KV, R2, Resend, Better Auth (3s timeout each) → `healthy | degraded | unhealthy`. The Better Auth check only verifies the module imports; the adapter is not wired into live auth (see Cookie Configuration above and issue #19).
+- `GET /api/health` (see `handleHealth` in `worker-integrated.ts:4489`) checks DB (`SELECT NOW()`), Upstash Redis (`/ping`), Stripe (`/v1/balance`), and Resend (`/domains`). Reports `ok` or `degraded` — not a tri-state, and no Better Auth probe in the live handler (earlier doc claimed one; it never existed in this function).
 - All `ctx.waitUntil()` promises catch internally, never break requests (fire-and-forget telemetry)

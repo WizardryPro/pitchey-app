@@ -8,7 +8,7 @@ See `docs/roadmap-post-launch-2026-04-20.md` for the post-launch execution plan.
 - **Frontend**: Cloudflare Pages — React 18 + Vite + Zustand + TailwindCSS
 - **Backend**: Cloudflare Worker (`src/worker-integrated.ts`) — single entry point for all API routing
 - **Database**: Neon PostgreSQL — raw SQL, no ORM
-- **Auth**: Custom handlers on the legacy `users`/`sessions` tables, `pitchey-session` UUID cookie. Better Auth is imported but the `createAuthAdapter` call in `src/worker-integrated.ts` has been commented out since commit `41850ea1` (2025-12-18); BA's `session`/`user`/`account`/`verification` tables are empty in prod. No JWT. Decision on rip-out vs migrate tracked in issue #19.
+- **Auth**: Mixed model. Primary session handling is custom — legacy `users`/`sessions` tables, `pitchey-session` UUID cookie, custom login/logout/refresh handlers inlined in `src/worker-integrated.ts`. **Better Auth is also genuinely live**: `src/auth/better-auth-config.ts:51` calls `betterAuth({...})` and the resulting instance is reached from (a) `src/routes/user-profile.ts` via `auth-adapter.ts` for `/api/users/profile` + `/api/users/settings`, and (b) `src/services/worker-realtime.service.ts` via `better-auth-session-handler.ts` for WebSocket auth. What IS disabled is the separate `createAuthAdapter` import at `worker-integrated.ts:20` (commented since `41850ea1`, 2025-12-18) — a *different* adapter from a *different* file than the live BA wiring. Earlier doc revisions conflated the two and framed BA as "vestigial"; it isn't. Decision on rip-out vs migrate for the live BA paths still tracked in issue #19.
 - **Cache**: Upstash Redis (global)
 - **Storage**: Cloudflare R2
 
@@ -32,7 +32,7 @@ See `docs/roadmap-post-launch-2026-04-20.md` for the post-launch execution plan.
 ## Code Conventions
 - TypeScript for all new code
 - Raw SQL only (no ORM)
-- Sessions live in the legacy `sessions` table; cookie is `pitchey-session` (UUID). No JWT. Better Auth imports are vestigial — see root "Auth" section and issue #19 before touching.
+- Sessions live in the legacy `sessions` table; cookie is `pitchey-session` (UUID). No JWT. Better Auth imports are **not vestigial** — see root "Auth" section; BA is live on `/api/users/profile`, `/api/users/settings`, and WebSocket auth.
 - `credentials: 'include'` on all API calls
 - Defensive utils (`safeAccess`, `safeNumber`, `safeArray`) for runtime safety
 - In `catch` blocks: `const e = err instanceof Error ? err : new Error(String(err))`
@@ -108,6 +108,22 @@ Available slash commands: `/deploy`, `/test`, `/migrate`
 - **Dashboard SQL drift fix** (`a99ac28` + `5ef44e8`, closes #40) — four prod error fingerprints cleared in one sweep: Neon `sql(str, params)` → `sql.query(...)` migration across 27 sites in 7 query modules (with `SqlQuery` type corrected so the old call-form can no longer type-check), `getRevenueMetrics` JOIN alias qualification, `u.avatar` → `u.avatar_url`, migration 081 backfilling `subscription_history.new_tier` and friends. Post-deploy observability confirms all six fingerprints at zero events.
 - **Test drift cleanup** (`4d89f89`) — 19 → 0 pre-existing failures. 14 fixes were stale assertions vs. current components (dashboard "Welcome back" refactor, `/watcher/dashboard` viewer redirect, `navigate()` 2-arg shape, NDA-gated creator name, DocumentUploadHub relocation). 5 `PitchForm` NDA tests *moved* to `src/features/ndas/components/__tests__/NDAUploadSection.test.tsx` (7 tests) — tighter unit boundary, each deletion cites the replacement test name.
 - **ZAP dedup** (`3be1c10`, closes #37 + #41) — `.zap/rules.tsv` IGNOREs the five rule IDs that opened an issue per push (cloud-metadata probes, UUID-matched-as-Base64, Sec-Fetch-* request-headers-on-server confusion, marketing-route cacheability). Workflow now `allow_issue_writing: false` + `fail_action: true` — routine runs file no issue; genuine new Med/High tripping the fail threshold route through the existing CI-failure alert path.
+- **Deno-era dead code sweep closeout** (`ef839f1`, closes #38) — three orphan files deleted (`environment-config.ts`, `router/router.ts`, `database-cache.service.ts`, -817 LOC). Acceptance gate `grep -rn "\bDeno\." src/ | wc -l` → 0.
+- **URL consolidation — CI side** (`bf11007`) — 23 refs across 13 `.github/` files swept from the NXDOMAINing `pitchey.pages.dev` to the canonical `pitchey-5o8.pages.dev`. Fixes Lighthouse CI's `CHROME_INTERSTITIAL_ERROR`, plus the scheduled health-check and SSL-cert-expiry probes that had been silently failing.
+- **CORS allowed-origins flip** (`697de63` + `21bd7bd`) — `src/utils/response.ts` had the URL-consolidation model backwards; `pitchey.pages.dev` labeled "Primary production" and `pitchey-5o8` labeled "Legacy alias." Flipped to reality. Preview regex switched from `*.pitchey.pages.dev` (matches nothing) to `*.pitchey-5o8.pages.dev`.
+- **Email link rot** (`9b78932` + `bdd6b3d`) — swept stale `pitchey.pages.dev` from email templates + fallbacks; fixed `pitch-interactions.ts` which was shipping `pitchey.com/pitches/${id}` (wrong host + wrong path) in follower-notification emails; deleted 1130-line dead `src/services/nda.service.ts`. Side-effect finding: `notification_templates` table missing in prod despite baseline marking migration applied — filed as **#43** (architecture question on `EmailTemplateService` rip-vs-repair, not fixed in this session).
+- **Live-worker URL fallbacks** (`12a1d2f`) — 8 remaining `pitchey.pages.dev` fallbacks in `worker-integrated.ts`, `worker-modules/*`, `middleware/optimized-cache.ts`, and `middleware/csrf-protection.ts` (which also had a duplicate entry in `ALLOWED_ORIGINS`). Live-worker region now zero stale refs.
+
+### Session 2026-04-23 — shipped
+- **Better Auth dead-file rip** (`<this commit>`, issue #19 remains open for the live paths) — deleted 5 orphan files in `src/auth/` (2083 LOC): `better-auth-cloudflare-config.ts`, `better-auth-cloudflare.ts`, `better-auth-worker-handler.ts`, `better-auth-worker-integration.ts`, `raw-sql-auth.ts`. 5 live BA files remain (`auth-adapter.ts`, `better-auth-config.ts`, `better-auth-neon-raw-sql.ts`, `better-auth-session-handler.ts`, `cors-config.ts`) — genuinely in the live request path for `/api/users/profile`, `/api/users/settings`, and WebSocket auth. The full rip-vs-migrate decision for those live paths is unresolved and needs proper scoping — not a session-end call.
+
+### #20 near-misses from 2026-04-22/23
+
+Two instances this session where stale CLAUDE.md framing nearly caused wrong action:
+- **"Tests: 3639+, zero failures"** → actually 19 failures across 9 files. Almost laundered 5 PitchForm NDA tests into `.skip` with an aspirational "covered elsewhere" comment; caught by verifying coverage doesn't exist, then writing the targeted NDAUploadSection.test.tsx as real replacement before deleting the PitchForm NDA block.
+- **"Better Auth is vestigial, `createAuthAdapter` commented out"** → true for `auth-adapter.ts` but a *different* adapter `createBetterAuthInstance` from `better-auth-neon-raw-sql.ts` is imported AND called in `worker-integrated.ts:766`, and `auth-adapter.ts` itself is live via `routes/user-profile.ts`. Almost ripped live auth code; caught by re-tracing imports through `rg` one more pass before `rm`.
+
+Takeaway: run the drift-audit check *before* any cleanup/rip, not during. Cheap to verify, expensive to undo.
 
 ## Observability & Analysis Stack
 
@@ -142,7 +158,7 @@ Launch Chrome: `google-chrome-stable --remote-debugging-port=9222 --user-data-di
 - **Sentry**: `@sentry/cloudflare` with `withSentry()`, DSN in wrangler.toml. MCP server removed — use dashboard directly
 - **Axiom**: Dataset `pitchey-logs`, token via `wrangler secret put AXIOM_TOKEN`
 - **Analytics Engine**: 2 bindings — `pitchey_metrics`, `pitchey_database_metrics` (pruned from 7 on 2026-04-17; see `docs/observability-audit-2026-04-17.md`)
-- **Health**: `GET /api/health` checks DB, KV, R2, Resend, Better Auth (3s timeout each). Note: the Better Auth health probe returns healthy as long as the module is importable — it does not verify the adapter is wired into the live request path (it isn't; see Auth section and issue #19).
+- **Health**: `GET /api/health` (see `handleHealth` in `worker-integrated.ts`) checks DB, Upstash Redis, Stripe, Resend; reports `ok` or `degraded`. No Better Auth probe in the live handler — earlier documentation claimed one existed and described behavior the code didn't implement (another drift instance, see the 2026-04-23 BA near-miss below).
 - **Logging**: `src/lib/production-logger.ts` — structured JSON, auto-redaction, requestId/traceId propagation
 - **Auth**: `src/lib/auth-observability.ts` — login/signup/session events, brute force detection (5+ failures/15min)
 - **Tracing**: W3C Trace Context, 10% sampling, 30-day retention in R2 + Analytics Engine
