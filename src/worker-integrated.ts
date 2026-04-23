@@ -3332,6 +3332,12 @@ class RouteRegistry {
       return recalculateHeatScoresHandler(req, this.env);
     });
 
+    // Founding-user grant status (migration 082) — admin-only observability
+    this.register('GET', '/api/admin/subscription-grants/status', async (req) => {
+      const { subscriptionGrantsStatusHandler } = await import('./handlers/subscription-grants');
+      return subscriptionGrantsStatusHandler(req, this.env);
+    });
+
     this.register('GET', '/api/creator/ndas', async (req) => {
       const { creatorNdasHandler } = await import('./handlers/creator-sidebar');
       return creatorNdasHandler(req, this.env);
@@ -20630,13 +20636,23 @@ async function updateTrendingAlgorithm(env: any, ctx: ExecutionContext): Promise
  * subscription_history action='founding_grant' has period_end < NOW() AND
  * stripe_subscription_id IS NULL. Real Stripe subs are never touched here —
  * those expire via customer.subscription.deleted webhooks.
+ *
+ * Observability: emits a structured log per run (picked up by Axiom via the
+ * Worker's 100% observability sampling) and captures exceptions to Sentry
+ * so silent sweep failures page someone.
  */
 async function sweepExpiredSubscriptionGrants(env: any, ctx: ExecutionContext): Promise<void> {
+  const startedAt = Date.now();
   try {
     const { getDb } = await import('./db');
     const sql = getDb(env);
     if (!sql) {
-      console.log('sweepExpiredSubscriptionGrants: no DB, skipping');
+      console.log(JSON.stringify({
+        level: 'warn',
+        category: 'subscription_sweep',
+        action: 'sweep_founding_grants',
+        outcome: 'skipped_no_db',
+      }));
       return;
     }
 
@@ -20662,16 +20678,31 @@ async function sweepExpiredSubscriptionGrants(env: any, ctx: ExecutionContext): 
       RETURNING id
     `;
 
+    const downgraded = Array.isArray(expired) ? expired.length : 0;
     console.log(JSON.stringify({
       level: 'info',
       category: 'subscription_sweep',
       action: 'sweep_founding_grants',
-      downgraded: Array.isArray(expired) ? expired.length : 0,
+      outcome: 'success',
+      downgraded,
+      duration_ms: Date.now() - startedAt,
     }));
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
-    console.error('sweepExpiredSubscriptionGrants error:', e.message);
-    // Don't throw — scheduled handlers should stay resilient.
+    console.error(JSON.stringify({
+      level: 'error',
+      category: 'subscription_sweep',
+      action: 'sweep_founding_grants',
+      outcome: 'failed',
+      error: e.message,
+      duration_ms: Date.now() - startedAt,
+    }));
+    // Best-effort Sentry report. Sentry may not be available in the scheduled
+    // context — don't let that crash the handler.
+    try {
+      const SentryMod = await import('@sentry/cloudflare');
+      SentryMod.captureException?.(e, { tags: { cron: 'sweep_founding_grants' } });
+    } catch { /* no-op */ }
   }
 }
 
