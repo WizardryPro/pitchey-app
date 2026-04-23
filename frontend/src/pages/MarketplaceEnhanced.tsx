@@ -20,6 +20,7 @@ import HumanMadeBadge from '../components/HumanMadeBadge';
 import GenrePlaceholder from '@shared/components/GenrePlaceholder';
 import { motion, AnimatePresence } from 'framer-motion';
 import PortalTopNav from '@shared/components/layout/PortalTopNav';
+import SortPillRow from '@shared/components/ui/SortPillRow';
 import {
   Search,
   TrendingUp,
@@ -923,34 +924,14 @@ export default function MarketplaceEnhanced() {
           {/* Row 2: sort pills — primary discovery axis, promoted from a <select>
               so the three marquee modes (Hot/Trending/New) are visible at a glance.
               Color-coded active states echo brand.featured/trending/new */}
-          <div
-            className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1"
-            role="tablist"
-            aria-label="Sort pitches by"
-          >
-            {SORT_OPTIONS.map(option => {
-              const Icon = option.icon;
-              const active = sortBy === option.value;
-              const activeBg = SORT_ACTIVE_BG[option.value] || SORT_DEFAULT_ACTIVE_BG;
-              return (
-                <button
-                  key={option.value}
-                  role="tab"
-                  aria-selected={active}
-                  title={option.label}
-                  onClick={() => setSortBy(option.value)}
-                  className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium border transition ${
-                    active
-                      ? `${activeBg} text-white border-transparent shadow-sm`
-                      : 'bg-white text-gray-700 border-gray-200 hover:border-brand-anchor hover:text-brand-anchor'
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span>{option.shortLabel}</span>
-                </button>
-              );
-            })}
-          </div>
+          <SortPillRow
+            options={SORT_OPTIONS}
+            value={sortBy}
+            onChange={setSortBy}
+            ariaLabel="Sort pitches by"
+            activeAccents={SORT_ACTIVE_BG}
+            defaultActiveBg={SORT_DEFAULT_ACTIVE_BG}
+          />
 
           {/* Row 3: genre quick-chips — softer tinted palette signals "secondary
               filter" below sort. Config-driven with a sensible fallback list.

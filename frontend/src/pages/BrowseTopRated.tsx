@@ -11,15 +11,19 @@ import FormatDisplay from '../components/FormatDisplay';
 import HeatBadge, { getHeatScore } from '../components/HeatBadge';
 import { getApiUrl } from '../config';
 import PortalTopNav from '@shared/components/layout/PortalTopNav';
+import SortPillRow, { type SortPillOption } from '@shared/components/ui/SortPillRow';
 import {
   Eye,
   Heart,
+  Clock,
   User,
   Film,
   Building2,
   DollarSign,
   Shield,
   Calendar,
+  CalendarDays,
+  CalendarRange,
   TrendingUp,
   Filter,
   Grid,
@@ -33,6 +37,20 @@ import {
 
 type SortBy = 'rating' | 'views' | 'recent' | 'likes';
 type TimeFilter = 'all' | 'week' | 'month' | 'year';
+
+const SORT_OPTIONS: ReadonlyArray<SortPillOption<SortBy>> = [
+  { value: 'rating', label: 'Highest Rated', shortLabel: 'Top Rated', icon: Star },
+  { value: 'views',  label: 'Most Viewed',   shortLabel: 'Most Viewed', icon: Eye },
+  { value: 'recent', label: 'Recently Added', shortLabel: 'Newest', icon: Clock },
+  { value: 'likes',  label: 'Most Liked',    shortLabel: 'Most Liked', icon: Heart },
+];
+
+const TIME_OPTIONS: ReadonlyArray<SortPillOption<TimeFilter>> = [
+  { value: 'all',   label: 'All Time',   icon: Calendar },
+  { value: 'week',  label: 'This Week',  icon: Clock },
+  { value: 'month', label: 'This Month', icon: CalendarDays },
+  { value: 'year',  label: 'This Year',  icon: CalendarRange },
+];
 
 interface RatingStats {
   totalRated: number;
@@ -393,7 +411,23 @@ export default function BrowseTopRated() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Filters */}
+        {/* Always-visible sort + time-period. Min-rating stays in the "Advanced" accordion below. */}
+        <div className="bg-white rounded-lg shadow-sm border mb-4 p-4 space-y-3">
+          <SortPillRow
+            options={SORT_OPTIONS}
+            value={sortBy}
+            onChange={setSortBy}
+            ariaLabel="Sort top-rated pitches by"
+          />
+          <SortPillRow
+            options={TIME_OPTIONS}
+            value={timeFilter}
+            onChange={setTimeFilter}
+            ariaLabel="Filter by time period"
+          />
+        </div>
+
+        {/* Advanced filters — only the minimum-rating slider lives in here. */}
         <div className="bg-white rounded-lg shadow-sm border mb-8">
           <div className="p-4 border-b">
             <button
@@ -402,7 +436,7 @@ export default function BrowseTopRated() {
             >
               <div className="flex items-center gap-2">
                 <Filter className="w-5 h-5 text-gray-600" />
-                <span className="font-medium text-gray-900">Filters & Sorting</span>
+                <span className="font-medium text-gray-900">Advanced filters</span>
               </div>
               <ChevronDown
                 className={`w-5 h-5 text-gray-600 transition-transform ${
@@ -411,54 +445,9 @@ export default function BrowseTopRated() {
               />
             </button>
           </div>
-          
+
           {showFilters && (
-            <div className="p-4 space-y-6">
-              {/* Sort Options */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Sort by
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {(['rating', 'views', 'recent', 'likes'] as SortBy[]).map((sort) => (
-                    <button
-                      key={sort}
-                      onClick={() => setSortBy(sort)}
-                      className={`px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
-                        sortBy === sort
-                          ? 'bg-purple-600 text-white border-purple-600'
-                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      {getSortLabel(sort)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Time Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Time period
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {(['all', 'week', 'month', 'year'] as TimeFilter[]).map((time) => (
-                    <button
-                      key={time}
-                      onClick={() => setTimeFilter(time)}
-                      className={`px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
-                        timeFilter === time
-                          ? 'bg-purple-600 text-white border-purple-600'
-                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      {getTimeFilterLabel(time)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Minimum Rating */}
+            <div className="p-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Minimum rating: {minRating > 0 ? `${minRating}+ stars` : 'Any rating'}
