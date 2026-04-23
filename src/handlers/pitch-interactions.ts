@@ -246,6 +246,7 @@ export async function pitchPublishHandler(request: Request, env: Env): Promise<R
           LIMIT 50
         `;
         const resendKey = (env as Record<string, unknown>).RESEND_API_KEY as string;
+        const frontendUrl = (env as Record<string, unknown>).FRONTEND_URL as string || 'https://pitchey-5o8.pages.dev';
         for (const follower of followers) {
           if (follower.email) {
             sendNewPitchFromFollowedEmail(follower.email, {
@@ -253,7 +254,9 @@ export async function pitchPublishHandler(request: Request, env: Env): Promise<R
               pitchTitle: pd.title || 'Untitled Pitch',
               pitchGenre: pd.genre || undefined,
               pitchLogline: pd.logline || undefined,
-              pitchUrl: `https://pitchey.com/pitches/${pitchId}`,
+              // Previously hardcoded to pitchey.com — that's the coming-soon
+              // marketing stub on a separate CF account, not the live frontend.
+              pitchUrl: `${frontendUrl}/pitch/${pitchId}`,
             }, resendKey).catch((err: unknown) => {
               const e = err instanceof Error ? err : new Error(String(err));
               console.error('Failed to send new pitch email to follower:', e.message);
