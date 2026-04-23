@@ -1,18 +1,18 @@
 // Canonical user-type shape, plus a normalizer for the viewer↔watcher drift.
 //
-// DB authority: the `users.user_type` column (with a CHECK constraint in
-// `src/db/business-rules-enforcement.sql:425`) permits exactly:
-//   'creator' | 'investor' | 'production' | 'viewer' | 'admin'
+// Conceptual model:
+//   - "Watcher" is the user-type for the fourth portal.
+//   - "Viewer" is a behavioral role — anyone viewing a pitch, regardless of
+//     their user_type. They're different things.
 //
-// UI authority: URL namespace (/watcher/*) and marketing label ("Watcher
-// Portal") use `watcher`. Some handlers in src/worker-integrated.ts also
-// branch on `userType === 'watcher'` for UI-facing logic, and some on
-// `'viewer'` for DB-facing logic — the split is inconsistent.
+// Current drift: the DB conflates them. `users.user_type` stores `'viewer'`
+// for watcher-tier accounts (legacy), and a CHECK constraint in
+// `src/db/business-rules-enforcement.sql:425` enforces that spelling. The
+// future refactor direction is DB → `'watcher'`; until that lands, every
+// frontend caller narrowing on userType routes through `normalizeUserType()`
+// so UI code only knows the canonical `'watcher'` spelling.
 //
-// Until the fuller refactor (see the `project_viewer_watcher_drift` memory),
-// every caller that narrows or switches on userType should route through
-// `normalizeUserType()` so we only have one place to change when the
-// canonical spelling is chosen.
+// See project_viewer_watcher_drift memory for the full inventory.
 
 export type UserTypeCanonical = 'creator' | 'investor' | 'production' | 'watcher' | 'admin';
 
