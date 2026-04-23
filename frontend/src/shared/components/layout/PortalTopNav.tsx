@@ -12,14 +12,22 @@ import {
   CREATOR_ROUTES, INVESTOR_ROUTES, PRODUCTION_ROUTES, WATCHER_ROUTES,
 } from '@/config/navigation.routes';
 import { normalizeUserType, type UserTypeCanonical } from '@shared/types/user-type';
+import { setPendingReturnTo } from '@/utils/postLoginRedirect';
 
 type NavItem = { label: string; to: string };
+
+// "Hot" surfaces the heat-score discovery path (Bayesian + role-weighted)
+// from anywhere in the app — deep-links to the marketplace with the Hot sort
+// pill pre-selected. Kept as a top-level item across every role so users don't
+// have to remember it lives under a filter.
+const HOT_LINK: NavItem = { label: 'Hot', to: '/marketplace?sort=hot' };
 
 const NAV_BY_ROLE: Partial<Record<UserTypeCanonical, NavItem[]>> = {
   creator: [
     { label: 'Dashboard', to: CREATOR_ROUTES.dashboard },
     { label: 'My Pitches', to: CREATOR_ROUTES.pitches },
     { label: 'Marketplace', to: '/marketplace' },
+    HOT_LINK,
     { label: 'Messages', to: CREATOR_ROUTES.messages },
     { label: 'NDAs', to: CREATOR_ROUTES.ndas },
     { label: 'Portfolio', to: CREATOR_ROUTES.portfolio },
@@ -27,6 +35,7 @@ const NAV_BY_ROLE: Partial<Record<UserTypeCanonical, NavItem[]>> = {
   investor: [
     { label: 'Dashboard', to: INVESTOR_ROUTES.dashboard },
     { label: 'Browse', to: INVESTOR_ROUTES.browse },
+    HOT_LINK,
     { label: 'Watchlist', to: INVESTOR_ROUTES.watchlist },
     { label: 'Portfolio', to: INVESTOR_ROUTES.portfolio },
     { label: 'Messages', to: '/messages' },
@@ -35,6 +44,7 @@ const NAV_BY_ROLE: Partial<Record<UserTypeCanonical, NavItem[]>> = {
   production: [
     { label: 'Dashboard', to: PRODUCTION_ROUTES.dashboard },
     { label: 'Browse', to: '/marketplace' },
+    HOT_LINK,
     { label: 'Projects', to: PRODUCTION_ROUTES.projects },
     { label: 'NDAs', to: '/production/ndas' },
     { label: 'Messages', to: PRODUCTION_ROUTES.messages },
@@ -42,6 +52,7 @@ const NAV_BY_ROLE: Partial<Record<UserTypeCanonical, NavItem[]>> = {
   watcher: [
     { label: 'Dashboard', to: WATCHER_ROUTES.dashboard },
     { label: 'Marketplace', to: '/marketplace' },
+    HOT_LINK,
     { label: 'Library', to: WATCHER_ROUTES.library },
     { label: 'Saved', to: WATCHER_ROUTES.saved },
     { label: 'Following', to: WATCHER_ROUTES.following },
@@ -50,6 +61,7 @@ const NAV_BY_ROLE: Partial<Record<UserTypeCanonical, NavItem[]>> = {
 
 const ANON_NAV: NavItem[] = [
   { label: 'Marketplace', to: '/marketplace' },
+  HOT_LINK,
   { label: 'How It Works', to: '/how-it-works' },
   { label: 'About', to: '/about' },
 ];
@@ -163,14 +175,26 @@ export default function PortalTopNav() {
             ) : (
               <>
                 <button
-                  onClick={() => { void navigate('/portals'); }}
+                  onClick={() => {
+                    // Preserve where the user was trying to go so they land back
+                    // after completing login. `state.from` is the primary channel;
+                    // `setPendingReturnTo` covers MFA / OTP flows that lose router
+                    // state. Both read by postLoginRedirect.resolvePostLoginRedirect.
+                    const from = location.pathname + location.search;
+                    setPendingReturnTo(from);
+                    void navigate('/portals', { state: { from } });
+                  }}
                   className="px-2.5 py-1.5 sm:px-4 sm:py-2 text-purple-600 hover:text-purple-700 transition font-medium text-xs sm:text-sm flex items-center gap-1.5"
                 >
                   <LogIn className="w-4 h-4" />
                   <span className="hidden sm:inline">Sign In</span>
                 </button>
                 <button
-                  onClick={() => { void navigate('/portals'); }}
+                  onClick={() => {
+                    const from = location.pathname + location.search;
+                    setPendingReturnTo(from);
+                    void navigate('/portals', { state: { from } });
+                  }}
                   className="px-2.5 py-1.5 sm:px-4 sm:py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-xs sm:text-sm flex-shrink-0 flex items-center gap-1.5"
                 >
                   <UserPlus className="w-4 h-4" />

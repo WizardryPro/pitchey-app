@@ -352,10 +352,58 @@ export async function getPitchFeedbackPublic(request: Request, env: Env): Promis
   const sql = getDb(env);
   if (!sql) return jsonResponse({ success: true, data: { ratings: null, feedback: [] } }, origin);
 
+  // Optional viewer identity. Endpoint is public — anonymous callers still get
+  // the feedback list, but reviewer identities are gated behind NDA/ownership.
+  const viewerId = await getUserId(request, env);
+
   try {
-    // Verify pitch exists and is published
-    const [pitch] = await sql`SELECT id FROM pitches WHERE id = ${pitchId} AND status = 'published'`;
+    // Verify pitch exists and grab owner for NDA/ownership gate
+    const [pitch] = await sql`SELECT id, user_id FROM pitches WHERE id = ${pitchId} AND status = 'published'`;
     if (!pitch) return errorResponse('Pitch not found or not published', origin, 404);
+
+    // Determine whether to reveal reviewer identity. Only pitch owner or users
+    // with an active NDA / granted access see names; everyone else (including
+    // authenticated non-NDA viewers) sees "Anonymous Reviewer" regardless of
+    // the reviewer's own is_anonymous choice. The reviewer's opt-in anonymity
+    // still applies — this just tightens the default floor.
+    const isOwner = !!viewerId && String(pitch.user_id) === String(viewerId);
+    let hasNDAAccess = false;
+    if (!isOwner && viewerId) {
+      // Same permissive NDA probe as getPitch — columns drifted across history.
+      try {
+        const rows = await sql`
+          SELECT 1 FROM ndas
+          WHERE pitch_id = ${pitchId} AND signer_id = ${Number(viewerId)}
+            AND (status = 'approved' OR status = 'signed')
+          LIMIT 1
+        `;
+        hasNDAAccess = rows.length > 0;
+      } catch { /* column may not exist */ }
+      if (!hasNDAAccess) {
+        try {
+          const rows = await sql`
+            SELECT 1 FROM ndas
+            WHERE pitch_id = ${pitchId} AND requester_id = ${Number(viewerId)}
+              AND (status = 'approved' OR status = 'signed')
+            LIMIT 1
+          `;
+          hasNDAAccess = rows.length > 0;
+        } catch { /* ignore */ }
+      }
+      if (!hasNDAAccess) {
+        try {
+          const rows = await sql`
+            SELECT 1 FROM pitch_access
+            WHERE pitch_id = ${pitchId} AND user_id = ${Number(viewerId)}
+              AND (revoked_at IS NULL)
+              AND (expires_at IS NULL OR expires_at > NOW())
+            LIMIT 1
+          `;
+          hasNDAAccess = rows.length > 0;
+        } catch { /* pitch_access may not exist */ }
+      }
+    }
+    const canSeeReviewerNames = isOwner || hasNDAAccess;
 
     // Rating aggregation — dual scores + 10-bucket distribution
     const [ratings] = await sql`
@@ -425,19 +473,38 @@ export async function getPitchFeedbackPublic(request: Request, env: Env): Promis
           }, {} as Record<string, { count: number; avgRating: number; weightedAvg: number }>)
         : undefined;
 
-    // Individual feedback with anonymization
-    const feedback = await sql`
-      SELECT
-        pf.id, pf.reviewer_type, pf.rating, pf.strengths, pf.weaknesses,
-        pf.suggestions, pf.overall_feedback, pf.is_interested, pf.is_anonymous, pf.created_at,
-        CASE WHEN pf.is_anonymous THEN NULL ELSE u.id END as reviewer_id,
-        CASE WHEN pf.is_anonymous THEN 'Anonymous' ELSE COALESCE(u.name, u.username, 'User') END as reviewer_name,
-        CASE WHEN pf.is_anonymous THEN NULL ELSE u.company_name END as reviewer_company
-      FROM pitch_feedback pf
-      LEFT JOIN users u ON u.id = pf.reviewer_id
-      WHERE pf.pitch_id = ${pitchId}
-      ORDER BY pf.created_at DESC
-    `;
+    // Individual feedback with anonymization.
+    //
+    // Two layers of gating stack here:
+    // 1. `pf.is_anonymous` — the reviewer opted to stay anonymous at submission time.
+    // 2. `canSeeReviewerNames` — the viewer is neither the pitch owner nor NDA-signed,
+    //    so names are hidden regardless of what the reviewer chose. This is the fix
+    //    for "non-NDA viewers see who gave feedback" — previously names leaked to
+    //    any unauthenticated caller who hit this public endpoint.
+    const feedback = canSeeReviewerNames
+      ? await sql`
+          SELECT
+            pf.id, pf.reviewer_type, pf.rating, pf.strengths, pf.weaknesses,
+            pf.suggestions, pf.overall_feedback, pf.is_interested, pf.is_anonymous, pf.created_at,
+            CASE WHEN pf.is_anonymous THEN NULL ELSE u.id END as reviewer_id,
+            CASE WHEN pf.is_anonymous THEN 'Anonymous' ELSE COALESCE(u.name, u.username, 'User') END as reviewer_name,
+            CASE WHEN pf.is_anonymous THEN NULL ELSE u.company_name END as reviewer_company
+          FROM pitch_feedback pf
+          LEFT JOIN users u ON u.id = pf.reviewer_id
+          WHERE pf.pitch_id = ${pitchId}
+          ORDER BY pf.created_at DESC
+        `
+      : await sql`
+          SELECT
+            pf.id, pf.reviewer_type, pf.rating, pf.strengths, pf.weaknesses,
+            pf.suggestions, pf.overall_feedback, pf.is_interested, pf.is_anonymous, pf.created_at,
+            NULL as reviewer_id,
+            'Anonymous Reviewer' as reviewer_name,
+            NULL as reviewer_company
+          FROM pitch_feedback pf
+          WHERE pf.pitch_id = ${pitchId}
+          ORDER BY pf.created_at DESC
+        `;
 
     return jsonResponse({
       success: true,
