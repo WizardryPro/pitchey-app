@@ -41,7 +41,7 @@ type TimeFilter = 'all' | 'week' | 'month' | 'year';
 
 interface RatingStats {
   totalRated: number;
-  averageRating: number;
+  avgRating: number;
   ratingDistribution: {
     [key: number]: number;
   };
@@ -126,7 +126,7 @@ export default function BrowseTopRated() {
           
           setRatingStats({
             totalRated: ratedPitches.length,
-            averageRating: totalRating / ratedPitches.length,
+            avgRating: totalRating / ratedPitches.length,
             ratingDistribution: distribution
           });
         }
@@ -445,7 +445,7 @@ export default function BrowseTopRated() {
                   <span className="font-semibold">Average Rating</span>
                 </div>
                 <div className="text-2xl font-bold">
-                  {ratingStats.averageRating.toFixed(1)}/5.0
+                  {(ratingStats.avgRating ?? 0).toFixed(1)}/5.0
                 </div>
               </div>
               
