@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ArrowLeft, Eye, Heart, Share2, Tag, Film, Calendar, User, Shield, Lock, DollarSign, Briefcase, LogIn, Building2, Wallet, Bookmark, UserPlus } from 'lucide-react';
+import { Eye, Heart, Share2, Tag, Film, Calendar, User, Shield, Lock, DollarSign, Briefcase, LogIn, Building2, Wallet, Bookmark, UserPlus } from 'lucide-react';
 import { pitchAPI } from '../lib/api';
 import type { Pitch } from '../lib/api';
 import { useBetterAuthStore } from '../store/betterAuthStore';
@@ -15,7 +15,7 @@ export default function PublicPitchView() {
   const navigate = useNavigate();
   const location = useLocation();
   const { id } = useParams<{ id: string }>();
-  const { isAuthenticated, user, logout } = useBetterAuthStore();
+  const { isAuthenticated, user } = useBetterAuthStore();
   const goToLogin = () => navigate('/portals', { state: { from: location.pathname + location.search } });
   const [pitch, setPitch] = useState<Pitch | null>(null);
   const [loading, setLoading] = useState(true);
@@ -193,89 +193,10 @@ export default function PublicPitchView() {
   return (
     <div className="min-h-screen bg-gray-50">
       <PortalTopNav />
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            {/* Back Navigation */}
-            <button
-              onClick={() => { void navigate('/marketplace'); }}
-              className="flex items-center gap-2 text-gray-600 hover:text-purple-600 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-medium">Back to Marketplace</span>
-            </button>
-
-            {/* User Actions */}
-            <div className="flex flex-wrap items-center gap-3">
-              {isAuthenticated && user ? (
-                <>
-                  {/* User Status Indicator */}
-                  <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg">
-                    {user.userType === 'production' && (
-                      <>
-                        <Building2 className="w-4 h-4 text-purple-600" />
-                        <span className="text-sm font-medium text-gray-700">Production</span>
-                      </>
-                    )}
-                    {user.userType === 'investor' && (
-                      <>
-                        <Wallet className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-medium text-gray-700">Investor</span>
-                      </>
-                    )}
-                    {user.userType === 'creator' && (
-                      <>
-                        <User className="w-4 h-4 text-blue-600" />
-                        <span className="text-sm font-medium text-gray-700">Creator</span>
-                      </>
-                    )}
-                    {user.userType && (
-                      <span className="text-xs text-gray-500 hidden sm:inline">
-                        • {user.companyName || user.username}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Dashboard Link */}
-                  <button
-                    onClick={() => {
-                      const userType = user?.userType;
-                      if (userType) {
-                        void navigate(`/${getPortalPath(userType)}/dashboard`);
-                      } else {
-                        void navigate('/portals');
-                      }
-                    }}
-                    className="px-4 py-2 text-sm text-purple-600 hover:text-purple-700 font-medium bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
-                  >
-                    Dashboard
-                  </button>
-
-                  {/* Sign Out */}
-                  <button
-                    onClick={() => {
-                      void logout();
-                      window.location.href = '/portals';
-                    }}
-                    className="px-4 py-2 text-sm text-gray-600 hover:text-gray-700 font-medium hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    Sign Out
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={goToLogin}
-                  className="px-5 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 font-medium shadow-sm transition-colors"
-                >
-                  <LogIn className="w-4 h-4" />
-                  Sign In for Full Access
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* Standalone "Back to Marketplace / Sign In for Full Access" chrome was
+          deleted; PortalTopNav above provides Marketplace + Sign In already.
+          PitchRouter guarantees this component only renders for anonymous
+          viewers, so the auth-branch that used to live here was dead code. */}
 
       {/* Hero Image */}
       {pitch.titleImage && (

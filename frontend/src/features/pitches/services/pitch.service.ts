@@ -1080,6 +1080,29 @@ export class PitchService {
     }
   }
 
+  // Top pitches by Bayesian + role-weighted heat score (no auth required).
+  // Backend: /api/pitches/hot returns { pitches: [...] } with `heat_score` on each.
+  static async getPublicHotPitches(limit: number = 3): Promise<Pitch[]> {
+    try {
+      const response = await fetch(`${API_URL}/api/pitches/hot?limit=${limit}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      interface HotPitchesJson {
+        success?: boolean;
+        data?: { pitches?: Pitch[] };
+      }
+      const data = await response.json() as HotPitchesJson;
+      const pitches = data.success === true ? (data.data?.pitches ?? []) : [];
+      return pitches.map(PitchService.transformPublicPitch);
+    } catch (error) {
+      console.warn('Error fetching public hot pitches:', error);
+      return [];
+    }
+  }
+
   // Search public pitches (no auth required)
   static async searchPublicPitches(
     searchTerm: string,

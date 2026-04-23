@@ -28,6 +28,22 @@ export interface NotificationsResponse {
   };
 }
 
+// Translates the raw API payload's snake_case into the camelCase `Notification`
+// shape the rest of the frontend expects. Keeps both keys on the object so any
+// stragglers still resolve.
+const PitcheyNotificationShape = {
+  normalize(raw: any): Notification {
+    return {
+      ...raw,
+      userId: raw.userId ?? raw.user_id,
+      isRead: raw.isRead ?? raw.is_read ?? raw.read ?? false,
+      createdAt: raw.createdAt ?? raw.created_at,
+      relatedId: raw.relatedId ?? raw.related_id,
+      relatedType: raw.relatedType ?? raw.related_type,
+    };
+  },
+};
+
 export class NotificationsService {
   /**
    * Get all notifications for the current user
@@ -38,7 +54,10 @@ export class NotificationsService {
       const response = await apiClient.get<any>(`/api/user/notifications?limit=${limit}`);
 
       if (response.success && response.data?.notifications) {
-        return response.data.notifications;
+        // Backend returns snake_case (created_at/is_read/related_id/related_type);
+        // the rest of the client (convertToFrontendFormat, NotificationCenter) reads
+        // camelCase. Without this normalisation `new Date(undefined)` → "Invalid Date".
+        return response.data.notifications.map(PitcheyNotificationShape.normalize);
       }
 
       return [];

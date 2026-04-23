@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Film, TrendingUp, Search, Play, Star, Eye, Calendar, ArrowRight, Sparkles, User, Building2, Wallet, LogOut } from 'lucide-react';
+import { Film, TrendingUp, Search, Play, Star, Eye, Heart, Calendar, ArrowRight, Sparkles, User, Building2, Wallet, LogOut, Flame } from 'lucide-react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { pitchService } from '@features/pitches/services/pitch.service';
 import { pitchAPI } from '../lib/api';
@@ -8,6 +8,7 @@ import type { Pitch } from '@features/pitches/services/pitch.service';
 import { getGenresSync, getFormatsSync } from '@config/pitchConstants';
 import FormatDisplay from '../components/FormatDisplay';
 import GenrePlaceholder from '@shared/components/GenrePlaceholder';
+import HeatBadge, { getHeatScore } from '../components/HeatBadge';
 import { getPortalPath } from '@/utils/navigation';
 
 
@@ -21,6 +22,7 @@ export default function Homepage() {
   const [selectedFormat, setSelectedFormat] = useState('all');
   const [trendingPitches, setTrendingPitches] = useState<Pitch[]>([]);
   const [newReleases, setNewReleases] = useState<Pitch[]>([]);
+  const [hotPitches, setHotPitches] = useState<Pitch[]>([]);
   const [loading, setLoading] = useState(true);
   // likedPitches state removed — replaced by Pitchey Score
 
@@ -38,15 +40,17 @@ export default function Homepage() {
   const fetchPitches = async () => {
     try {
       // Use the new public endpoints that work without authentication
-      const [trending, newReleases, featured] = await Promise.all([
+      const [trending, newReleases, featured, hot] = await Promise.all([
         pitchService.getPublicTrendingPitches(4),
         pitchService.getPublicNewPitches(4),
-        pitchService.getPublicFeaturedPitches(4)
+        pitchService.getPublicFeaturedPitches(4),
+        pitchService.getPublicHotPitches(3),
       ]);
-      
+
       setTrendingPitches(trending);
       // If no new releases, show featured pitches
       setNewReleases(newReleases.length > 0 ? newReleases : featured);
+      setHotPitches(hot);
     } catch (error) {
       console.warn('Failed to fetch from new public endpoints, using fallback:', error);
       // Fallback to original public endpoint if new endpoints fail
@@ -274,39 +278,93 @@ export default function Homepage() {
       </section>
 
 
-      {/* How It Works */}
-      <section className="py-16 bg-white border-b border-gray-100">
+      {/* Hottest Pitches — top 3 by Bayesian + role-weighted heat score.
+          Replaces the old "How Pitchey Works" tri-card; we'd rather surface real
+          traction than explain the product in the abstract. */}
+      <section className="py-16 bg-gradient-to-br from-orange-50 via-white to-amber-50 border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-section-title text-center mb-4">How Pitchey Works</h2>
-          <p className="text-body text-center mb-12 max-w-2xl mx-auto">Three portals, one marketplace. Each role gets tools built for how they actually work.</p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center p-6 rounded-xl bg-purple-50">
-              <div className="w-14 h-14 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Film className="w-7 h-7 text-white" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Creators</h3>
-              <p className="text-sm text-gray-600">
-                Publish your pitch with logline, synopsis, and media. See exactly which investors and production companies are engaging. Get structured feedback from industry professionals.
-              </p>
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold mb-4">
+              <Flame className="w-3.5 h-3.5" />
+              HOTTEST RIGHT NOW
             </div>
-            <div className="text-center p-6 rounded-xl bg-green-50">
-              <div className="w-14 h-14 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Wallet className="w-7 h-7 text-white" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Investors</h3>
-              <p className="text-sm text-gray-600">
-                Browse pitches by genre, format, and budget. Sign NDAs for protected content. Track your deal flow from discovery to investment — all in one place.
-              </p>
+            <h2 className="text-section-title mb-3">Top Pitches by Heat Score</h2>
+            <p className="text-body max-w-2xl mx-auto">
+              Ranked by views, likes, NDAs signed, and who's engaging — weighted so production and investor attention counts more than anonymous browsing.
+            </p>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
             </div>
-            <div className="text-center p-6 rounded-xl bg-orange-50">
-              <div className="w-14 h-14 bg-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Building2 className="w-7 h-7 text-white" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Production Companies</h3>
-              <p className="text-sm text-gray-600">
-                Assess pitch completeness, assemble teams, share production feedback with creators, and convert pitches into tracked projects with one click.
-              </p>
+          ) : hotPitches.length === 0 ? (
+            <p className="text-center text-gray-500">No hot pitches yet — check back soon.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {hotPitches.map((pitch, idx) => {
+                const heat = getHeatScore(pitch as unknown as Record<string, unknown>);
+                return (
+                  <div
+                    key={pitch.id}
+                    onClick={() => navigate(`/pitch/${pitch.id}`)}
+                    className="relative bg-white rounded-2xl overflow-hidden border border-orange-200 shadow-md hover:shadow-xl hover:border-orange-400 transition cursor-pointer group"
+                  >
+                    {/* Rank medallion */}
+                    <div className="absolute top-3 left-3 z-10 w-10 h-10 rounded-full bg-white/95 backdrop-blur-sm shadow-md flex items-center justify-center font-bold text-orange-600 text-lg">
+                      #{idx + 1}
+                    </div>
+                    {/* Heat badge top-right */}
+                    <div className="absolute top-3 right-3 z-10">
+                      <HeatBadge score={heat} />
+                    </div>
+
+                    <div className="h-48 bg-gradient-to-br from-orange-100 to-amber-100 relative">
+                      {((pitch as any).cover_image || (pitch as any).title_image || pitch.titleImage || pitch.thumbnailUrl) ? (
+                        <img
+                          src={(pitch as any).cover_image || (pitch as any).title_image || pitch.titleImage || pitch.thumbnailUrl}
+                          alt={pitch.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <GenrePlaceholder genre={pitch.genre} />
+                      )}
+                    </div>
+
+                    <div className="p-5">
+                      <h3 className="font-bold text-lg text-gray-900 mb-1 line-clamp-1 group-hover:text-orange-600 transition">
+                        {pitch.title}
+                      </h3>
+                      <p className="text-xs text-gray-500 mb-3">
+                        by {(pitch as any).creator_name || (pitch as any).creatorName || 'Unknown'}
+                      </p>
+                      <p className="text-sm text-gray-600 line-clamp-2 mb-4">
+                        {pitch.logline}
+                      </p>
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <div className="flex items-center gap-3">
+                          <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> {(pitch as any).view_count ?? pitch.viewCount ?? 0}</span>
+                          <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5" /> {(pitch as any).like_count ?? (pitch as any).likeCount ?? 0}</span>
+                        </div>
+                        {heat > 0 && (
+                          <span className="font-semibold text-orange-600">{heat.toFixed(1)} heat</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
+          )}
+
+          <div className="flex justify-center mt-10">
+            <button
+              onClick={() => navigate('/marketplace?sort=hot')}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-medium"
+            >
+              See all hot pitches
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </section>

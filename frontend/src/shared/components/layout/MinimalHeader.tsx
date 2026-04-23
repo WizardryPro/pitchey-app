@@ -79,20 +79,22 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
         </Link>
 
         {/* Divider */}
-        <div className="hidden sm:block h-6 w-px bg-gray-300"></div>
+        <div className="h-6 w-px bg-gray-300"></div>
 
-        {/* Quick Navigation Links */}
-        <nav className="hidden sm:flex items-center gap-1">
+        {/* Quick Navigation Links — icons show on all viewports; label on md+ */}
+        <nav className="flex items-center gap-1">
           <Link
             to="/"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Home"
           >
             <Home className="w-4 h-4" />
             <span className="hidden md:inline">Home</span>
           </Link>
           <Link
             to="/marketplace"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Marketplace"
           >
             <Store className="w-4 h-4" />
             <span className="hidden md:inline">Marketplace</span>

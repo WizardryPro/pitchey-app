@@ -322,15 +322,11 @@ export default function PitchDetail() {
         </div>
       )}
 
-      {/* Header */}
+      {/* Header — title/meta block. The standalone "Back to Marketplace" chrome
+          that used to sit above this was removed; PortalTopNav above provides
+          navigation and the dedicated back row just duplicated chrome. */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          {/* Top Row - Navigation */}
-          <div className="mb-4">
-            <BackButton />
-          </div>
-
-          {/* Main Content Row */}
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
             {/* Title & Info Section */}
             <div className="flex-1 min-w-0">
