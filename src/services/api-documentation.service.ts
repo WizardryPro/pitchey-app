@@ -349,7 +349,7 @@ export class ApiDocumentationService {
       },
       servers: [
         {
-          url: "https://pitchey.pages.dev/api",
+          url: "https://pitchey-5o8.pages.dev/api",
           description: "Production server"
         },
         {
@@ -434,7 +434,7 @@ export class ApiDocumentationService {
       variable: [
         {
           key: "baseUrl",
-          value: "https://pitchey.pages.dev/api",
+          value: "https://pitchey-5o8.pages.dev/api",
           type: "string"
         }
       ]
@@ -460,7 +460,7 @@ Authorization: Bearer YOUR_JWT_TOKEN
 \`\`\`
 
 ## Base URLs
-- Production: \`https://pitchey.pages.dev/api\`
+- Production: \`https://pitchey-5o8.pages.dev/api\`
 - Development: \`http://localhost:8001/api\`
 
 ## Rate Limiting
