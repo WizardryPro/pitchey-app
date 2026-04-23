@@ -5,6 +5,7 @@ import type { FeedbackEntry, ConsumptionStatus, CommentEntry } from '../../servi
 import StructuredFeedbackForm from './StructuredFeedbackForm';
 import FeedbackDisplay from './FeedbackDisplay';
 import PitcheyRating from '../PitcheyRating';
+import RatingScaleKey from './RatingScaleKey';
 
 interface Props {
   pitchId: number;
@@ -116,6 +117,10 @@ export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, use
           <MessageSquare className="w-5 h-5 text-purple-600" />
           Feedback & Ratings
         </h3>
+
+        {/* Rating scale reference — lets readers decode what
+            "Studio Contender" / "Pitch Perfect" / etc actually mean. */}
+        <RatingScaleKey />
 
         {/* Quick Rate — available to everyone except owner */}
         {canRate && !canLeaveFeedback && (

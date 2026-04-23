@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Star } from 'lucide-react';
 import { RATING_LABELS, RATING_COLORS, RATING_TEXT_COLORS } from '../constants/pitchey-score';
 
 interface InteractiveProps {
@@ -18,7 +19,19 @@ interface CompactProps {
   value: number;
 }
 
-type Props = InteractiveProps | DisplayProps | CompactProps;
+/** Stars mode renders the Pitchey Score (1-10) as a 5-star visual with half-step
+ *  support. For discovery surfaces — card grids, marketplace, homepage — where
+ *  the full colored-pill or label takes too much space. */
+interface StarsProps {
+  mode: 'stars';
+  value: number;
+  /** Render size — defaults to 'sm' (14px). 'md' is 18px (detail-ish surfaces). */
+  size?: 'sm' | 'md';
+  /** Show the numeric score next to the stars. Off by default; cards usually don't need it. */
+  showNumber?: boolean;
+}
+
+type Props = InteractiveProps | DisplayProps | CompactProps | StarsProps;
 
 /** Compact: colored pill with number — for cards/listings */
 function CompactRating({ value }: { value: number }) {
@@ -107,6 +120,49 @@ function InteractiveRating({ value, onChange, disabled }: Omit<InteractiveProps,
   );
 }
 
+/** Stars: 1-10 score rendered as 5 stars with half-step support. Tooltip shows
+ *  tier label so the scale semantics aren't lost at the card-density surfaces. */
+function StarsRating({ value, size = 'sm', showNumber = false }: Omit<StarsProps, 'mode'>) {
+  if (!value || value <= 0) return null;
+  const clamped = Math.max(0, Math.min(10, value));
+  const stars = clamped / 2; // 1-10 → 0.5-5 stars
+  const label = RATING_LABELS[Math.max(1, Math.min(10, Math.round(clamped)))];
+  const textColor = RATING_TEXT_COLORS[Math.max(1, Math.min(10, Math.round(clamped)))];
+  const dim = size === 'md' ? 'w-[18px] h-[18px]' : 'w-3.5 h-3.5';
+
+  return (
+    <span
+      className="inline-flex items-center gap-1"
+      title={`${clamped.toFixed(1)} / 10 — ${label}`}
+      aria-label={`Pitchey Score: ${clamped.toFixed(1)} out of 10, ${label}`}
+    >
+      <span className="inline-flex items-center gap-0.5">
+        {[1, 2, 3, 4, 5].map((n) => {
+          // Each star represents 2 score points. Full when stars >= n, half when stars >= n-0.5.
+          const full = stars >= n;
+          const half = !full && stars >= n - 0.5;
+          return (
+            <span key={n} className={`relative ${dim} inline-block`}>
+              <Star className={`absolute inset-0 ${dim} text-gray-300`} />
+              {(full || half) && (
+                <span
+                  className="absolute inset-0 overflow-hidden"
+                  style={{ width: full ? '100%' : '50%' }}
+                >
+                  <Star className={`${dim} fill-yellow-400 text-yellow-400`} />
+                </span>
+              )}
+            </span>
+          );
+        })}
+      </span>
+      {showNumber && (
+        <span className={`text-xs font-semibold ${textColor}`}>{clamped.toFixed(1)}</span>
+      )}
+    </span>
+  );
+}
+
 export default function PitcheyRating(props: Props) {
   switch (props.mode) {
     case 'compact':
@@ -115,5 +171,7 @@ export default function PitcheyRating(props: Props) {
       return <DisplayRating value={props.value} />;
     case 'interactive':
       return <InteractiveRating value={props.value} onChange={props.onChange} disabled={props.disabled} />;
+    case 'stars':
+      return <StarsRating value={props.value} size={props.size} showNumber={props.showNumber} />;
   }
 }

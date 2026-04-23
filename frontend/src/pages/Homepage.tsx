@@ -8,7 +8,8 @@ import type { Pitch } from '@features/pitches/services/pitch.service';
 import { getGenresSync, getFormatsSync } from '@config/pitchConstants';
 import FormatDisplay from '../components/FormatDisplay';
 import GenrePlaceholder from '@shared/components/GenrePlaceholder';
-import HeatBadge, { getHeatScore } from '../components/HeatBadge';
+import HeatBadge, { getHeatScore, getPitcheyScore } from '../components/HeatBadge';
+import PitcheyRating from '../components/PitcheyRating';
 import { getPortalPath } from '@/utils/navigation';
 
 
@@ -303,7 +304,9 @@ export default function Homepage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {hotPitches.map((pitch, idx) => {
-                const heat = getHeatScore(pitch as unknown as Record<string, unknown>);
+                const pitchRecord = pitch as unknown as Record<string, unknown>;
+                const heat = getHeatScore(pitchRecord);
+                const score = getPitcheyScore(pitchRecord);
                 return (
                   <div
                     key={pitch.id}
@@ -335,9 +338,14 @@ export default function Homepage() {
                       <h3 className="font-bold text-lg text-gray-900 mb-1 line-clamp-1 group-hover:text-orange-600 transition">
                         {pitch.title}
                       </h3>
-                      <p className="text-xs text-gray-500 mb-3">
+                      <p className="text-xs text-gray-500 mb-2">
                         by {(pitch as any).creator_name || (pitch as any).creatorName || 'Unknown'}
                       </p>
+                      {score > 0 && (
+                        <div className="mb-3">
+                          <PitcheyRating mode="stars" value={score} showNumber />
+                        </div>
+                      )}
                       <p className="text-sm text-gray-600 line-clamp-2 mb-4">
                         {pitch.logline}
                       </p>
