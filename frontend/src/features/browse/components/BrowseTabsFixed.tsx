@@ -5,6 +5,7 @@ import LoadingSpinner from '@shared/components/feedback/LoadingSpinner';
 import { PitchService } from '@features/pitches/services/pitch.service';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import PortalTopNav from '@shared/components/layout/PortalTopNav';
 
 interface Pitch {
   id: number;
@@ -286,6 +287,7 @@ const BrowseTabsFixed: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <PortalTopNav />
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 py-6">

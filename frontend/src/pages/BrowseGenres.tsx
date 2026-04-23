@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { pitchService } from '@features/pitches/services/pitch.service';
 import type { Pitch } from '@features/pitches/services/pitch.service';
-import { useBetterAuthStore } from '../store/betterAuthStore';
 import { PitchCardSkeleton } from '@shared/components/feedback/Skeleton';
 import EmptyState from '../components/EmptyState';
 import { useToast } from '@shared/components/feedback/ToastProvider';
@@ -10,17 +9,13 @@ import Pagination from '../components/Pagination';
 import { configService } from '../services/config.service';
 import FormatDisplay from '../components/FormatDisplay';
 import { getApiUrl } from '../config';
-import { getPortalPath } from '@/utils/navigation';
-import { 
-  Eye, 
-  Heart, 
-  Clock, 
+import PortalTopNav from '@shared/components/layout/PortalTopNav';
+import {
+  Eye,
+  Heart,
   User,
-  LogIn,
-  UserPlus,
   Film,
   Building2,
-  Wallet,
   DollarSign,
   Shield,
   Calendar,
@@ -46,9 +41,7 @@ interface GenreStats {
 export default function BrowseGenres() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isAuthenticated, user } = useBetterAuthStore();
   const toast = useToast();
-  const userType = user?.userType;
   
   const [pitches, setPitches] = useState<Pitch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -283,81 +276,7 @@ export default function BrowseGenres() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navigation Header */}
-      <nav className="bg-white shadow-sm border-b" data-testid="genres-navigation">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-8">
-              <a href="/" className="text-2xl font-bold text-purple-600">
-                Pitchey
-              </a>
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <button
-                  onClick={() => navigate('/marketplace')}
-                  className="hover:text-purple-600 transition-colors"
-                >
-                  Browse
-                </button>
-                <span>/</span>
-                <span className="font-medium text-gray-900">Genres</span>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              {isAuthenticated && user ? (
-                <>
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg border border-gray-200">
-                    {userType === 'production' && (
-                      <>
-                        <Building2 className="w-4 h-4 text-purple-600" />
-                        <span className="text-sm font-medium text-gray-700">Production</span>
-                      </>
-                    )}
-                    {userType === 'investor' && (
-                      <>
-                        <Wallet className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-medium text-gray-700">Investor</span>
-                      </>
-                    )}
-                    {userType === 'creator' && (
-                      <>
-                        <User className="w-4 h-4 text-blue-600" />
-                        <span className="text-sm font-medium text-gray-700">Creator</span>
-                      </>
-                    )}
-                    <span className="text-xs text-gray-500">•</span>
-                    <span className="text-sm text-gray-700">{user.companyName || user.username}</span>
-                  </div>
-                  
-                  <button
-                    onClick={() => navigate(userType ? `/${getPortalPath(userType)}/dashboard` : '/portals')}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium"
-                  >
-                    Dashboard
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => navigate('/portals')}
-                    className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:text-purple-600 font-medium"
-                  >
-                    <LogIn className="w-4 h-4" />
-                    <span>Sign In</span>
-                  </button>
-                  <button
-                    onClick={() => navigate('/portals')}
-                    className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    <span>Join Pitchey</span>
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
+      <PortalTopNav />
 
       {/* Page Header */}
       <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white">

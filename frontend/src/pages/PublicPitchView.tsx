@@ -5,6 +5,7 @@ import { pitchAPI } from '../lib/api';
 import type { Pitch } from '../lib/api';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { formatCurrency } from '@shared/utils/formatters';
+import PortalTopNav from '@shared/components/layout/PortalTopNav';
 import { ndaService } from '@features/ndas/services/nda.service';
 import NDAWizard from '@features/ndas/components/NDAWizard';
 import FormatDisplay from '../components/FormatDisplay';
@@ -191,8 +192,9 @@ export default function PublicPitchView() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <PortalTopNav />
       {/* Header */}
-      <header className="bg-white shadow-sm border-b sticky top-0 z-40">
+      <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             {/* Back Navigation */}

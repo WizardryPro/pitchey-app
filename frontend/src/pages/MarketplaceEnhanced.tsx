@@ -18,8 +18,8 @@ import HeatBadge, { getHeatScore, getHeatLevel } from '../components/HeatBadge';
 import VerificationBadge from '../components/VerificationBadge';
 import HumanMadeBadge from '../components/HumanMadeBadge';
 import GenrePlaceholder from '@shared/components/GenrePlaceholder';
-import { getPortalPath } from '@/utils/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import PortalTopNav from '@shared/components/layout/PortalTopNav';
 import {
   Search,
   TrendingUp,
@@ -42,14 +42,9 @@ import {
   WifiOff,
   RefreshCw,
   AlertTriangle,
-  LogOut,
-  LayoutDashboard,
   MapPin,
   Calendar as CalendarIcon,
-  UserPlus,
   Building2,
-  Menu,
-  ChevronRight
 } from 'lucide-react';
 import { API_URL } from '../config';
 import { formatBudgetCompact } from '@shared/utils/formatters';
@@ -155,7 +150,7 @@ export default function MarketplaceEnhanced() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isAuthenticated, user, logout } = useBetterAuthStore();
+  const { isAuthenticated, user } = useBetterAuthStore();
   const toast = useToast();
   const { isMobile } = useResponsive();
 
@@ -175,7 +170,6 @@ export default function MarketplaceEnhanced() {
   const [tabStates, setTabStates] = useState<Record<string, TabState>>({});
   const [viewMode, setViewMode] = useState<keyof typeof VIEW_MODES>('grid');
   const [showFilters, setShowFilters] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'popular');
   const [currentPage, setCurrentPage] = useState(1);
@@ -756,139 +750,8 @@ export default function MarketplaceEnhanced() {
 
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden">
-      {/* Navigation Header — hidden when inside a portal (PortalLayout has its own) */}
-      {!isInsidePortal && (
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50 overflow-hidden">
-        <div className="container mx-auto px-3 sm:px-4">
-          <div className="flex items-center justify-between h-14 sm:h-16">
-            {/* Logo and main nav */}
-            <div className="flex items-center gap-3 sm:gap-8 min-w-0">
-              <a href="/" className="flex items-center flex-shrink-0">
-                <span className="text-xl sm:text-2xl font-bold text-purple-600">Pitchey</span>
-              </a>
-              <nav className="hidden md:flex items-center gap-6">
-                <button
-                  onClick={() => { void navigate('/marketplace'); }}
-                  className="text-nav-link text-brand-anchor font-medium"
-                >
-                  Marketplace
-                </button>
-                <button
-                  onClick={() => { void navigate('/how-it-works'); }}
-                  className="text-nav-link text-gray-700 hover:text-brand-anchor transition"
-                >
-                  How It Works
-                </button>
-                <button
-                  onClick={() => { void navigate('/about'); }}
-                  className="text-nav-link text-gray-700 hover:text-brand-anchor transition"
-                >
-                  About
-                </button>
-              </nav>
-            </div>
-
-            {/* Auth buttons */}
-            <div className="flex items-center gap-2 sm:gap-3">
-              {/* Mobile hamburger — only below md, and only when there are links to show */}
-              <button
-                type="button"
-                onClick={() => setMobileMenuOpen(v => !v)}
-                aria-label="Open navigation menu"
-                aria-expanded={mobileMenuOpen}
-                className="md:hidden p-2 text-gray-700 hover:text-brand-anchor transition"
-              >
-                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </button>
-
-              {isAuthenticated ? (
-                <>
-                  {/* User info — desktop only */}
-                  <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-lg">
-                    <User className="w-4 h-4 text-gray-600" />
-                    <span className="text-sm text-gray-700">
-                      {user?.userType === 'production' && user?.companyName ? user.companyName : user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.username || user?.email}
-                    </span>
-                  </div>
-
-                  {/* Dashboard button — icon on mobile, text on sm+ */}
-                  <button
-                    onClick={() => {
-                      void navigate(user?.userType ? `/${getPortalPath(user.userType)}/dashboard` : '/dashboard');
-                    }}
-                    className="p-2 sm:px-4 sm:py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition flex items-center gap-1.5"
-                  >
-                    <LayoutDashboard className="w-4 h-4" />
-                    <span className="hidden sm:inline">Dashboard</span>
-                  </button>
-
-                  {/* Sign Out button */}
-                  <button
-                    onClick={async () => { await logout(); navigate('/'); }}
-                    className="p-2 text-gray-500 hover:text-red-600 transition flex-shrink-0"
-                    title="Sign Out"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => { void navigate('/portals'); }}
-                    className="px-2.5 py-1.5 sm:px-4 sm:py-2 text-purple-600 hover:text-purple-700 transition font-medium text-xs sm:text-sm"
-                  >
-                    Sign In
-                  </button>
-                  <button
-                    onClick={() => { void navigate('/portals'); }}
-                    className="px-2.5 py-1.5 sm:px-4 sm:py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-xs sm:text-sm flex-shrink-0"
-                  >
-                    Get Started
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Mobile nav panel — below md only. Links mirror the desktop nav
-              so mobile users aren't stranded when the md:flex bar is hidden. */}
-          <AnimatePresence>
-            {mobileMenuOpen && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="md:hidden overflow-hidden border-t border-gray-100"
-              >
-                <nav className="flex flex-col py-2">
-                  <button
-                    onClick={() => { setMobileMenuOpen(false); void navigate('/marketplace'); }}
-                    className="flex items-center justify-between px-2 py-3 text-nav-link text-brand-anchor font-medium hover:bg-purple-50 rounded-lg"
-                  >
-                    Marketplace
-                    <ChevronRight className="w-4 h-4 opacity-60" />
-                  </button>
-                  <button
-                    onClick={() => { setMobileMenuOpen(false); void navigate('/how-it-works'); }}
-                    className="flex items-center justify-between px-2 py-3 text-nav-link text-gray-700 hover:text-brand-anchor hover:bg-purple-50 rounded-lg"
-                  >
-                    How It Works
-                    <ChevronRight className="w-4 h-4 opacity-60" />
-                  </button>
-                  <button
-                    onClick={() => { setMobileMenuOpen(false); void navigate('/about'); }}
-                    className="flex items-center justify-between px-2 py-3 text-nav-link text-gray-700 hover:text-brand-anchor hover:bg-purple-50 rounded-lg"
-                  >
-                    About
-                    <ChevronRight className="w-4 h-4 opacity-60" />
-                  </button>
-                </nav>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </header>
-      )}
+      {/* Portal-aware top nav — hidden when inside a portal (PortalLayout has its own) */}
+      {!isInsidePortal && <PortalTopNav />}
 
       {/* Header with stats */}
       <div className="bg-gradient-to-r from-purple-700 to-indigo-600 text-white">

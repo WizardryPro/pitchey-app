@@ -18,10 +18,12 @@ import HeatBadge, { getHeatScore } from '../components/HeatBadge';
 import VerificationBadge from '../components/VerificationBadge';
 import HumanMadeBadge from '../components/HumanMadeBadge';
 import { viewService } from '@features/analytics/services/view.service';
+import PortalTopNav from '@shared/components/layout/PortalTopNav';
 
 export default function PitchDetail() {
   const navigate = useNavigate();
   const location = useLocation();
+  const isInsidePortal = /^\/(watcher|creator|investor|production|admin)\//.test(location.pathname);
   const { id } = useParams<{ id: string }>();
   const { isAuthenticated, user } = useBetterAuthStore();
   const goToLogin = () => navigate('/portals', { state: { from: location.pathname + location.search } });
@@ -218,6 +220,7 @@ export default function PitchDetail() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 animate-pulse">
+        {!isInsidePortal && <PortalTopNav />}
         {/* Skeleton header */}
         <header className="bg-white shadow-sm border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -269,6 +272,7 @@ export default function PitchDetail() {
   if (error || !pitch) {
     return (
       <div className="min-h-screen bg-gray-50">
+        {!isInsidePortal && <PortalTopNav />}
         <header className="bg-white shadow-sm border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex items-center gap-4">
@@ -307,6 +311,7 @@ export default function PitchDetail() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {!isInsidePortal && <PortalTopNav />}
       {/* Connectivity Banner */}
       {!isOnline && (
         <div className="bg-red-50 border-b border-red-200">
