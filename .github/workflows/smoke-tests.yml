@@ -1,0 +1,128 @@
+name: Smoke Tests (production)
+
+# Runs scripts/smoke-test.mjs against prod every 30 min + on PRs that touch
+# the frontend. Catches the class of drift we've been finding manually:
+# double-chrome headers, credit pills stuck loading, login fallback leaking,
+# 5xx cascades on page load.
+#
+# Alerting pattern mirrors simple-health-check.yml — Slack if SLACK_WEBHOOK
+# is set, deduplicated GitHub issue otherwise.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/30 * * * *'
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - 'src/**'
+      - 'scripts/smoke-test.mjs'
+      - '.github/workflows/smoke-tests.yml'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Chromium (Playwright)
+        run: npx playwright install --with-deps chromium
+
+      - name: Run smoke test
+        run: node scripts/smoke-test.mjs
+
+      # Scheduled runs only — don't spam Slack/issues from PR checks (the PR
+      # itself is the notification there).
+      - name: Slack alert on failure
+        if: failure() && github.event_name == 'schedule' && env.SLACK_WEBHOOK != ''
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: |
+          curl -X POST -H 'Content-Type: application/json' \
+            --data "{\"text\":\"🔥 Pitchey smoke test failed — run ${{ github.run_id }}. https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$SLACK_WEBHOOK"
+
+      - name: Open/update GitHub issue on failure
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `🔥 Smoke test failed — ${new Date().toISOString().slice(0, 10)}`;
+            const body = [
+              `Automated smoke test failed at ${new Date().toISOString()}.`,
+              ``,
+              `Run: https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              ``,
+              `Checks 18 audit routes × 2 viewports (mobile 390px / desktop 1280px)`,
+              `for known-bad patterns: double-chrome, credit pill stuck loading,`,
+              `"User data not received" error, 5xx network responses.`,
+              ``,
+              `Auto-closed when next successful run completes.`,
+            ].join('\n');
+
+            // Deduplicate — if there's already an open smoke-test-failure issue, comment on it instead.
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'smoke-test-failure',
+              per_page: 1,
+            });
+            if (existing.data.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.data[0].number,
+                body: `Still failing — run ${context.runId}`,
+              });
+              return;
+            }
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['smoke-test-failure', 'incident'],
+            });
+
+      # Auto-close any open failure issue once we go green again, matching the
+      # "auto-closed when next successful run completes" promise in the body above.
+      - name: Close open failure issue on success
+        if: success() && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const open = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'smoke-test-failure',
+              per_page: 5,
+            });
+            for (const issue of open.data) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `Smoke test passed — run ${context.runId}. Auto-closing.`,
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed',
+              });
+            }
