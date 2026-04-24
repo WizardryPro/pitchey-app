@@ -1,16 +1,22 @@
 /**
- * Portal theme tokens — pre-enumerated Tailwind class strings per portal.
+ * Portal theme tokens — built on the `brand.portal-*` design-system tokens
+ * defined in tailwind.config.js. Each portal has a single canonical hex
+ * (e.g. `#5B4FC7` for investor); shades are derived via Tailwind's opacity
+ * modifier (`/10`, `/90`, etc.) so the entire accent palette of a portal is
+ * tied to one source-of-truth color.
  *
- * Why pre-enumerated rather than template-literal (`bg-${color}-600`): Tailwind
- * JIT only generates CSS for classes it can statically see in source. Dynamic
- * concatenation would require a safelist. Enumerating each portal × each slot
- * puts every class as a literal in this file, which the JIT picks up during
- * build. Verbose at the definition site, but one file to maintain.
+ * Why not Tailwind's shade palette (cyan-100/500/600 etc.)? Because the
+ * design system already has brand tokens, login pages and sidebars already
+ * use them, and deriving accents from a Tailwind shade scale was a parallel
+ * universe where investor was "green" (a bug inherited from the old
+ * getPortalColor() in MinimalHeader). Using the brand tokens directly keeps
+ * one source of truth.
  *
- * The single hex definitions in tailwind.config.js (brand.portal-watcher,
- * etc.) are intentionally not used here — they're one shade each, and portal
- * theming needs a range (light bg → solid button → hover state → ring), which
- * Tailwind's shade-scale palette (cyan-100/500/600/700) handles for free.
+ * Why pre-enumerated per portal rather than a single template? Tailwind JIT
+ * only generates CSS for classes it can statically see in source. Listing
+ * each slot × each portal as a literal means every class appears in this
+ * file, which the JIT picks up during build. Verbose at the definition
+ * site, but one file to maintain.
  *
  * DB stores user_type='viewer' for watchers (legacy). Callers pass the raw
  * user_type; the hook normalizes to the portal key.
@@ -23,166 +29,201 @@ export type PortalKey = 'creator' | 'investor' | 'production' | 'watcher' | 'adm
 export interface PortalTheme {
   key: PortalKey;
   label: string;
-  /** Human-readable accent color for debugging — not for className use. */
-  accentName: string;
+  /** Raw design-token name, for debugging. Not a className. */
+  tokenName: string;
 
   // Solid-surface slots (buttons, tab underlines)
-  btnPrimary: string;           // bg + hover + text-white
-  btnPrimaryDisabled: string;   // same shape, disabled states muted
+  btnPrimary: string;           // bg-<token> + hover:bg-<token>/90 + text-white
+  btnPrimaryDisabled: string;   // same + disabled states muted
 
   // Tab nav
-  tabActiveBorder: string;      // border-<c>-500
-  tabActiveText: string;        // text-<c>-600
+  tabActiveBorder: string;      // border-<token>
+  tabActiveText: string;        // text-<token>
 
   // Focus / input
-  focusRing: string;            // focus:ring-<c>-500
-  peerFocusRing: string;        // peer-focus:ring-<c>-300
-  inputFocus: string;           // focus:ring-2 focus:ring-<c>-500 + focus:border-transparent
+  focusRing: string;            // focus:ring-<token>
+  peerFocusRing: string;        // peer-focus:ring-<token>/30
+  inputFocus: string;           // focus:outline-none focus:ring-2 focus:ring-<token> focus:border-transparent
 
   // Toggle switch (tailwind peer pattern)
-  toggleChecked: string;        // peer-checked:bg-<c>-600
+  toggleChecked: string;        // peer-checked:bg-<token>
 
-  // Accent surfaces
-  bgLight: string;              // bg-<c>-50 — page-level tints
-  bgLightHover: string;         // hover:bg-<c>-50
-  bgMuted: string;              // bg-<c>-100 — pill backgrounds
-  textAccent: string;           // text-<c>-600
-  textAccentHover: string;      // hover:text-<c>-700
-  textOnSolid: string;          // text-<c>-100 — for text on solid bg
+  // Accent surfaces — use opacity to derive light/muted variants
+  bgLight: string;              // bg-<token>/5
+  bgLightHover: string;         // hover:bg-<token>/5
+  bgMuted: string;              // bg-<token>/10 — pill backgrounds
+  textAccent: string;           // text-<token>
+  textAccentHover: string;      // hover:opacity-80 — brand color doesn't have a hover shade, opacity is the next best thing
+  textOnSolid: string;          // text-white/80 — secondary text over a solid brand bg
 
   // Persistent identity
-  stripTop: string;             // h-1 bg-<c>-500 — layout identity strip
-  badge: string;                // pill for role badge (bg-<c>-100 text-<c>-700)
+  stripTop: string;             // bg-<token> — layout identity strip
+  badge: string;                // bg-<token>/10 text-<token>
   /** Full composite for the MinimalHeader credit pill: bg + text + hover bg. */
   creditPill: string;
 
-  // Hero / gradient elements
-  heroGradient: string;         // bg-gradient-to-r from-<c>-600 to-<c2>-600
+  // Hero / gradient elements — single-hue gradient from full to 70% opacity
+  heroGradient: string;
 
   // Loading spinner
-  spinnerBorder: string;        // border-<c>-600
+  spinnerBorder: string;        // border-<token>
 }
 
+function buildTheme(key: PortalKey, label: string, token: string): PortalTheme {
+  // `token` is the tail of the brand class (e.g. 'brand-portal-investor').
+  // Builder enumerates every slot for every portal so Tailwind JIT sees the
+  // full class string in source.
+  return {
+    key,
+    label,
+    tokenName: token,
+    btnPrimary: `bg-${token} hover:bg-${token}/90 text-white`,
+    btnPrimaryDisabled: `bg-${token} hover:bg-${token}/90 text-white disabled:opacity-50 disabled:cursor-not-allowed`,
+    tabActiveBorder: `border-${token}`,
+    tabActiveText: `text-${token}`,
+    focusRing: `focus:ring-${token}`,
+    peerFocusRing: `peer-focus:ring-${token}/30`,
+    inputFocus: `focus:outline-none focus:ring-2 focus:ring-${token} focus:border-transparent`,
+    toggleChecked: `peer-checked:bg-${token}`,
+    bgLight: `bg-${token}/5`,
+    bgLightHover: `hover:bg-${token}/5`,
+    bgMuted: `bg-${token}/10`,
+    textAccent: `text-${token}`,
+    textAccentHover: 'hover:opacity-80',
+    textOnSolid: 'text-white/80',
+    stripTop: `bg-${token}`,
+    badge: `bg-${token}/10 text-${token}`,
+    creditPill: `bg-${token}/10 text-${token} hover:bg-${token}/20`,
+    heroGradient: `bg-gradient-to-r from-${token} to-${token}/70`,
+    spinnerBorder: `border-${token}`,
+  };
+}
+
+// NOTE: If you touch these, also touch tailwind.config.js `brand.portal-*`.
+// The literal class strings below must appear somewhere JIT can see them.
+// buildTheme above produces the right shape; below we also embed the full
+// expanded strings so the JIT has them as static literals (template literals
+// inside a function don't count for JIT purposes — the output strings do).
 const THEMES: Record<PortalKey, PortalTheme> = {
   creator: {
     key: 'creator',
     label: 'Creator',
-    accentName: 'purple',
-    btnPrimary: 'bg-purple-600 hover:bg-purple-700 text-white',
-    btnPrimaryDisabled: 'bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50 disabled:cursor-not-allowed',
-    tabActiveBorder: 'border-purple-500',
-    tabActiveText: 'text-purple-600',
-    focusRing: 'focus:ring-purple-500',
-    peerFocusRing: 'peer-focus:ring-purple-300',
-    inputFocus: 'focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent',
-    toggleChecked: 'peer-checked:bg-purple-600',
-    bgLight: 'bg-purple-50',
-    bgLightHover: 'hover:bg-purple-50',
-    bgMuted: 'bg-purple-100',
-    textAccent: 'text-purple-600',
-    textAccentHover: 'hover:text-purple-700',
-    textOnSolid: 'text-purple-100',
-    stripTop: 'bg-purple-500',
-    badge: 'bg-purple-100 text-purple-700',
-    creditPill: 'bg-purple-100 text-purple-700 hover:bg-purple-200',
-    heroGradient: 'bg-gradient-to-r from-purple-600 to-indigo-600',
-    spinnerBorder: 'border-purple-600',
+    tokenName: 'brand-portal-creator',
+    btnPrimary: 'bg-brand-portal-creator hover:bg-brand-portal-creator/90 text-white',
+    btnPrimaryDisabled: 'bg-brand-portal-creator hover:bg-brand-portal-creator/90 text-white disabled:opacity-50 disabled:cursor-not-allowed',
+    tabActiveBorder: 'border-brand-portal-creator',
+    tabActiveText: 'text-brand-portal-creator',
+    focusRing: 'focus:ring-brand-portal-creator',
+    peerFocusRing: 'peer-focus:ring-brand-portal-creator/30',
+    inputFocus: 'focus:outline-none focus:ring-2 focus:ring-brand-portal-creator focus:border-transparent',
+    toggleChecked: 'peer-checked:bg-brand-portal-creator',
+    bgLight: 'bg-brand-portal-creator/5',
+    bgLightHover: 'hover:bg-brand-portal-creator/5',
+    bgMuted: 'bg-brand-portal-creator/10',
+    textAccent: 'text-brand-portal-creator',
+    textAccentHover: 'hover:opacity-80',
+    textOnSolid: 'text-white/80',
+    stripTop: 'bg-brand-portal-creator',
+    badge: 'bg-brand-portal-creator/10 text-brand-portal-creator',
+    creditPill: 'bg-brand-portal-creator/10 text-brand-portal-creator hover:bg-brand-portal-creator/20',
+    heroGradient: 'bg-gradient-to-r from-brand-portal-creator to-brand-portal-creator/70',
+    spinnerBorder: 'border-brand-portal-creator',
   },
   investor: {
     key: 'investor',
     label: 'Investor',
-    accentName: 'green',
-    btnPrimary: 'bg-green-600 hover:bg-green-700 text-white',
-    btnPrimaryDisabled: 'bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed',
-    tabActiveBorder: 'border-green-500',
-    tabActiveText: 'text-green-600',
-    focusRing: 'focus:ring-green-500',
-    peerFocusRing: 'peer-focus:ring-green-300',
-    inputFocus: 'focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent',
-    toggleChecked: 'peer-checked:bg-green-600',
-    bgLight: 'bg-green-50',
-    bgLightHover: 'hover:bg-green-50',
-    bgMuted: 'bg-green-100',
-    textAccent: 'text-green-600',
-    textAccentHover: 'hover:text-green-700',
-    textOnSolid: 'text-green-100',
-    stripTop: 'bg-green-500',
-    badge: 'bg-green-100 text-green-700',
-    creditPill: 'bg-green-100 text-green-700 hover:bg-green-200',
-    heroGradient: 'bg-gradient-to-r from-green-600 to-emerald-600',
-    spinnerBorder: 'border-green-600',
+    tokenName: 'brand-portal-investor',
+    btnPrimary: 'bg-brand-portal-investor hover:bg-brand-portal-investor/90 text-white',
+    btnPrimaryDisabled: 'bg-brand-portal-investor hover:bg-brand-portal-investor/90 text-white disabled:opacity-50 disabled:cursor-not-allowed',
+    tabActiveBorder: 'border-brand-portal-investor',
+    tabActiveText: 'text-brand-portal-investor',
+    focusRing: 'focus:ring-brand-portal-investor',
+    peerFocusRing: 'peer-focus:ring-brand-portal-investor/30',
+    inputFocus: 'focus:outline-none focus:ring-2 focus:ring-brand-portal-investor focus:border-transparent',
+    toggleChecked: 'peer-checked:bg-brand-portal-investor',
+    bgLight: 'bg-brand-portal-investor/5',
+    bgLightHover: 'hover:bg-brand-portal-investor/5',
+    bgMuted: 'bg-brand-portal-investor/10',
+    textAccent: 'text-brand-portal-investor',
+    textAccentHover: 'hover:opacity-80',
+    textOnSolid: 'text-white/80',
+    stripTop: 'bg-brand-portal-investor',
+    badge: 'bg-brand-portal-investor/10 text-brand-portal-investor',
+    creditPill: 'bg-brand-portal-investor/10 text-brand-portal-investor hover:bg-brand-portal-investor/20',
+    heroGradient: 'bg-gradient-to-r from-brand-portal-investor to-brand-portal-investor/70',
+    spinnerBorder: 'border-brand-portal-investor',
   },
   production: {
     key: 'production',
     label: 'Production',
-    accentName: 'blue',
-    btnPrimary: 'bg-blue-600 hover:bg-blue-700 text-white',
-    btnPrimaryDisabled: 'bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed',
-    tabActiveBorder: 'border-blue-500',
-    tabActiveText: 'text-blue-600',
-    focusRing: 'focus:ring-blue-500',
-    peerFocusRing: 'peer-focus:ring-blue-300',
-    inputFocus: 'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
-    toggleChecked: 'peer-checked:bg-blue-600',
-    bgLight: 'bg-blue-50',
-    bgLightHover: 'hover:bg-blue-50',
-    bgMuted: 'bg-blue-100',
-    textAccent: 'text-blue-600',
-    textAccentHover: 'hover:text-blue-700',
-    textOnSolid: 'text-blue-100',
-    stripTop: 'bg-blue-500',
-    badge: 'bg-blue-100 text-blue-700',
-    creditPill: 'bg-blue-100 text-blue-700 hover:bg-blue-200',
-    heroGradient: 'bg-gradient-to-r from-blue-600 to-indigo-600',
-    spinnerBorder: 'border-blue-600',
+    tokenName: 'brand-portal-production',
+    btnPrimary: 'bg-brand-portal-production hover:bg-brand-portal-production/90 text-white',
+    btnPrimaryDisabled: 'bg-brand-portal-production hover:bg-brand-portal-production/90 text-white disabled:opacity-50 disabled:cursor-not-allowed',
+    tabActiveBorder: 'border-brand-portal-production',
+    tabActiveText: 'text-brand-portal-production',
+    focusRing: 'focus:ring-brand-portal-production',
+    peerFocusRing: 'peer-focus:ring-brand-portal-production/30',
+    inputFocus: 'focus:outline-none focus:ring-2 focus:ring-brand-portal-production focus:border-transparent',
+    toggleChecked: 'peer-checked:bg-brand-portal-production',
+    bgLight: 'bg-brand-portal-production/5',
+    bgLightHover: 'hover:bg-brand-portal-production/5',
+    bgMuted: 'bg-brand-portal-production/10',
+    textAccent: 'text-brand-portal-production',
+    textAccentHover: 'hover:opacity-80',
+    textOnSolid: 'text-white/80',
+    stripTop: 'bg-brand-portal-production',
+    badge: 'bg-brand-portal-production/10 text-brand-portal-production',
+    creditPill: 'bg-brand-portal-production/10 text-brand-portal-production hover:bg-brand-portal-production/20',
+    heroGradient: 'bg-gradient-to-r from-brand-portal-production to-brand-portal-production/70',
+    spinnerBorder: 'border-brand-portal-production',
   },
   watcher: {
     key: 'watcher',
     label: 'Watcher',
-    accentName: 'cyan',
-    btnPrimary: 'bg-cyan-600 hover:bg-cyan-700 text-white',
-    btnPrimaryDisabled: 'bg-cyan-600 hover:bg-cyan-700 text-white disabled:opacity-50 disabled:cursor-not-allowed',
-    tabActiveBorder: 'border-cyan-500',
-    tabActiveText: 'text-cyan-600',
-    focusRing: 'focus:ring-cyan-500',
-    peerFocusRing: 'peer-focus:ring-cyan-300',
-    inputFocus: 'focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent',
-    toggleChecked: 'peer-checked:bg-cyan-600',
-    bgLight: 'bg-cyan-50',
-    bgLightHover: 'hover:bg-cyan-50',
-    bgMuted: 'bg-cyan-100',
-    textAccent: 'text-cyan-600',
-    textAccentHover: 'hover:text-cyan-700',
-    textOnSolid: 'text-cyan-100',
-    stripTop: 'bg-cyan-500',
-    badge: 'bg-cyan-100 text-cyan-700',
-    creditPill: 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200',
-    heroGradient: 'bg-gradient-to-r from-cyan-600 via-sky-600 to-sky-700',
-    spinnerBorder: 'border-cyan-600',
+    tokenName: 'brand-portal-watcher',
+    btnPrimary: 'bg-brand-portal-watcher hover:bg-brand-portal-watcher/90 text-white',
+    btnPrimaryDisabled: 'bg-brand-portal-watcher hover:bg-brand-portal-watcher/90 text-white disabled:opacity-50 disabled:cursor-not-allowed',
+    tabActiveBorder: 'border-brand-portal-watcher',
+    tabActiveText: 'text-brand-portal-watcher',
+    focusRing: 'focus:ring-brand-portal-watcher',
+    peerFocusRing: 'peer-focus:ring-brand-portal-watcher/30',
+    inputFocus: 'focus:outline-none focus:ring-2 focus:ring-brand-portal-watcher focus:border-transparent',
+    toggleChecked: 'peer-checked:bg-brand-portal-watcher',
+    bgLight: 'bg-brand-portal-watcher/5',
+    bgLightHover: 'hover:bg-brand-portal-watcher/5',
+    bgMuted: 'bg-brand-portal-watcher/10',
+    textAccent: 'text-brand-portal-watcher',
+    textAccentHover: 'hover:opacity-80',
+    textOnSolid: 'text-white/80',
+    stripTop: 'bg-brand-portal-watcher',
+    badge: 'bg-brand-portal-watcher/10 text-brand-portal-watcher',
+    creditPill: 'bg-brand-portal-watcher/10 text-brand-portal-watcher hover:bg-brand-portal-watcher/20',
+    heroGradient: 'bg-gradient-to-r from-brand-portal-watcher to-brand-portal-watcher/70',
+    spinnerBorder: 'border-brand-portal-watcher',
   },
   admin: {
     key: 'admin',
     label: 'Admin',
-    accentName: 'indigo',
-    btnPrimary: 'bg-indigo-600 hover:bg-indigo-700 text-white',
-    btnPrimaryDisabled: 'bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 disabled:cursor-not-allowed',
-    tabActiveBorder: 'border-indigo-500',
-    tabActiveText: 'text-indigo-600',
-    focusRing: 'focus:ring-indigo-500',
-    peerFocusRing: 'peer-focus:ring-indigo-300',
-    inputFocus: 'focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent',
-    toggleChecked: 'peer-checked:bg-indigo-600',
-    bgLight: 'bg-indigo-50',
-    bgLightHover: 'hover:bg-indigo-50',
-    bgMuted: 'bg-indigo-100',
-    textAccent: 'text-indigo-600',
-    textAccentHover: 'hover:text-indigo-700',
-    textOnSolid: 'text-indigo-100',
-    stripTop: 'bg-indigo-500',
-    badge: 'bg-indigo-100 text-indigo-700',
-    creditPill: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200',
-    heroGradient: 'bg-gradient-to-r from-indigo-600 to-purple-600',
-    spinnerBorder: 'border-indigo-600',
+    tokenName: 'brand-portal-admin',
+    btnPrimary: 'bg-brand-portal-admin hover:bg-brand-portal-admin/90 text-white',
+    btnPrimaryDisabled: 'bg-brand-portal-admin hover:bg-brand-portal-admin/90 text-white disabled:opacity-50 disabled:cursor-not-allowed',
+    tabActiveBorder: 'border-brand-portal-admin',
+    tabActiveText: 'text-brand-portal-admin',
+    focusRing: 'focus:ring-brand-portal-admin',
+    peerFocusRing: 'peer-focus:ring-brand-portal-admin/30',
+    inputFocus: 'focus:outline-none focus:ring-2 focus:ring-brand-portal-admin focus:border-transparent',
+    toggleChecked: 'peer-checked:bg-brand-portal-admin',
+    bgLight: 'bg-brand-portal-admin/5',
+    bgLightHover: 'hover:bg-brand-portal-admin/5',
+    bgMuted: 'bg-brand-portal-admin/10',
+    textAccent: 'text-brand-portal-admin',
+    textAccentHover: 'hover:opacity-80',
+    textOnSolid: 'text-white/80',
+    stripTop: 'bg-brand-portal-admin',
+    badge: 'bg-brand-portal-admin/10 text-brand-portal-admin',
+    creditPill: 'bg-brand-portal-admin/10 text-brand-portal-admin hover:bg-brand-portal-admin/20',
+    heroGradient: 'bg-gradient-to-r from-brand-portal-admin to-brand-portal-admin/70',
+    spinnerBorder: 'border-brand-portal-admin',
   },
 };
 
@@ -215,3 +256,8 @@ export function usePortalTheme(userType?: string | null): PortalTheme {
 export function getPortalTheme(userType?: string | null): PortalTheme {
   return THEMES[portalKeyFromUserType(userType)];
 }
+
+// Suppress unused-warning on buildTheme — retained as documentation for the
+// shape of each entry above. If the hook grows, the builder is the
+// straightforward way to refactor without re-enumerating by hand.
+void buildTheme;
