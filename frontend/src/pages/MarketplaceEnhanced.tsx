@@ -231,14 +231,56 @@ export default function MarketplaceEnhanced() {
     void fetchPitchesForTab(tab);
   }, [sortBy]);
 
-  // Sync sortBy state FROM url when user navigates in (e.g. clicking "Hot" in
-  // the top nav while already on /marketplace). Without this, useState only
-  // reads ?sort on mount; subsequent navigations change the URL but leave
-  // sortBy stale, so the tab doesn't switch. The !== guard prevents a
-  // ping-pong with the state→URL effect below.
+  // Sync state FROM url on navigation. useState initializers only run once,
+  // so without these effects the component's state drifts from the URL when
+  // someone deep-links from elsewhere (e.g. top-nav "Hot" → ?sort=hot, or a
+  // future marketplace link with ?search=… / ?genres=…). Equality guards
+  // prevent ping-pong with the state→URL effect below.
   useEffect(() => {
     const urlSort = searchParams.get('sort') || 'popular';
     if (urlSort !== sortBy) setSortBy(urlSort);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  useEffect(() => {
+    const urlSearch = searchParams.get('search') || '';
+    if (urlSearch !== searchQuery) setSearchQuery(urlSearch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  useEffect(() => {
+    const urlFilters = {
+      genres: searchParams.get('genres')?.split(',').filter(Boolean) || [],
+      formats: searchParams.get('formats')?.split(',').filter(Boolean) || [],
+      status: searchParams.get('status')?.split(',').filter(Boolean) || [],
+      budgetMin: parseInt(searchParams.get('budgetMin') || '0'),
+      budgetMax: parseInt(searchParams.get('budgetMax') || '500000000'),
+      hasNDA: searchParams.get('hasNDA') === 'true' ? true : searchParams.get('hasNDA') === 'false' ? false : null,
+      hasInvestment: searchParams.get('hasInvestment') === 'true' ? true : searchParams.get('hasInvestment') === 'false' ? false : null,
+    };
+    setFilters((prev) => {
+      // Round-trip idempotency: only the fields the state→URL writer emits are
+      // compared. dateRange/location/searchType are UI-only today (not written
+      // to URL), so keep the previous values for those.
+      const same =
+        prev.genres.join(',') === urlFilters.genres.join(',') &&
+        prev.formats.join(',') === urlFilters.formats.join(',') &&
+        prev.status.join(',') === urlFilters.status.join(',') &&
+        prev.budgetRange.min === urlFilters.budgetMin &&
+        prev.budgetRange.max === urlFilters.budgetMax &&
+        prev.hasNDA === urlFilters.hasNDA &&
+        prev.hasInvestment === urlFilters.hasInvestment;
+      if (same) return prev;
+      return {
+        ...prev,
+        genres: urlFilters.genres,
+        formats: urlFilters.formats,
+        status: urlFilters.status,
+        budgetRange: { min: urlFilters.budgetMin, max: urlFilters.budgetMax },
+        hasNDA: urlFilters.hasNDA,
+        hasInvestment: urlFilters.hasInvestment,
+      };
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
