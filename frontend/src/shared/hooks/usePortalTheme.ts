@@ -56,6 +56,10 @@ export interface PortalTheme {
   textAccentHover: string;      // hover:opacity-80 — brand color doesn't have a hover shade, opacity is the next best thing
   textOnSolid: string;          // text-white/80 — secondary text over a solid brand bg
 
+  // Hover variants — Tailwind JIT needs these as literals (can't generate
+  // `hover:${theme.tabActiveBorder}` from a template). Enumerate per portal.
+  borderAccentHover: string;    // hover:border-<token> — dropzone/card rollovers
+
   // Persistent identity
   stripTop: string;             // bg-<token> — layout identity strip
   badge: string;                // bg-<token>/10 text-<token>
@@ -91,6 +95,7 @@ function buildTheme(key: PortalKey, label: string, token: string): PortalTheme {
     textAccent: `text-${token}`,
     textAccentHover: 'hover:opacity-80',
     textOnSolid: 'text-white/80',
+    borderAccentHover: `hover:border-${token}`,
     stripTop: `bg-${token}`,
     badge: `bg-${token}/10 text-${token}`,
     creditPill: `bg-${token}/10 text-${token} hover:bg-${token}/20`,
@@ -123,6 +128,7 @@ const THEMES: Record<PortalKey, PortalTheme> = {
     textAccent: 'text-brand-portal-creator',
     textAccentHover: 'hover:opacity-80',
     textOnSolid: 'text-white/80',
+    borderAccentHover: 'hover:border-brand-portal-creator',
     stripTop: 'bg-brand-portal-creator',
     badge: 'bg-brand-portal-creator/10 text-brand-portal-creator',
     creditPill: 'bg-brand-portal-creator/10 text-brand-portal-creator hover:bg-brand-portal-creator/20',
@@ -147,6 +153,7 @@ const THEMES: Record<PortalKey, PortalTheme> = {
     textAccent: 'text-brand-portal-investor',
     textAccentHover: 'hover:opacity-80',
     textOnSolid: 'text-white/80',
+    borderAccentHover: 'hover:border-brand-portal-investor',
     stripTop: 'bg-brand-portal-investor',
     badge: 'bg-brand-portal-investor/10 text-brand-portal-investor',
     creditPill: 'bg-brand-portal-investor/10 text-brand-portal-investor hover:bg-brand-portal-investor/20',
@@ -171,6 +178,7 @@ const THEMES: Record<PortalKey, PortalTheme> = {
     textAccent: 'text-brand-portal-production',
     textAccentHover: 'hover:opacity-80',
     textOnSolid: 'text-white/80',
+    borderAccentHover: 'hover:border-brand-portal-production',
     stripTop: 'bg-brand-portal-production',
     badge: 'bg-brand-portal-production/10 text-brand-portal-production',
     creditPill: 'bg-brand-portal-production/10 text-brand-portal-production hover:bg-brand-portal-production/20',
@@ -195,6 +203,7 @@ const THEMES: Record<PortalKey, PortalTheme> = {
     textAccent: 'text-brand-portal-watcher',
     textAccentHover: 'hover:opacity-80',
     textOnSolid: 'text-white/80',
+    borderAccentHover: 'hover:border-brand-portal-watcher',
     stripTop: 'bg-brand-portal-watcher',
     badge: 'bg-brand-portal-watcher/10 text-brand-portal-watcher',
     creditPill: 'bg-brand-portal-watcher/10 text-brand-portal-watcher hover:bg-brand-portal-watcher/20',
@@ -219,6 +228,7 @@ const THEMES: Record<PortalKey, PortalTheme> = {
     textAccent: 'text-brand-portal-admin',
     textAccentHover: 'hover:opacity-80',
     textOnSolid: 'text-white/80',
+    borderAccentHover: 'hover:border-brand-portal-admin',
     stripTop: 'bg-brand-portal-admin',
     badge: 'bg-brand-portal-admin/10 text-brand-portal-admin',
     creditPill: 'bg-brand-portal-admin/10 text-brand-portal-admin hover:bg-brand-portal-admin/20',

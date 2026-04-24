@@ -617,7 +617,7 @@ export default function PitchEdit() {
                 </div>
               )}
 
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition">
+              <div className={`border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition ${theme.borderAccentHover}`}>
                 <ImageIcon className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                 <p className="text-sm text-gray-600 mb-2">
                   {existingImageUrl || formData.image ? 'Replace cover image' : 'Upload a cover image (optional)'}
@@ -644,7 +644,7 @@ export default function PitchEdit() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Script/Treatment (PDF)
               </label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition">
+              <div className={`border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition ${theme.borderAccentHover}`}>
                 {formData.pdf ? (
                   <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
                     <div className="flex items-center gap-3">
@@ -687,7 +687,7 @@ export default function PitchEdit() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Pitch Video (Optional)
               </label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition">
+              <div className={`border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition ${theme.borderAccentHover}`}>
                 {formData.video ? (
                   <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
                     <div className="flex items-center gap-3">
