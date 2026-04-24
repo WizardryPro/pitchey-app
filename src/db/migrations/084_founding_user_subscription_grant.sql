@@ -30,6 +30,21 @@
 -- 1. Add expiry column — idempotent
 ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_ends_at TIMESTAMPTZ;
 
+-- 1a. Relax orphaned NOT NULL columns on subscription_history.
+--     The table has two parallel column sets: a legacy set (tier, start_date,
+--     end_date) from a retired BASIC/PRO/ENTERPRISE scheme, and a current set
+--     (new_tier, previous_tier, period_start, period_end). Live code writes
+--     only the current set; the legacy columns are orphaned. No code reads
+--     tier or start_date (verified via grep).
+--
+--     `tier` is ENUM subscription_tier_new (values: BASIC/PRO/ENTERPRISE),
+--     which can't legally hold current tier IDs like 'creator_unlimited'.
+--     `start_date` has no default, so new inserts fail the NOT NULL check.
+--
+--     Full column+type drop tracked alongside issue #44.
+ALTER TABLE subscription_history ALTER COLUMN tier       DROP NOT NULL;
+ALTER TABLE subscription_history ALTER COLUMN start_date DROP NOT NULL;
+
 -- 2. Grant + record history in one transactional block. The CTE gives us a
 --    single source of truth for "which users get the grant" so the UPDATE and
 --    INSERT see the same set.
