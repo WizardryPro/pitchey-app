@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Camera, Mail, Phone, MapPin, Building2, Calendar, Edit3, Save, X, Loader2 } from 'lucide-react';
+import { Camera, Mail, Phone, MapPin, Building2, Calendar, Edit3, Save, X, Loader2 } from 'lucide-react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { API_URL } from '../config';
 
@@ -245,61 +245,48 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => { void navigate(-1); }}
-                className="p-2 text-gray-500 hover:text-gray-700 transition rounded-lg hover:bg-gray-100"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Profile Settings</h1>
-                <p className="text-sm text-gray-500">Manage your account information</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3">
-              {isEditing ? (
-                <>
-                  <button
-                    onClick={() => {
-                      setIsEditing(false);
-                      setEditedProfile(profile);
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-                  >
-                    <X className="w-4 h-4" />
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => { void handleSaveProfile(); }}
-                    disabled={saving}
-                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:opacity-50"
-                  >
-                    <Save className="w-4 h-4" />
-                    {saving ? 'Saving...' : 'Save Changes'}
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
-                >
-                  <Edit3 className="w-4 h-4" />
-                  Edit Profile
-                </button>
-              )}
-            </div>
-          </div>
+    <div className="space-y-6">
+      {/* Page heading — global chrome comes from PortalLayout's MinimalHeader */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Profile Settings</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage your account information</p>
         </div>
-      </header>
+        <div className="flex items-center gap-3">
+          {isEditing ? (
+            <>
+              <button
+                onClick={() => {
+                  setIsEditing(false);
+                  setEditedProfile(profile);
+                }}
+                className="flex items-center gap-2 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+              >
+                <X className="w-4 h-4" />
+                Cancel
+              </button>
+              <button
+                onClick={() => { void handleSaveProfile(); }}
+                disabled={saving}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:opacity-50"
+              >
+                <Save className="w-4 h-4" />
+                {saving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+            >
+              <Edit3 className="w-4 h-4" />
+              Edit Profile
+            </button>
+          )}
+        </div>
+      </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div>
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           {/* Profile Header */}
           <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-8">

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, Filter, Eye, Heart, DollarSign, Calendar, Shield, Star, Film, TrendingUp, Building2, User } from 'lucide-react';
+import { Search, Filter, Eye, Heart, DollarSign, Calendar, Shield, Star, Film, TrendingUp, Building2, User } from 'lucide-react';
 import { pitchAPI } from '../lib/api';
 import { API_URL } from '../config';
 import { configService } from '../services/config.service';
@@ -288,51 +288,39 @@ export default function InvestorBrowse() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate('/investor/dashboard')}
-                className="p-2 text-gray-500 hover:text-gray-700 transition rounded-lg hover:bg-gray-100"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Browse Investment Opportunities</h1>
-                <p className="text-sm text-gray-500">Discover and invest in the next big entertainment projects</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="latest">Latest</option>
-                <option value="popular">Most Popular</option>
-                <option value="budget">Highest Budget</option>
-                <option value="roi">Best ROI</option>
-              </select>
-
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition ${
-                  showFilters ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <Filter className="w-4 h-4" />
-                Filters
-              </button>
-            </div>
-          </div>
+    <div className="space-y-6">
+      {/* Page heading — wrap on narrow viewports so sort/filter don't overflow the title */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-gray-900">Browse Investment Opportunities</h1>
+          <p className="text-sm text-gray-500 mt-1">Discover and invest in the next big entertainment projects</p>
         </div>
-      </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="flex items-center gap-3 flex-wrap">
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="latest">Latest</option>
+            <option value="popular">Most Popular</option>
+            <option value="budget">Highest Budget</option>
+            <option value="roi">Best ROI</option>
+          </select>
+
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition ${
+              showFilters ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <Filter className="w-4 h-4" />
+            Filters
+          </button>
+        </div>
+      </div>
+
+      <div>
         {/* Browse Tabs */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
           {/* Tab Navigation */}

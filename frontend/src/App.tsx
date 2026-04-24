@@ -497,6 +497,7 @@ function App() {
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
             <Route path="portfolio" element={<CreatorPortfolio />} />
+            <Route path="billing" element={<Billing />} />
 
             {/* Enhanced Creator Routes */}
             {AllCreatorRoutes({ isAuthenticated: true, userType: 'creator' })}
@@ -516,6 +517,7 @@ function App() {
             <Route path="profile" element={<Profile />} />
             <Route path="messages/*" element={<Messages />} />
             <Route path="calendar" element={<Calendar />} />
+            <Route path="billing" element={<Billing />} />
 
             {/* Enhanced Investor Routes */}
             {AllInvestorRoutes({ isAuthenticated: true, userType: 'investor' })}
@@ -546,6 +548,7 @@ function App() {
             <Route path="ndas" element={<ProductionNDAManagement />} />
             <Route path="pitches" element={<ManagePitches />} />
             <Route path="pitches/:id/edit" element={<PitchEdit />} />
+            <Route path="billing" element={<Billing />} />
 
             {/* Enhanced Production Routes */}
             {AllProductionRoutes({ isAuthenticated: true, userType: 'production' })}
@@ -676,22 +679,10 @@ function App() {
           <Route path="/settings/onboarding" element={isAuthenticated ? <OnboardingSettings /> : <Navigate to="/portals" />} />
           <Route path="/notifications" element={isAuthenticated ? <NotificationCenter /> : <Navigate to="/portals" />} />
           
-          {/* Billing Routes - Available to all authenticated users */}
-          <Route path="/billing" element={isAuthenticated ? <Billing /> : <Navigate to="/portals" />} />
-          <Route path="/creator/billing" element={
-            isAuthenticated && userType === 'creator' ? <Billing /> : 
-            isAuthenticated ? <Navigate to="/" /> :
-            <Navigate to="/login/creator" />
-          } />
-          <Route path="/investor/billing" element={
-            isAuthenticated && userType === 'investor' ? <Billing /> : 
-            isAuthenticated ? <Navigate to="/" /> :
-            <Navigate to="/login/investor" />
-          } />
-          <Route path="/production/billing" element={
-            isAuthenticated && userType === 'production' ? <Billing /> : 
-            isAuthenticated ? <Navigate to="/" /> :
-            <Navigate to="/login/production" />
+          {/* /billing redirects to the portal-specific billing so MinimalHeader renders; portal-specific billing lives inside each portal's PortalLayout */}
+          <Route path="/billing" element={
+            isAuthenticated && userType ? <Navigate to={`/${getPortalPath(userType)}/billing`} replace /> :
+            <Navigate to="/portals" />
           } />
           
           {/* Legacy Protected routes */}

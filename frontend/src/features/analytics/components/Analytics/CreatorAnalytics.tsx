@@ -64,17 +64,17 @@ export const CreatorAnalytics: React.FC<CreatorAnalyticsProps> = ({
 
   return (
     <div className="bg-white rounded-xl border p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">
+      <div className="flex flex-wrap justify-between items-start gap-3 mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 min-w-0">
           Pitch Performance Analytics
         </h2>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3">
           <TimeRangeFilter
             value={timeRange}
             onChange={(range) => onTimeRangeChange?.(range)}
             defaultRange="30d"
           />
-          <AnalyticsExport 
+          <AnalyticsExport
             data={[]}  // Replace with actual data
             title="Creator Analytics"
           />

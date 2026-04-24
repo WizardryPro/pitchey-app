@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Eye, Edit3, Trash2, BarChart3, Search, Filter, RefreshCw, Send } from 'lucide-react';
+import { Plus, Eye, Edit3, Trash2, BarChart3, Search, Filter, RefreshCw, Send } from 'lucide-react';
 import { pitchService } from '@features/pitches/services/pitch.service';
 import type { Pitch } from '@shared/types/api';
 import FormatDisplay from '../components/FormatDisplay';
@@ -202,37 +202,24 @@ export default function ManagePitches() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => void navigate(`${portalPrefix}/dashboard`)}
-                className="p-2 text-gray-500 hover:text-gray-700 transition rounded-lg hover:bg-gray-100"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Manage Pitches</h1>
-                <p className="text-sm text-gray-500">View and manage all your pitch submissions</p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => void navigate(`${portalPrefix}/pitch/new`)}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:shadow-lg transition"
-            >
-              <Plus className="w-4 h-4" />
-              New Pitch
-            </button>
-          </div>
+    <div className="space-y-6">
+      {/* Page heading — global chrome comes from PortalLayout's MinimalHeader */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Manage Pitches</h1>
+          <p className="text-sm text-gray-500 mt-1">View and manage all your pitch submissions</p>
         </div>
-      </header>
+        <button
+          onClick={() => void navigate(`${portalPrefix}/pitch/new`)}
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:shadow-lg transition"
+        >
+          <Plus className="w-4 h-4" />
+          New Pitch
+        </button>
+      </div>
 
       {/* Filters */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div>
         {/* Notifications */}
         <div className="fixed top-4 right-4 space-y-2 z-50">
           {notifications.map((notification) => (

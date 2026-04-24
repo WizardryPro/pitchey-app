@@ -33,6 +33,21 @@ export default function WatcherLogin() {
     }
   };
 
+  const setDemoCredentials = async () => {
+    const demoData = { email: 'jamie.watcher@demo.com', password: 'Demo123' };
+    setFormData(demoData);
+    try {
+      await loginWatcher(demoData.email, demoData.password, turnstileToken);
+      void navigate(resolveDest());
+    } catch (err) {
+      if (err instanceof MFARequiredError) {
+        void navigate(`/mfa/challenge?challengeId=${err.challengeId}&userType=${err.user.userType}&name=${encodeURIComponent(err.user.name)}&email=${encodeURIComponent(err.user.email)}${mfaFromQuery}`);
+        return;
+      }
+      console.error('Demo watcher login failed:', err);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-portal-watcher/10 via-white to-brand-portal-watcher/5 flex items-center justify-center p-4">
       <div className="absolute top-6 left-6">
@@ -142,6 +157,17 @@ export default function WatcherLogin() {
               <Mail className="h-4 w-4" />
               Sign in with email code
             </Link>
+
+            <div className="mt-4 p-4 bg-brand-portal-watcher/5 rounded-lg border border-brand-portal-watcher/20">
+              <p className="text-brand-portal-watcher text-xs text-center mb-3">Try our demo account</p>
+              <button
+                type="button"
+                onClick={() => { void setDemoCredentials(); }}
+                className="w-full py-2 bg-brand-portal-watcher/10 hover:bg-brand-portal-watcher/20 text-brand-portal-watcher rounded-lg text-sm font-medium transition border border-brand-portal-watcher/30"
+              >
+                Use Demo Watcher Account
+              </button>
+            </div>
           </form>
 
           <div className="mt-6">

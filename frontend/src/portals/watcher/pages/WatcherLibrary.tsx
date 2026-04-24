@@ -121,9 +121,9 @@ export default function WatcherLibrary() {
         <p className="text-cyan-100">Your saved pitches, viewing history, and followed creators.</p>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs — horizontally scrollable on mobile */}
       <div className="border-b border-gray-200">
-        <nav className="flex gap-1" aria-label="Library tabs">
+        <nav className="flex gap-1 overflow-x-auto scrollbar-hide" aria-label="Library tabs">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -132,7 +132,7 @@ export default function WatcherLibrary() {
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
                 className={`
-                  flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors
+                  flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap shrink-0
                   ${isActive
                     ? 'text-cyan-600 border-cyan-600'
                     : 'text-gray-600 border-transparent hover:text-gray-900 hover:border-gray-300'

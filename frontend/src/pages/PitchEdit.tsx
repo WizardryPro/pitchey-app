@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Save, X, Upload, FileText, Video, Image as ImageIcon, Shield, WifiOff } from 'lucide-react';
+import { Save, X, Upload, FileText, Video, Image as ImageIcon, Shield, WifiOff } from 'lucide-react';
 import { pitchService } from '@features/pitches/services/pitch.service';
 import { uploadService } from '@features/uploads/services/upload.service';
 import type { Pitch, UpdatePitchInput } from '@shared/types/api';
@@ -317,21 +317,9 @@ export default function PitchEdit() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50">
-        <header className="bg-white shadow-sm border-b">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate(pitchesListPath)}
-                className="p-2 text-gray-500 hover:text-gray-700 transition rounded-lg hover:bg-gray-100"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <h1 className="text-2xl font-bold text-gray-900">Error</h1>
-            </div>
-          </div>
-        </header>
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-gray-900">Error</h1>
+        <div className="py-8 text-center">
           <p className="text-gray-600">{error}</p>
           <button
             onClick={() => navigate(pitchesListPath)}
@@ -345,27 +333,15 @@ export default function PitchEdit() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate(pitchesListPath)}
-              className="p-2 text-gray-500 hover:text-gray-700 transition rounded-lg hover:bg-gray-100"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Edit Pitch</h1>
-              <p className="text-sm text-gray-500">Update your pitch information</p>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="space-y-6">
+      {/* Page heading — global chrome comes from PortalLayout's MinimalHeader */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Edit Pitch</h1>
+        <p className="text-sm text-gray-500 mt-1">Update your pitch information</p>
+      </div>
 
       {/* Form */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div>
         {/* Offline banner */}
         {!isOnline && (
           <div className="mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center gap-3">

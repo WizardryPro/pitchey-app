@@ -135,15 +135,18 @@ export default function PaymentHistory({ payments: initialPayments, onRefresh }:
   const exportPayments = async () => {
     try {
       setLoading(true);
-      const headers = ['Date', 'Description', 'Type', 'Amount', 'Currency', 'Status'];
-      const rows = payments.map((p: any) => [
-        new Date(p.createdAt).toLocaleDateString(),
-        (p.description || `Payment #${p.id}`).replace(/,/g, ' '),
-        p.type || 'unknown',
-        (parseFloat(p.amount) / 100).toFixed(2),
-        (p.currency || 'USD').toUpperCase(),
-        p.status || 'unknown'
-      ]);
+      const headers = ['Date', 'Description', 'Type', 'Credits', 'Status'];
+      const rows = payments.map((p: any) => {
+        const amount = parseFloat(p.amount);
+        const signed = p.type === 'usage' ? -Math.abs(amount) : Math.abs(amount);
+        return [
+          new Date(p.createdAt).toLocaleDateString(),
+          (p.description || `Entry #${p.id}`).replace(/,/g, ' '),
+          p.type || 'unknown',
+          String(signed),
+          p.status || 'unknown'
+        ];
+      });
       const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -378,7 +381,7 @@ export default function PaymentHistory({ payments: initialPayments, onRefresh }:
                       Type
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Amount
+                      Credits
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
@@ -416,13 +419,17 @@ export default function PaymentHistory({ payments: initialPayments, onRefresh }:
                           {payment.type?.replace('_', ' ') || 'unknown'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <div className="font-medium">
-                          ${(parseFloat(payment.amount) / 100).toFixed(2)}
-                        </div>
-                        <div className="text-xs text-gray-500 uppercase">
-                          {payment.currency || 'USD'}
-                        </div>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {(() => {
+                          const isDebit = payment.type === 'usage';
+                          const amount = parseFloat(payment.amount);
+                          return (
+                            <div className={`font-medium ${isDebit ? 'text-red-600' : 'text-green-600'}`}>
+                              {isDebit ? '−' : '+'}{Math.abs(amount)}
+                              <span className="text-xs text-gray-500 ml-1">credits</span>
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(payment.status)}`}>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useSearchParams, useNavigate, useLocation, Link } from 'react-router-dom';
-import { TrendingUp, Star, Film, Search, Filter, Grid, List, ArrowLeft, Home, RefreshCw, AlertCircle, WifiOff } from 'lucide-react';
+import { TrendingUp, Star, Film, Search, Filter, Grid, List, Home, RefreshCw, AlertCircle, WifiOff } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { InvestorService, type InvestmentOpportunity } from '@features/deals/services/investor.service';
 import { formatCurrency } from '@shared/utils/formatters';
@@ -281,32 +281,20 @@ const InvestorDiscover = () => {
         </div>
       )}
 
-      <div className="container mx-auto px-4 py-6">
-        {/* Navigation Breadcrumb */}
-        <div className="mb-4 flex items-center gap-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => { void navigate('/investor/dashboard'); }}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Dashboard
-          </Button>
-          
-          <Link 
-            to="/marketplace" 
-            className="text-sm text-green-600 hover:text-green-700 flex items-center gap-1"
+      <div>
+        {/* Page heading — portal sidebar covers dashboard nav; keeping the All Pitches shortcut since it links to a different route */}
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-bold mb-1">Discover Investment Opportunities</h1>
+            <p className="text-gray-600">Find your next successful film investment</p>
+          </div>
+          <Link
+            to="/marketplace"
+            className="text-sm text-green-600 hover:text-green-700 flex items-center gap-1 mt-2"
           >
             <Home className="w-4 h-4" />
             All Pitches
           </Link>
-        </div>
-        
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">Discover Investment Opportunities</h1>
-          <p className="text-gray-600">Find your next successful film investment</p>
         </div>
 
       {/* Search and Filter Bar */}
@@ -371,14 +359,14 @@ const InvestorDiscover = () => {
       {/* Tabs */}
       {!isGenresPage && (
         <div className="border-b mb-6">
-          <div className="flex space-x-8">
+          <div className="flex space-x-6 sm:space-x-8 overflow-x-auto scrollbar-hide">
             {tabs.map(tab => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
                   onClick={() => handleTabChange(tab.id)}
-                  className={`pb-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                  className={`pb-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 whitespace-nowrap shrink-0 ${
                     currentTab === tab.id
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'

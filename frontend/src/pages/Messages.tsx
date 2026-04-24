@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Send, Search, Filter, MessageSquare, Paperclip, MoreVertical,
   RefreshCw, Users, Circle, FileText, Image, Video, Music,
-  Lock, Unlock, Check, CheckCheck, Clock, X, WifiOff, PenSquare, User, Shield
+  Lock, Unlock, Check, CheckCheck, Clock, X, WifiOff, PenSquare, User, Shield, ArrowLeft
 } from 'lucide-react';
 import { useMessaging } from '@features/notifications/hooks/useWebSocket';
 import { getUserId } from '../lib/apiServices';
@@ -684,9 +684,9 @@ export default function Messages() {
           ))}
         </div>
 
-        {/* Enhanced Real-time status */}
-        <div className="flex items-center justify-between bg-white rounded-lg p-3 mb-6 shadow-sm border">
-          <div className="flex items-center gap-4">
+        {/* Enhanced Real-time status — wraps on mobile so the right-side "Last updated" doesn't clip off */}
+        <div className="flex flex-wrap items-center justify-between gap-2 bg-white rounded-lg p-3 mb-6 shadow-sm border">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <div className={`w-2 h-2 rounded-full ${
                 connectionStatus().color === 'green' ? 'bg-green-500' :
@@ -750,8 +750,8 @@ export default function Messages() {
 
         <div className="bg-white rounded-xl shadow-sm overflow-hidden" style={{ height: 'calc(100vh - 200px)' }}>
           <div className="flex h-full">
-            {/* Conversations List */}
-            <div className="w-1/3 border-r border-gray-200 flex flex-col">
+            {/* Conversations List — full width on mobile when no conversation selected, 1/3 on sm+ */}
+            <div className={`${selectedConversation ? 'hidden sm:flex' : 'flex'} w-full sm:w-1/3 border-r border-gray-200 flex-col`}>
               {/* Header with New Conversation button */}
               <div className="p-4 border-b border-gray-200">
                 <div className="flex items-center justify-between mb-3">
@@ -908,21 +908,29 @@ export default function Messages() {
               </div>
             </div>
 
-            {/* Message View */}
-            <div className="flex-1 flex flex-col">
+            {/* Message View — hidden on mobile when no conversation selected (list takes the whole viewport instead) */}
+            <div className={`${selectedConversation ? 'flex' : 'hidden sm:flex'} flex-1 flex-col`}>
               {selectedConversation ? (
                 <>
                   {/* Message Header */}
                   <div className="p-4 border-b border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <div>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {/* Back to list on mobile */}
+                        <button
+                          onClick={() => setSelectedConversation(null)}
+                          className="sm:hidden p-1 -ml-1 rounded hover:bg-gray-100"
+                          aria-label="Back to conversations"
+                        >
+                          <ArrowLeft className="w-5 h-5" />
+                        </button>
                         {(() => {
                           const conv = conversations.find(c => c.id === selectedConversation);
                           return conv ? (
-                            <div>
-                              <h2 className="font-semibold text-gray-900">{conv.participantName}</h2>
+                            <div className="min-w-0">
+                              <h2 className="font-semibold text-gray-900 truncate">{conv.participantName}</h2>
                               {conv.pitchTitle && (
-                                <p className="text-sm text-gray-500">About: {conv.pitchTitle}</p>
+                                <p className="text-sm text-gray-500 truncate">About: {conv.pitchTitle}</p>
                               )}
                             </div>
                           ) : null;

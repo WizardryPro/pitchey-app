@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Shield, Bell, Eye, Mail, Smartphone, Lock, Key, Trash2, AlertCircle } from 'lucide-react';
+import { Shield, Bell, Eye, Mail, Smartphone, Lock, Key, Trash2, AlertCircle } from 'lucide-react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { API_URL } from '../config';
 
@@ -144,40 +144,27 @@ export default function Settings() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate(-1)}
-                className="p-2 text-gray-500 hover:text-gray-700 transition rounded-lg hover:bg-gray-100"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Account Settings</h1>
-                <p className="text-sm text-gray-500">Manage your preferences and security</p>
-              </div>
-            </div>
-            
-            <button
-              onClick={saveSettings}
-              disabled={saving}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
+    <div className="space-y-6">
+      {/* Page heading — global chrome comes from PortalLayout's MinimalHeader */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Account Settings</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage your preferences and security</p>
         </div>
-      </header>
+        <button
+          onClick={saveSettings}
+          disabled={saving}
+          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:opacity-50"
+        >
+          {saving ? 'Saving...' : 'Save Changes'}
+        </button>
+      </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div>
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          {/* Tab Navigation */}
+          {/* Tab Navigation — horizontally scrollable on mobile */}
           <div className="border-b border-gray-200">
-            <div className="flex">
+            <div className="flex overflow-x-auto scrollbar-hide">
               {[
                 { id: 'notifications', label: 'Notifications', icon: Bell },
                 { id: 'privacy', label: 'Privacy', icon: Eye },
@@ -187,7 +174,7 @@ export default function Settings() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition ${
+                  className={`flex items-center gap-2 px-4 sm:px-6 py-4 text-sm font-medium border-b-2 transition whitespace-nowrap shrink-0 ${
                     activeTab === tab.id
                       ? 'border-purple-500 text-purple-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700'

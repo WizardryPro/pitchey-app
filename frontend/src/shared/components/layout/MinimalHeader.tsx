@@ -32,14 +32,14 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isProfileOpen]);
 
-  const [creditBalance, setCreditBalance] = useState<number>(0);
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
 
   useEffect(() => {
     paymentsAPI.getCreditBalance().then((data: any) => {
       if (data) {
         setCreditBalance(data.balance?.credits ?? data.credits ?? 0);
       }
-    }).catch(() => {});
+    }).catch(() => { setCreditBalance(0); });
   }, []);
 
   const handleLogout = async () => {
@@ -78,11 +78,11 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
           <span className="text-xl sm:text-2xl font-bold text-purple-600">Pitchey</span>
         </Link>
 
-        {/* Divider */}
-        <div className="h-6 w-px bg-gray-300"></div>
+        {/* Divider — hidden on mobile (quick nav is also hidden; reduces header clutter) */}
+        <div className="hidden sm:block h-6 w-px bg-gray-300"></div>
 
-        {/* Quick Navigation Links — icons show on all viewports; label on md+ */}
-        <nav className="flex items-center gap-1">
+        {/* Quick Navigation Links — hidden on mobile (sidebar hamburger covers this) */}
+        <nav className="hidden sm:flex items-center gap-1">
           <Link
             to="/"
             className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
@@ -103,14 +103,18 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
       </div>
 
       {/* Right: User Actions */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
         {/* WebSocket Status */}
         <WebSocketStatusCompact className="hidden sm:flex" />
 
-        {/* Credits */}
-        <button className={`flex items-center gap-2 px-3 py-1 bg-${color}-100 text-${color}-700 rounded-full text-sm hover:bg-${color}-200 transition`}>
-          <Coins className="w-4 h-4" />
-          <span>{creditBalance} Credits</span>
+        {/* Credits — just count on mobile, count + label on sm+ (prevents "500 Credits" pill wrapping at 390px viewports) */}
+        <button
+          className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 bg-${color}-100 text-${color}-700 rounded-full text-sm font-medium hover:bg-${color}-200 transition whitespace-nowrap`}
+          aria-label={creditBalance === null ? 'Credits loading' : `${creditBalance} credits`}
+        >
+          <Coins className="w-4 h-4 shrink-0" />
+          <span>{creditBalance === null ? '—' : creditBalance}</span>
+          <span className="hidden sm:inline">Credits</span>
         </button>
 
         {/* Notifications */}

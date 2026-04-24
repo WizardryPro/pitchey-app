@@ -7,26 +7,22 @@ import {
   History,
   Settings,
   Star,
-  LogOut,
   Receipt,
   Coins,
   Crown,
-  ArrowLeft
 } from 'lucide-react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
-import Logo from '../components/Logo';
 import { paymentsAPI } from '../lib/apiServices';
 import SubscriptionCard from '@features/billing/components/SubscriptionCard';
 import CreditPurchase from '@features/billing/components/CreditPurchase';
 import PaymentHistory from '@features/billing/components/PaymentHistory';
 import PaymentMethodCard from '@features/billing/components/PaymentMethodCard';
 import { getSubscriptionTier } from '../config/subscription-plans';
-import { getPortalPath } from '@/utils/navigation';
 
 export default function Billing() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, logout } = useBetterAuthStore();
+  const { user } = useBetterAuthStore();
   const validTabs = ['overview', 'subscription', 'credits', 'history', 'invoices', 'payment-methods'];
   const tabParam = searchParams.get('tab');
   // When the user lands here from Stripe with ?subscription=success, jump
@@ -97,16 +93,6 @@ export default function Billing() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    logout();
-    window.location.href = '/';
-  };
-
-  const getDefaultDashboardPath = () => {
-    const portal = getPortalPath(userType);
-    return portal ? `/${portal}/dashboard` : '/dashboard';
-  };
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Star },
@@ -129,85 +115,32 @@ export default function Billing() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-6">
-              {/* Back to Dashboard */}
-              <button
-                onClick={() => navigate(getDefaultDashboardPath())}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5" />
-                <span>Back to Dashboard</span>
-              </button>
-              
-              {/* Divider */}
-              <div className="h-8 w-px bg-gray-300"></div>
-              
-              {/* Pitchey Logo */}
-              <Link
-                to="/"
-                className="flex items-center hover:opacity-80 transition-opacity"
-              >
-                <Logo size="md" />
-              </Link>
-              
-              {/* Divider */}
-              <div className="h-8 w-px bg-gray-300"></div>
-              
-              {/* Page Info */}
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Billing & Payments</h1>
-                <p className="text-xs text-gray-500">Manage your subscription and billing</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              {/* Current Credits */}
-              {credits && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-purple-50 rounded-lg">
-                  <Coins className="w-4 h-4 text-purple-600" />
-                  <span className="text-sm font-medium text-purple-900">
-                    {credits?.balance?.credits ?? credits?.credits ?? 0} Credits
-                  </span>
-                </div>
-              )}
-              
-              <button
-                onClick={handleLogout}
-                className="p-2 text-gray-500 hover:text-gray-700 transition"
-              >
-                <LogOut className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="space-y-6">
+      {/* Page heading — global chrome (logo, credits, profile) comes from PortalLayout's MinimalHeader */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Billing & Payments</h1>
+        <p className="text-sm text-gray-500 mt-1">Manage your subscription and billing</p>
+      </div>
 
       {/* Error Message */}
       {error && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-700">{error}</p>
-            <button
-              onClick={fetchBillingData}
-              className="mt-2 text-red-600 hover:text-red-800 underline text-sm"
-            >
-              Try again
-            </button>
-          </div>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-700">{error}</p>
+          <button
+            onClick={fetchBillingData}
+            className="mt-2 text-red-600 hover:text-red-800 underline text-sm"
+          >
+            Try again
+          </button>
         </div>
       )}
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Tab Navigation */}
+      <div>
+        {/* Tab Navigation — horizontally scrollable at narrow viewports so all 6 tabs stay reachable on mobile */}
         <div className="bg-white rounded-xl shadow-sm mb-8">
           <div className="border-b border-gray-200">
-            <nav className="flex space-x-8 px-6">
+            <nav className="flex space-x-4 sm:space-x-8 px-4 sm:px-6 overflow-x-auto scrollbar-hide">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
@@ -218,7 +151,7 @@ export default function Billing() {
                       params.set('tab', tab.id);
                       navigate(`?${params.toString()}`, { replace: true });
                     }}
-                    className={`flex items-center gap-2 py-4 border-b-2 font-medium text-sm transition-colors ${
+                    className={`flex items-center gap-2 py-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap shrink-0 ${
                       activeTab === tab.id
                         ? 'border-purple-500 text-purple-600'
                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -351,33 +284,32 @@ function OverviewTab({ subscription, credits, paymentHistory, onRefresh }: any) 
         </div>
       </div>
 
-      {/* Recent Activity */}
+      {/* Recent Activity — backend serves rows from credit_transactions, so these are credit grants/usage, not dollar payments */}
       <div className="bg-white border rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Payments</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Credit Activity</h3>
         {recentPayments.length > 0 ? (
           <div className="space-y-3">
-            {recentPayments.map((payment: any, index: number) => (
-              <div key={index} className="flex items-center justify-between py-3 border-b last:border-b-0">
-                <div>
-                  <p className="font-medium text-gray-900">{payment.description}</p>
-                  <p className="text-sm text-gray-500">{new Date(payment.createdAt).toLocaleDateString()}</p>
+            {recentPayments.map((payment: any, index: number) => {
+              const isDebit = payment.type === 'usage';
+              const amount = parseFloat(payment.amount);
+              return (
+                <div key={index} className="flex items-center justify-between py-3 border-b last:border-b-0">
+                  <div>
+                    <p className="font-medium text-gray-900">{payment.description}</p>
+                    <p className="text-sm text-gray-500">{new Date(payment.createdAt).toLocaleDateString()}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`font-medium ${isDebit ? 'text-red-600' : 'text-green-600'}`}>
+                      {isDebit ? '−' : '+'}{Math.abs(amount)} credits
+                    </p>
+                    <p className="text-xs text-gray-500 capitalize">{payment.type}</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-medium text-gray-900">
-                    ${(parseFloat(payment.amount) / 100).toFixed(2)}
-                  </p>
-                  <p className={`text-xs ${
-                    payment.status === 'completed' ? 'text-green-600' : 
-                    payment.status === 'pending' ? 'text-yellow-600' : 'text-red-600'
-                  }`}>
-                    {payment.status}
-                  </p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
-          <p className="text-gray-500 text-center py-8">No recent payments</p>
+          <p className="text-gray-500 text-center py-8">No recent activity</p>
         )}
       </div>
     </div>

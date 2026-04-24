@@ -96,8 +96,12 @@ export const useBetterAuthStore = create<BetterAuthState>((set) => ({
         set({ loading: false });
         throw new MFARequiredError(raw);
       }
+      if (response.success === false) {
+        const srvErr = typeof response.error === 'string' ? response.error : (response.error as any)?.message;
+        throw new Error(srvErr || 'Login failed. Please complete the captcha above and try again.');
+      }
       const user = response.user || response.data?.user;
-      if (!user) throw new Error('User data not received from server');
+      if (!user) throw new Error('Login response was incomplete. Please try again.');
       sessionCache.set(user);
       sessionManager.updateCache(user);
       set({ user: user as User, isAuthenticated: true, loading: false });
@@ -117,8 +121,12 @@ export const useBetterAuthStore = create<BetterAuthState>((set) => ({
         set({ loading: false });
         throw new MFARequiredError(raw);
       }
+      if (response.success === false) {
+        const srvErr = typeof response.error === 'string' ? response.error : (response.error as any)?.message;
+        throw new Error(srvErr || 'Login failed. Please complete the captcha above and try again.');
+      }
       const user = response.user || response.data?.user;
-      if (!user) throw new Error('User data not received from server');
+      if (!user) throw new Error('Login response was incomplete. Please try again.');
       sessionCache.set(user);
       sessionManager.updateCache(user);
       set({ user: user as User, isAuthenticated: true, loading: false });
@@ -138,8 +146,12 @@ export const useBetterAuthStore = create<BetterAuthState>((set) => ({
         set({ loading: false });
         throw new MFARequiredError(raw);
       }
+      if (response.success === false) {
+        const srvErr = typeof response.error === 'string' ? response.error : (response.error as any)?.message;
+        throw new Error(srvErr || 'Login failed. Please complete the captcha above and try again.');
+      }
       const user = response.user || response.data?.user;
-      if (!user) throw new Error('User data not received from server');
+      if (!user) throw new Error('Login response was incomplete. Please try again.');
       sessionCache.set(user);
       sessionManager.updateCache(user);
       set({ user: user as User, isAuthenticated: true, loading: false });
@@ -159,8 +171,12 @@ export const useBetterAuthStore = create<BetterAuthState>((set) => ({
         set({ loading: false });
         throw new MFARequiredError(raw);
       }
+      if (response.success === false) {
+        const srvErr = typeof response.error === 'string' ? response.error : (response.error as any)?.message;
+        throw new Error(srvErr || 'Login failed. Please complete the captcha above and try again.');
+      }
       const user = response.user || response.data?.user;
-      if (!user) throw new Error('User data not received from server');
+      if (!user) throw new Error('Login response was incomplete. Please try again.');
       sessionCache.set(user);
       sessionManager.updateCache(user);
       set({ user: user as User, isAuthenticated: true, loading: false });

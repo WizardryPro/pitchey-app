@@ -1,35 +1,26 @@
 import { Shield } from 'lucide-react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import ComprehensiveNDAManagement from '@features/ndas/components/NDA/ComprehensiveNDAManagement';
-import BackButton from '../components/BackButton';
 
 export default function CreatorNDAManagement() {
   const { user, isAuthenticated } = useBetterAuthStore();
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Enhanced Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center gap-4">
-            <BackButton />
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Shield className="w-6 h-6 text-purple-600" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">NDA Management</h1>
-                <p className="text-sm text-gray-600">Comprehensive NDA workflow and analytics</p>
-              </div>
-            </div>
-          </div>
+    <div className="space-y-6">
+      {/* Page heading — global chrome comes from PortalLayout's MinimalHeader */}
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-purple-100 rounded-lg">
+          <Shield className="w-6 h-6 text-purple-600" />
         </div>
-      </header>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">NDA Management</h1>
+          <p className="text-sm text-gray-600">Comprehensive NDA workflow and analytics</p>
+        </div>
+      </div>
 
-      {/* Main Content */}
       {isAuthenticated && user?.id ? (
-        <ComprehensiveNDAManagement 
-          userType="creator" 
+        <ComprehensiveNDAManagement
+          userType="creator"
           userId={user.id}
         />
       ) : (

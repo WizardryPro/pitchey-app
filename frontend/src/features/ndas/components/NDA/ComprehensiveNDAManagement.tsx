@@ -319,12 +319,12 @@ export default function ComprehensiveNDAManagement({
   }
 
   return (
-    <div className="bg-gray-50">
-      {/* Stats Bar + Actions */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        <div className="flex items-center justify-between mb-4">
+    <div>
+      {/* Stats Bar + Actions — flex-wrap so narrow viewports stack cleanly */}
+      <div className="mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           {analytics && (
-            <div className="flex items-center gap-6 text-sm">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-blue-500" />
                 <span className="text-gray-600">Requests:</span>
@@ -343,7 +343,7 @@ export default function ComprehensiveNDAManagement({
             </div>
           )}
           {!analytics && <div />}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={fetchAllNDAData}
               className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
@@ -367,15 +367,15 @@ export default function ComprehensiveNDAManagement({
         </div>
       </div>
 
-      {/* Navigation Tabs */}
+      {/* Navigation Tabs — horizontally scrollable on mobile */}
       <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8">
+        <div>
+          <nav className="flex space-x-6 sm:space-x-8 overflow-x-auto scrollbar-hide">
             {[
               { id: 'overview', label: 'Overview', icon: TrendingUp },
-              { 
-                id: userType === 'creator' ? 'incoming' : 'outgoing', 
-                label: userType === 'creator' ? 'Incoming Requests' : 'My Requests', 
+              {
+                id: userType === 'creator' ? 'incoming' : 'outgoing',
+                label: userType === 'creator' ? 'Incoming Requests' : 'My Requests',
                 icon: userType === 'creator' ? Mail : Send
               },
               { id: 'signed', label: 'Active NDAs', icon: Shield },
@@ -383,12 +383,12 @@ export default function ComprehensiveNDAManagement({
             ].map((tab) => {
               const Icon = tab.icon;
               const count = getTabCount(tab.id);
-              
+
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition ${
+                  className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition whitespace-nowrap shrink-0 ${
                     activeTab === tab.id
                       ? 'border-purple-600 text-purple-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'

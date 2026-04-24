@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { ArrowLeft, Eye, Heart, MessageSquare, Share2, TrendingUp, Calendar, Users, Download } from 'lucide-react';
+import { Eye, Heart, MessageSquare, Share2, TrendingUp, Calendar, Users, Download } from 'lucide-react';
 import { analyticsService, type PitchAnalytics } from '@features/analytics/services/analytics.service';
 import { pitchService } from '@features/pitches/services/pitch.service';
 
@@ -120,21 +120,9 @@ export default function PitchAnalytics() {
 
   if (error || !analytics) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50">
-        <header className="bg-white shadow-sm border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate('/creator/pitches')}
-                className="p-2 text-gray-500 hover:text-gray-700 transition rounded-lg hover:bg-gray-100"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <h1 className="text-2xl font-bold text-gray-900">Analytics Not Found</h1>
-            </div>
-          </div>
-        </header>
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-gray-900">Analytics Not Found</h1>
+        <div className="py-8 text-center">
           <p className="text-gray-600">{error}</p>
           <button
             onClick={() => navigate('/creator/pitches')}
@@ -148,48 +136,35 @@ export default function PitchAnalytics() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate('/creator/pitches')}
-                className="p-2 text-gray-500 hover:text-gray-700 transition rounded-lg hover:bg-gray-100"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
-                <p className="text-sm text-gray-500">{pitchTitle || analytics?.title || 'Loading...'}</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3">
-              <select
-                value={timeRange}
-                onChange={(e) => setTimeRange(e.target.value as '7d' | '30d' | '90d')}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="7d">Last 7 days</option>
-                <option value="30d">Last 30 days</option>
-                <option value="90d">Last 90 days</option>
-              </select>
-              <button
-                onClick={() => toast('Analytics export coming soon', { icon: 'ℹ️' })}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
-              >
-                <Download className="w-4 h-4" />
-                Export
-              </button>
-            </div>
-          </div>
+    <div className="space-y-6">
+      {/* Page heading — global chrome comes from PortalLayout's MinimalHeader */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
+          <p className="text-sm text-gray-500 mt-1">{pitchTitle || analytics?.title || 'Loading...'}</p>
         </div>
-      </header>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex flex-wrap items-center gap-3">
+          <select
+            value={timeRange}
+            onChange={(e) => setTimeRange(e.target.value as '7d' | '30d' | '90d')}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+          >
+            <option value="7d">Last 7 days</option>
+            <option value="30d">Last 30 days</option>
+            <option value="90d">Last 90 days</option>
+          </select>
+          <button
+            onClick={() => toast('Analytics export coming soon', { icon: 'ℹ️' })}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+          >
+            <Download className="w-4 h-4" />
+            Export
+          </button>
+        </div>
+      </div>
+
+      <div>
         {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-sm p-6">

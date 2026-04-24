@@ -128,10 +128,10 @@ export default function CreatorAnalyticsPage() {
       </div>
 
       <div>
-        {/* Tab Navigation */}
+        {/* Tab Navigation — horizontally scrollable on mobile */}
         <div className="bg-white rounded-lg shadow-sm mb-6">
           <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+            <nav className="-mb-px flex space-x-6 sm:space-x-8 px-4 sm:px-6 overflow-x-auto scrollbar-hide" aria-label="Tabs">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
@@ -139,7 +139,7 @@ export default function CreatorAnalyticsPage() {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as 'overview' | 'activity' | 'stats')}
                     className={`
-                      flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                      flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap shrink-0
                       ${activeTab === tab.id
                         ? 'border-purple-500 text-purple-600'
                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
