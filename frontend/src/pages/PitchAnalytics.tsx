@@ -4,10 +4,12 @@ import { toast } from 'react-hot-toast';
 import { Eye, Heart, MessageSquare, Share2, TrendingUp, Calendar, Users, Download } from 'lucide-react';
 import { analyticsService, type PitchAnalytics } from '@features/analytics/services/analytics.service';
 import { pitchService } from '@features/pitches/services/pitch.service';
+import { usePortalTheme } from '@shared/hooks/usePortalTheme';
 
 
 export default function PitchAnalytics() {
   const navigate = useNavigate();
+  const theme = usePortalTheme();
   const { id } = useParams<{ id: string }>();
   const [analytics, setAnalytics] = useState<PitchAnalytics | null>(null);
   const [pitchTitle, setPitchTitle] = useState<string>('');
@@ -113,7 +115,7 @@ export default function PitchAnalytics() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        <div className={`animate-spin rounded-full h-12 w-12 border-b-2 ${theme.spinnerBorder}`}></div>
       </div>
     );
   }
@@ -126,7 +128,7 @@ export default function PitchAnalytics() {
           <p className="text-gray-600">{error}</p>
           <button
             onClick={() => navigate('/creator/pitches')}
-            className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+            className={`mt-4 px-4 py-2 rounded-lg transition ${theme.btnPrimary}`}
           >
             Back to Pitches
           </button>
@@ -148,7 +150,7 @@ export default function PitchAnalytics() {
           <select
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value as '7d' | '30d' | '90d')}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className={`px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
           >
             <option value="7d">Last 7 days</option>
             <option value="30d">Last 30 days</option>
@@ -156,7 +158,7 @@ export default function PitchAnalytics() {
           </select>
           <button
             onClick={() => toast('Analytics export coming soon', { icon: 'ℹ️' })}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${theme.btnPrimary}`}
           >
             <Download className="w-4 h-4" />
             Export

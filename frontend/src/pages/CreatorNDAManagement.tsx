@@ -1,16 +1,18 @@
 import { Shield } from 'lucide-react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import ComprehensiveNDAManagement from '@features/ndas/components/NDA/ComprehensiveNDAManagement';
+import { usePortalTheme } from '@shared/hooks/usePortalTheme';
 
 export default function CreatorNDAManagement() {
   const { user, isAuthenticated } = useBetterAuthStore();
+  const theme = usePortalTheme();
 
   return (
     <div className="space-y-6">
       {/* Page heading — global chrome comes from PortalLayout's MinimalHeader */}
       <div className="flex items-center gap-3">
-        <div className="p-2 bg-purple-100 rounded-lg">
-          <Shield className="w-6 h-6 text-purple-600" />
+        <div className={`p-2 rounded-lg ${theme.bgMuted}`}>
+          <Shield className={`w-6 h-6 ${theme.textAccent}`} />
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">NDA Management</h1>

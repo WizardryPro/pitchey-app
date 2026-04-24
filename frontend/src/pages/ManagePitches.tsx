@@ -5,9 +5,11 @@ import { pitchService } from '@features/pitches/services/pitch.service';
 import type { Pitch } from '@shared/types/api';
 import FormatDisplay from '../components/FormatDisplay';
 import { useBetterAuthStore } from '../store/betterAuthStore';
+import { usePortalTheme } from '@shared/hooks/usePortalTheme';
 
 export default function ManagePitches() {
   const navigate = useNavigate();
+  const theme = usePortalTheme();
   const user = useBetterAuthStore((s) => s.user);
   const userType = (user as { userType?: string } | null)?.userType;
   const isProduction = userType === 'production';
@@ -211,7 +213,7 @@ export default function ManagePitches() {
         </div>
         <button
           onClick={() => void navigate(`${portalPrefix}/pitch/new`)}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:shadow-lg transition"
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg hover:shadow-lg transition ${theme.heroGradient} text-white`}
         >
           <Plus className="w-4 h-4" />
           New Pitch
@@ -255,7 +257,7 @@ export default function ManagePitches() {
               placeholder="Search pitches..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className={`w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
             />
           </div>
           
@@ -264,7 +266,7 @@ export default function ManagePitches() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className={`px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
             >
               <option value="all">All Status</option>
               <option value="published">Published</option>
@@ -293,7 +295,7 @@ export default function ManagePitches() {
                 type="checkbox"
                 checked={autoRefresh}
                 onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                className={`rounded border-gray-300 ${theme.textAccent} ${theme.focusRing}`}
               />
               Auto-refresh
             </label>
@@ -343,7 +345,7 @@ export default function ManagePitches() {
         {/* Pitches Grid */}
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+            <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${theme.spinnerBorder}`}></div>
           </div>
         ) : filteredPitches.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm p-12 text-center">
@@ -361,7 +363,7 @@ export default function ManagePitches() {
             </p>
             <button
               onClick={() => void navigate(`${portalPrefix}/pitch/new`)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg transition ${theme.btnPrimary}`}
             >
               <Plus className="w-4 h-4" />
               Create Your First Pitch
@@ -380,7 +382,7 @@ export default function ManagePitches() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-purple-400 to-indigo-600" />
+                    <div className={`w-full h-full ${theme.heroGradient}`} />
                   )}
                 </div>
                 <div className="p-6">
@@ -446,7 +448,7 @@ export default function ManagePitches() {
                           void navigate(`/creator/pitches/${pitch.id}/${slug}/analytics`);
                         }
                       }}
-                      className="flex items-center justify-center gap-2 px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition text-sm"
+                      className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition text-sm ${theme.creditPill}`}
                       title="View analytics"
                     >
                       <BarChart3 className="w-4 h-4" />

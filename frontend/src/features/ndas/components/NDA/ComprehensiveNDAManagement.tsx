@@ -10,6 +10,7 @@ import type { NDA, NDARequest } from '@shared/types/nda.types';
 import NDAManagementPanel from '../NDAManagementPanel';
 import NDAStatusBadge from '../NDAStatusBadge';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
+import { getPortalTheme } from '@shared/hooks/usePortalTheme';
 
 interface ComprehensiveNDAManagementProps {
   userType: 'creator' | 'investor' | 'production';
@@ -40,6 +41,7 @@ export default function ComprehensiveNDAManagement({
   userId 
 }: ComprehensiveNDAManagementProps) {
   const { isAuthenticated } = useBetterAuthStore();
+  const theme = getPortalTheme(userType);
   const [activeTab, setActiveTab] = useState<'overview' | 'incoming' | 'outgoing' | 'signed' | 'analytics'>('overview');
   const [incomingNDAs, setIncomingNDAs] = useState<NDARequest[]>([]);
   const [outgoingNDAs, setOutgoingNDAs] = useState<NDARequest[]>([]);
@@ -309,9 +311,9 @@ export default function ComprehensiveNDAManagement({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex items-center justify-center py-16">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+          <div className={`animate-spin rounded-full h-12 w-12 border-b-2 ${theme.spinnerBorder} mx-auto`}></div>
           <p className="mt-4 text-gray-600">Loading NDA management...</p>
         </div>
       </div>
@@ -356,7 +358,7 @@ export default function ComprehensiveNDAManagement({
                 <span className="text-sm text-gray-600">{selectedNDAs.size} selected</span>
                 <button
                   onClick={() => setShowBulkActions(!showBulkActions)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition"
+                  className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition ${theme.creditPill}`}
                 >
                   <MoreHorizontal className="w-3.5 h-3.5" />
                   Actions
@@ -390,7 +392,7 @@ export default function ComprehensiveNDAManagement({
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition whitespace-nowrap shrink-0 ${
                     activeTab === tab.id
-                      ? 'border-purple-600 text-purple-600'
+                      ? `${theme.tabActiveBorder} ${theme.tabActiveText}`
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
@@ -398,7 +400,7 @@ export default function ComprehensiveNDAManagement({
                   {tab.label}
                   {count > 0 && (
                     <span className={`px-2 py-1 text-xs rounded-full ${
-                      activeTab === tab.id ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-600'
+                      activeTab === tab.id ? `${theme.bgMuted} ${theme.textAccent}` : 'bg-gray-100 text-gray-600'
                     }`}>
                       {count}
                     </span>
@@ -492,7 +494,7 @@ export default function ComprehensiveNDAManagement({
                 
                 <button
                   onClick={() => setActiveTab('analytics')}
-                  className="w-full flex items-center gap-3 p-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition"
+                  className={`w-full flex items-center gap-3 p-3 rounded-lg transition ${theme.bgLight} ${theme.textAccent} ${theme.bgLightHover}`}
                 >
                   <TrendingUp className="w-5 h-5" />
                   <div className="text-left">
@@ -517,14 +519,14 @@ export default function ComprehensiveNDAManagement({
                     placeholder="Search NDAs..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className={`w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                   />
                 </div>
                 
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value as any)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className={`px-4 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                 >
                   <option value="all">All Status</option>
                   <option value="pending">Pending</option>
@@ -537,7 +539,7 @@ export default function ComprehensiveNDAManagement({
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as any)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    className={`px-4 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                   >
                     <option value="date">Sort by Date</option>
                     <option value="title">Sort by Title</option>
@@ -565,7 +567,7 @@ export default function ComprehensiveNDAManagement({
                           .every(nda => selectedNDAs.has(nda.id))
                       }
                       onChange={() => selectAllNDAs(activeTab === 'incoming' ? incomingNDAs : outgoingNDAs as any)}
-                      className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                      className={`rounded border-gray-300 ${theme.textAccent} ${theme.focusRing}`}
                     />
                     <span className="text-sm text-gray-600">Select all</span>
                   </label>

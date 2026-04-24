@@ -6,6 +6,7 @@ import { API_URL } from '../config';
 import { configService } from '../services/config.service';
 import FormatDisplay from '../components/FormatDisplay';
 import { useDebounce } from '@/shared/hooks/useDebounce';
+import { usePortalTheme } from '@shared/hooks/usePortalTheme';
 
 interface Pitch {
   id: number;
@@ -45,6 +46,7 @@ interface TabState {
 
 export default function InvestorBrowse() {
   const navigate = useNavigate();
+  const theme = usePortalTheme();
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
   const [filters, setFilters] = useState({
@@ -281,8 +283,8 @@ export default function InvestorBrowse() {
 
   if (currentTabState.loading && currentTabState.pitches.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center py-16">
+        <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${theme.spinnerBorder}`}></div>
       </div>
     );
   }
@@ -300,7 +302,7 @@ export default function InvestorBrowse() {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
           >
             <option value="latest">Latest</option>
             <option value="popular">Most Popular</option>
@@ -311,7 +313,7 @@ export default function InvestorBrowse() {
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition ${
-              showFilters ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+              showFilters ? `${theme.bgMuted} ${theme.tabActiveBorder} ${theme.textAccent}` : 'border-gray-300 text-gray-700 hover:bg-gray-50'
             }`}
           >
             <Filter className="w-4 h-4" />
@@ -331,7 +333,7 @@ export default function InvestorBrowse() {
                 className={`
                   flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200
                   ${activeTab === 'trending'
-                    ? 'bg-white text-blue-700 shadow-sm'
+                    ? `bg-white ${theme.textAccent} shadow-sm`
                     : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
                   }
                 `}
@@ -344,7 +346,7 @@ export default function InvestorBrowse() {
                 className={`
                   flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200
                   ${activeTab === 'new'
-                    ? 'bg-white text-blue-700 shadow-sm'
+                    ? `bg-white ${theme.textAccent} shadow-sm`
                     : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
                   }
                 `}
@@ -357,7 +359,7 @@ export default function InvestorBrowse() {
                 className={`
                   flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200
                   ${activeTab === 'popular'
-                    ? 'bg-white text-blue-700 shadow-sm'
+                    ? `bg-white ${theme.textAccent} shadow-sm`
                     : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
                   }
                 `}
@@ -380,7 +382,7 @@ export default function InvestorBrowse() {
               placeholder="Search by title, genre, or keywords..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg ${theme.inputFocus}`}
             />
           </div>
 
@@ -391,7 +393,7 @@ export default function InvestorBrowse() {
                 <select
                   value={filters.genre}
                   onChange={(e) => setFilters(prev => ({ ...prev, genre: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                 >
                   <option value="">All Genres</option>
                   {config?.genres?.map((genre: string) => (
@@ -413,7 +415,7 @@ export default function InvestorBrowse() {
                 <select
                   value={filters.format}
                   onChange={(e) => setFilters(prev => ({ ...prev, format: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                 >
                   <option value="">All Formats</option>
                   {config?.formats?.map((format: string) => (
@@ -432,7 +434,7 @@ export default function InvestorBrowse() {
                 <select
                   value={filters.budgetRange}
                   onChange={(e) => setFilters(prev => ({ ...prev, budgetRange: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                 >
                   <option value="">All Budgets</option>
                   {config?.budgetRanges?.map((range: {value: string, label: string}) => (
@@ -451,7 +453,7 @@ export default function InvestorBrowse() {
                 <select
                   value={filters.riskLevel}
                   onChange={(e) => setFilters(prev => ({ ...prev, riskLevel: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                 >
                   <option value="">All Risk Levels</option>
                   {config?.riskLevels?.map((level: {value: string, label: string}) => (
@@ -469,7 +471,7 @@ export default function InvestorBrowse() {
                 <select
                   value={filters.productionStage}
                   onChange={(e) => setFilters(prev => ({ ...prev, productionStage: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                 >
                   <option value="">All Stages</option>
                   {config?.productionStages?.map((stage: string) => (

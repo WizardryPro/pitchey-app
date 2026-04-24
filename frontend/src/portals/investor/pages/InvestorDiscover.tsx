@@ -3,6 +3,7 @@ import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useSearchParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { TrendingUp, Star, Film, Search, Filter, Grid, List, Home, RefreshCw, AlertCircle, WifiOff } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
+import { usePortalTheme } from '@shared/hooks/usePortalTheme';
 import { InvestorService, type InvestmentOpportunity } from '@features/deals/services/investor.service';
 import { formatCurrency } from '@shared/utils/formatters';
 import { getGenresSync } from '@/config/pitchConstants';
@@ -20,6 +21,7 @@ interface PitchItem {
 }
 
 const InvestorDiscover = () => {
+  const theme = usePortalTheme();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -241,8 +243,8 @@ const InvestorDiscover = () => {
                   onClick={() => setSelectedGenre(genre.toLowerCase().replace(' ', '-'))}
                   className={`px-4 py-2 rounded-full border ${
                     selectedGenre === genre.toLowerCase().replace(' ', '-') || (selectedGenre === 'all' && genre === 'All Genres')
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'border-gray-300 hover:border-blue-600'
+                      ? `${theme.btnPrimary} ${theme.tabActiveBorder}`
+                      : 'border-gray-300 hover:border-gray-400'
                   }`}
                 >
                   {genre}

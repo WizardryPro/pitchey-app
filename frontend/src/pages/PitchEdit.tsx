@@ -6,6 +6,7 @@ import { pitchService } from '@features/pitches/services/pitch.service';
 import { uploadService } from '@features/uploads/services/upload.service';
 import type { Pitch, UpdatePitchInput } from '@shared/types/api';
 import { getGenresSync } from '@config/pitchConstants';
+import { usePortalTheme } from '@shared/hooks/usePortalTheme';
 import { CharacterManagement } from '@features/pitches/components/CharacterManagement';
 import type { Character } from '@shared/types/character';
 import { normalizeCharacters, serializeCharacters } from '@features/pitches/utils/characterUtils';
@@ -37,6 +38,7 @@ interface PitchFormData {
 
 export default function PitchEdit() {
   const navigate = useNavigate();
+  const theme = usePortalTheme();
   const { id } = useParams<{ id: string }>();
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -309,8 +311,8 @@ export default function PitchEdit() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+      <div className="flex items-center justify-center py-16">
+        <div className={`animate-spin rounded-full h-12 w-12 border-b-2 ${theme.spinnerBorder}`}></div>
       </div>
     );
   }
@@ -323,7 +325,7 @@ export default function PitchEdit() {
           <p className="text-gray-600">{error}</p>
           <button
             onClick={() => navigate(pitchesListPath)}
-            className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+            className={`mt-4 px-4 py-2 rounded-lg transition ${theme.btnPrimary}`}
           >
             Back to Pitches
           </button>
@@ -369,7 +371,7 @@ export default function PitchEdit() {
                   name="title"
                   value={formData.title}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                   placeholder="Enter your project title"
                   required
                 />
@@ -384,7 +386,7 @@ export default function PitchEdit() {
                   name="genre"
                   value={formData.genre}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                   required
                 >
                   <option value="">Select a genre</option>
@@ -405,7 +407,7 @@ export default function PitchEdit() {
                   onChange={handleFormatCategoryChange}
                   aria-required="true"
                   required
-                  className="w-full px-3 py-2 border rounded-lg transition-colors border-gray-300 focus:ring-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                  className={`w-full px-3 py-2 border rounded-lg transition-colors border-gray-300 ${theme.inputFocus} focus:ring-offset-2`}
                 >
                   <option value="">Select a format category</option>
                   {Object.keys(formatCategories).map(category => (
@@ -426,7 +428,7 @@ export default function PitchEdit() {
                     onChange={handleFormatSubtypeChange}
                     aria-required="true"
                     required
-                    className="w-full px-3 py-2 border rounded-lg transition-colors border-gray-300 focus:ring-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                    className={`w-full px-3 py-2 border rounded-lg transition-colors border-gray-300 ${theme.inputFocus} focus:ring-offset-2`}
                   >
                     <option value="">Select a format subtype</option>
                     {formatCategories[formData.formatCategory as keyof typeof formatCategories]?.map(subtype => (
@@ -447,7 +449,7 @@ export default function PitchEdit() {
                     name="customFormat"
                     value={formData.customFormat}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                     placeholder="Please specify your custom format"
                     required
                   />
@@ -465,7 +467,7 @@ export default function PitchEdit() {
                 value={formData.logline}
                 onChange={handleInputChange}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                 placeholder="A one-sentence summary of your story (max 2-3 sentences)"
                 required
               />
@@ -484,7 +486,7 @@ export default function PitchEdit() {
                 value={formData.shortSynopsis}
                 onChange={handleInputChange}
                 rows={6}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                 placeholder="Provide a brief overview of your story, main characters, and key plot points (1-2 paragraphs)"
                 required
               />
@@ -510,7 +512,7 @@ export default function PitchEdit() {
                   onChange={handleInputChange}
                   rows={4}
                   maxLength={1000}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                   placeholder="Describe the themes explored in your story (e.g., love, betrayal, redemption, social justice, family bonds, etc.)"
                 />
                 <p className="text-xs text-gray-500 mt-1">
@@ -529,7 +531,7 @@ export default function PitchEdit() {
                   onChange={handleInputChange}
                   rows={6}
                   maxLength={2000}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                   placeholder="Describe the world, setting, and environment of your story. Include time period, location, atmosphere, visual style, and any unique world-building elements..."
                 />
                 <p className="text-xs text-gray-500 mt-1">
@@ -615,7 +617,7 @@ export default function PitchEdit() {
                 </div>
               )}
 
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-500 transition">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition">
                 <ImageIcon className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                 <p className="text-sm text-gray-600 mb-2">
                   {existingImageUrl || formData.image ? 'Replace cover image' : 'Upload a cover image (optional)'}
@@ -629,7 +631,7 @@ export default function PitchEdit() {
                 />
                 <label
                   htmlFor="image-upload"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition cursor-pointer"
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg transition cursor-pointer ${theme.btnPrimary}`}
                 >
                   <Upload className="w-4 h-4" />
                   {existingImageUrl || formData.image ? 'Choose New Image' : 'Choose Image'}
@@ -642,11 +644,11 @@ export default function PitchEdit() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Script/Treatment (PDF)
               </label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-500 transition">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition">
                 {formData.pdf ? (
                   <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
                     <div className="flex items-center gap-3">
-                      <FileText className="w-5 h-5 text-purple-600" />
+                      <FileText className={`w-5 h-5 ${theme.textAccent}`} />
                       <span className="text-sm font-medium">{formData.pdf.name}</span>
                     </div>
                     <button
@@ -685,11 +687,11 @@ export default function PitchEdit() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Pitch Video (Optional)
               </label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-500 transition">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition">
                 {formData.video ? (
                   <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
                     <div className="flex items-center gap-3">
-                      <Video className="w-5 h-5 text-purple-600" />
+                      <Video className={`w-5 h-5 ${theme.textAccent}`} />
                       <span className="text-sm font-medium">{formData.video.name}</span>
                     </div>
                     <button
@@ -739,7 +741,7 @@ export default function PitchEdit() {
                       value="none"
                       checked={formData.ndaConfig.ndaType === 'none'}
                       onChange={() => handleNDAChange('none')}
-                      className="mt-1 w-4 h-4 text-purple-600"
+                      className={`mt-1 w-4 h-4 ${theme.textAccent}`}
                     />
                     <div>
                       <span className="text-sm font-medium text-gray-900">No NDA Required</span>
@@ -754,7 +756,7 @@ export default function PitchEdit() {
                       value="platform"
                       checked={formData.ndaConfig.ndaType === 'platform'}
                       onChange={() => handleNDAChange('platform')}
-                      className="mt-1 w-4 h-4 text-purple-600"
+                      className={`mt-1 w-4 h-4 ${theme.textAccent}`}
                     />
                     <div>
                       <span className="text-sm font-medium text-gray-900">Use Platform Standard NDA</span>
@@ -769,7 +771,7 @@ export default function PitchEdit() {
                       value="custom"
                       checked={formData.ndaConfig.ndaType === 'custom'}
                       onChange={() => handleNDAChange('custom')}
-                      className="mt-1 w-4 h-4 text-purple-600"
+                      className={`mt-1 w-4 h-4 ${theme.textAccent}`}
                     />
                     <div>
                       <span className="text-sm font-medium text-gray-900">Use Custom NDA</span>
