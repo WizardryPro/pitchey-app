@@ -231,6 +231,17 @@ export default function MarketplaceEnhanced() {
     void fetchPitchesForTab(tab);
   }, [sortBy]);
 
+  // Sync sortBy state FROM url when user navigates in (e.g. clicking "Hot" in
+  // the top nav while already on /marketplace). Without this, useState only
+  // reads ?sort on mount; subsequent navigations change the URL but leave
+  // sortBy stale, so the tab doesn't switch. The !== guard prevents a
+  // ping-pong with the state→URL effect below.
+  useEffect(() => {
+    const urlSort = searchParams.get('sort') || 'popular';
+    if (urlSort !== sortBy) setSortBy(urlSort);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   // Update URL params when filters change
   useEffect(() => {
     const params = new URLSearchParams();
