@@ -20110,7 +20110,7 @@ Signatures: [To be completed upon signing]
 
         await this.db.query(`
           INSERT INTO credit_transactions (user_id, type, amount, description, balance_before, balance_after, created_at)
-          VALUES ($1, 'grant', $2, 'Referral invite bonus credits', $3, $3 + $2, NOW())
+          VALUES ($1, 'bonus', $2, 'Referral invite bonus credits', $3, $3 + $2, NOW())
         `, [userId, bonusCredits, currentBalance]);
       } catch (creditErr) {
         const e = creditErr instanceof Error ? creditErr : new Error(String(creditErr));
@@ -20559,6 +20559,7 @@ const websocketSafeHandler = {
             exportAuditLogs(env, ctx),
             archiveOldJobs(env, ctx),
             sweepExpiredSubscriptionGrants(env, ctx),
+            topUpDemoAccountCredits(env, ctx),
           ]);
           break;
 
@@ -20641,6 +20642,81 @@ async function updateTrendingAlgorithm(env: any, ctx: ExecutionContext): Promise
  * Worker's 100% observability sampling) and captures exceptions to Sentry
  * so silent sweep failures page someone.
  */
+// Keeps the four demo accounts at a predictable baseline credit balance so the
+// "create a pitch" / "request NDA" / "send message" demo flows never dead-end
+// on an empty wallet. Idempotent — if balance already >= baseline, no-op.
+async function topUpDemoAccountCredits(env: any, ctx: ExecutionContext): Promise<void> {
+  const startedAt = Date.now();
+  const DEMO_EMAILS = [
+    'alex.creator@demo.com',
+    'sarah.investor@demo.com',
+    'stellar.production@demo.com',
+    'jamie.watcher@demo.com',
+  ];
+  const BASELINE = 500;
+
+  try {
+    const { getDb } = await import('./db');
+    const sql = getDb(env);
+    if (!sql) {
+      console.log(JSON.stringify({
+        level: 'warn',
+        category: 'demo_credit_topup',
+        action: 'topup_demo_credits',
+        outcome: 'skipped_no_db',
+      }));
+      return;
+    }
+
+    const granted = await sql`
+      WITH target_users AS (
+        SELECT u.id AS user_id, COALESCE(uc.balance, 0) AS current_balance
+        FROM users u
+        LEFT JOIN user_credits uc ON uc.user_id = u.id
+        WHERE u.email = ANY(${DEMO_EMAILS})
+          AND COALESCE(uc.balance, 0) < ${BASELINE}
+      ),
+      topped AS (
+        INSERT INTO user_credits (user_id, balance, total_purchased, total_used, last_updated)
+        SELECT user_id, ${BASELINE}, 0, 0, NOW() FROM target_users
+        ON CONFLICT (user_id) DO UPDATE
+          SET balance = ${BASELINE}, last_updated = NOW()
+        RETURNING user_id
+      )
+      INSERT INTO credit_transactions (user_id, type, amount, description, balance_before, balance_after, usage_type)
+      SELECT tu.user_id, 'bonus', ${BASELINE} - tu.current_balance, 'Daily demo-account top-up', tu.current_balance, ${BASELINE}, 'demo_topup'
+      FROM target_users tu
+      JOIN topped t ON t.user_id = tu.user_id
+      RETURNING user_id, amount
+    `;
+
+    const toppedUp = Array.isArray(granted) ? granted.length : 0;
+    console.log(JSON.stringify({
+      level: 'info',
+      category: 'demo_credit_topup',
+      action: 'topup_demo_credits',
+      outcome: 'success',
+      topped_up: toppedUp,
+      baseline: BASELINE,
+      duration_ms: Date.now() - startedAt,
+    }));
+  } catch (err) {
+    const e = err instanceof Error ? err : new Error(String(err));
+    console.error(JSON.stringify({
+      level: 'error',
+      category: 'demo_credit_topup',
+      action: 'topup_demo_credits',
+      outcome: 'failed',
+      error: e.message,
+      duration_ms: Date.now() - startedAt,
+    }));
+    try {
+      const SentryMod = await import('@sentry/cloudflare');
+      SentryMod.captureException?.(e, { tags: { cron: 'topup_demo_credits' } });
+    } catch { /* no-op */ }
+  }
+}
+
 async function sweepExpiredSubscriptionGrants(env: any, ctx: ExecutionContext): Promise<void> {
   const startedAt = Date.now();
   try {
