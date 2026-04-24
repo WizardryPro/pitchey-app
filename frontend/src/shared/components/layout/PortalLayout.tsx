@@ -2,6 +2,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { MinimalHeader } from './MinimalHeader';
 import { PageErrorBoundary } from '@shared/components/feedback/ConsoleErrorBoundary';
+import { getPortalTheme } from '@shared/hooks/usePortalTheme';
 
 import { EnhancedCreatorNav } from './EnhancedCreatorNav';
 import { EnhancedInvestorNav } from './EnhancedInvestorNav';
@@ -17,6 +18,7 @@ export function PortalLayout({ userType }: PortalLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Closed by default on mobile
   const [isDesktopSidebarCollapsed, _setIsDesktopSidebarCollapsed] = useState(false);
   const location = useLocation();
+  const theme = getPortalTheme(userType);
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -84,10 +86,14 @@ export function PortalLayout({ userType }: PortalLayoutProps) {
 
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto">
+          {/* Persistent portal identity strip — 3px colored bar that stays visible
+              across every route inside this portal. Primary "you are in Watcher"
+              signal when page chrome is otherwise shared/neutral. */}
+          <div className={`h-[3px] ${theme.stripTop}`} aria-hidden="true" />
           <div className="container mx-auto px-4 py-6 max-w-7xl">
             {/* Page Content - key forces re-render on route change and resets error boundary */}
             <PageErrorBoundary key={location.pathname}>
-              <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div></div>}>
+              <Suspense fallback={<div className="flex items-center justify-center h-64"><div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${theme.spinnerBorder}`}></div></div>}>
                 <Outlet />
               </Suspense>
             </PageErrorBoundary>

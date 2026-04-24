@@ -6,6 +6,7 @@ import { paymentsAPI } from '@/lib/apiServices';
 import { WebSocketStatusCompact } from '@/components/WebSocketStatus';
 import { NotificationBell } from '@features/notifications/components/NotificationBell';
 import { getPortalPath } from '@/utils/navigation';
+import { getPortalTheme } from '@shared/hooks/usePortalTheme';
 
 
 interface MinimalHeaderProps {
@@ -47,18 +48,9 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
     navigate('/');
   };
 
-  const getPortalColor = () => {
-    switch (userType) {
-      case 'creator': return 'purple';
-      case 'investor': return 'green';
-      case 'production': return 'blue';
-      case 'admin': return 'indigo';
-      case 'watcher': return 'cyan';
-      default: return 'purple';
-    }
-  };
-
-  const color = getPortalColor();
+  // Portal theme — single source of truth for color accents. See usePortalTheme.
+  const theme = getPortalTheme(userType);
+  const showRoleBadge = Boolean(userType) && userType !== null;
 
   return (
     <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-4 sticky top-0 z-40">
@@ -73,10 +65,22 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
           {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
 
-        {/* Logo */}
+        {/* Logo — brand purple intentionally kept; portal identity is carried by
+            the role badge + main-content strip, not the logo color */}
         <Link to="/" className="flex items-center">
           <span className="text-xl sm:text-2xl font-bold text-purple-600">Pitchey</span>
         </Link>
+
+        {/* Role badge — persistent "you are in <Portal>" signal, visible across
+            every route. Tinted with the portal's accent color. */}
+        {showRoleBadge && (
+          <span
+            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${theme.badge}`}
+            aria-label={`${theme.label} portal`}
+          >
+            {theme.label}
+          </span>
+        )}
 
         {/* Divider — hidden on mobile (quick nav is also hidden; reduces header clutter) */}
         <div className="hidden sm:block h-6 w-px bg-gray-300"></div>
@@ -109,7 +113,7 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
 
         {/* Credits — just count on mobile, count + label on sm+ (prevents "500 Credits" pill wrapping at 390px viewports) */}
         <button
-          className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 bg-${color}-100 text-${color}-700 rounded-full text-sm font-medium hover:bg-${color}-200 transition whitespace-nowrap`}
+          className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 ${theme.creditPill} rounded-full text-sm font-medium transition whitespace-nowrap`}
           aria-label={creditBalance === null ? 'Credits loading' : `${creditBalance} credits`}
         >
           <Coins className="w-4 h-4 shrink-0" />
@@ -127,8 +131,8 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
             className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
             aria-label="Profile menu"
           >
-            <div className={`w-8 h-8 bg-${color}-100 rounded-full flex items-center justify-center`}>
-              <CircleUser className={`w-5 h-5 text-${color}-600`} />
+            <div className={`w-8 h-8 ${theme.bgMuted} rounded-full flex items-center justify-center`}>
+              <CircleUser className={`w-5 h-5 ${theme.textAccent}`} />
             </div>
             <ChevronDown className="w-4 h-4 text-gray-600" />
           </button>

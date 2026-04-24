@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { paymentsAPI } from '../lib/apiServices';
+import { usePortalTheme } from '@shared/hooks/usePortalTheme';
 import SubscriptionCard from '@features/billing/components/SubscriptionCard';
 import CreditPurchase from '@features/billing/components/CreditPurchase';
 import PaymentHistory from '@features/billing/components/PaymentHistory';
@@ -23,6 +24,7 @@ export default function Billing() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useBetterAuthStore();
+  const theme = usePortalTheme();
   const validTabs = ['overview', 'subscription', 'credits', 'history', 'invoices', 'payment-methods'];
   const tabParam = searchParams.get('tab');
   // When the user lands here from Stripe with ?subscription=success, jump
@@ -105,9 +107,9 @@ export default function Billing() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 flex items-center justify-center">
+      <div className="flex items-center justify-center py-16">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+          <div className={`animate-spin rounded-full h-12 w-12 border-b-2 ${theme.spinnerBorder} mx-auto`}></div>
           <p className="mt-4 text-gray-600">Loading billing information...</p>
         </div>
       </div>
@@ -153,7 +155,7 @@ export default function Billing() {
                     }}
                     className={`flex items-center gap-2 py-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap shrink-0 ${
                       activeTab === tab.id
-                        ? 'border-purple-500 text-purple-600'
+                        ? `${theme.tabActiveBorder} ${theme.tabActiveText}`
                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                     }`}
                   >
@@ -168,29 +170,30 @@ export default function Billing() {
           {/* Tab Content */}
           <div className="p-6">
             {activeTab === 'overview' && (
-              <OverviewTab 
+              <OverviewTab
                 subscription={subscription}
                 credits={credits}
                 paymentHistory={paymentHistory}
                 onRefresh={fetchBillingData}
+                theme={theme}
               />
             )}
-            
+
             {activeTab === 'subscription' && (
               (userType === 'viewer' || userType === 'watcher') ? (
                 <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-purple-100 mb-4">
-                    <Crown className="w-6 h-6 text-purple-600" />
+                  <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full ${theme.bgMuted} mb-4`}>
+                    <Crown className={`w-6 h-6 ${theme.textAccent}`} />
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">
                     Watcher accounts don't have subscriptions
                   </h3>
                   <p className="text-sm text-gray-600 max-w-md mx-auto">
                     Watchers can browse, like, and comment on pitches. To create, invest in, or produce pitches, sign up separately as a Creator, Investor, or Production account at{' '}
-                    <Link to="/signup" className="text-purple-600 hover:text-purple-700 font-medium">pitchey.com</Link>.
+                    <Link to="/signup" className={`${theme.textAccent} ${theme.textAccentHover} font-medium`}>pitchey.com</Link>.
                   </p>
                   <p className="text-sm text-gray-500 mt-4">
-                    You can still buy credits under the <button onClick={() => { const params = new URLSearchParams(searchParams); params.set('tab', 'credits'); navigate(`?${params.toString()}`, { replace: true }); }} className="text-purple-600 hover:text-purple-700 underline">Credits tab</button>.
+                    You can still buy credits under the <button onClick={() => { const params = new URLSearchParams(searchParams); params.set('tab', 'credits'); navigate(`?${params.toString()}`, { replace: true }); }} className={`${theme.textAccent} ${theme.textAccentHover} underline`}>Credits tab</button>.
                   </p>
                 </div>
               ) : (
@@ -216,9 +219,10 @@ export default function Billing() {
             )}
             
             {activeTab === 'invoices' && (
-              <InvoicesTab 
+              <InvoicesTab
                 invoices={invoices}
                 onRefresh={fetchBillingData}
+                theme={theme}
               />
             )}
             
@@ -236,7 +240,7 @@ export default function Billing() {
 }
 
 // Overview Tab Component
-function OverviewTab({ subscription, credits, paymentHistory, onRefresh }: any) {
+function OverviewTab({ subscription, credits, paymentHistory, onRefresh, theme }: any) {
   const nextPayment = subscription?.subscription?.currentPeriodEnd
     ? new Date(subscription.subscription.currentPeriodEnd)
     : null;
@@ -247,7 +251,7 @@ function OverviewTab({ subscription, credits, paymentHistory, onRefresh }: any) 
     <div className="space-y-6">
       {/* Current Plan */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg p-6 text-white">
+        <div className={`${theme.heroGradient} rounded-lg p-6 text-white`}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold">Current Plan</h3>
             <Crown className="w-6 h-6" />
@@ -258,7 +262,7 @@ function OverviewTab({ subscription, credits, paymentHistory, onRefresh }: any) 
               return tier?.name || 'Free Plan';
             })()}
           </p>
-          <p className="text-purple-100 text-sm">
+          <p className={`${theme.textOnSolid} text-sm`}>
             {subscription?.status === 'active' ? (
               <>
                 {nextPayment && `Next payment: ${nextPayment.toLocaleDateString()}`}
@@ -272,7 +276,7 @@ function OverviewTab({ subscription, credits, paymentHistory, onRefresh }: any) 
         <div className="bg-white border rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">Credit Balance</h3>
-            <Coins className="w-6 h-6 text-purple-600" />
+            <Coins className={`w-6 h-6 ${theme.textAccent}`} />
           </div>
           <p className="text-2xl font-bold text-gray-900 mb-2">
             {credits?.balance?.credits ?? credits?.credits ?? 0}
@@ -317,14 +321,14 @@ function OverviewTab({ subscription, credits, paymentHistory, onRefresh }: any) 
 }
 
 // Invoices Tab Component
-function InvoicesTab({ invoices, onRefresh }: any) {
+function InvoicesTab({ invoices, onRefresh, theme }: any) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">Invoices</h3>
         <button
           onClick={onRefresh}
-          className="text-purple-600 hover:text-purple-700 text-sm font-medium"
+          className={`${theme.textAccent} ${theme.textAccentHover} text-sm font-medium`}
         >
           Refresh
         </button>
@@ -379,7 +383,7 @@ function InvoicesTab({ invoices, onRefresh }: any) {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <button
                       onClick={() => toast('Available after billing is connected', { icon: 'ℹ️' })}
-                      className="text-purple-600 hover:text-purple-700 flex items-center gap-1"
+                      className={`${theme.textAccent} ${theme.textAccentHover} flex items-center gap-1`}
                     >
                       <Download className="w-4 h-4" />
                       Download

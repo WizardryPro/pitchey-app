@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Shield, Bell, Eye, Mail, Smartphone, Lock, Key, Trash2, AlertCircle } from 'lucide-react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { API_URL } from '../config';
+import { usePortalTheme } from '@shared/hooks/usePortalTheme';
 
 interface NotificationSettings {
   emailNotifications: boolean;
@@ -31,6 +32,7 @@ interface SecuritySettings {
 export default function Settings() {
   const navigate = useNavigate();
   const { user, logout } = useBetterAuthStore();
+  const theme = usePortalTheme();
   const [activeTab, setActiveTab] = useState<'notifications' | 'privacy' | 'security' | 'account'>('notifications');
   const [notifications, setNotifications] = useState<NotificationSettings>({
     emailNotifications: true,
@@ -137,8 +139,8 @@ export default function Settings() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+      <div className="flex items-center justify-center py-16">
+        <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${theme.spinnerBorder}`}></div>
       </div>
     );
   }
@@ -154,7 +156,7 @@ export default function Settings() {
         <button
           onClick={saveSettings}
           disabled={saving}
-          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:opacity-50"
+          className={`px-4 py-2 rounded-lg transition disabled:opacity-50 ${theme.btnPrimary}`}
         >
           {saving ? 'Saving...' : 'Save Changes'}
         </button>
@@ -176,7 +178,7 @@ export default function Settings() {
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`flex items-center gap-2 px-4 sm:px-6 py-4 text-sm font-medium border-b-2 transition whitespace-nowrap shrink-0 ${
                     activeTab === tab.id
-                      ? 'border-purple-500 text-purple-600'
+                      ? `${theme.tabActiveBorder} ${theme.tabActiveText}`
                       : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
                 >
@@ -212,7 +214,7 @@ export default function Settings() {
                           onChange={(e) => handleNotificationChange('emailNotifications', e.target.checked)}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        <div className={`w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 ${theme.peerFocusRing} rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${theme.toggleChecked}`}></div>
                       </label>
                     </div>
 
@@ -233,7 +235,7 @@ export default function Settings() {
                           onChange={(e) => handleNotificationChange('pushNotifications', e.target.checked)}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        <div className={`w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 ${theme.peerFocusRing} rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${theme.toggleChecked}`}></div>
                       </label>
                     </div>
 
@@ -258,7 +260,7 @@ export default function Settings() {
                             onChange={(e) => handleNotificationChange(item.key as keyof NotificationSettings, e.target.checked)}
                             className="sr-only peer"
                           />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                          <div className={`w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 ${theme.peerFocusRing} rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${theme.toggleChecked}`}></div>
                         </label>
                       </div>
                     ))}
@@ -278,7 +280,7 @@ export default function Settings() {
                       <select
                         value={privacy.profileVisibility}
                         onChange={(e) => handlePrivacyChange('profileVisibility', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                       >
                         <option value="public">Public - Anyone can view your profile</option>
                         <option value="network">Network - Only connections can view</option>
@@ -300,7 +302,7 @@ export default function Settings() {
                           onChange={(e) => handlePrivacyChange('showEmail', e.target.checked)}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        <div className={`w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 ${theme.peerFocusRing} rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${theme.toggleChecked}`}></div>
                       </label>
                     </div>
 
@@ -318,7 +320,7 @@ export default function Settings() {
                           onChange={(e) => handlePrivacyChange('showPhone', e.target.checked)}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        <div className={`w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 ${theme.peerFocusRing} rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${theme.toggleChecked}`}></div>
                       </label>
                     </div>
 
@@ -336,7 +338,7 @@ export default function Settings() {
                           onChange={(e) => handlePrivacyChange('allowDirectMessages', e.target.checked)}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        <div className={`w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 ${theme.peerFocusRing} rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${theme.toggleChecked}`}></div>
                       </label>
                     </div>
 
@@ -354,7 +356,7 @@ export default function Settings() {
                           onChange={(e) => handlePrivacyChange('allowPitchRequests', e.target.checked)}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        <div className={`w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 ${theme.peerFocusRing} rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${theme.toggleChecked}`}></div>
                       </label>
                     </div>
                   </div>
@@ -395,7 +397,7 @@ export default function Settings() {
                       <select
                         value={security.sessionTimeout}
                         onChange={(e) => handleSecurityChange('sessionTimeout', parseInt(e.target.value))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                       >
                         <option value={15}>15 minutes</option>
                         <option value={30}>30 minutes</option>
@@ -422,14 +424,14 @@ export default function Settings() {
                           onChange={(e) => handleSecurityChange('loginNotifications', e.target.checked)}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        <div className={`w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 ${theme.peerFocusRing} rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${theme.toggleChecked}`}></div>
                       </label>
                     </div>
 
                     <div className="border-t pt-6">
                       <h4 className="font-medium text-gray-900 mb-3">Password Management</h4>
                       <div className="space-y-3">
-                        <button className="flex items-center gap-3 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition">
+                        <button className={`flex items-center gap-3 px-4 py-2 rounded-lg transition ${theme.creditPill}`}>
                           <Key className="w-4 h-4" />
                           Change Password
                         </button>
@@ -455,7 +457,7 @@ export default function Settings() {
                       <p className="text-sm text-gray-600 mb-3">
                         Download a copy of your account data including pitches, messages, and analytics.
                       </p>
-                      <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                      <button className={`px-4 py-2 rounded-lg transition ${theme.btnPrimary}`}>
                         Request Data Export
                       </button>
                     </div>

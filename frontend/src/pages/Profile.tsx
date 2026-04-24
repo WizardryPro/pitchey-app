@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Camera, Mail, Phone, MapPin, Building2, Calendar, Edit3, Save, X, Loader2 } from 'lucide-react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { API_URL } from '../config';
+import { usePortalTheme } from '@shared/hooks/usePortalTheme';
 
 interface UserProfile {
   id: number;
@@ -28,6 +29,7 @@ interface SocialStats {
 
 export default function Profile() {
   const navigate = useNavigate();
+  const theme = usePortalTheme();
   const { user, logout } = useBetterAuthStore();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [socialStats, setSocialStats] = useState<SocialStats>({ followers: 0, following: 0 });
@@ -221,21 +223,21 @@ export default function Profile() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+      <div className="flex items-center justify-center py-16">
+        <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${theme.spinnerBorder}`}></div>
       </div>
     );
   }
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 flex items-center justify-center">
+      <div className="flex items-center justify-center py-16">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Profile Not Found</h2>
           <p className="text-gray-600 mb-4">Unable to load your profile information.</p>
           <button
             onClick={() => { void navigate(-1); }}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+            className={`px-4 py-2 rounded-lg transition ${theme.btnPrimary}`}
           >
             Go Back
           </button>
@@ -268,7 +270,7 @@ export default function Profile() {
               <button
                 onClick={() => { void handleSaveProfile(); }}
                 disabled={saving}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:opacity-50"
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition disabled:opacity-50 ${theme.btnPrimary}`}
               >
                 <Save className="w-4 h-4" />
                 {saving ? 'Saving...' : 'Save Changes'}
@@ -277,7 +279,7 @@ export default function Profile() {
           ) : (
             <button
               onClick={() => setIsEditing(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${theme.btnPrimary}`}
             >
               <Edit3 className="w-4 h-4" />
               Edit Profile
@@ -289,7 +291,7 @@ export default function Profile() {
       <div>
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           {/* Profile Header */}
-          <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-8">
+          <div className={`${theme.heroGradient} px-6 py-8`}>
             <div className="flex items-start gap-6">
               <div className="relative">
                 <div className="w-24 h-24 bg-white/20 backdrop-blur rounded-full flex items-center justify-center">
@@ -315,7 +317,7 @@ export default function Profile() {
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploadingImage}
-                  className="absolute bottom-0 right-0 p-2 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition disabled:opacity-50"
+                  className={`absolute bottom-0 right-0 p-2 rounded-full transition disabled:opacity-50 ${theme.btnPrimary}`}
                 >
                   {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
                 </button>
@@ -333,20 +335,20 @@ export default function Profile() {
                     {profile.userType}
                   </span>
                 </div>
-                <p className="text-purple-100 mb-3">@{profile.username}</p>
+                <p className={`${theme.textOnSolid} mb-3`}>@{profile.username}</p>
                 
                 {/* Social Stats */}
                 <div className="flex items-center gap-6 mb-3">
                   <button 
                     onClick={() => { void navigate(`/creator/${profile.id}`); }}
-                    className="text-purple-100 hover:text-white transition-colors"
+                    className={`${theme.textOnSolid} hover:text-white transition-colors`}
                   >
                     <span className="font-semibold">{socialStats.followers}</span>
                     <span className="text-sm"> followers</span>
                   </button>
                   <button 
                     onClick={() => { void navigate('/following'); }}
-                    className="text-purple-100 hover:text-white transition-colors"
+                    className={`${theme.textOnSolid} hover:text-white transition-colors`}
                   >
                     <span className="font-semibold">{socialStats.following}</span>
                     <span className="text-sm"> following</span>
@@ -354,7 +356,7 @@ export default function Profile() {
                 </div>
                 
                 {profile.companyName != null && (
-                  <div className="flex items-center gap-2 text-purple-100">
+                  <div className={`flex items-center gap-2 ${theme.textOnSolid}`}>
                     <Building2 className="w-4 h-4" />
                     <span>{profile.companyName}</span>
                   </div>
@@ -377,7 +379,7 @@ export default function Profile() {
                         type="text"
                         value={editedProfile.firstName ?? ''}
                         onChange={(e) => handleInputChange('firstName', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                         placeholder="Enter your first name"
                       />
                     ) : (
@@ -392,7 +394,7 @@ export default function Profile() {
                         type="text"
                         value={editedProfile.lastName ?? ''}
                         onChange={(e) => handleInputChange('lastName', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                         placeholder="Enter your last name"
                       />
                     ) : (
@@ -407,7 +409,7 @@ export default function Profile() {
                         type="email"
                         value={editedProfile.email ?? ''}
                         onChange={(e) => handleInputChange('email', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                         placeholder="Enter your email"
                       />
                     ) : (
@@ -425,7 +427,7 @@ export default function Profile() {
                         type="tel"
                         value={editedProfile.phone ?? ''}
                         onChange={(e) => handleInputChange('phone', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                         placeholder="Enter your phone number"
                       />
                     ) : (
@@ -443,7 +445,7 @@ export default function Profile() {
                         type="text"
                         value={editedProfile.location ?? ''}
                         onChange={(e) => handleInputChange('location', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                         placeholder="Enter your location"
                       />
                     ) : (
@@ -469,7 +471,7 @@ export default function Profile() {
                             type="text"
                             value={editedProfile.companyName ?? ''}
                             onChange={(e) => handleInputChange('companyName', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                             placeholder="Enter your company name"
                           />
                         ) : (
@@ -483,7 +485,7 @@ export default function Profile() {
                           <select
                             value={editedProfile.companyType ?? ''}
                             onChange={(e) => handleInputChange('companyType', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                           >
                             <option value="">Select company type</option>
                             <option value="studio">Studio</option>
@@ -506,13 +508,13 @@ export default function Profile() {
                         type="url"
                         value={editedProfile.website ?? ''}
                         onChange={(e) => handleInputChange('website', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                         placeholder="https://your-website.com"
                       />
                     ) : (
                       <p className="text-gray-900">
                         {profile.website != null ? (
-                          <a href={profile.website} target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:text-purple-700">
+                          <a href={profile.website} target="_blank" rel="noopener noreferrer" className={`${theme.textAccent} ${theme.textAccentHover}`}>
                             {profile.website}
                           </a>
                         ) : (
@@ -529,7 +531,7 @@ export default function Profile() {
                         value={editedProfile.bio ?? ''}
                         onChange={(e) => handleInputChange('bio', e.target.value)}
                         rows={4}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
                         placeholder="Tell us about yourself..."
                       />
                     ) : (
@@ -558,7 +560,7 @@ export default function Profile() {
           <div className="space-y-3">
             <button
               onClick={() => { void navigate('/settings'); }}
-              className="w-full sm:w-auto px-4 py-2 text-purple-600 border border-purple-600 rounded-lg hover:bg-purple-50 transition"
+              className={`w-full sm:w-auto px-4 py-2 rounded-lg transition border ${theme.textAccent} ${theme.tabActiveBorder} ${theme.bgLightHover}`}
             >
               Account Settings
             </button>
