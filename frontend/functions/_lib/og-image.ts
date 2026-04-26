@@ -48,33 +48,21 @@ export async function renderPortfolioCard(p: PortfolioCardProps): Promise<Respon
   const initials = (p.creatorName || '?').trim().charAt(0).toUpperCase();
   const pitchWord = p.pitchCount === 1 ? 'pitch' : 'pitches';
 
-  const avatarBlock = p.avatarUrl
-    ? `<img src="${escapeHtml(p.avatarUrl)}" width="220" height="220" style="border-radius: 110px; object-fit: cover; border: 6px solid rgba(255,255,255,0.15);" />`
-    : `<div style="display: flex; align-items: center; justify-content: center; width: 220px; height: 220px; border-radius: 110px; background: rgba(255,255,255,0.18); color: white; font-size: 110px; font-weight: 700; font-family: 'Inter';">${escapeHtml(initials)}</div>`;
-
-  const html = `
-    <div style="display: flex; width: 1200px; height: 630px; padding: 80px; background: ${GRADIENT_BG}; font-family: 'Inter';">
-      <div style="display: flex; align-items: center; gap: 56px; width: 100%;">
-        ${avatarBlock}
-        <div style="display: flex; flex-direction: column; flex: 1; color: white;">
-          <div style="font-size: 56px; font-weight: 700; line-height: 1.1; margin-bottom: 12px;">${escapeHtml(p.creatorName)}</div>
-          ${p.username ? `<div style="font-size: 24px; opacity: 0.7; margin-bottom: 24px;">@${escapeHtml(p.username)}</div>` : '<div style="height: 24px; margin-bottom: 24px;"></div>'}
-          <div style="font-size: 28px; opacity: 0.9;">${p.pitchCount} ${pitchWord} on Pitchey</div>
-        </div>
-      </div>
-      <div style="position: absolute; bottom: 60px; right: 80px; display: flex; align-items: center; gap: 12px; color: white; font-size: 26px; font-weight: 700; letter-spacing: -0.02em;">
-        Pitchey
-      </div>
-    </div>
-  `;
+  // Minimal first — every div with >1 child explicitly display:flex.
+  const html =
+    `<div style="display:flex;flex-direction:column;justify-content:center;align-items:flex-start;width:1200px;height:630px;padding:80px;background:${GRADIENT_BG};font-family:Inter;color:white;">` +
+      `<div style="display:flex;font-size:56px;font-weight:700;margin-bottom:16px;">${escapeHtml(p.creatorName)}</div>` +
+      `<div style="display:flex;font-size:28px;opacity:0.9;margin-bottom:24px;">${p.pitchCount} ${pitchWord} on Pitchey</div>` +
+      `<div style="display:flex;font-size:26px;font-weight:700;opacity:0.7;">Pitchey</div>` +
+    `</div>`;
 
   const fonts = await loadFonts();
-  const res = new ImageResponse(html, {
+  return new ImageResponse(html, {
     width: 1200,
     height: 630,
     fonts,
+    headers: CACHE_HEADERS,
   });
-  return new Response(res.body, { status: res.status, headers: { ...Object.fromEntries(res.headers), ...CACHE_HEADERS } });
 }
 
 export interface SlateCardProps {
@@ -87,30 +75,18 @@ export interface SlateCardProps {
 export async function renderSlateCard(p: SlateCardProps): Promise<Response> {
   const pitchWord = p.pitchCount === 1 ? 'pitch' : 'pitches';
 
-  // Background: cover image with dark gradient overlay; fallback to brand gradient.
-  const bgStyle = p.coverImageUrl
-    ? `background-image: linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.85) 100%), url('${escapeHtml(p.coverImageUrl)}'); background-size: cover; background-position: center;`
-    : `background: ${GRADIENT_BG};`;
-
-  const html = `
-    <div style="display: flex; flex-direction: column; justify-content: flex-end; width: 1200px; height: 630px; padding: 80px; ${bgStyle} font-family: 'Inter'; color: white;">
-      <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 32px;">
-        <div style="display: flex; padding: 10px 22px; border-radius: 999px; background: rgba(255,255,255,0.15); font-size: 22px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;">Slate</div>
-        <div style="font-size: 22px; opacity: 0.85;">${p.pitchCount} ${pitchWord}</div>
-      </div>
-      <div style="font-size: 76px; font-weight: 700; line-height: 1.05; letter-spacing: -0.02em; margin-bottom: 24px; max-width: 1040px;">${escapeHtml(p.title)}</div>
-      <div style="font-size: 30px; opacity: 0.9; font-weight: 400;">by ${escapeHtml(p.creatorName)}</div>
-      <div style="position: absolute; top: 60px; right: 80px; display: flex; align-items: center; gap: 12px; color: white; font-size: 26px; font-weight: 700; letter-spacing: -0.02em;">
-        Pitchey
-      </div>
-    </div>
-  `;
+  const html =
+    `<div style="display:flex;flex-direction:column;justify-content:flex-end;width:1200px;height:630px;padding:80px;background:${GRADIENT_BG};font-family:Inter;color:white;">` +
+      `<div style="display:flex;font-size:22px;font-weight:700;letter-spacing:0.06em;margin-bottom:24px;opacity:0.8;">SLATE · ${p.pitchCount} ${pitchWord}</div>` +
+      `<div style="display:flex;font-size:72px;font-weight:700;line-height:1.05;margin-bottom:24px;">${escapeHtml(p.title)}</div>` +
+      `<div style="display:flex;font-size:30px;opacity:0.9;">by ${escapeHtml(p.creatorName)}</div>` +
+    `</div>`;
 
   const fonts = await loadFonts();
-  const res = new ImageResponse(html, {
+  return new ImageResponse(html, {
     width: 1200,
     height: 630,
     fonts,
+    headers: CACHE_HEADERS,
   });
-  return new Response(res.body, { status: res.status, headers: { ...Object.fromEntries(res.headers), ...CACHE_HEADERS } });
 }

@@ -18,7 +18,6 @@ import {
 } from '../../_lib/og';
 
 interface Env {
-  ASSETS: { fetch: (request: Request) => Promise<Response> };
   API_BACKEND_URL?: string;
 }
 
@@ -42,16 +41,20 @@ interface PortfolioApi {
   };
 }
 
-async function fetchIndex(env: Env, request: Request): Promise<Response> {
-  const indexUrl = new URL(request.url);
-  indexUrl.pathname = '/index.html';
-  return env.ASSETS.fetch(new Request(indexUrl.toString(), request));
-}
-
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { request, env, params } = context;
   const token = String(params.token || '');
-  const indexResponse = await fetchIndex(env, request);
+
+  // Fetch the SPA index.html via same-origin HTTP. We can't use
+  // `env.ASSETS.fetch('/index.html')` because the `_redirects` rule
+  // `/* /index.html 200!` causes that path to bounce back as a 308 → /.
+  // We can't use `context.next()` either — that loops back through this
+  // function via the middleware passthrough. Plain HTTP fetch is the only
+  // path that cleanly resolves to the static index.html.
+  const origin = new URL(request.url).origin;
+  const indexResponse = await fetch(`${origin}/index.html`, {
+    headers: { Accept: 'text/html' },
+  });
 
   if (!token) return indexResponse;
 

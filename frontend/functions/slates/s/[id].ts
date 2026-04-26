@@ -14,7 +14,6 @@ import {
 } from '../../_lib/og';
 
 interface Env {
-  ASSETS: { fetch: (request: Request) => Promise<Response> };
   API_BACKEND_URL?: string;
 }
 
@@ -39,17 +38,17 @@ interface SlateApi {
   };
 }
 
-async function fetchIndex(env: Env, request: Request): Promise<Response> {
-  const indexUrl = new URL(request.url);
-  indexUrl.pathname = '/index.html';
-  return env.ASSETS.fetch(new Request(indexUrl.toString(), request));
-}
-
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { request, env, params } = context;
   const idStr = String(params.id || '');
   const slateId = parseInt(idStr, 10);
-  const indexResponse = await fetchIndex(env, request);
+
+  // See portfolio/s/[token].ts for why we can't use env.ASSETS.fetch()
+  // or context.next() to fetch index.html.
+  const origin = new URL(request.url).origin;
+  const indexResponse = await fetch(`${origin}/index.html`, {
+    headers: { Accept: 'text/html' },
+  });
 
   if (!slateId || isNaN(slateId)) return indexResponse;
 
