@@ -416,8 +416,13 @@ BEGIN
     RAISE NOTICE 'User created but email verification required for full platform access';
   END IF;
   
-  -- Rule 3: Subscription tier validation
-  IF NEW.subscription_tier NOT IN ('free', 'creator', 'pro', 'investor') THEN
+  -- Rule 3: Subscription tier validation — lookup-based (see migration 085 + issue #44).
+  -- The set of valid tier IDs lives in the subscription_plans table; adding or
+  -- renaming a tier requires only a migration row, not a separate trigger edit.
+  IF NEW.subscription_tier IS NOT NULL
+     AND NOT EXISTS (
+       SELECT 1 FROM subscription_plans WHERE id = NEW.subscription_tier
+     ) THEN
     RAISE EXCEPTION 'Business rule violation: Invalid subscription tier: %', NEW.subscription_tier;
   END IF;
   
