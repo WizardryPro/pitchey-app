@@ -69,6 +69,7 @@
     "tailwind-merge": "^3.4.0",
     "use-sync-external-store": "^1.6.0",
     "valibot": "^1.2.0",
+    "workers-og": "^0.0.27",
     "zod": "^4.3.4",
     "zustand": "^5.0.8"
   },

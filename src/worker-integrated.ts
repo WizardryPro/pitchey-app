@@ -1305,16 +1305,6 @@ class RouteRegistry {
           return await this.notificationRoutes.trackPushEvent(mockContext as any);
         case 'testPushNotification':
           return await this.notificationRoutes.testPushNotification(mockContext as any);
-        case 'getTemplates':
-          return await this.notificationRoutes.getTemplates(mockContext as any);
-        case 'createTemplate':
-          return await this.notificationRoutes.createTemplate(mockContext as any);
-        case 'updateTemplate':
-          return await this.notificationRoutes.updateTemplate(mockContext as any);
-        case 'deleteTemplate':
-          return await this.notificationRoutes.deleteTemplate(mockContext as any);
-        case 'previewTemplate':
-          return await this.notificationRoutes.previewTemplate(mockContext as any);
         case 'processUnsubscribe':
           return await this.notificationRoutes.processUnsubscribe(mockContext as any);
         case 'createUnsubscribeToken':
@@ -2184,13 +2174,6 @@ class RouteRegistry {
       this.register('GET', '/api/notifications/push/vapid-key', this.handleNotificationRoute.bind(this, 'getVapidKey'));
       this.register('POST', '/api/notifications/push/track', this.handleNotificationRoute.bind(this, 'trackPushEvent'));
       this.register('POST', '/api/notifications/push/test', this.handleNotificationRoute.bind(this, 'testPushNotification'));
-
-      // Email Templates & Management
-      this.register('GET', '/api/notifications/templates', this.handleNotificationRoute.bind(this, 'getTemplates'));
-      this.register('POST', '/api/notifications/templates', this.handleNotificationRoute.bind(this, 'createTemplate'));
-      this.register('PUT', '/api/notifications/templates/:id', this.handleNotificationRoute.bind(this, 'updateTemplate'));
-      this.register('DELETE', '/api/notifications/templates/:id', this.handleNotificationRoute.bind(this, 'deleteTemplate'));
-      this.register('POST', '/api/notifications/templates/preview', this.handleNotificationRoute.bind(this, 'previewTemplate'));
 
       // Email Management
       this.register('DELETE', '/api/notifications/unsubscribe', this.handleNotificationRoute.bind(this, 'processUnsubscribe'));

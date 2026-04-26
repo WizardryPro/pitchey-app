@@ -10,10 +10,24 @@
  * Middleware at `/` receives all requests. `/api/*` requests are passed
  * through via `context.next()` so `api/_middleware.ts` can handle them.
  */
+// Paths handled by their own Pages Functions (OG meta-tag injection for social
+// unfurls). Must be passed through with context.next(); otherwise this middleware
+// short-circuits to ASSETS and the dedicated function never runs.
+const SOCIAL_UNFURL_PATHS = [
+  /^\/portfolio\/s\/[^/]+\/?$/,
+  /^\/slates\/s\/[^/]+\/?$/,
+  /^\/og\/portfolio\/[^/]+\/?$/,
+  /^\/og\/slate\/[^/]+\/?$/,
+];
+
 export const onRequest: PagesFunction = async (context) => {
   const url = new URL(context.request.url);
 
   if (url.pathname.startsWith('/api/')) {
+    return context.next();
+  }
+
+  if (SOCIAL_UNFURL_PATHS.some(re => re.test(url.pathname))) {
     return context.next();
   }
 

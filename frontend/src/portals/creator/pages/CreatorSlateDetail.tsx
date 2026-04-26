@@ -258,10 +258,11 @@ export default function CreatorSlateDetailPage() {
         <div className="bg-green-900/20 border border-green-800/50 rounded-lg px-4 py-3 flex items-center gap-2 text-sm">
           <Globe className="h-4 w-4 text-green-400 shrink-0" />
           <span className="text-green-300">Public link:</span>
-          <code className="text-green-400 truncate">/api/slates/{slate.id}/public</code>
+          <code className="text-green-400 truncate">/slates/s/{slate.id}</code>
           <button
-            onClick={() => navigator.clipboard.writeText(`${window.location.origin}/api/slates/${slate.id}/public`)}
+            onClick={() => navigator.clipboard.writeText(`${window.location.origin}/slates/s/${slate.id}`)}
             className="ml-auto text-green-400 hover:text-green-300 shrink-0"
+            title="Copy link"
           >
             <ExternalLink className="h-4 w-4" />
           </button>

@@ -156,6 +156,7 @@ const Following = lazyRetry(() => import('./pages/Following'));
 const CreatorPortfolio = lazyRetry(() => import('./pages/CreatorPortfolio'));
 const UserPortfolio = lazyRetry(() => import('./pages/UserPortfolio'));
 const SharedPortfolio = lazyRetry(() => import('./pages/SharedPortfolio'));
+const PublicSlate = lazyRetry(() => import('./pages/PublicSlate'));
 
 // Info Pages
 const HowItWorks = lazyRetry(() => import('./pages/HowItWorks'));
@@ -684,6 +685,9 @@ function App() {
           
           {/* Shared Portfolio (public, token-based) */}
           <Route path="/portfolio/s/:token" element={<SharedPortfolio />} />
+
+          {/* Public Slate (published only) */}
+          <Route path="/slates/s/:id" element={<PublicSlate />} />
 
           {/* New Unified Portfolio Routes */}
           <Route path="/portfolio" element={<UserPortfolio />} />

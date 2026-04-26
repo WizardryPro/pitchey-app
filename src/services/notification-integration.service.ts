@@ -5,7 +5,6 @@
 
 import type { DatabaseService } from '../types/worker-types';
 import { NotificationService, type NotificationData } from './notification.service';
-import { EmailTemplateService } from './email-template.service';
 import { PushNotificationService } from './push-notification.service';
 import { IntelligentNotificationService } from './intelligent-notification.service';
 
@@ -21,13 +20,11 @@ export interface NotificationIntegrationConfig {
 
 export class NotificationIntegrationService {
   private notificationService: NotificationService;
-  private emailTemplateService: EmailTemplateService;
   private pushService: PushNotificationService;
   private intelligentService: IntelligentNotificationService;
 
   constructor(config: NotificationIntegrationConfig) {
     // Initialize all notification services
-    this.emailTemplateService = new EmailTemplateService(config.database, config.redis);
     this.pushService = new PushNotificationService(config.database, config.redis, config.vapidKeys);
     this.notificationService = new NotificationService(config.database, config.redis);
     this.intelligentService = new IntelligentNotificationService(
@@ -445,7 +442,6 @@ export class NotificationIntegrationService {
   getServices() {
     return {
       notification: this.notificationService,
-      emailTemplate: this.emailTemplateService,
       push: this.pushService,
       intelligent: this.intelligentService,
     };
