@@ -368,7 +368,7 @@ export default function Homepage() {
           <div className="flex justify-center mt-10">
             <button
               onClick={() => navigate('/marketplace?sort=hot')}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-lg transition font-medium shadow-sm"
             >
               See all hot pitches
               <ArrowRight className="w-4 h-4" />

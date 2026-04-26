@@ -55,7 +55,7 @@ export default {
   				anchor: '#6F2DA8',
   				action: '#6F2DA8',
   				trending: '#A82D63',
-  				'new': '#2D7FA8',
+  				'new': '#5B4FC7',
   				featured: '#842DA8',
   				nda: '#A82D4E',
   				'portal-creator': '#7B3FBF',
