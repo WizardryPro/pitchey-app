@@ -161,8 +161,18 @@ async function runRouteTest(browser, route, viewportName, storageState) {
       errors.push(`HTTP ${resp.status()} on navigation`);
     }
 
-    // Give the app a beat to finish lazy loads + balance fetch + render
-    await page.waitForTimeout(2_500);
+    // For portal routes, wait explicitly for the layout's <header> to appear (up to 10s)
+    // before running assertions. This absorbs cold-deploy lazy-chunk load latency and the
+    // lazyRetry-reload edge case (App.tsx) that can briefly push render time past a fixed
+    // 2.5s wait. Falls through silently on timeout — the banner assertion below will then
+    // correctly trip with "No banner landmark" if the header genuinely never rendered.
+    // Non-portal routes (homepage, marketplace) keep the fixed beat.
+    const isPortalRoute = /\/(creator|investor|production|watcher|admin)\//.test(route.path);
+    if (isPortalRoute) {
+      await page.locator('header').first().waitFor({ state: 'visible', timeout: 10_000 }).catch(() => {});
+    } else {
+      await page.waitForTimeout(2_500);
+    }
 
     // Assertion 1: no "known-bad" text anywhere on the page
     for (const { text, why } of BAD_TEXT_PATTERNS) {
@@ -172,7 +182,6 @@ async function runRouteTest(browser, route, viewportName, storageState) {
 
     // Assertion 2: portal routes have exactly 1 banner landmark (double-chrome regression).
     // Uses accessibility tree — implicit role="banner" from <header> as top-level landmark.
-    const isPortalRoute = /\/(creator|investor|production|watcher|admin)\//.test(route.path);
     if (isPortalRoute) {
       const banners = await page.getByRole('banner').count();
       if (banners > 1) {
