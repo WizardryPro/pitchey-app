@@ -27,22 +27,22 @@ export default function HeatBadge({ score, variant = 'pill' }: Props) {
 
   if (variant === 'inline') {
     return level === 'fire' ? (
-      <span className="inline-flex items-center gap-1 text-orange-500 text-sm font-medium">
-        <Flame className="w-4 h-4" /> Hot
+      <span className="inline-flex items-center gap-1 bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent text-sm font-medium">
+        <Flame className="w-4 h-4 text-orange-500" /> Hot
       </span>
     ) : (
-      <span className="inline-flex items-center gap-1 text-amber-500 text-sm font-medium">
+      <span className="inline-flex items-center gap-1 text-red-500 text-sm font-medium">
         <TrendingUp className="w-4 h-4" /> Trending
       </span>
     );
   }
 
   return level === 'fire' ? (
-    <span className="bg-orange-500/90 backdrop-blur-sm text-white px-2.5 py-0.5 text-xs rounded-full font-medium flex items-center gap-1">
+    <span className="bg-gradient-to-r from-orange-500/90 to-red-500/90 backdrop-blur-sm text-white px-2.5 py-0.5 text-xs rounded-full font-medium flex items-center gap-1">
       <Flame className="w-3 h-3" /> Hot
     </span>
   ) : (
-    <span className="bg-amber-500/90 backdrop-blur-sm text-white px-2.5 py-0.5 text-xs rounded-full font-medium flex items-center gap-1">
+    <span className="bg-red-500/90 backdrop-blur-sm text-white px-2.5 py-0.5 text-xs rounded-full font-medium flex items-center gap-1">
       <TrendingUp className="w-3 h-3" /> Trending
     </span>
   );
