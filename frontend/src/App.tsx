@@ -28,36 +28,53 @@ if (import.meta.env.DEV) {
   });
 }
 
-// Retry wrapper for lazy imports — handles stale chunks after deploys
-// If a chunk fails to load (404 after deploy), retry once then reload the page
+// Retry wrapper for lazy imports — handles stale chunks after deploys.
+// Strategy: inline retry once on failure (transient network), then reload the page
+// once if that still fails (likely a stale-chunk situation post-deploy). If even
+// the post-reload attempt fails, throw to the error boundary instead of looping.
+// The previous implementation cycled reload ↔ cache-busted-reload indefinitely
+// when the chunk genuinely 404'd (e.g., during a Pages deploy race).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function lazyRetry(factory: () => Promise<{ default: React.ComponentType<any> }>) {
-  return lazy(() =>
-    factory()
-      .then((mod) => {
-        // Guard against stale CDN/cache responses that resolve to a module
-        // with no default export — React's lazy() throws "Cannot read properties
-        // of undefined (reading 'default')" in that case.
-        if (!mod || typeof mod.default === 'undefined') {
-          return Promise.reject(new Error('Module resolved without default export'));
-        }
-        return mod;
-      })
-      .catch(() => {
-        // Chunk likely stale after deploy — reload the page once
-        const reloadKey = 'chunk-reload-' + window.location.pathname;
-        if (!sessionStorage.getItem(reloadKey)) {
-          sessionStorage.setItem(reloadKey, '1');
-          window.location.reload();
-          // Return a never-resolving promise to prevent flash
-          return new Promise<never>(() => {});
-        }
-        // Already reloaded once — force a cache-busted full reload
-        sessionStorage.removeItem(reloadKey);
-        window.location.href = window.location.href.split('?')[0] + '?_cb=' + Date.now();
+function lazyRetry<T extends React.ComponentType<any>>(factory: () => Promise<{ default: T }>) {
+  return lazy(async () => {
+    const RELOAD_KEY = 'chunk-reload-' + window.location.pathname;
+
+    const loadOnce = async () => {
+      const mod = await factory();
+      // Guard against stale CDN/cache responses that resolve to a module with no
+      // default export — React's lazy() would throw an unhelpful TypeError otherwise.
+      if (!mod || typeof mod.default === 'undefined') {
+        throw new Error('Module resolved without default export');
+      }
+      return mod;
+    };
+
+    try {
+      // First attempt + one inline retry with backoff for transient blips.
+      let mod;
+      try {
+        mod = await loadOnce();
+      } catch {
+        await new Promise((r) => setTimeout(r, 500));
+        mod = await loadOnce();
+      }
+      // Loaded successfully — clear any stale reload flag from a prior visit.
+      sessionStorage.removeItem(RELOAD_KEY);
+      return mod;
+    } catch (err) {
+      // Both inline attempts failed. If we haven't yet reloaded for this path,
+      // reload once — fresh index.html will reference current chunk hashes.
+      if (!sessionStorage.getItem(RELOAD_KEY)) {
+        sessionStorage.setItem(RELOAD_KEY, '1');
+        window.location.reload();
+        // Block render until the reload navigation takes effect.
         return new Promise<never>(() => {});
-      })
-  );
+      }
+      // Already reloaded once and still failing — surface the error to the
+      // boundary instead of cycling. User sees real error UI and can refresh.
+      throw err;
+    }
+  });
 }
 
 // Immediately needed components (not lazy loaded)
