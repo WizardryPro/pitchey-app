@@ -15,7 +15,6 @@ import {
   clampDescription,
   clampTitle,
   canonicalUrl,
-  isCrawlerUA,
   DEFAULT_BACKEND_URL,
   type OgMeta,
 } from '../_lib/og';
@@ -48,16 +47,18 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   // Fetch the SPA index.html via same-origin HTTP (see portfolio/s/[token].ts
   // for why we can't use env.ASSETS.fetch or context.next here).
+  //
+  // Note on latency: this Function only runs on initial server hits — internal
+  // SPA navigation (`<Link>`) is intercepted by React Router client-side and
+  // never reaches the server. So the ~50-100ms upstream-API + HTMLRewriter
+  // overhead applies only to direct URL navigation, refreshes, and crawlers.
+  // Same magnitude as the /portfolio/s and /slates/s Functions, which we
+  // already accept. UA-based gating was tried and dropped because real
+  // scrapers (opengraph.xyz, sometimes Discord) use stock Chrome UAs.
   const origin = new URL(request.url).origin;
   const indexResponse = await fetch(`${origin}/index.html`, {
     headers: { Accept: 'text/html' },
   });
-
-  // Bot-UA gate: only rewrite meta for crawlers. Humans get the unmodified
-  // SPA shell immediately, no upstream-API latency on every pitch page load.
-  if (!isCrawlerUA(request.headers.get('User-Agent'))) {
-    return indexResponse;
-  }
 
   if (!pitchId || isNaN(pitchId)) return indexResponse;
 
