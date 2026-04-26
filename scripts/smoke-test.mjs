@@ -52,6 +52,10 @@ const ROUTES = [
   { path: '/investor/billing', as: 'investor' },
 
   { path: '/production/dashboard', as: 'production' },
+  { path: '/production/pitches', as: 'production' },
+  { path: '/production/projects', as: 'production' },
+  { path: '/production/submissions', as: 'production' },
+  { path: '/production/analytics', as: 'production' },
   { path: '/production/ndas', as: 'production' },
   { path: '/production/billing', as: 'production' },
 
