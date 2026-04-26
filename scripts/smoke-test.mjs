@@ -182,12 +182,22 @@ async function runRouteTest(browser, route, viewportName, storageState) {
       }
     }
 
-    // Assertion 3: for authenticated routes, credits pill should resolve to a number, not stay in "—" loading state
+    // Assertion 3: for authenticated routes, credits pill should resolve to a number, not stay in "—" loading state.
+    // Polls up to 3.5s on top of the 2.5s baseline above (6s total). Creator dashboard fans out more parallel
+    // requests than any other portal page; on cold-starts the balance fetch can finish >2.5s after DOM-ready.
+    // A genuine balance outage still trips this — the pill stays "—" past the full 6s deadline.
     if (route.as) {
       const creditsBtn = page.locator('header button:has-text("Credits"), header button:has-text("credits")').first();
-      const creditsText = await creditsBtn.textContent().catch(() => null);
+      const POLL_DEADLINE_MS = 3_500;
+      const pollStarted = Date.now();
+      let creditsText = null;
+      while (Date.now() - pollStarted < POLL_DEADLINE_MS) {
+        creditsText = await creditsBtn.textContent().catch(() => null);
+        if (!creditsText || !/^—/.test(creditsText.trim())) break;
+        await page.waitForTimeout(200);
+      }
       if (creditsText && /^—/.test(creditsText.trim())) {
-        errors.push(`Credits pill still "—" after 2.5s: "${creditsText.trim()}" (balance endpoint broken or outage)`);
+        errors.push(`Credits pill still "—" after 6s: "${creditsText.trim()}" (balance endpoint broken or outage)`);
       }
     }
 
