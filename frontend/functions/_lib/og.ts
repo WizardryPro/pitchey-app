@@ -110,10 +110,12 @@ export function applyOgMeta(html: Response, meta: OgMeta): Response {
 }
 
 /**
- * Truncate to a budget; OG description sweet spot is ~155-200 chars (LinkedIn
- * cuts at 200, Twitter at 200, Facebook at 300). We aim for 200 to stay safe.
+ * Truncate to a budget. We aim for 160 chars: LinkedIn truncates around 115,
+ * Facebook around 155, X around 200. 160 keeps us inside FB's window and
+ * leaves a tail for X without being cut by either. Earlier 200 was getting
+ * trimmed mid-sentence on LinkedIn previews.
  */
-export function clampDescription(s: string | null | undefined, max = 200): string {
+export function clampDescription(s: string | null | undefined, max = 160): string {
   const v = (s || '').trim().replace(/\s+/g, ' ');
   if (!v) return '';
   if (v.length <= max) return v;

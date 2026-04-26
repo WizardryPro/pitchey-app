@@ -20,6 +20,12 @@ const CACHE_HEADERS = {
   'Cache-Control': 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800',
 };
 
+// Shared CTA pill — used in the bottom-right of every card so the rendered
+// PNG has a visible affordance. opengraph.xyz's analyzer (and our own gut
+// check) flagged the previous "Pitchey" wordmark as too passive.
+const CTA_HTML =
+  `<div style="display:flex;align-items:center;padding:10px 22px;border-radius:999px;background:rgba(255,255,255,0.18);font-size:20px;font-weight:700;letter-spacing:-0.01em;">View on Pitchey →</div>`;
+
 function escapeHtml(s: string): string {
   return String(s).replace(/[&<>"']/g, c => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!
@@ -62,14 +68,16 @@ export async function renderPortfolioCard(p: PortfolioCardProps): Promise<Respon
 
   // No whitespace between sibling tags — Satori counts whitespace text nodes
   // as children, which trips the "div with >1 child needs display:flex" rule.
+  // Wrap CTA in a flex row so it sizes to content (stretches otherwise — the
+  // parent column has flex:1 and a bare pill child fills the width).
   const html =
     `<div style="display:flex;align-items:center;width:1200px;height:630px;padding:80px;background:${GRADIENT_BG};font-family:Inter;color:white;">` +
       avatarBlock +
       `<div style="display:flex;flex-direction:column;flex:1;">` +
         `<div style="display:flex;font-size:56px;font-weight:700;line-height:1.1;margin-bottom:12px;">${escapeHtml(p.creatorName)}</div>` +
         usernameLine +
-        `<div style="display:flex;font-size:28px;opacity:0.9;margin-bottom:32px;">${p.pitchCount} ${pitchWord} on Pitchey</div>` +
-        `<div style="display:flex;font-size:24px;font-weight:700;opacity:0.6;letter-spacing:-0.02em;">Pitchey</div>` +
+        `<div style="display:flex;font-size:28px;opacity:0.9;margin-bottom:36px;">${p.pitchCount} ${pitchWord} on Pitchey</div>` +
+        `<div style="display:flex;">${CTA_HTML}</div>` +
       `</div>` +
     `</div>`;
 
@@ -106,7 +114,7 @@ export async function renderSlateCard(p: SlateCardProps): Promise<Response> {
       `<div style="display:flex;font-size:72px;font-weight:700;line-height:1.05;margin-bottom:24px;">${escapeHtml(p.title)}</div>` +
       `<div style="display:flex;justify-content:space-between;align-items:flex-end;">` +
         `<div style="display:flex;font-size:30px;opacity:0.9;">by ${escapeHtml(p.creatorName)}</div>` +
-        `<div style="display:flex;font-size:24px;font-weight:700;opacity:0.6;letter-spacing:-0.02em;">Pitchey</div>` +
+        CTA_HTML +
       `</div>` +
     `</div>`;
 
@@ -163,7 +171,7 @@ export async function renderPitchCard(p: PitchCardProps): Promise<Response> {
         loglineBlock +
         `<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:auto;">` +
           `<div style="display:flex;font-size:24px;opacity:0.9;">by ${escapeHtml(p.creatorName)}</div>` +
-          `<div style="display:flex;font-size:22px;font-weight:700;opacity:0.6;letter-spacing:-0.02em;">Pitchey</div>` +
+          CTA_HTML +
         `</div>` +
       `</div>` +
     `</div>`;
