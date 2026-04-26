@@ -38,6 +38,7 @@ interface PortfolioApi {
       logline: string | null;
       cover_image: string | null;
     }>;
+    og_version?: number;
   };
 }
 
@@ -68,15 +69,16 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const json = await apiRes.json() as PortfolioApi;
     if (!json.success || !json.data) return indexResponse;
 
-    const { creator, pitches } = json.data;
+    const { creator, pitches, og_version } = json.data;
     const displayName = creator.name?.trim() || creator.username?.trim() || 'Creator';
     const pitchCount = pitches.length;
     const pitchWord = pitchCount === 1 ? 'pitch' : 'pitches';
 
-    // Branded composite — phase 2 endpoint generates the card; redirects to a
-    // raw fallback if rendering fails. The static avatar/cover only flows through
-    // when this branded endpoint itself is unreachable.
-    const ogImage = canonicalUrl(request, `/og/portfolio/${encodeURIComponent(token)}`);
+    // Branded composite. `?v=<og_version>` cache-busts the OG image whenever
+    // the creator profile or any of their pitches changes (CDN cache key
+    // changes immediately on edit, no manual invalidation).
+    const versionParam = og_version ? `?v=${og_version}` : '';
+    const ogImage = canonicalUrl(request, `/og/portfolio/${encodeURIComponent(token)}${versionParam}`);
 
     // Description preference: creator bio → "X pitches available on Pitchey"
     const description = creator.bio?.trim()

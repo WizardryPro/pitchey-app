@@ -194,7 +194,7 @@ export async function publicPortfolioByTokenHandler(
 
     // Fetch creator profile (NO email exposed)
     const creatorResult = await sql`
-      SELECT id, name, username, bio, profile_image, is_verified, created_at
+      SELECT id, name, username, bio, profile_image, is_verified, created_at, updated_at
       FROM users
       WHERE id = ${creatorId}
     `;
@@ -211,11 +211,19 @@ export async function publicPortfolioByTokenHandler(
         id, title, logline, genre, title_image AS cover_image,
         COALESCE(view_count, 0)::int AS view_count,
         COALESCE(like_count, 0)::int AS like_count,
-        created_at
+        created_at, updated_at
       FROM pitches
       WHERE user_id = ${creatorId} AND status = 'published'
       ORDER BY created_at DESC
     `;
+
+    // og_version = Unix epoch of the most recent change touching anything that
+    // would affect the social-share card. Lets the frontend cache-bust the OG
+    // image on edit (`og:image=/og/portfolio/<token>?v=<og_version>`).
+    const candidateTimes = [creator.updated_at, ...pitches.map((p: any) => p.updated_at)]
+      .filter(Boolean)
+      .map((t: string) => new Date(t).getTime());
+    const og_version = candidateTimes.length > 0 ? Math.floor(Math.max(...candidateTimes) / 1000) : 0;
 
     return jsonResponse({
       success: true,
@@ -230,6 +238,7 @@ export async function publicPortfolioByTokenHandler(
           created_at: creator.created_at,
         },
         pitches,
+        og_version,
       },
     }, origin);
   } catch (err) {

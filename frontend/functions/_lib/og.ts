@@ -133,3 +133,37 @@ export function canonicalUrl(request: Request, pathname: string): string {
 }
 
 export const DEFAULT_BACKEND_URL = 'https://pitchey-api-prod.ndlovucavelle.workers.dev';
+
+// User-agent fragments for crawlers that scrape OG meta. Match is
+// case-insensitive substring; order-sensitive (cheaper checks first).
+// Why: per-pitch OG rewriter does an upstream API fetch + HTMLRewrite (~50-150ms
+// added latency). For dedicated share URLs (/portfolio/s, /slates/s) the cost
+// is tolerable, but /pitch/:id is the main detail page hit on every internal
+// nav. Gate the rewrite to bot UAs so humans get the unmodified index.html
+// immediately (and the SPA does its own client-side fetch as before).
+const BOT_UA_FRAGMENTS = [
+  'facebookexternalhit',
+  'twitterbot',
+  'linkedinbot',
+  'slackbot',
+  'discordbot',
+  'whatsapp',
+  'telegrambot',
+  'googlebot',
+  'bingbot',
+  'applebot',
+  'duckduckbot',
+  'yandexbot',
+  'baiduspider',
+  'pinterest',
+  'redditbot',
+  'embedly',
+  'opengraph',  // catches opengraph.xyz and similar validators
+  'metainspector',
+];
+
+export function isCrawlerUA(ua: string | null): boolean {
+  if (!ua) return false;
+  const lower = ua.toLowerCase();
+  return BOT_UA_FRAGMENTS.some(f => lower.includes(f));
+}

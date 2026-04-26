@@ -16,8 +16,10 @@
 const SOCIAL_UNFURL_PATHS = [
   /^\/portfolio\/s\/[^/]+\/?$/,
   /^\/slates\/s\/[^/]+\/?$/,
+  /^\/pitch\/[^/]+\/?$/,
   /^\/og\/portfolio\/[^/]+\/?$/,
   /^\/og\/slate\/[^/]+\/?$/,
+  /^\/og\/pitch\/[^/]+\/?$/,
 ];
 
 export const onRequest: PagesFunction = async (context) => {

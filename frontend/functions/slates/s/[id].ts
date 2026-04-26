@@ -35,6 +35,7 @@ interface SlateApi {
       title: string;
       cover_image: string | null;
     }>;
+    og_version?: number;
   };
 }
 
@@ -67,9 +68,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const pitchCount = slate.pitches.length;
     const pitchWord = pitchCount === 1 ? 'pitch' : 'pitches';
 
-    // Branded composite — phase 2 endpoint renders the card; falls back to raw
-    // image inside that endpoint if rendering fails.
-    const ogImage = canonicalUrl(request, `/og/slate/${slateId}`);
+    // Branded composite. `?v=<og_version>` cache-busts on slate edit / pitch
+    // change (CDN key changes immediately, no manual invalidation).
+    const versionParam = slate.og_version ? `?v=${slate.og_version}` : '';
+    const ogImage = canonicalUrl(request, `/og/slate/${slateId}${versionParam}`);
 
     const description = slate.description?.trim()
       ? clampDescription(slate.description)

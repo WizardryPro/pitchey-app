@@ -532,7 +532,7 @@ export async function publicSlateHandler(
     }
 
     const slateResult = await sql`
-      SELECT s.id, s.title, s.description, s.cover_image, s.created_at,
+      SELECT s.id, s.title, s.description, s.cover_image, s.created_at, s.updated_at,
              u.id AS creator_id, u.name AS creator_name, u.username AS creator_username,
              u.profile_image AS creator_avatar
       FROM slates s
@@ -550,7 +550,7 @@ export async function publicSlateHandler(
              p.title_image AS cover_image,
              COALESCE(p.view_count, 0)::int AS view_count,
              COALESCE(p.like_count, 0)::int AS like_count,
-             p.created_at
+             p.created_at, p.updated_at
       FROM slate_pitches sp
       JOIN pitches p ON p.id = sp.pitch_id
       WHERE sp.slate_id = ${slateId} AND p.status = 'published'
@@ -558,6 +558,13 @@ export async function publicSlateHandler(
     `;
 
     const slate = slateResult[0];
+
+    // og_version = Unix epoch of MAX(slate.updated_at, latest pitch in slate updated_at).
+    const candidateTimes = [slate.updated_at, ...pitches.map((p: any) => p.updated_at)]
+      .filter(Boolean)
+      .map((t: string) => new Date(t).getTime());
+    const og_version = candidateTimes.length > 0 ? Math.floor(Math.max(...candidateTimes) / 1000) : 0;
+
     return jsonResponse({
       success: true,
       data: {
@@ -573,6 +580,7 @@ export async function publicSlateHandler(
           avatar_url: slate.creator_avatar,
         },
         pitches,
+        og_version,
       },
     }, origin);
   } catch (err) {
