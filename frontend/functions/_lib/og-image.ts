@@ -128,35 +128,43 @@ export interface PitchCardProps {
 }
 
 export async function renderPitchCard(p: PitchCardProps): Promise<Response> {
-  // Layered background: brand gradient under cover image with darker overlay
-  // for legibility (loglines are long).
-  const bg = p.coverImageUrl
-    ? `linear-gradient(180deg,rgba(0,0,0,0.30) 0%,rgba(0,0,0,0.88) 100%),url('${escapeHtml(p.coverImageUrl)}')`
-    : GRADIENT_BG;
-  const bgSize = p.coverImageUrl ? 'background-size:cover;background-position:center;' : '';
+  // Layout: brand gradient bg (cheap to encode) with the cover image as a
+  // 360×500 inset on the left. Earlier full-bleed cover-as-bg ballooned the
+  // PNG to ~1MB because workers-og outputs lossless PNG and any photographic
+  // content at 1200×630 RGBA is huge. Gradient pixels compress well; the
+  // photo footprint is now ~30% of the canvas instead of 100%.
 
   const genreBadge = p.genre
-    ? `<div style="display:flex;padding:8px 18px;border-radius:999px;background:rgba(255,255,255,0.18);font-size:20px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;margin-right:16px;">${escapeHtml(p.genre)}</div>`
+    ? `<div style="display:flex;padding:8px 18px;border-radius:999px;background:rgba(255,255,255,0.20);font-size:20px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;margin-right:16px;">${escapeHtml(p.genre)}</div>`
     : '';
 
-  // Loglines run long; clamp ~180 chars so they don't overflow the card.
+  // Loglines run long; clamp ~160 chars to fit the narrower text column.
   const logline = (p.logline || '').trim();
-  const cappedLogline = logline.length > 180 ? logline.slice(0, 179).trimEnd() + '…' : logline;
+  const cappedLogline = logline.length > 160 ? logline.slice(0, 159).trimEnd() + '…' : logline;
   const loglineBlock = cappedLogline
-    ? `<div style="display:flex;font-size:26px;line-height:1.3;opacity:0.92;margin-bottom:32px;max-width:1040px;">${escapeHtml(cappedLogline)}</div>`
+    ? `<div style="display:flex;font-size:24px;line-height:1.35;opacity:0.92;margin-bottom:32px;">${escapeHtml(cappedLogline)}</div>`
+    : '';
+
+  const coverInset = p.coverImageUrl
+    ? `<div style="display:flex;width:360px;height:500px;border-radius:16px;overflow:hidden;background:rgba(0,0,0,0.25);margin-right:60px;flex-shrink:0;">` +
+        `<img src="${escapeHtml(p.coverImageUrl)}" width="360" height="500" style="object-fit:cover;width:360px;height:500px;" />` +
+      `</div>`
     : '';
 
   const html =
-    `<div style="display:flex;flex-direction:column;justify-content:flex-end;width:1200px;height:630px;padding:80px;background:${bg};${bgSize}font-family:Inter;color:white;">` +
-      `<div style="display:flex;align-items:center;margin-bottom:24px;">` +
-        genreBadge +
-        `<div style="display:flex;font-size:20px;font-weight:700;letter-spacing:0.06em;opacity:0.7;text-transform:uppercase;">PITCH</div>` +
-      `</div>` +
-      `<div style="display:flex;font-size:64px;font-weight:700;line-height:1.05;letter-spacing:-0.02em;margin-bottom:20px;max-width:1040px;">${escapeHtml(p.title)}</div>` +
-      loglineBlock +
-      `<div style="display:flex;justify-content:space-between;align-items:flex-end;">` +
-        `<div style="display:flex;font-size:26px;opacity:0.9;">by ${escapeHtml(p.creatorName)}</div>` +
-        `<div style="display:flex;font-size:24px;font-weight:700;opacity:0.6;letter-spacing:-0.02em;">Pitchey</div>` +
+    `<div style="display:flex;align-items:center;width:1200px;height:630px;padding:65px 80px;background:${GRADIENT_BG};font-family:Inter;color:white;">` +
+      coverInset +
+      `<div style="display:flex;flex-direction:column;flex:1;">` +
+        `<div style="display:flex;align-items:center;margin-bottom:20px;">` +
+          genreBadge +
+          `<div style="display:flex;font-size:18px;font-weight:700;letter-spacing:0.06em;opacity:0.65;text-transform:uppercase;">PITCH</div>` +
+        `</div>` +
+        `<div style="display:flex;font-size:54px;font-weight:700;line-height:1.05;letter-spacing:-0.02em;margin-bottom:20px;">${escapeHtml(p.title)}</div>` +
+        loglineBlock +
+        `<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:auto;">` +
+          `<div style="display:flex;font-size:24px;opacity:0.9;">by ${escapeHtml(p.creatorName)}</div>` +
+          `<div style="display:flex;font-size:22px;font-weight:700;opacity:0.6;letter-spacing:-0.02em;">Pitchey</div>` +
+        `</div>` +
       `</div>` +
     `</div>`;
 
