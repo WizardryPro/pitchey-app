@@ -219,7 +219,7 @@ export default function InvestorSaved() {
     switch (priority) {
       case 'high': return 'bg-red-100 text-red-800';
       case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'low': return 'bg-green-100 text-green-800';
+      case 'low': return 'bg-indigo-100 text-indigo-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -228,7 +228,7 @@ export default function InvestorSaved() {
     switch (status) {
       case 'saved': return 'bg-blue-100 text-blue-800';
       case 'under-review': return 'bg-yellow-100 text-yellow-800';
-      case 'interested': return 'bg-green-100 text-green-800';
+      case 'interested': return 'bg-indigo-100 text-indigo-800';
       case 'archived': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -541,7 +541,7 @@ export default function InvestorSaved() {
                         <span className="text-sm font-medium">{pitch.rating}/5</span>
                       </div>
                       {pitch.estimatedROI != null && (
-                        <span className="text-sm text-green-600 font-medium">
+                        <span className="text-sm text-indigo-600 font-medium">
                           Est. ROI: {pitch.estimatedROI}%
                         </span>
                       )}
@@ -647,7 +647,7 @@ export default function InvestorSaved() {
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => { void navigate(`/pitch/${pitch.id}`); }}
-                        className="text-green-600 hover:text-green-700"
+                        className="text-indigo-600 hover:text-indigo-700"
                       >
                         <Eye className="w-4 h-4" />
                       </button>

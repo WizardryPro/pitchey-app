@@ -268,16 +268,16 @@ export default function InvestorActivity() {
     if (isImportant) return 'text-red-500 bg-red-50';
     
     const colorMap: Record<string, string> = {
-      investment: 'text-green-500 bg-green-50',
+      investment: 'text-indigo-500 bg-indigo-50',
       pitch_view: 'text-blue-500 bg-blue-50',
       due_diligence: 'text-purple-500 bg-purple-50',
       portfolio_update: 'text-indigo-500 bg-indigo-50',
       market_alert: 'text-orange-500 bg-orange-50',
-      creator_follow: 'text-teal-500 bg-teal-50',
+      creator_follow: 'text-violet-500 bg-violet-50',
       collaboration: 'text-pink-500 bg-pink-50',
       funding_round: 'text-blue-500 bg-blue-50',
       exit: 'text-yellow-500 bg-yellow-50',
-      dividend: 'text-green-500 bg-green-50'
+      dividend: 'text-indigo-500 bg-indigo-50'
     };
     
     return colorMap[type] || 'text-gray-500 bg-gray-50';
@@ -348,7 +348,7 @@ export default function InvestorActivity() {
             <button
               onClick={markAllAsRead}
               disabled={unreadCount === 0}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
             >
               <CheckCircle className="w-4 h-4 mr-2" />
               Mark All Read
@@ -357,7 +357,7 @@ export default function InvestorActivity() {
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
               {refreshing ? 'Refreshing...' : 'Refresh'}
@@ -551,8 +551,8 @@ export default function InvestorActivity() {
                             </div>
                             {activity.investment.roi && (
                               <div className="flex items-center">
-                                <TrendingUp className="w-4 h-4 mr-1 text-green-500" />
-                                <span className="font-medium text-green-600">
+                                <TrendingUp className="w-4 h-4 mr-1 text-indigo-500" />
+                                <span className="font-medium text-indigo-600">
                                   +{activity.investment.roi}% ROI
                                 </span>
                               </div>

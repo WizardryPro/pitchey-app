@@ -104,11 +104,11 @@ const RiskAssessment = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-600">Diversification</p>
-                      <p className="text-2xl font-bold text-green-600">
+                      <p className="text-2xl font-bold text-indigo-600">
                         {riskData.diversification ?? riskData.diversification_rating ?? 'N/A'}
                       </p>
                     </div>
-                    <CheckCircle className="h-8 w-8 text-green-600" />
+                    <CheckCircle className="h-8 w-8 text-indigo-600" />
                   </div>
                 </CardContent>
               </Card>
@@ -125,14 +125,14 @@ const RiskAssessment = () => {
                   <div>
                     <div className="flex justify-between text-sm mb-2">
                       <span className="text-gray-600 flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <CheckCircle className="w-4 h-4 text-indigo-500" />
                         Low Risk
                       </span>
                       <span className="font-medium">{riskData.lowRisk ?? riskData.low_risk ?? riskData.portfolio?.lowRisk ?? 0}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-3">
                       <div
-                        className="bg-green-500 h-3 rounded-full transition-all duration-300"
+                        className="bg-indigo-500 h-3 rounded-full transition-all duration-300"
                         style={{ width: `${riskData.lowRisk ?? riskData.low_risk ?? riskData.portfolio?.lowRisk ?? 0}%` }}
                       />
                     </div>
@@ -197,7 +197,7 @@ const RiskAssessment = () => {
                         <td className="px-6 py-4 text-sm font-medium text-gray-900">{cat.category || cat.genre}</td>
                         <td className="px-6 py-4 text-center">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            (cat.risk_level || cat.riskLevel) === 'low' ? 'bg-green-100 text-green-800' :
+                            (cat.risk_level || cat.riskLevel) === 'low' ? 'bg-indigo-100 text-indigo-800' :
                             (cat.risk_level || cat.riskLevel) === 'high' ? 'bg-red-100 text-red-800' :
                             'bg-yellow-100 text-yellow-800'
                           }`}>

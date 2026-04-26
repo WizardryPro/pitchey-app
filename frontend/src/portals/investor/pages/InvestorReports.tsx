@@ -54,7 +54,7 @@ const InvestorReports = () => {
       case 'pdf':
         return 'text-red-600 bg-red-100';
       case 'excel':
-        return 'text-green-600 bg-green-100';
+        return 'text-indigo-600 bg-indigo-100';
       case 'csv':
         return 'text-blue-600 bg-blue-100';
       default:
@@ -71,7 +71,7 @@ const InvestorReports = () => {
       case 'tax':
         return 'text-orange-600 bg-orange-100';
       case 'analytics':
-        return 'text-green-600 bg-green-100';
+        return 'text-indigo-600 bg-indigo-100';
       default:
         return 'text-gray-600 bg-gray-100';
     }

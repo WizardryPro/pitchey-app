@@ -193,7 +193,7 @@ const PendingDeals = () => {
       case 'due-diligence':
         return 'text-purple-600 bg-purple-100';
       case 'awaiting-approval':
-        return 'text-green-600 bg-green-100';
+        return 'text-indigo-600 bg-indigo-100';
       case 'expiring-soon':
         return 'text-red-600 bg-red-100';
       default:
@@ -208,7 +208,7 @@ const PendingDeals = () => {
       case 'medium':
         return 'text-yellow-600';
       case 'low':
-        return 'text-green-600';
+        return 'text-indigo-600';
       default:
         return 'text-gray-600';
     }
@@ -217,7 +217,7 @@ const PendingDeals = () => {
   const getRiskColor = (risk: string) => {
     switch (risk) {
       case 'low':
-        return 'text-green-600 bg-green-100';
+        return 'text-indigo-600 bg-indigo-100';
       case 'medium':
         return 'text-yellow-600 bg-yellow-100';
       case 'high':
@@ -309,7 +309,7 @@ const PendingDeals = () => {
                   <p className="text-sm text-gray-600">Total Requested</p>
                   <p className="text-xl font-bold">{formatCurrency(stats.totalRequested)}</p>
                 </div>
-                <DollarSign className="h-8 w-8 text-green-400" />
+                <DollarSign className="h-8 w-8 text-indigo-400" />
               </div>
             </CardContent>
           </Card>
@@ -412,7 +412,7 @@ const PendingDeals = () => {
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Projected ROI</p>
-                          <p className="text-sm font-medium text-green-600">{deal.projectedROI || deal.projected_roi || 0}%</p>
+                          <p className="text-sm font-medium text-indigo-600">{deal.projectedROI || deal.projected_roi || 0}%</p>
                         </div>
                       </div>
 

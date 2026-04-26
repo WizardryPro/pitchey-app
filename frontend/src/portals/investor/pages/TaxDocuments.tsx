@@ -69,7 +69,7 @@ const TaxDocuments = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'available':
-        return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+        return <CheckCircle2 className="h-4 w-4 text-indigo-600" />;
       case 'processing':
         return <Clock className="h-4 w-4 text-yellow-600" />;
       case 'archived':
@@ -82,7 +82,7 @@ const TaxDocuments = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'available':
-        return 'text-green-600 bg-green-100';
+        return 'text-indigo-600 bg-indigo-100';
       case 'processing':
         return 'text-yellow-600 bg-yellow-100';
       case 'archived':

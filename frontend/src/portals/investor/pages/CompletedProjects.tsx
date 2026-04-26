@@ -99,7 +99,7 @@ const CompletedProjects = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
-        return 'text-green-600 bg-green-100';
+        return 'text-indigo-600 bg-indigo-100';
       case 'active':
         return 'text-blue-600 bg-blue-100';
       default:
@@ -192,9 +192,9 @@ const CompletedProjects = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Returns</p>
-                  <p className="text-2xl font-bold text-green-600">{formatCurrency(totalReturns)}</p>
+                  <p className="text-2xl font-bold text-indigo-600">{formatCurrency(totalReturns)}</p>
                 </div>
-                <TrendingUp className="h-8 w-8 text-green-600" />
+                <TrendingUp className="h-8 w-8 text-indigo-600" />
               </div>
             </CardContent>
           </Card>
@@ -302,7 +302,7 @@ const CompletedProjects = () => {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-sm text-gray-600">Returns</span>
-                          <span className="text-sm font-medium text-green-600">{formatCurrency(project.finalReturn || 0)}</span>
+                          <span className="text-sm font-medium text-indigo-600">{formatCurrency(project.finalReturn || 0)}</span>
                         </div>
                         <div className="flex justify-between border-t pt-3">
                           <span className="text-sm font-semibold">ROI</span>

@@ -80,11 +80,11 @@ const MarketTrends = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Market Growth</p>
-                  <p className="text-2xl font-bold text-green-600">
+                  <p className="text-2xl font-bold text-indigo-600">
                     {trendsData != null ? `+${trendsData.marketGrowth ?? 0}%` : 'N/A'}
                   </p>
                 </div>
-                <TrendingUp className="h-8 w-8 text-green-600" />
+                <TrendingUp className="h-8 w-8 text-indigo-600" />
               </div>
             </CardContent>
           </Card>
@@ -168,7 +168,7 @@ const MarketTrends = () => {
                       <tr key={index} className="hover:bg-gray-50">
                         <td className="px-6 py-4 text-sm font-medium text-gray-900">{item.genre || item.name}</td>
                         <td className="px-6 py-4 text-sm text-right text-gray-900">{formatCurrency(item.avg_investment || item.avgInvestment || 0)}</td>
-                        <td className="px-6 py-4 text-sm text-right text-green-600 font-medium">{formatCurrency(item.total_volume || item.totalVolume || 0)}</td>
+                        <td className="px-6 py-4 text-sm text-right text-indigo-600 font-medium">{formatCurrency(item.total_volume || item.totalVolume || 0)}</td>
                       </tr>
                     ))}
                   </tbody>

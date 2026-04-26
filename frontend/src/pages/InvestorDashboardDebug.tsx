@@ -109,7 +109,7 @@ export default function InvestorDashboardDebug() {
             <button 
               onClick={nextPhase}
               disabled={testPhase >= 8}
-              className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400"
+              className="px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:bg-gray-400"
             >
               Next Phase
             </button>
@@ -192,7 +192,7 @@ export default function InvestorDashboardDebug() {
                   <h3 className="text-lg font-medium">Portfolio Overview</h3>
                   <div className="grid grid-cols-2 gap-4 mt-4">
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-green-600">$0</p>
+                      <p className="text-2xl font-bold text-indigo-600">$0</p>
                       <p className="text-sm text-gray-500">Total Invested</p>
                     </div>
                     <div className="text-center">

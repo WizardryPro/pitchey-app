@@ -242,7 +242,7 @@ export default function NDARequests() {
     switch(status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'approved': return 'bg-blue-100 text-blue-800';
-      case 'signed': return 'bg-green-100 text-green-800';
+      case 'signed': return 'bg-indigo-100 text-indigo-800';
       case 'rejected': return 'bg-red-100 text-red-800';
       case 'expired': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
@@ -335,7 +335,7 @@ export default function NDARequests() {
               <CardDescription>Signed</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.signed}</div>
+              <div className="text-2xl font-bold text-indigo-600">{stats.signed}</div>
             </CardContent>
           </Card>
           <Card>
@@ -465,7 +465,7 @@ export default function NDARequests() {
                             <Button
                               variant="default"
                               size="sm"
-                              className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700"
                               onClick={() => handleSignNDA(request.id)}
                               disabled={signingId === request.id}
                             >

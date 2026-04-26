@@ -202,7 +202,7 @@ export default function InvestorAnalytics() {
   const marketTrendChartData = marketTrends.map(trend => ({
     sector: trend.sector,
     growth: trend.growth,
-    fill: trend.growth > 30 ? '#22c55e' :
+    fill: trend.growth > 30 ? '#6366f1' :
           trend.growth > 20 ? '#3b82f6' :
           trend.growth > 15 ? '#fb923c' :
           '#ef4444'
@@ -218,7 +218,7 @@ export default function InvestorAnalytics() {
 
   const riskDistributionData = riskAnalysis
     ? [
-        { name: 'Low Risk', value: riskAnalysis.lowRisk, color: '#22c55e' },
+        { name: 'Low Risk', value: riskAnalysis.lowRisk, color: '#6366f1' },
         { name: 'Medium Risk', value: riskAnalysis.mediumRisk, color: '#fb923c' },
         { name: 'High Risk', value: riskAnalysis.highRisk, color: '#ef4444' }
       ]
@@ -245,7 +245,7 @@ export default function InvestorAnalytics() {
   const getRiskBadgeColor = (level: string) => {
     switch (level) {
       case 'low':
-        return 'bg-green-100 text-green-800';
+        return 'bg-indigo-100 text-indigo-800';
       case 'medium':
         return 'bg-yellow-100 text-yellow-800';
       case 'high':
@@ -592,7 +592,7 @@ export default function InvestorAnalytics() {
                       <div className="text-sm font-medium text-gray-900">{trend.sector}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <div className="text-sm font-semibold text-green-600">
+                      <div className="text-sm font-semibold text-indigo-600">
                         +{trend.growth.toFixed(1)}%
                       </div>
                     </td>
@@ -660,7 +660,7 @@ export default function InvestorAnalytics() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <div className="text-sm font-semibold text-green-600">
+                      <div className="text-sm font-semibold text-indigo-600">
                         +{creator.performance.toFixed(1)}%
                       </div>
                     </td>
@@ -669,7 +669,7 @@ export default function InvestorAnalytics() {
                         <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
                           <div 
                             className={`h-2 rounded-full ${
-                              creator.riskScore <= 2.5 ? 'bg-green-500' :
+                              creator.riskScore <= 2.5 ? 'bg-indigo-500' :
                               creator.riskScore <= 3.5 ? 'bg-yellow-500' :
                               'bg-red-500'
                             }`}

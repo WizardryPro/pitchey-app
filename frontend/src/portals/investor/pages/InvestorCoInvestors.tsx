@@ -152,7 +152,7 @@ export default function InvestorCoInvestors() {
       case 'moderate':
         return 'text-blue-600 bg-blue-100';
       case 'conservative':
-        return 'text-green-600 bg-green-100';
+        return 'text-indigo-600 bg-indigo-100';
       default:
         return 'text-gray-600 bg-gray-100';
     }
@@ -223,7 +223,7 @@ export default function InvestorCoInvestors() {
             </div>
             <div className="bg-white rounded-lg shadow p-4">
               <div className="flex items-center">
-                <TrendingUp className="w-8 h-8 text-green-500" />
+                <TrendingUp className="w-8 h-8 text-indigo-500" />
                 <div className="ml-3">
                   <p className="text-sm text-gray-500">Opportunities</p>
                   <p className="text-xl font-semibold text-gray-900">{coInvestors.filter(i => i.connectionStatus === 'connected').length} Active</p>
@@ -318,7 +318,7 @@ export default function InvestorCoInvestors() {
                               cx="40"
                               cy="40"
                               r="36"
-                              stroke={investor.compatibility >= 80 ? '#10b981' : investor.compatibility >= 60 ? '#3b82f6' : '#f59e0b'}
+                              stroke={investor.compatibility >= 80 ? '#6366f1' : investor.compatibility >= 60 ? '#3b82f6' : '#f59e0b'}
                               strokeWidth="8"
                               fill="none"
                               strokeDasharray={`${(investor.compatibility / 100) * 226.2} 226.2`}
@@ -349,7 +349,7 @@ export default function InvestorCoInvestors() {
                       </div>
                       <div>
                         <p className="text-xs text-gray-500">Success Rate</p>
-                        <p className="text-lg font-semibold text-green-600">{investor.stats.successRate}%</p>
+                        <p className="text-lg font-semibold text-indigo-600">{investor.stats.successRate}%</p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-500">Portfolio Value</p>
@@ -397,14 +397,14 @@ export default function InvestorCoInvestors() {
                           <>
                             <button
                               onClick={() => navigate('/investor/deals')}
-                              className="inline-flex items-center px-4 py-2 border border-green-600 rounded-md text-sm font-medium text-green-600 hover:bg-green-50"
+                              className="inline-flex items-center px-4 py-2 border border-indigo-600 rounded-md text-sm font-medium text-indigo-600 hover:bg-indigo-50"
                             >
                               <Eye className="w-4 h-4 mr-2" />
                               View Shared Deals
                             </button>
                             <button
                               onClick={() => navigate('/investor/discover')}
-                              className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700"
+                              className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700"
                             >
                               <DollarSign className="w-4 h-4 mr-2" />
                               Propose Co-Investment
@@ -426,7 +426,7 @@ export default function InvestorCoInvestors() {
                       </div>
                       <button
                         onClick={() => navigate(`/investor/co-investor/${investor.id}`)}
-                        className="text-green-600 hover:text-purple-700 text-sm font-medium"
+                        className="text-indigo-600 hover:text-purple-700 text-sm font-medium"
                       >
                         View Full Profile →
                       </button>

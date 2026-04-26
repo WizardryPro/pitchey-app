@@ -229,7 +229,7 @@ export default function InvestorStats() {
     const colors: { [key: string]: string } = {
       blue: 'text-blue-600 bg-blue-50',
       red: 'text-red-600 bg-red-50',
-      green: 'text-green-600 bg-green-50',
+      green: 'text-indigo-600 bg-indigo-50',
       purple: 'text-purple-600 bg-purple-50',
       yellow: 'text-yellow-600 bg-yellow-50',
       orange: 'text-orange-600 bg-orange-50'
@@ -320,8 +320,8 @@ export default function InvestorStats() {
                     <div className="flex items-center gap-1 text-sm mb-1">
                       {stat.trend === 'up' ? (
                         <>
-                          <ArrowUp className="w-4 h-4 text-green-600" />
-                          <span className="text-green-600">+{stat.change}%</span>
+                          <ArrowUp className="w-4 h-4 text-indigo-600" />
+                          <span className="text-indigo-600">+{stat.change}%</span>
                         </>
                       ) : stat.trend === 'down' ? (
                         <>
@@ -356,16 +356,16 @@ export default function InvestorStats() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Unrealized Gains</span>
-                  <span className="font-semibold text-green-600">{formatCurrency(metrics.unrealizedGains)}</span>
+                  <span className="font-semibold text-indigo-600">{formatCurrency(metrics.unrealizedGains)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Realized Gains</span>
-                  <span className="font-semibold text-green-600">{formatCurrency(metrics.realizedGains)}</span>
+                  <span className="font-semibold text-indigo-600">{formatCurrency(metrics.realizedGains)}</span>
                 </div>
                 <div className="pt-4 border-t">
                   <div className="flex justify-between">
                     <span className="text-sm font-medium text-gray-900">Net Gain</span>
-                    <span className="font-bold text-green-600">
+                    <span className="font-bold text-indigo-600">
                       {formatCurrency(metrics.unrealizedGains + metrics.realizedGains)}
                     </span>
                   </div>
@@ -424,7 +424,7 @@ export default function InvestorStats() {
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div 
-                      className="bg-green-600 h-2 rounded-full transition-all duration-300" 
+                      className="bg-indigo-600 h-2 rounded-full transition-all duration-300" 
                       style={{ width: `${metrics.hitRate}%` }}
                     />
                   </div>

@@ -121,9 +121,9 @@ const BudgetAllocation = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Utilization</p>
-                  <p className="text-2xl font-bold text-green-600">{utilization.toFixed(1)}%</p>
+                  <p className="text-2xl font-bold text-indigo-600">{utilization.toFixed(1)}%</p>
                 </div>
-                <Calculator className="h-8 w-8 text-green-600" />
+                <Calculator className="h-8 w-8 text-indigo-600" />
               </div>
             </CardContent>
           </Card>

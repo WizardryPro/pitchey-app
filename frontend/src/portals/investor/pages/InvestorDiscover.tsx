@@ -292,7 +292,7 @@ const InvestorDiscover = () => {
           </div>
           <Link
             to="/marketplace"
-            className="text-sm text-green-600 hover:text-green-700 flex items-center gap-1 mt-2"
+            className="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1 mt-2"
           >
             <Home className="w-4 h-4" />
             All Pitches
@@ -413,7 +413,7 @@ const PitchCard = ({ pitch, viewMode }: { pitch: PitchItem; viewMode: 'grid' | '
                 <p className="text-sm text-gray-500 mt-1">{pitch.description}</p>
               </div>
               <div className="text-right">
-                <div className="text-lg font-bold text-green-600">{pitch.roi}</div>
+                <div className="text-lg font-bold text-indigo-600">{pitch.roi}</div>
                 <div className="text-sm text-gray-500">Est. ROI</div>
                 <div className="mt-2">
                   <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full">
@@ -454,7 +454,7 @@ const PitchCard = ({ pitch, viewMode }: { pitch: PitchItem; viewMode: 'grid' | '
           </div>
           <div>
             <div className="text-xs text-gray-500">Est. ROI</div>
-            <div className="font-semibold text-green-600">{pitch.roi}</div>
+            <div className="font-semibold text-indigo-600">{pitch.roi}</div>
           </div>
         </div>
         <div className="flex justify-between items-center">

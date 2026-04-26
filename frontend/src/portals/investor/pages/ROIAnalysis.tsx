@@ -98,7 +98,7 @@ const ROIAnalysis = () => {
 
   const monthlyROIData = trendData;
 
-  const pieColors = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899'];
+  const pieColors = ['#8b5cf6', '#3b82f6', '#6366f1', '#f59e0b', '#ef4444', '#ec4899'];
 
   // Calculate metrics from summary and category data
   const totalInvested = roiSummary?.total_investments || 0;
@@ -209,10 +209,10 @@ const ROIAnalysis = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Returns</p>
-                  <p className="text-2xl font-bold text-green-600">{formatCurrency(totalReturned)}</p>
+                  <p className="text-2xl font-bold text-indigo-600">{formatCurrency(totalReturned)}</p>
                   <p className="text-xs text-gray-500 mt-1">+{formatCurrency(totalReturned - totalInvested)} profit</p>
                 </div>
-                <TrendingUp className="h-8 w-8 text-green-600" />
+                <TrendingUp className="h-8 w-8 text-indigo-600" />
               </div>
             </CardContent>
           </Card>
@@ -323,7 +323,7 @@ const ROIAnalysis = () => {
                 <Tooltip formatter={(value: any) => formatCurrency(value as number)} />
                 <Legend />
                 <Bar dataKey="invested" fill="#8b5cf6" name="Invested" />
-                <Bar dataKey="returned" fill="#10b981" name="Returned" />
+                <Bar dataKey="returned" fill="#6366f1" name="Returned" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -395,7 +395,7 @@ const ROIAnalysis = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {metric.avg_roi > 50 ? (
-                            <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                            <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-indigo-100 text-indigo-800 rounded-full">
                               <CheckCircle className="h-3 w-3 mr-1" />
                               Excellent
                             </span>

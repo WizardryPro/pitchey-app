@@ -167,7 +167,7 @@ export default function InvestorProductionCompanies() {
       case 'independent':
         return 'text-blue-600 bg-blue-100';
       case 'boutique':
-        return 'text-green-600 bg-green-100';
+        return 'text-indigo-600 bg-indigo-100';
       case 'streaming':
         return 'text-orange-600 bg-orange-100';
       default:
@@ -178,7 +178,7 @@ export default function InvestorProductionCompanies() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'partner':
-        return 'text-green-800 bg-green-100';
+        return 'text-indigo-800 bg-indigo-100';
       case 'in-talks':
         return 'text-yellow-800 bg-yellow-100';
       case 'available':
@@ -197,7 +197,7 @@ export default function InvestorProductionCompanies() {
       case 'post-production':
         return 'text-orange-600';
       case 'distribution':
-        return 'text-green-600';
+        return 'text-indigo-600';
       default:
         return 'text-gray-600';
     }
@@ -264,7 +264,7 @@ export default function InvestorProductionCompanies() {
             </div>
             <div className="bg-white rounded-lg shadow p-4">
               <div className="flex items-center">
-                <DollarSign className="w-8 h-8 text-green-500" />
+                <DollarSign className="w-8 h-8 text-indigo-500" />
                 <div className="ml-3">
                   <p className="text-sm text-gray-500">Opportunities</p>
                   <p className="text-xl font-semibold text-gray-900">{totalInvestmentOpportunities}</p>
@@ -381,7 +381,7 @@ export default function InvestorProductionCompanies() {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Success Rate</p>
-                    <p className="text-lg font-semibold text-green-600">{company.stats.successRate}%</p>
+                    <p className="text-lg font-semibold text-indigo-600">{company.stats.successRate}%</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Awards</p>
@@ -389,7 +389,7 @@ export default function InvestorProductionCompanies() {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Avg ROI</p>
-                    <p className="text-lg font-semibold text-green-600">{company.investmentHistory.avgROI}%</p>
+                    <p className="text-lg font-semibold text-indigo-600">{company.investmentHistory.avgROI}%</p>
                   </div>
                 </div>
 
@@ -431,7 +431,7 @@ export default function InvestorProductionCompanies() {
                           {project.investmentNeeded && (
                             <div className="text-right">
                               <p className="text-xs text-gray-500">Seeking</p>
-                              <p className="text-sm font-semibold text-green-600">
+                              <p className="text-sm font-semibold text-indigo-600">
                                 {formatCurrency(project.investmentNeeded)}
                               </p>
                             </div>
@@ -452,7 +452,7 @@ export default function InvestorProductionCompanies() {
                           <Star className="w-4 h-4 text-yellow-400" />
                           <span className="text-gray-700">{success.title} ({success.year})</span>
                           {success.boxOffice && (
-                            <span className="text-green-600 font-medium">
+                            <span className="text-indigo-600 font-medium">
                               {formatCurrency(success.boxOffice)}
                             </span>
                           )}
@@ -468,7 +468,7 @@ export default function InvestorProductionCompanies() {
                     {company.connectionStatus === 'partner' ? (
                       <button
                         onClick={() => navigate('/investor/discover')}
-                        className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700"
+                        className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700"
                       >
                         <Briefcase className="w-4 h-4 mr-2" />
                         View Opportunities
@@ -490,7 +490,7 @@ export default function InvestorProductionCompanies() {
                   </div>
                   <button
                     onClick={() => navigate(`/production/${company.id}`)}
-                    className="text-green-600 hover:text-purple-700 text-sm font-medium"
+                    className="text-indigo-600 hover:text-purple-700 text-sm font-medium"
                   >
                     View Full Profile →
                   </button>

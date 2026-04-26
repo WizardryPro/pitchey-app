@@ -323,7 +323,7 @@ const InvestorWallet = () => {
   const getTransactionStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
+        return <CheckCircle className="h-4 w-4 text-indigo-600" />;
       case 'failed':
         return <XCircle className="h-4 w-4 text-red-600" />;
       case 'pending':
@@ -338,7 +338,7 @@ const InvestorWallet = () => {
       case 'security':
         return <AlertCircle className="h-4 w-4 text-red-600" />;
       case 'success':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
+        return <CheckCircle className="h-4 w-4 text-indigo-600" />;
       case 'info':
         return <Bell className="h-4 w-4 text-blue-600" />;
       default:
@@ -390,7 +390,7 @@ const InvestorWallet = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm text-muted-foreground">Available</p>
-                  <DollarSign className="h-4 w-4 text-green-600" />
+                  <DollarSign className="h-4 w-4 text-indigo-600" />
                 </div>
                 <p className="text-2xl font-bold">{formatCurrency(wallet.balance.available)}</p>
                 <p className="text-xs text-muted-foreground mt-1">Ready to invest</p>

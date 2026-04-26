@@ -69,7 +69,7 @@ export function InvestorNavigation({ user, onLogout }: InvestorNavigationProps) 
           </SheetTrigger>
           <SheetContent side="left" className="w-80 p-0 bg-white">
             <SheetHeader className="px-6 py-4 border-b bg-white">
-              <SheetTitle className="text-xl font-bold text-green-600">Menu</SheetTitle>
+              <SheetTitle className="text-xl font-bold text-indigo-600">Menu</SheetTitle>
             </SheetHeader>
             <div className="px-4 py-4 bg-white">
               <Accordion type="single" collapsible className="w-full">
@@ -85,28 +85,28 @@ export function InvestorNavigation({ user, onLogout }: InvestorNavigationProps) 
                     <div className="flex flex-col gap-1 pl-6">
                       <button
                         onClick={() => handleNavigation('/investor/dashboard')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <Home className="w-4 h-4" />
                         Overview
                       </button>
                       <button
                         onClick={() => handleNavigation('/investor/analytics')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <BarChart3 className="w-4 h-4" />
                         Investment Analytics
                       </button>
                       <button
                         onClick={() => handleNavigation('/investor/performance-tracking')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <LineChart className="w-4 h-4" />
                         Performance Tracking
                       </button>
                       <button
                         onClick={() => handleNavigation('/investor/activity')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <Calendar className="w-4 h-4" />
                         Recent Activity
@@ -127,42 +127,42 @@ export function InvestorNavigation({ user, onLogout }: InvestorNavigationProps) 
                     <div className="flex flex-col gap-1 pl-6">
                       <button
                         onClick={() => handleNavigation('/investor/discover')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <Globe className="w-4 h-4" />
                         All Pitches
                       </button>
                       <button
                         onClick={() => handleNavigation('/investor/discover?tab=trending')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <TrendingUp className="w-4 h-4" />
                         Trending Now
                       </button>
                       <button
                         onClick={() => handleNavigation('/investor/discover?tab=new')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <Star className="w-4 h-4" />
                         New Opportunities
                       </button>
                       <button
                         onClick={() => handleNavigation('/investor/discover?tab=featured')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <Award className="w-4 h-4" />
                         Featured Projects
                       </button>
                       <button
                         onClick={() => handleNavigation('/investor/discover?tab=high-potential')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <ArrowUpRight className="w-4 h-4" />
                         High Potential
                       </button>
                       <button
                         onClick={() => handleNavigation('/investor/discover/genres')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <Filter className="w-4 h-4" />
                         Browse by Genre
@@ -183,42 +183,42 @@ export function InvestorNavigation({ user, onLogout }: InvestorNavigationProps) 
                     <div className="flex flex-col gap-1 pl-6">
                       <button
                         onClick={() => handleNavigation('/investor/all-investments')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <Briefcase className="w-4 h-4" />
                         All Investments
                       </button>
                       <button
                         onClick={() => handleNavigation('/investor/portfolio/active')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <Activity className="w-4 h-4" />
                         Active Projects
                       </button>
                       <button
                         onClick={() => handleNavigation('/investor/pending-deals')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <History className="w-4 h-4" />
                         Pending Deals
                       </button>
                       <button
                         onClick={() => handleNavigation('/investor/completed-projects')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <FileText className="w-4 h-4" />
                         Completed Projects
                       </button>
                       <button
                         onClick={() => handleNavigation('/investor/saved')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <Bookmark className="w-4 h-4" />
                         Saved Pitches
                       </button>
                       <button
                         onClick={() => handleNavigation('/investor/ndas')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <Shield className="w-4 h-4" />
                         NDA Management
@@ -239,28 +239,28 @@ export function InvestorNavigation({ user, onLogout }: InvestorNavigationProps) 
                     <div className="flex flex-col gap-1 pl-6">
                       <button
                         onClick={() => handleNavigation('/investor/network')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <Users className="w-4 h-4" />
                         My Network
                       </button>
                       <button
                         onClick={() => handleNavigation('/investor/creators')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <User className="w-4 h-4" />
                         Connected Creators
                       </button>
                       <button
                         onClick={() => handleNavigation('/investor/co-investors')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <HandshakeIcon className="w-4 h-4" />
                         Co-Investors
                       </button>
                       <button
                         onClick={() => handleNavigation('/investor/production-companies')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <Building2 className="w-4 h-4" />
                         Production Companies
@@ -281,28 +281,28 @@ export function InvestorNavigation({ user, onLogout }: InvestorNavigationProps) 
                     <div className="flex flex-col gap-1 pl-6">
                       <button
                         onClick={() => handleNavigation('/investor/analytics')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <BarChart3 className="w-4 h-4" />
                         Investment Overview
                       </button>
                       <button
                         onClick={() => handleNavigation('/investor/roi-analysis')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <TrendingUp className="w-4 h-4" />
                         ROI Analysis
                       </button>
                       <button
                         onClick={() => handleNavigation('/investor/market-trends')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <LineChart className="w-4 h-4" />
                         Market Trends
                       </button>
                       <button
                         onClick={() => handleNavigation('/investor/risk-assessment')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <TrendingDown className="w-4 h-4" />
                         Risk Assessment
@@ -323,28 +323,28 @@ export function InvestorNavigation({ user, onLogout }: InvestorNavigationProps) 
                     <div className="flex flex-col gap-1 pl-6">
                       <button
                         onClick={() => handleNavigation('/investor/financial-overview')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <Wallet className="w-4 h-4" />
                         Financial Overview
                       </button>
                       <button
                         onClick={() => handleNavigation('/investor/transaction-history')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <DollarSign className="w-4 h-4" />
                         Transaction History
                       </button>
                       <button
                         onClick={() => handleNavigation('/investor/budget-allocation')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <PieChart className="w-4 h-4" />
                         Budget Allocation
                       </button>
                       <button
                         onClick={() => handleNavigation('/investor/tax-documents')}
-                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 py-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                       >
                         <FileText className="w-4 h-4" />
                         Tax Documents
@@ -356,9 +356,9 @@ export function InvestorNavigation({ user, onLogout }: InvestorNavigationProps) 
 
               {/* User Profile Section */}
               <div className="mt-6 pt-6 border-t">
-                <div className="flex items-center gap-3 px-2 py-3 bg-green-50 rounded-lg">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                    <CircleUser className="w-6 h-6 text-green-600" />
+                <div className="flex items-center gap-3 px-2 py-3 bg-indigo-50 rounded-lg">
+                  <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                    <CircleUser className="w-6 h-6 text-indigo-600" />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-semibold">{user?.firstName ?? 'Investor'} {user?.lastName ?? ''}</p>
@@ -368,14 +368,14 @@ export function InvestorNavigation({ user, onLogout }: InvestorNavigationProps) 
                 <div className="mt-2 flex flex-col gap-1">
                   <button
                     onClick={() => handleNavigation('/investor/profile')}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                   >
                     <User className="w-4 h-4" />
                     View Profile
                   </button>
                   <button
                     onClick={() => handleNavigation('/investor/settings')}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                   >
                     <Settings className="w-4 h-4" />
                     Settings
@@ -395,7 +395,7 @@ export function InvestorNavigation({ user, onLogout }: InvestorNavigationProps) 
 
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2" data-discover="true">
-          <span className="text-xl sm:text-2xl font-bold text-green-600">Pitchey</span>
+          <span className="text-xl sm:text-2xl font-bold text-indigo-600">Pitchey</span>
         </Link>
       </div>
 
@@ -403,7 +403,7 @@ export function InvestorNavigation({ user, onLogout }: InvestorNavigationProps) 
       <nav className="hidden xl:flex items-center gap-1">
         {/* Dashboard Dropdown - Matches mobile menu */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors cursor-pointer">
+          <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer">
             <Home className="w-4 h-4" aria-hidden="true" />
             <span>Dashboard</span>
             <ChevronDown className="w-4 h-4 ml-1" aria-hidden="true" />
@@ -430,7 +430,7 @@ export function InvestorNavigation({ user, onLogout }: InvestorNavigationProps) 
 
         {/* Discover Dropdown - Matches mobile menu */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors cursor-pointer">
+          <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer">
             <Globe className="w-4 h-4" aria-hidden="true" />
             <span>Discover</span>
             <ChevronDown className="w-4 h-4 ml-1" aria-hidden="true" />
@@ -465,7 +465,7 @@ export function InvestorNavigation({ user, onLogout }: InvestorNavigationProps) 
 
         {/* Portfolio Dropdown - Matches mobile menu */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors cursor-pointer">
+          <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer">
             <Briefcase className="w-4 h-4" aria-hidden="true" />
             <span>Portfolio</span>
             <ChevronDown className="w-4 h-4 ml-1" aria-hidden="true" />
@@ -500,7 +500,7 @@ export function InvestorNavigation({ user, onLogout }: InvestorNavigationProps) 
 
         {/* Network Dropdown - Matches mobile menu */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors cursor-pointer">
+          <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer">
             <Users className="w-4 h-4" aria-hidden="true" />
             <span>Network</span>
             <ChevronDown className="w-4 h-4 ml-1" aria-hidden="true" />
@@ -527,7 +527,7 @@ export function InvestorNavigation({ user, onLogout }: InvestorNavigationProps) 
 
         {/* Analytics Dropdown - Matches mobile menu */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors cursor-pointer">
+          <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer">
             <PieChart className="w-4 h-4" aria-hidden="true" />
             <span>Analytics</span>
             <ChevronDown className="w-4 h-4 ml-1" aria-hidden="true" />
@@ -554,7 +554,7 @@ export function InvestorNavigation({ user, onLogout }: InvestorNavigationProps) 
 
         {/* Financials Dropdown - Matches mobile menu */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors cursor-pointer">
+          <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer">
             <Wallet className="w-4 h-4" aria-hidden="true" />
             <span>Financials</span>
             <ChevronDown className="w-4 h-4 ml-1" aria-hidden="true" />
@@ -585,7 +585,7 @@ export function InvestorNavigation({ user, onLogout }: InvestorNavigationProps) 
         {/* Notification Bell */}
         <div className="relative">
           <button 
-            className="relative p-2 rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200"
+            className="relative p-2 rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200"
             aria-label="Notifications"
             title="Notifications"
             onClick={() => handleNavigation('/investor/notifications')}
@@ -602,8 +602,8 @@ export function InvestorNavigation({ user, onLogout }: InvestorNavigationProps) 
         {/* User Profile Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center gap-2 cursor-pointer">
-            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-              <CircleUser className="w-5 h-5 text-green-600" aria-hidden="true" />
+            <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+              <CircleUser className="w-5 h-5 text-indigo-600" aria-hidden="true" />
             </div>
             <ChevronDown className="w-4 h-4 text-gray-600" aria-hidden="true" />
           </DropdownMenuTrigger>
@@ -612,7 +612,7 @@ export function InvestorNavigation({ user, onLogout }: InvestorNavigationProps) 
               <div className="flex flex-col">
                 <span className="font-semibold">{user?.firstName ?? 'Investor'} {user?.lastName ?? ''}</span>
                 <span className="text-sm text-gray-500">{user?.email}</span>
-                <span className="text-xs text-green-600 mt-1">Accredited Investor</span>
+                <span className="text-xs text-indigo-600 mt-1">Accredited Investor</span>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />

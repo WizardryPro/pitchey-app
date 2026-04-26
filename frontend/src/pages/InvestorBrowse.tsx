@@ -244,7 +244,7 @@ export default function InvestorBrowse() {
 
   const getRiskColor = (risk?: string) => {
     switch (risk) {
-      case 'low': return 'bg-white text-green-800 shadow-sm';
+      case 'low': return 'bg-white text-indigo-800 shadow-sm';
       case 'medium': return 'bg-white text-yellow-800 shadow-sm';
       case 'high': return 'bg-white text-red-800 shadow-sm';
       default: return 'bg-white text-gray-800 shadow-sm';
@@ -256,7 +256,7 @@ export default function InvestorBrowse() {
       case 'Development': return 'bg-white text-blue-800 shadow-sm';
       case 'Pre-Production': return 'bg-white text-purple-800 shadow-sm';
       case 'Financing': return 'bg-white text-orange-800 shadow-sm';
-      case 'Post-Production': return 'bg-white text-green-800 shadow-sm';
+      case 'Post-Production': return 'bg-white text-indigo-800 shadow-sm';
       default: return 'bg-white text-gray-800 shadow-sm';
     }
   };
@@ -578,6 +578,10 @@ export default function InvestorBrowse() {
                         {pitch.viewCount}
                       </span>
                       <span className="flex items-center gap-1">
+                        <Heart className="w-4 h-4 text-red-500 fill-red-500" />
+                        {pitch.likeCount || 0}
+                      </span>
+                      <span className="flex items-center gap-1">
                         <Shield className="w-4 h-4" />
                         {pitch.ndaCount}
                       </span>
@@ -597,7 +601,7 @@ export default function InvestorBrowse() {
                       </div>
                       <div>
                         <p className="text-gray-600">Expected ROI</p>
-                        <p className="font-semibold text-green-600">{pitch.expectedROI}</p>
+                        <p className="font-semibold text-indigo-600">{pitch.expectedROI}</p>
                       </div>
                       <div>
                         <p className="text-gray-600">Stage</p>
@@ -646,14 +650,14 @@ export default function InvestorBrowse() {
                   <div className="flex space-x-2 mt-2">
                     <button
                       onClick={() => handleScheduleMeeting(pitch)}
-                      className="flex-1 text-center py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition text-sm flex items-center justify-center gap-1"
+                      className="flex-1 text-center py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition text-sm flex items-center justify-center gap-1"
                     >
                       <Calendar className="w-4 h-4" />
                       Schedule Meeting
                     </button>
                     <button
                       onClick={() => handleMakeOffer(pitch)}
-                      className="flex-1 text-center py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition text-sm flex items-center justify-center gap-1"
+                      className="flex-1 text-center py-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-lg hover:from-indigo-700 hover:to-violet-700 transition text-sm flex items-center justify-center gap-1"
                     >
                       <DollarSign className="w-4 h-4" />
                       Make Offer

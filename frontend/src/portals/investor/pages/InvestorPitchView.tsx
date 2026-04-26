@@ -401,7 +401,7 @@ const InvestorPitchView: React.FC = () => {
 
   const getCategoryIcon = (category: InvestmentNote['category']) => {
     switch (category) {
-      case 'strength': return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case 'strength': return <CheckCircle className="h-4 w-4 text-indigo-600" />;
       case 'concern': return <XCircle className="h-4 w-4 text-red-600" />;
       case 'question': return <AlertCircle className="h-4 w-4 text-yellow-600" />;
       default: return <MessageSquare className="h-4 w-4 text-gray-600" />;
@@ -410,7 +410,7 @@ const InvestorPitchView: React.FC = () => {
 
   const getRiskColor = (level: string) => {
     switch (level) {
-      case 'low': return 'text-green-600';
+      case 'low': return 'text-indigo-600';
       case 'high': return 'text-red-600';
       default: return 'text-yellow-600';
     }
@@ -418,7 +418,7 @@ const InvestorPitchView: React.FC = () => {
 
   const getRiskBarColor = (level: string) => {
     switch (level) {
-      case 'low': return 'bg-green-500';
+      case 'low': return 'bg-indigo-500';
       case 'high': return 'bg-red-500';
       default: return 'bg-yellow-500';
     }
@@ -451,7 +451,7 @@ const InvestorPitchView: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -459,7 +459,7 @@ const InvestorPitchView: React.FC = () => {
 
   if (error || !pitch) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-8">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-8">
         <div className="max-w-4xl mx-auto">
           <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Error Loading Pitch</h2>
@@ -477,10 +477,10 @@ const InvestorPitchView: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       {/* Success Toast */}
       {actionSuccess && (
-        <div className="fixed top-4 right-4 z-50 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center">
+        <div className="fixed top-4 right-4 z-50 bg-indigo-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center">
           <CheckCircle className="h-5 w-5 mr-2" />
           {actionSuccess}
         </div>
@@ -595,7 +595,7 @@ const InvestorPitchView: React.FC = () => {
                   <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
                     {pitch.genre}
                   </span>
-                  <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+                  <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm">
                     <FormatDisplay
                       formatCategory={(pitch as any).formatCategory}
                       formatSubtype={(pitch as any).formatSubtype}
@@ -698,7 +698,7 @@ const InvestorPitchView: React.FC = () => {
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <span className="text-sm text-gray-600">Projected ROI</span>
-                            <p className="text-xl font-bold text-green-600">
+                            <p className="text-xl font-bold text-indigo-600">
                               {roiCalculation.roi.toFixed(1)}%
                             </p>
                           </div>
@@ -728,7 +728,7 @@ const InvestorPitchView: React.FC = () => {
 
                 {/* Revenue Projections */}
                 {pitch.revenueProjections && (
-                  <div className="p-6 bg-green-50 rounded-lg">
+                  <div className="p-6 bg-indigo-50 rounded-lg">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Projections</h3>
                     <p className="text-gray-700">{pitch.revenueProjections}</p>
                   </div>
@@ -766,7 +766,7 @@ const InvestorPitchView: React.FC = () => {
                       <label htmlFor={`diligence-${key}`} className="ml-3 flex-1 text-gray-700 capitalize">
                         {key.replace(/([A-Z])/g, ' $1').trim()}
                       </label>
-                      {value && <CheckCircle className="h-5 w-5 text-green-600" />}
+                      {value && <CheckCircle className="h-5 w-5 text-indigo-600" />}
                     </div>
                   ))}
                 </div>
@@ -853,7 +853,7 @@ const InvestorPitchView: React.FC = () => {
                   className={`w-full flex items-center justify-between px-4 py-2 rounded-lg ${
                     pitchDetail?.hasExpressedInterest
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-indigo-600 text-white hover:bg-indigo-700'
                   }`}
                 >
                   <span>{pitchDetail?.hasExpressedInterest ? 'Interest Expressed' : 'Express Interest'}</span>
@@ -872,7 +872,7 @@ const InvestorPitchView: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setShowInfoModal(true)}
-                  className="w-full flex items-center justify-between px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  className="w-full flex items-center justify-between px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                 >
                   <span>Request More Info</span>
                   <ChevronRight className="h-4 w-4" />
@@ -900,7 +900,7 @@ const InvestorPitchView: React.FC = () => {
                     <TrendingUp className="h-4 w-4 mr-2" />
                     Expected ROI
                   </span>
-                  <span className="font-semibold text-green-600">
+                  <span className="font-semibold text-indigo-600">
                     {pitchDetail?.expectedROI != null ? `${pitchDetail.expectedROI}%` : 'N/A'}
                   </span>
                 </div>
@@ -973,7 +973,7 @@ const InvestorPitchView: React.FC = () => {
                 <div className="pt-2 flex items-center justify-between">
                   <span className="text-sm text-gray-600">Overall Risk</span>
                   <span className={`text-sm font-semibold capitalize px-2 py-0.5 rounded ${
-                    pitchDetail?.riskLevel === 'low' ? 'bg-green-100 text-green-700' :
+                    pitchDetail?.riskLevel === 'low' ? 'bg-indigo-100 text-indigo-700' :
                     pitchDetail?.riskLevel === 'high' ? 'bg-red-100 text-red-700' :
                     'bg-yellow-100 text-yellow-700'
                   }`}>
@@ -1044,7 +1044,7 @@ const InvestorPitchView: React.FC = () => {
                   value={interestForm.amount}
                   onChange={(e) => setInterestForm(prev => ({ ...prev, amount: e.target.value }))}
                   placeholder="e.g. 50000"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
               <div>
@@ -1055,7 +1055,7 @@ const InvestorPitchView: React.FC = () => {
                   id="interest-level"
                   value={interestForm.level}
                   onChange={(e) => setInterestForm(prev => ({ ...prev, level: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -1072,7 +1072,7 @@ const InvestorPitchView: React.FC = () => {
                   value={interestForm.message}
                   onChange={(e) => setInterestForm(prev => ({ ...prev, message: e.target.value }))}
                   placeholder="Tell the creator why you're interested..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   rows={3}
                 />
               </div>
@@ -1087,7 +1087,7 @@ const InvestorPitchView: React.FC = () => {
                 <button
                   onClick={handleExpressInterest}
                   disabled={actionLoading || !interestForm.amount}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
                   {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Submit'}
                 </button>

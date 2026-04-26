@@ -158,7 +158,7 @@ export default function InvestorNetwork() {
   const getMemberColor = (type: string) => {
     switch (type) {
       case 'investor':
-        return 'text-green-600 bg-green-100';
+        return 'text-indigo-600 bg-indigo-100';
       case 'creator':
         return 'text-purple-600 bg-purple-100';
       case 'production':
@@ -193,7 +193,7 @@ export default function InvestorNetwork() {
           </p>
           <div className="mt-4 flex items-center space-x-6 text-sm">
             <div className="flex items-center">
-              <UserCheck className="w-4 h-4 text-green-500 mr-1" />
+              <UserCheck className="w-4 h-4 text-indigo-500 mr-1" />
               <span className="text-gray-700">
                 <span className="font-semibold">{connectedCount}</span> Connections
               </span>
@@ -279,7 +279,7 @@ export default function InvestorNetwork() {
                     {/* Connection Status */}
                     <div>
                       {member.connectionStatus === 'connected' ? (
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
                           <Check className="w-3 h-3 mr-1" />
                           Connected
                         </span>
@@ -332,7 +332,7 @@ export default function InvestorNetwork() {
                     )}
                     {member.stats.successRate !== undefined && (
                       <div className="flex items-center">
-                        <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
+                        <TrendingUp className="w-4 h-4 text-indigo-500 mr-1" />
                         <span className="font-semibold text-gray-900">{member.stats.successRate}%</span>
                       </div>
                     )}
@@ -366,7 +366,7 @@ export default function InvestorNetwork() {
                     </div>
                     <button
                       onClick={() => navigate(`/network/${member.id}`)}
-                      className="text-green-600 hover:text-purple-700 font-medium"
+                      className="text-indigo-600 hover:text-purple-700 font-medium"
                     >
                       View Profile
                     </button>

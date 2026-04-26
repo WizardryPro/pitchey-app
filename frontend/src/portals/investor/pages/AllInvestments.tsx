@@ -183,7 +183,7 @@ const AllInvestments = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'active':
-        return <PlayCircle className="h-4 w-4 text-green-600" />;
+        return <PlayCircle className="h-4 w-4 text-indigo-600" />;
       case 'completed':
         return <CheckCircle className="h-4 w-4 text-blue-600" />;
       case 'on-hold':
@@ -200,7 +200,7 @@ const AllInvestments = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
-        return 'text-green-600 bg-green-100';
+        return 'text-indigo-600 bg-indigo-100';
       case 'completed':
         return 'text-blue-600 bg-blue-100';
       case 'on-hold':
@@ -217,7 +217,7 @@ const AllInvestments = () => {
   const getPerformanceColor = (performance: string) => {
     switch (performance) {
       case 'outperforming':
-        return 'text-green-600';
+        return 'text-indigo-600';
       case 'meeting-expectations':
         return 'text-blue-600';
       case 'underperforming':
@@ -281,7 +281,7 @@ const AllInvestments = () => {
                   <p className="text-sm text-gray-600">Current Value</p>
                   <p className="text-xl font-bold">{formatCurrency(portfolioStats.currentValue)}</p>
                 </div>
-                <TrendingUp className="h-8 w-8 text-green-400" />
+                <TrendingUp className="h-8 w-8 text-indigo-400" />
               </div>
             </CardContent>
           </Card>

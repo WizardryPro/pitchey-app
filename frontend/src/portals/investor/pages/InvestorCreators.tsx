@@ -199,7 +199,7 @@ export default function InvestorCreators() {
       case 'writer':
         return 'text-blue-600 bg-blue-100';
       case 'producer':
-        return 'text-green-600 bg-green-100';
+        return 'text-indigo-600 bg-indigo-100';
       case 'writer-director':
         return 'text-indigo-600 bg-indigo-100';
       case 'multi-role':
@@ -296,7 +296,7 @@ export default function InvestorCreators() {
             </div>
             <div className="bg-white rounded-lg shadow p-4">
               <div className="flex items-center">
-                <Check className="w-8 h-8 text-green-500" />
+                <Check className="w-8 h-8 text-indigo-500" />
                 <div className="ml-3">
                   <p className="text-sm text-gray-500">Verified</p>
                   <p className="text-xl font-semibold text-gray-900">{verifiedCount}</p>
@@ -444,7 +444,7 @@ export default function InvestorCreators() {
                     <p className="text-xs text-gray-500">Active</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-semibold text-green-600">{creator.stats?.successRate ?? 0}%</p>
+                    <p className="text-lg font-semibold text-indigo-600">{creator.stats?.successRate ?? 0}%</p>
                     <p className="text-xs text-gray-500">Success</p>
                   </div>
                   <div className="text-center">
@@ -492,7 +492,7 @@ export default function InvestorCreators() {
                               </p>
                               <div className="mt-1 w-20 bg-gray-200 rounded-full h-1.5">
                                 <div 
-                                  className="bg-green-500 h-1.5 rounded-full"
+                                  className="bg-indigo-500 h-1.5 rounded-full"
                                   style={{ width: `${project.percentageFunded}%` }}
                                 />
                               </div>
@@ -520,13 +520,13 @@ export default function InvestorCreators() {
                 {/* Actions */}
                 <div className="mt-4 flex items-center justify-between">
                   <div className="flex items-center space-x-3 text-sm">
-                    <button className="flex items-center text-gray-600 hover:text-green-600">
+                    <button className="flex items-center text-gray-600 hover:text-indigo-600">
                       <Eye className="w-4 h-4 mr-1" />
                       {creator.stats.viewCount.toLocaleString()}
                     </button>
                     <button
                       onClick={() => navigate(`/investor/messages?to=${encodeURIComponent(creator.email || '')}`)}
-                      className="flex items-center text-gray-600 hover:text-green-600"
+                      className="flex items-center text-gray-600 hover:text-indigo-600"
                     >
                       <MessageSquare className="w-4 h-4 mr-1" />
                       Message
@@ -534,7 +534,7 @@ export default function InvestorCreators() {
                   </div>
                   <button
                     onClick={() => navigate(`/creator/${creator.id}`)}
-                    className="text-green-600 hover:text-purple-700 text-sm font-medium"
+                    className="text-indigo-600 hover:text-purple-700 text-sm font-medium"
                   >
                     View Profile →
                   </button>

@@ -148,7 +148,7 @@ export default function InvestorPortfolio() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
+      case 'active': return 'bg-indigo-100 text-indigo-800';
       case 'completed': return 'bg-blue-100 text-blue-800';
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       default: return 'bg-gray-100 text-gray-800';
@@ -157,7 +157,7 @@ export default function InvestorPortfolio() {
 
   const getRiskColor = (risk: string) => {
     switch (risk) {
-      case 'low': return 'text-green-600';
+      case 'low': return 'text-indigo-600';
       case 'medium': return 'text-yellow-600';
       case 'high': return 'text-red-600';
       default: return 'text-gray-600';
@@ -195,33 +195,33 @@ export default function InvestorPortfolio() {
         )}
 
         {/* Portfolio Overview */}
-        <div className="bg-gradient-to-r from-green-600 to-teal-600 rounded-xl shadow-xl p-6 mb-8 text-white">
+        <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-xl shadow-xl p-6 mb-8 text-white">
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6">
             <div>
-              <p className="text-green-100 text-sm">Total Invested</p>
+              <p className="text-indigo-100 text-sm">Total Invested</p>
               <p className="text-3xl font-bold">${(stats.totalInvested / 1000000).toFixed(1)}M</p>
             </div>
             <div>
-              <p className="text-green-100 text-sm">Current Value</p>
+              <p className="text-indigo-100 text-sm">Current Value</p>
               <p className="text-3xl font-bold">${(stats.currentValue / 1000000).toFixed(1)}M</p>
             </div>
             <div>
-              <p className="text-green-100 text-sm">Total Returns</p>
+              <p className="text-indigo-100 text-sm">Total Returns</p>
               <p className="text-3xl font-bold flex items-center gap-1">
                 <ArrowUp className="w-5 h-5" />
                 ${(stats.totalReturns / 1000).toFixed(0)}K
               </p>
             </div>
             <div>
-              <p className="text-green-100 text-sm">Average ROI</p>
+              <p className="text-indigo-100 text-sm">Average ROI</p>
               <p className="text-3xl font-bold">{stats.averageROI}%</p>
             </div>
             <div>
-              <p className="text-green-100 text-sm">Active</p>
+              <p className="text-indigo-100 text-sm">Active</p>
               <p className="text-3xl font-bold">{stats.activeInvestments}</p>
             </div>
             <div>
-              <p className="text-green-100 text-sm">Completed</p>
+              <p className="text-indigo-100 text-sm">Completed</p>
               <p className="text-3xl font-bold">{stats.completedDeals}</p>
             </div>
           </div>
@@ -241,7 +241,7 @@ export default function InvestorPortfolio() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 autoComplete="off"
-                className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
             </div>
             
@@ -250,7 +250,7 @@ export default function InvestorPortfolio() {
               <button
                 onClick={() => setFilter('all')}
                 className={`px-4 py-2 rounded-lg transition ${
-                  filter === 'all' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  filter === 'all' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
                 All
@@ -258,7 +258,7 @@ export default function InvestorPortfolio() {
               <button
                 onClick={() => setFilter('active')}
                 className={`px-4 py-2 rounded-lg transition ${
-                  filter === 'active' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  filter === 'active' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
                 Active
@@ -266,7 +266,7 @@ export default function InvestorPortfolio() {
               <button
                 onClick={() => setFilter('completed')}
                 className={`px-4 py-2 rounded-lg transition ${
-                  filter === 'completed' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  filter === 'completed' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
                 Completed
@@ -274,7 +274,7 @@ export default function InvestorPortfolio() {
               <button
                 onClick={() => setFilter('pending')}
                 className={`px-4 py-2 rounded-lg transition ${
-                  filter === 'pending' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  filter === 'pending' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
                 Pending
@@ -286,7 +286,7 @@ export default function InvestorPortfolio() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm"
               >
                 <option value="date">Sort by Date</option>
                 <option value="amount">Sort by Amount</option>
@@ -297,7 +297,7 @@ export default function InvestorPortfolio() {
               <select
                 value={timeRange}
                 onChange={(e) => setTimeRange(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm"
               >
                 <option value="all">All Time</option>
                 <option value="year">This Year</option>
@@ -308,13 +308,13 @@ export default function InvestorPortfolio() {
               <div className="flex border border-gray-300 rounded-lg overflow-hidden">
                 <button
                   onClick={() => setViewMode('grid')}
-                  className={`px-3 py-2 text-sm ${viewMode === 'grid' ? 'bg-green-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                  className={`px-3 py-2 text-sm ${viewMode === 'grid' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
                 >
                   <Grid3X3 className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`px-3 py-2 text-sm ${viewMode === 'list' ? 'bg-green-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                  className={`px-3 py-2 text-sm ${viewMode === 'list' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
                 >
                   <List className="w-4 h-4" />
                 </button>
@@ -322,7 +322,7 @@ export default function InvestorPortfolio() {
             </div>
             
             <div className="flex gap-2">
-              <button className="px-4 py-2 border border-green-600 text-green-600 rounded-lg hover:bg-green-50 flex items-center gap-2 text-sm" onClick={() => {
+              <button className="px-4 py-2 border border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 flex items-center gap-2 text-sm" onClick={() => {
                 const csvContent = ['Title,Creator,Genre,Amount,Current Value,ROI,Stake,Status,Stage,Risk Level'].concat(
                   filteredInvestments.map(inv => `"${inv.pitchTitle}","${inv.creator}","${inv.genre}",${inv.amount},${inv.currentValue},${inv.roi}%,${inv.stake}%,"${inv.status}","${inv.stage}","${inv.riskLevel}"`)
                 ).join('\n');
@@ -351,7 +351,7 @@ export default function InvestorPortfolio() {
         {/* Investment Display */}
         {loading ? (
           <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
           </div>
         ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -417,7 +417,7 @@ export default function InvestorPortfolio() {
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div 
-                        className="bg-gradient-to-r from-green-600 to-teal-600 h-2 rounded-full transition-all duration-300"
+                        className="bg-gradient-to-r from-indigo-600 to-violet-600 h-2 rounded-full transition-all duration-300"
                         style={{ 
                           width: `${
                             investment.stage === 'development' ? 25 :
@@ -433,14 +433,14 @@ export default function InvestorPortfolio() {
                   <div className="flex gap-2 mt-4">
                     <button 
                       onClick={() => navigate(`/investor/investment/${investment.id}`)}
-                      className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm"
+                      className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm"
                     >
                       View Details
                     </button>
-                    <button className="px-3 py-2 text-green-600 border border-green-600 rounded-lg hover:bg-green-50 transition" onClick={() => toast('Added to favorites')}>
+                    <button className="px-3 py-2 text-indigo-600 border border-indigo-600 rounded-lg hover:bg-indigo-50 transition" onClick={() => toast('Added to favorites')}>
                       <Heart className="w-4 h-4" />
                     </button>
-                    <button className="px-3 py-2 text-green-600 border border-green-600 rounded-lg hover:bg-green-50 transition" onClick={() => navigate('/investor/messages')}>
+                    <button className="px-3 py-2 text-indigo-600 border border-indigo-600 rounded-lg hover:bg-indigo-50 transition" onClick={() => navigate('/investor/messages')}>
                       <MessageSquare className="w-4 h-4" />
                     </button>
                   </div>
@@ -513,7 +513,7 @@ export default function InvestorPortfolio() {
                         <div className="flex items-center justify-center gap-2">
                           <button 
                             onClick={() => navigate(`/investor/investment/${investment.id}`)}
-                            className="text-green-600 hover:text-green-800"
+                            className="text-indigo-600 hover:text-indigo-800"
                           >
                             <Eye className="w-4 h-4" />
                           </button>

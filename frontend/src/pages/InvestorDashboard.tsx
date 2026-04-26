@@ -339,18 +339,18 @@ function InvestorDashboard() {
   return (
     <div className="w-full">
       {/* Welcome Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700 rounded-2xl p-8 text-white shadow-lg shadow-emerald-500/20 mb-8">
+      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-indigo-600 to-violet-700 rounded-2xl p-8 text-white shadow-lg shadow-indigo-500/20 mb-8">
         <div aria-hidden className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
-        <div aria-hidden className="absolute -bottom-24 -left-10 w-72 h-72 bg-emerald-300/20 rounded-full blur-3xl" />
+        <div aria-hidden className="absolute -bottom-24 -left-10 w-72 h-72 bg-indigo-300/20 rounded-full blur-3xl" />
         <div className="relative">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm text-xs font-medium text-emerald-50 mb-4 ring-1 ring-white/20">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm text-xs font-medium text-indigo-50 mb-4 ring-1 ring-white/20">
             <Sparkles className="w-3.5 h-3.5" />
             Investor
           </div>
           <h1 className="text-3xl font-bold tracking-tight mb-2">
             Welcome back, {user?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'Investor'}
           </h1>
-          <p className="text-emerald-50/90 max-w-lg leading-relaxed">
+          <p className="text-indigo-50/90 max-w-lg leading-relaxed">
             Track your portfolio, discover new pitches, and manage your deals.
           </p>
         </div>
@@ -405,8 +405,8 @@ function InvestorDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
             <div className="group relative bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
               <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-100 ring-1 ring-emerald-100/60">
-                  <DollarSign className="w-5 h-5 text-emerald-600" />
+                <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-50 to-violet-100 ring-1 ring-indigo-100/60">
+                  <DollarSign className="w-5 h-5 text-indigo-600" />
                 </div>
               </div>
               <p className="text-3xl font-bold tracking-tight tabular-nums text-gray-900">
@@ -420,8 +420,8 @@ function InvestorDashboard() {
 
             <div className="group relative bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
               <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-green-50 to-emerald-100 ring-1 ring-green-100/60">
-                  <Briefcase className="w-5 h-5 text-green-600" />
+                <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100 ring-1 ring-indigo-100/60">
+                  <Briefcase className="w-5 h-5 text-indigo-600" />
                 </div>
               </div>
               <p className="text-3xl font-bold tracking-tight tabular-nums text-gray-900">
@@ -435,8 +435,8 @@ function InvestorDashboard() {
 
             <div className="group relative bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
               <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-teal-50 to-emerald-100 ring-1 ring-teal-100/60">
-                  <BarChart3 className="w-5 h-5 text-teal-600" />
+                <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-violet-50 to-indigo-100 ring-1 ring-violet-100/60">
+                  <BarChart3 className="w-5 h-5 text-violet-600" />
                 </div>
               </div>
               <p className="text-3xl font-bold tracking-tight tabular-nums text-gray-900">
@@ -470,7 +470,7 @@ function InvestorDashboard() {
               onClick={() => setActiveTab('dashboard')}
               className={`py-3 sm:py-4 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
                 activeTab === 'dashboard'
-                  ? 'border-green-500 text-green-600'
+                  ? 'border-indigo-500 text-indigo-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -480,7 +480,7 @@ function InvestorDashboard() {
               onClick={() => setActiveTab('browse')}
               className={`py-3 sm:py-4 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
                 activeTab === 'browse'
-                  ? 'border-green-500 text-green-600'
+                  ? 'border-indigo-500 text-indigo-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -490,7 +490,7 @@ function InvestorDashboard() {
               onClick={() => setActiveTab('investments')}
               className={`py-3 sm:py-4 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
                 activeTab === 'investments'
-                  ? 'border-green-500 text-green-600'
+                  ? 'border-indigo-500 text-indigo-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -500,7 +500,7 @@ function InvestorDashboard() {
               onClick={() => setActiveTab('due-diligence')}
               className={`py-3 sm:py-4 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
                 activeTab === 'due-diligence'
-                  ? 'border-green-500 text-green-600'
+                  ? 'border-indigo-500 text-indigo-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -510,7 +510,7 @@ function InvestorDashboard() {
               onClick={() => setActiveTab('network')}
               className={`py-3 sm:py-4 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
                 activeTab === 'network'
-                  ? 'border-green-500 text-green-600'
+                  ? 'border-indigo-500 text-indigo-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -520,7 +520,7 @@ function InvestorDashboard() {
               onClick={() => setActiveTab('analytics')}
               className={`py-3 sm:py-4 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
                 activeTab === 'analytics'
-                  ? 'border-green-500 text-green-600'
+                  ? 'border-indigo-500 text-indigo-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -530,7 +530,7 @@ function InvestorDashboard() {
               onClick={() => setActiveTab('financials')}
               className={`py-3 sm:py-4 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
                 activeTab === 'financials'
-                  ? 'border-green-500 text-green-600'
+                  ? 'border-indigo-500 text-indigo-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -567,7 +567,7 @@ function InvestorDashboard() {
                       <div key={safeAccess(pitch, 'id', `rec-${idx}`)} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
                         <div className="flex items-start justify-between">
                           <h4 className="font-medium text-gray-900">{safeString(safeAccess(pitch, 'title', 'Unknown Title'))}</h4>
-                          <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">
+                          <span className="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded">
                             {safeString(safeAccess(pitch, 'genre', 'Unknown'))}
                           </span>
                         </div>
@@ -605,7 +605,7 @@ function InvestorDashboard() {
                         const icon = actType === 'nda_request' || actType === 'nda_signed' ? (
                           <Shield className="w-5 h-5 text-blue-400" />
                         ) : actType === 'investment' ? (
-                          <DollarSign className="w-5 h-5 text-green-400" />
+                          <DollarSign className="w-5 h-5 text-indigo-400" />
                         ) : actType === 'pitch_view' || actType === 'pitch_viewed' ? (
                           <Eye className="w-5 h-5 text-purple-400" />
                         ) : (
@@ -708,7 +708,7 @@ function InvestorDashboard() {
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                                 (safeAccess(investment, 'status', '') as string) === 'active'
-                                  ? 'bg-green-100 text-green-800'
+                                  ? 'bg-indigo-100 text-indigo-800'
                                   : 'bg-gray-100 text-gray-800'
                               }`}>
                                 {safeString(safeAccess(investment, 'status', 'Unknown'))}
@@ -716,7 +716,7 @@ function InvestorDashboard() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className={`text-sm font-medium ${
-                                safeNumber(safeAccess(investment, 'roi', 0)) > 0 ? 'text-green-600' : 'text-gray-900'
+                                safeNumber(safeAccess(investment, 'roi', 0)) > 0 ? 'text-indigo-600' : 'text-gray-900'
                               }`}>
                                 {safeNumber(safeAccess(investment, 'roi', 0)) > 0 ? '+' : ''}{formatPercentage(safeAccess(investment, 'roi', 0), 0)}
                               </div>
@@ -768,7 +768,7 @@ function InvestorDashboard() {
                     onClick={() => navigate('/investor/discover?tab=trending')}
                     className="p-4 border rounded-lg hover:shadow-md transition-shadow text-left"
                   >
-                    <TrendingUp className="w-6 h-6 text-green-600 mb-2" />
+                    <TrendingUp className="w-6 h-6 text-indigo-600 mb-2" />
                     <h4 className="font-medium text-gray-900">Trending Projects</h4>
                     <p className="text-sm text-gray-500 mt-1">Hot opportunities gaining traction</p>
                   </button>
@@ -861,7 +861,7 @@ function InvestorDashboard() {
                         Pending: {safeArray<NDARequest>(ndaRequests).filter((nda: NDARequest) => nda.status === 'pending').length}
                       </span>
                     )}
-                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-sm">
+                    <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-sm">
                       Active: {safeArray<NDARequest>(ndaRequests).filter((nda: NDARequest) => nda.status === 'signed' || nda.status === 'active').length}
                     </span>
                   </div>
@@ -895,7 +895,7 @@ function InvestorDashboard() {
                             <div className="flex items-center gap-3">
                               <span className={`px-2 py-1 text-xs rounded-full ${
                                 (safeAccess(nda, 'status', '') as string) === 'signed'
-                                  ? 'bg-green-100 text-green-700'
+                                  ? 'bg-indigo-100 text-indigo-700'
                                   : (safeAccess(nda, 'status', '') as string) === 'pending'
                                   ? 'bg-yellow-100 text-yellow-700'
                                   : 'bg-gray-100 text-gray-700'
@@ -957,7 +957,7 @@ function InvestorDashboard() {
                   <h3 className="text-lg font-semibold text-gray-900">Your Investment Network</h3>
                   <button 
                     onClick={() => navigate('/investor/network')}
-                    className="px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                   >
                     View All Connections
                   </button>
@@ -978,7 +978,7 @@ function InvestorDashboard() {
                     onClick={() => navigate('/investor/co-investors')}
                     className="p-4 border rounded-lg hover:shadow-md transition-shadow text-left"
                   >
-                    <HandshakeIcon className="w-6 h-6 text-green-600 mb-2" />
+                    <HandshakeIcon className="w-6 h-6 text-indigo-600 mb-2" />
                     <p className="font-medium text-gray-900">Co-Investors</p>
                     <p className="text-2xl font-bold text-gray-900">8</p>
                     <p className="text-xs text-gray-500">Partner investors</p>
@@ -1069,7 +1069,7 @@ function InvestorDashboard() {
                   <div className="bg-gray-50 rounded-lg p-4">
                     <p className="text-sm text-gray-600">Total Returns</p>
                     <p className="text-2xl font-bold text-gray-900">$67,500</p>
-                    <p className="text-xs text-green-600 mt-1">+15% YTD</p>
+                    <p className="text-xs text-indigo-600 mt-1">+15% YTD</p>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-4">
                     <p className="text-sm text-gray-600">Success Rate</p>
@@ -1098,10 +1098,10 @@ function InvestorDashboard() {
                 
                 {/* Financial Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                  <div className="bg-green-50 rounded-lg p-4">
+                  <div className="bg-indigo-50 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-sm text-gray-600">Available Funds</p>
-                      <Wallet className="w-4 h-4 text-green-600" />
+                      <Wallet className="w-4 h-4 text-indigo-600" />
                     </div>
                     <p className="text-2xl font-bold text-gray-900">$250,000</p>
                     <p className="text-xs text-gray-500 mt-1">Ready to invest</p>
@@ -1122,7 +1122,7 @@ function InvestorDashboard() {
                       <TrendingUp className="w-4 h-4 text-purple-600" />
                     </div>
                     <p className="text-2xl font-bold text-gray-900">$67,500</p>
-                    <p className="text-xs text-green-600 mt-1">+15% YTD</p>
+                    <p className="text-xs text-indigo-600 mt-1">+15% YTD</p>
                   </div>
                   
                   <div className="bg-orange-50 rounded-lg p-4">
@@ -1174,7 +1174,7 @@ function InvestorDashboard() {
                             -$50,000
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-indigo-100 text-indigo-800">
                               Completed
                             </span>
                           </td>
@@ -1189,11 +1189,11 @@ function InvestorDashboard() {
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             Return
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-indigo-600">
                             +$12,500
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-indigo-100 text-indigo-800">
                               Received
                             </span>
                           </td>
@@ -1208,11 +1208,11 @@ function InvestorDashboard() {
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             Deposit
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-indigo-600">
                             +$100,000
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-indigo-100 text-indigo-800">
                               Cleared
                             </span>
                           </td>
@@ -1237,7 +1237,7 @@ function InvestorDashboard() {
                     onClick={() => navigate('/investor/wallet')}
                     className="p-4 border rounded-lg hover:shadow-md transition-shadow text-left"
                   >
-                    <Wallet className="w-5 h-5 text-green-600 mb-2" />
+                    <Wallet className="w-5 h-5 text-indigo-600 mb-2" />
                     <p className="font-medium text-gray-900">Manage Wallet</p>
                     <p className="text-sm text-gray-500">Add funds & banking</p>
                   </button>
@@ -1264,25 +1264,25 @@ function InvestorDashboard() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <button
               onClick={() => navigate('/marketplace')}
-              className="group relative overflow-hidden bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-emerald-200 transition-all duration-200 text-left"
+              className="group relative overflow-hidden bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-indigo-200 transition-all duration-200 text-left"
             >
-              <div aria-hidden className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-emerald-100/0 to-emerald-100/0 group-hover:from-emerald-100/60 group-hover:to-teal-100/40 rounded-full blur-2xl transition-all duration-300" />
+              <div aria-hidden className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-indigo-100/0 to-indigo-100/0 group-hover:from-indigo-100/60 group-hover:to-violet-100/40 rounded-full blur-2xl transition-all duration-300" />
               <div className="relative">
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm shadow-emerald-500/30 mb-4 group-hover:scale-105 group-hover:shadow-emerald-500/40 transition-all duration-200">
+                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-sm shadow-indigo-500/30 mb-4 group-hover:scale-105 group-hover:shadow-indigo-500/40 transition-all duration-200">
                   <Search className="w-5 h-5" />
                 </div>
                 <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-1.5">
                   Marketplace
-                  <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all duration-200" />
+                  <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all duration-200" />
                 </h3>
                 <p className="text-sm text-gray-500 leading-relaxed">Browse all pitches</p>
               </div>
             </button>
 
-            <button className="group relative overflow-hidden bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-emerald-200 transition-all duration-200 text-left">
-              <div aria-hidden className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-emerald-100/0 to-emerald-100/0 group-hover:from-emerald-100/60 group-hover:to-teal-100/40 rounded-full blur-2xl transition-all duration-300" />
+            <button className="group relative overflow-hidden bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-indigo-200 transition-all duration-200 text-left">
+              <div aria-hidden className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-indigo-100/0 to-indigo-100/0 group-hover:from-indigo-100/60 group-hover:to-violet-100/40 rounded-full blur-2xl transition-all duration-300" />
               <div className="relative">
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm shadow-emerald-500/30 mb-4 group-hover:scale-105 group-hover:shadow-emerald-500/40 transition-all duration-200">
+                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-sm shadow-indigo-500/30 mb-4 group-hover:scale-105 group-hover:shadow-indigo-500/40 transition-all duration-200">
                   <Users className="w-5 h-5" />
                 </div>
                 <h3 className="font-semibold text-gray-900 mb-1">Network</h3>
@@ -1290,10 +1290,10 @@ function InvestorDashboard() {
               </div>
             </button>
 
-            <button className="group relative overflow-hidden bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-emerald-200 transition-all duration-200 text-left">
-              <div aria-hidden className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-emerald-100/0 to-emerald-100/0 group-hover:from-emerald-100/60 group-hover:to-teal-100/40 rounded-full blur-2xl transition-all duration-300" />
+            <button className="group relative overflow-hidden bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-indigo-200 transition-all duration-200 text-left">
+              <div aria-hidden className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-indigo-100/0 to-indigo-100/0 group-hover:from-indigo-100/60 group-hover:to-violet-100/40 rounded-full blur-2xl transition-all duration-300" />
               <div className="relative">
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm shadow-emerald-500/30 mb-4 group-hover:scale-105 group-hover:shadow-emerald-500/40 transition-all duration-200">
+                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-sm shadow-indigo-500/30 mb-4 group-hover:scale-105 group-hover:shadow-indigo-500/40 transition-all duration-200">
                   <Calendar className="w-5 h-5" />
                 </div>
                 <h3 className="font-semibold text-gray-900 mb-1">Schedule</h3>
@@ -1301,10 +1301,10 @@ function InvestorDashboard() {
               </div>
             </button>
 
-            <button className="group relative overflow-hidden bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-emerald-200 transition-all duration-200 text-left">
-              <div aria-hidden className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-emerald-100/0 to-emerald-100/0 group-hover:from-emerald-100/60 group-hover:to-teal-100/40 rounded-full blur-2xl transition-all duration-300" />
+            <button className="group relative overflow-hidden bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-indigo-200 transition-all duration-200 text-left">
+              <div aria-hidden className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-indigo-100/0 to-indigo-100/0 group-hover:from-indigo-100/60 group-hover:to-violet-100/40 rounded-full blur-2xl transition-all duration-300" />
               <div className="relative">
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm shadow-emerald-500/30 mb-4 group-hover:scale-105 group-hover:shadow-emerald-500/40 transition-all duration-200">
+                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-sm shadow-indigo-500/30 mb-4 group-hover:scale-105 group-hover:shadow-indigo-500/40 transition-all duration-200">
                   <FileText className="w-5 h-5" />
                 </div>
                 <h3 className="font-semibold text-gray-900 mb-1">Documents</h3>

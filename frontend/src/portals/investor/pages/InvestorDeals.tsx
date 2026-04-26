@@ -231,7 +231,7 @@ export default function InvestorDeals() {
       case 'negotiation': return 'bg-yellow-100 text-yellow-800';
       case 'due-diligence': return 'bg-blue-100 text-blue-800';
       case 'term-sheet': return 'bg-purple-100 text-purple-800';
-      case 'closed': return 'bg-green-100 text-green-800';
+      case 'closed': return 'bg-indigo-100 text-indigo-800';
       case 'declined': return 'bg-red-100 text-red-800';
       case 'cancelled': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
@@ -254,7 +254,7 @@ export default function InvestorDeals() {
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'equity': return 'bg-blue-100 text-blue-800';
-      case 'debt': return 'bg-green-100 text-green-800';
+      case 'debt': return 'bg-indigo-100 text-indigo-800';
       case 'revenue-share': return 'bg-purple-100 text-purple-800';
       case 'pre-purchase': return 'bg-orange-100 text-orange-800';
       case 'partnership': return 'bg-pink-100 text-pink-800';
@@ -266,14 +266,14 @@ export default function InvestorDeals() {
     switch (priority) {
       case 'high': return 'bg-red-100 text-red-800';
       case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'low': return 'bg-green-100 text-green-800';
+      case 'low': return 'bg-indigo-100 text-indigo-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getRiskColor = (risk: string) => {
     switch (risk) {
-      case 'low': return 'text-green-600';
+      case 'low': return 'text-indigo-600';
       case 'medium': return 'text-yellow-600';
       case 'high': return 'text-red-600';
       default: return 'text-gray-600';
@@ -365,7 +365,7 @@ export default function InvestorDeals() {
               <Download className="w-4 h-4 mr-2" />
               Export Pipeline
             </button>
-            <button className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700" onClick={() => navigate('/investor/discover')}>
+            <button className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700" onClick={() => navigate('/investor/discover')}>
               <Handshake className="w-4 h-4 mr-2" />
               New Deal
             </button>
@@ -401,7 +401,7 @@ export default function InvestorDeals() {
           <div className="bg-white rounded-lg shadow-sm border p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-gray-600">Closed Deals</span>
-              <CheckCircle className="w-4 h-4 text-green-600" />
+              <CheckCircle className="w-4 h-4 text-indigo-600" />
             </div>
             <p className="text-2xl font-bold text-gray-900">{statusCounts.closed || 0}</p>
           </div>
@@ -576,7 +576,7 @@ export default function InvestorDeals() {
                           {deal.metrics.roi && (
                             <div className="flex justify-between">
                               <span className="text-gray-600">Projected ROI:</span>
-                              <span className="font-medium text-green-600">{deal.metrics.roi}%</span>
+                              <span className="font-medium text-indigo-600">{deal.metrics.roi}%</span>
                             </div>
                           )}
                           {deal.metrics.irr && (

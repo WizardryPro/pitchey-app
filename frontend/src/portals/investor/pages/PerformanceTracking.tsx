@@ -84,7 +84,7 @@ const PerformanceTracking = () => {
           change: overallROI,
           changeType: overallROI > 0 ? 'positive' : overallROI < 0 ? 'negative' : 'neutral',
           icon: DollarSign,
-          color: 'text-green-600',
+          color: 'text-indigo-600',
           description: 'Total value of all investments'
         },
         {
@@ -177,7 +177,7 @@ const PerformanceTracking = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'performing':
-        return 'text-green-600 bg-green-100';
+        return 'text-indigo-600 bg-indigo-100';
       case 'on-track':
         return 'text-blue-600 bg-blue-100';
       case 'underperforming':
@@ -192,7 +192,7 @@ const PerformanceTracking = () => {
   const getRiskColor = (risk: string) => {
     switch (risk) {
       case 'low':
-        return 'text-green-600';
+        return 'text-indigo-600';
       case 'medium':
         return 'text-yellow-600';
       case 'high':

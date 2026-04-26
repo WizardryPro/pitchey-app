@@ -208,11 +208,11 @@ export default function InvestorPerformance() {
             <div className="bg-white rounded-lg shadow-sm border p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-medium text-gray-900">Total Return</h3>
-                <TrendingUp className="w-5 h-5 text-green-600" />
+                <TrendingUp className="w-5 h-5 text-indigo-600" />
               </div>
               <div className="flex items-center gap-2">
                 <p className="text-3xl font-bold text-gray-900">{formatPercentage(metrics.totalReturn)}</p>
-                <ArrowUp className="w-4 h-4 text-green-600" />
+                <ArrowUp className="w-4 h-4 text-indigo-600" />
               </div>
               <p className="text-sm text-gray-500 mt-1">Since inception</p>
             </div>
@@ -224,7 +224,7 @@ export default function InvestorPerformance() {
               </div>
               <div className="flex items-center gap-2">
                 <p className="text-3xl font-bold text-gray-900">{formatPercentage(metrics.annualizedReturn)}</p>
-                <ArrowUp className="w-4 h-4 text-green-600" />
+                <ArrowUp className="w-4 h-4 text-indigo-600" />
               </div>
               <p className="text-sm text-gray-500 mt-1">Year over year</p>
             </div>
@@ -263,7 +263,7 @@ export default function InvestorPerformance() {
                   <XAxis dataKey="month" />
                   <YAxis />
                   <ChartTooltip />
-                  <Line type="monotone" dataKey="portfolio" stroke="#10b981" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="portfolio" stroke="#8b5cf6" strokeWidth={2} dot={false} />
                   <Line type="monotone" dataKey="market" stroke="#6366f1" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
@@ -294,7 +294,7 @@ export default function InvestorPerformance() {
                   dataKey="value"
                 >
                   {allocations.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={['#10b981', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'][index % 6]} />
+                    <Cell key={`cell-${index}`} fill={['#a78bfa', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'][index % 6]} />
                   ))}
                 </Pie>
                 <ChartTooltip />
@@ -319,7 +319,7 @@ export default function InvestorPerformance() {
                 <XAxis dataKey="genre" />
                 <YAxis tickFormatter={(value) => `${value}%`} />
                 <ChartTooltip formatter={(value: any) => `${value}%`} />
-                <Bar dataKey="performance" fill="#10b981" />
+                <Bar dataKey="performance" fill="#6366f1" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -417,9 +417,9 @@ export default function InvestorPerformance() {
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <div className="flex items-center justify-center">
                         {allocation.performance > 20 ? (
-                          <TrendingUp className="w-4 h-4 text-green-600" />
+                          <TrendingUp className="w-4 h-4 text-indigo-600" />
                         ) : allocation.performance > 0 ? (
-                          <ArrowUp className="w-4 h-4 text-green-600" />
+                          <ArrowUp className="w-4 h-4 text-indigo-600" />
                         ) : (
                           <TrendingDown className="w-4 h-4 text-red-600" />
                         )}

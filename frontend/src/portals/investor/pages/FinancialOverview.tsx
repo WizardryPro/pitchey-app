@@ -139,11 +139,11 @@ const FinancialOverview = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-600">Available Funds</p>
-                      <p className="text-2xl font-bold text-green-600">
+                      <p className="text-2xl font-bold text-indigo-600">
                         {formatCurrency(financialData?.available_funds || 0)}
                       </p>
                     </div>
-                    <DollarSign className="h-8 w-8 text-green-600" />
+                    <DollarSign className="h-8 w-8 text-indigo-600" />
                   </div>
                 </CardContent>
               </Card>
@@ -197,7 +197,7 @@ const FinancialOverview = () => {
                           </div>
                           <span className={`font-bold ${
                             transaction.type === 'deposit' || transaction.type === 'return' 
-                              ? 'text-green-600' 
+                              ? 'text-indigo-600' 
                               : 'text-red-600'
                           }`}>
                             {transaction.type === 'deposit' || transaction.type === 'return' ? '+' : '-'}
@@ -228,7 +228,7 @@ const FinancialOverview = () => {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center pb-3 border-b">
                       <span className="text-gray-600">Total Returns</span>
-                      <span className="font-bold text-green-600">
+                      <span className="font-bold text-indigo-600">
                         {formatCurrency(financialData?.total_returns || 0)}
                       </span>
                     </div>

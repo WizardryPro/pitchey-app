@@ -150,7 +150,7 @@ const TransactionHistory = () => {
             <Card>
               <CardContent className="p-4">
                 <p className="text-sm text-gray-600">Total Inflow</p>
-                <p className="text-2xl font-bold text-green-600">{formatCurrency(stats.total_in)}</p>
+                <p className="text-2xl font-bold text-indigo-600">{formatCurrency(stats.total_in)}</p>
               </CardContent>
             </Card>
             <Card>
@@ -186,13 +186,13 @@ const TransactionHistory = () => {
                       <div className="flex items-center gap-4">
                         <div className={`p-2 rounded-full ${
                           tx.type === 'investment' ? 'bg-purple-100' : 
-                          tx.type === 'return' ? 'bg-green-100' : 
+                          tx.type === 'return' ? 'bg-indigo-100' : 
                           tx.type === 'deposit' ? 'bg-blue-100' :
                           tx.type === 'withdrawal' ? 'bg-orange-100' :
                           'bg-gray-100'
                         }`}>
                           {tx.type === 'investment' ? <ArrowUpRight className="h-5 w-5 text-purple-600" /> :
-                           tx.type === 'return' ? <ArrowDownLeft className="h-5 w-5 text-green-600" /> :
+                           tx.type === 'return' ? <ArrowDownLeft className="h-5 w-5 text-indigo-600" /> :
                            tx.type === 'deposit' ? <ArrowDownLeft className="h-5 w-5 text-blue-600" /> :
                            tx.type === 'withdrawal' ? <ArrowUpRight className="h-5 w-5 text-orange-600" /> :
                            <DollarSign className="h-5 w-5 text-gray-600" />}
@@ -207,13 +207,13 @@ const TransactionHistory = () => {
                       </div>
                       <div className="text-right">
                         <p className={`font-semibold ${
-                          tx.type === 'return' || tx.type === 'deposit' ? 'text-green-600' : 'text-gray-900'
+                          tx.type === 'return' || tx.type === 'deposit' ? 'text-indigo-600' : 'text-gray-900'
                         }`}>
                           {tx.type === 'return' || tx.type === 'deposit' ? '+' : '-'}
                           {formatCurrency(Math.abs(tx.amount))}
                         </p>
                         <span className={`text-xs px-2 py-1 rounded-full ${
-                          tx.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                          tx.status === 'completed' ? 'bg-indigo-100 text-indigo-800' : 
                           tx.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
