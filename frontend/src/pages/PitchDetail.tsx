@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
-import { ArrowLeft, Share2, Eye, Calendar, User, Clock, Tag, Film, LogIn, FileText, Lock, Shield, Briefcase, DollarSign, WifiOff, RefreshCw, Bookmark } from 'lucide-react';
+import { ArrowLeft, Share2, Eye, Calendar, User, Clock, Tag, Film, LogIn, FileText, Lock, Shield, Briefcase, DollarSign, WifiOff, RefreshCw, Bookmark, Heart } from 'lucide-react';
 import PitcheyRating from '../components/PitcheyRating';
 import { pitchService } from '@features/pitches/services/pitch.service';
 import { createDownloadClickHandler } from '../utils/fileDownloads';
@@ -808,8 +808,8 @@ export default function PitchDetail() {
               />
             )}
 
-            {/* Pitchey Score */}
-            {((pitch as any).pitchey_score_avg > 0 || (pitch as any).viewer_score_avg > 0) && (
+            {/* Pitchey Score + Likes — visible to all viewers (auth gating only applies to named-liker breakdown above) */}
+            {((pitch as any).pitchey_score_avg > 0 || (pitch as any).viewer_score_avg > 0 || (pitch.likeCount || 0) > 0) && (
               <div className="bg-white rounded-xl shadow-sm p-4 space-y-3">
                 {(pitch as any).pitchey_score_avg > 0 && (
                   <div className="flex items-center justify-between gap-2 text-sm">
@@ -821,6 +821,15 @@ export default function PitchDetail() {
                   <div className="flex items-center justify-between gap-2 text-sm">
                     <span className="text-gray-600 font-medium shrink-0">Viewer Score</span>
                     <PitcheyRating mode="display" value={(pitch as any).viewer_score_avg} />
+                  </div>
+                )}
+                {(pitch.likeCount || 0) > 0 && (
+                  <div className="flex items-center justify-between gap-2 text-sm">
+                    <span className="text-gray-600 font-medium shrink-0">Likes</span>
+                    <span className="inline-flex items-center gap-1.5 text-gray-900 font-semibold">
+                      <Heart className="w-4 h-4 text-red-500 fill-red-500" />
+                      {pitch.likeCount}
+                    </span>
                   </div>
                 )}
               </div>

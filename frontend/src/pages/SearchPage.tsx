@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Search, Filter, Film, Users, Briefcase, DollarSign,
   Calendar, TrendingUp, Star, Clock, ChevronDown,
-  Grid, List, SortAsc, SortDesc, WifiOff
+  Grid, List, SortAsc, SortDesc, WifiOff, Heart
 } from 'lucide-react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { apiClient } from '../lib/api-client';
@@ -338,6 +338,12 @@ export default function SearchPage() {
                             {result.stats.views} views
                           </span>
                         )}
+                        {(result.stats as any).likes ? (
+                          <span className="flex items-center gap-1">
+                            <Heart className="w-4 h-4 text-red-500 fill-red-500" />
+                            {(result.stats as any).likes} likes
+                          </span>
+                        ) : null}
                         {result.stats.projects && (
                           <span className="flex items-center gap-1">
                             <Briefcase className="w-4 h-4" />

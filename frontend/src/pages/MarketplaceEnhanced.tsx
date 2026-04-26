@@ -46,6 +46,7 @@ import {
   MapPin,
   Calendar as CalendarIcon,
   Building2,
+  Heart,
 } from 'lucide-react';
 import { API_URL } from '../config';
 import { formatBudgetCompact } from '@shared/utils/formatters';
@@ -675,6 +676,10 @@ export default function MarketplaceEnhanced() {
                     <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
                     {pitch.viewCount || 0}
                   </span>
+                  <span className="flex items-center gap-1">
+                    <Heart className="w-3 h-3 sm:w-4 sm:h-4 text-red-500 fill-red-500" />
+                    {(pitch as any).likeCount ?? (pitch as any).like_count ?? 0}
+                  </span>
                   {(() => {
                     const r = Number((pitch as any).rating_average) || Number((pitch as any).ratingAverage) || 0;
                     return r > 0 ? <PitcheyRating mode="stars" value={r} showNumber /> : null;
@@ -727,6 +732,10 @@ export default function MarketplaceEnhanced() {
                 <span className="flex items-center gap-1">
                   <Eye className="w-3 h-3" />
                   {pitch.viewCount || 0}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Heart className="w-3 h-3 text-red-500 fill-red-500" />
+                  {(pitch as any).likeCount ?? (pitch as any).like_count ?? 0}
                 </span>
                 {(() => {
                   const r = Number((pitch as any).rating_average) || Number((pitch as any).ratingAverage) || 0;
@@ -791,6 +800,10 @@ export default function MarketplaceEnhanced() {
             <span className="flex items-center gap-1">
               <Eye className="w-3 h-3" />
               {pitch.viewCount || 0}
+            </span>
+            <span className="flex items-center gap-1">
+              <Heart className="w-3 h-3 text-red-500 fill-red-500" />
+              {(pitch as any).likeCount ?? (pitch as any).like_count ?? 0}
             </span>
             {(() => {
               const r = Number((pitch as any).rating_average) || Number((pitch as any).ratingAverage) || 0;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Plus, Eye, TrendingUp, Film, MapPin, Calendar, BadgeCheck, Edit2, Share2 } from 'lucide-react';
+import { ArrowLeft, Plus, Eye, TrendingUp, Film, MapPin, Calendar, BadgeCheck, Edit2, Share2, Heart } from 'lucide-react';
 import { apiClient } from '../lib/api-client';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import ShareLinksModal from '../components/portfolio/ShareLinksModal';
@@ -286,6 +286,9 @@ export default function CreatorPortfolio() {
                       <div className="flex items-center gap-3">
                         <span className="flex items-center gap-1">
                           <Eye className="w-3.5 h-3.5" /> {formatNumber(pitch.view_count || 0)}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" /> {formatNumber(pitch.like_count || 0)}
                         </span>
                         {pitch.investment_total > 0 && (
                           <span className="flex items-center gap-1">

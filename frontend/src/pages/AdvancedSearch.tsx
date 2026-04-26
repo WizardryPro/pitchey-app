@@ -735,6 +735,12 @@ export default function AdvancedSearch() {
                                     {result.views.toLocaleString()}
                                   </span>
                                 )}
+                                {result.likes != null && result.type === 'pitch' && (
+                                  <span className="flex items-center gap-1">
+                                    <Heart className="w-3 h-3 text-red-500 fill-red-500" />
+                                    {result.likes.toLocaleString()}
+                                  </span>
+                                )}
                               </div>
                               <div className="flex items-center gap-1">
                                 {result.type === 'pitch' && (
@@ -828,6 +834,12 @@ export default function AdvancedSearch() {
                                     <span className="flex items-center gap-1 text-xs sm:text-sm text-gray-500">
                                       <Eye className="w-3 h-3" />
                                       {result.views.toLocaleString()}
+                                    </span>
+                                  )}
+                                  {result.likes != null && result.type === 'pitch' && (
+                                    <span className="flex items-center gap-1 text-xs sm:text-sm text-gray-500">
+                                      <Heart className="w-3 h-3 text-red-500 fill-red-500" />
+                                      {result.likes.toLocaleString()}
                                     </span>
                                   )}
                                   {result.type === 'pitch' && (
