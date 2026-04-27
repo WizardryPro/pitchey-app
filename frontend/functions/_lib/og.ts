@@ -61,12 +61,24 @@ function escapeAttr(s: string): string {
   ));
 }
 
+// All OG images are 1200×630 PNGs out of `workers-og`. Hard-coded so the
+// dimension/type meta tags are always populated — WhatsApp, in particular,
+// falls back to a square crop or no image when these aren't set.
+const OG_IMAGE_WIDTH = '1200';
+const OG_IMAGE_HEIGHT = '630';
+const OG_IMAGE_TYPE = 'image/png';
+
 /**
  * Apply OG meta to an HTML response (typically index.html from ASSETS).
  *
  * Replaces the static og:* / twitter:* meta values, the <title>, the
  * <meta name="description">, the <link rel="canonical">. Appends profile-only
  * tags (og:profile:username etc.) since they don't exist in the static index.
+ *
+ * Also appends `og:image:width`, `og:image:height`, `og:image:type`,
+ * `og:image:secure_url`, `twitter:image:alt` because these aren't in the
+ * static template. WhatsApp's renderer is the strictest about these — without
+ * width/height it sometimes shows a square crop, no image, or just the favicon.
  */
 export function applyOgMeta(html: Response, meta: OgMeta): Response {
   const map: Record<string, string> = {
@@ -83,30 +95,36 @@ export function applyOgMeta(html: Response, meta: OgMeta): Response {
     'twitter:image': meta.image,
   };
 
-  const profileExtras: string[] = [];
+  // Image-dimension meta (recommended by Meta/Facebook docs, required-ish by
+  // WhatsApp). All our cards are 1200×630 PNGs from workers-og.
+  const headExtras: string[] = [
+    `<meta property="og:image:secure_url" content="${escapeAttr(meta.image)}" />`,
+    `<meta property="og:image:type" content="${OG_IMAGE_TYPE}" />`,
+    `<meta property="og:image:width" content="${OG_IMAGE_WIDTH}" />`,
+    `<meta property="og:image:height" content="${OG_IMAGE_HEIGHT}" />`,
+    `<meta property="og:image:alt" content="${escapeAttr(meta.title)}" />`,
+    `<meta name="twitter:image:alt" content="${escapeAttr(meta.title)}" />`,
+  ];
+
   if (meta.type === 'profile') {
     if (meta.username) {
-      profileExtras.push(
+      headExtras.push(
         `<meta property="og:profile:username" content="${escapeAttr(meta.username)}" />`
       );
     }
     if (meta.firstName) {
-      profileExtras.push(
+      headExtras.push(
         `<meta property="og:profile:first_name" content="${escapeAttr(meta.firstName)}" />`
       );
     }
   }
 
-  let rw = new HTMLRewriter()
+  return new HTMLRewriter()
     .on('title', new TitleRewriter(meta.title))
     .on('meta[name="description"], meta[property^="og:"], meta[name^="twitter:"]', new MetaRewriter(map))
-    .on('link[rel="canonical"]', new CanonicalRewriter(meta.url));
-
-  if (profileExtras.length > 0) {
-    rw = rw.on('head', new HeadAppender(profileExtras.join('\n')));
-  }
-
-  return rw.transform(html);
+    .on('link[rel="canonical"]', new CanonicalRewriter(meta.url))
+    .on('head', new HeadAppender(headExtras.join('\n')))
+    .transform(html);
 }
 
 /**
