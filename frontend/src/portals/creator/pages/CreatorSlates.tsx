@@ -80,15 +80,15 @@ export default function CreatorSlates() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Layers className="h-7 w-7 text-indigo-400" />
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Layers className="h-7 w-7 text-purple-600" />
             Slates
           </h1>
-          <p className="text-gray-400 mt-1">Curate collections of related pitches</p>
+          <p className="text-gray-600 mt-1">Curate collections of related pitches</p>
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
         >
           <Plus className="h-4 w-4" />
           New Slate
@@ -103,12 +103,12 @@ export default function CreatorSlates() {
           { label: 'Drafts', value: stats.drafts, icon: Pencil },
           { label: 'Total Pitches', value: stats.totalPitches, icon: Film },
         ].map(stat => (
-          <div key={stat.label} className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-            <div className="flex items-center gap-2 text-gray-400 text-sm mb-1">
+          <div key={stat.label} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+            <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
               <stat.icon className="h-4 w-4" />
               {stat.label}
             </div>
-            <div className="text-2xl font-bold text-white">{stat.value}</div>
+            <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
           </div>
         ))}
       </div>
@@ -116,13 +116,13 @@ export default function CreatorSlates() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
             type="text"
             placeholder="Search slates..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-gray-800/50 border border-gray-700/50 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
           />
         </div>
         <div className="flex gap-2">
@@ -132,8 +132,8 @@ export default function CreatorSlates() {
               onClick={() => setStatusFilter(s)}
               className={`px-3 py-2 rounded-lg text-sm transition-colors ${
                 statusFilter === s
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-800/50 text-gray-400 hover:text-white border border-gray-700/50'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-white text-gray-600 hover:text-gray-900 border border-gray-300 hover:border-gray-400'
               }`}
             >
               {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
@@ -144,40 +144,40 @@ export default function CreatorSlates() {
 
       {/* Create Modal */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowCreate(false)}>
-          <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
-            <h2 className="text-lg font-semibold text-white mb-4">Create New Slate</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowCreate(false)}>
+          <div className="bg-white border border-gray-200 rounded-xl p-6 w-full max-w-md mx-4 shadow-xl" onClick={e => e.stopPropagation()}>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Create New Slate</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Title</label>
+                <label className="block text-sm text-gray-700 mb-1">Title</label>
                 <input
                   type="text"
                   value={newTitle}
                   onChange={e => setNewTitle(e.target.value)}
                   placeholder="e.g. Sci-Fi Collection"
                   maxLength={150}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
                   autoFocus
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Description (optional)</label>
+                <label className="block text-sm text-gray-700 mb-1">Description (optional)</label>
                 <textarea
                   value={newDescription}
                   onChange={e => setNewDescription(e.target.value)}
                   placeholder="What's this slate about?"
                   rows={3}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-none"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 resize-none"
                 />
               </div>
               <div className="flex gap-3 justify-end">
-                <button onClick={() => setShowCreate(false)} className="px-4 py-2 text-gray-400 hover:text-white transition-colors">
+                <button onClick={() => setShowCreate(false)} className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors">
                   Cancel
                 </button>
                 <button
                   onClick={handleCreate}
                   disabled={!newTitle.trim() || creating}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg transition-colors"
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-lg transition-colors"
                 >
                   {creating ? 'Creating...' : 'Create'}
                 </button>
@@ -190,12 +190,12 @@ export default function CreatorSlates() {
       {/* Slate List */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="animate-spin h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full" />
+          <div className="animate-spin h-8 w-8 border-2 border-purple-600 border-t-transparent rounded-full" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-20">
-          <Layers className="h-12 w-12 text-gray-600 mx-auto mb-3" />
-          <p className="text-gray-400 text-lg">
+        <div className="text-center py-20 bg-white border border-gray-200 rounded-xl">
+          <Layers className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-700 text-lg">
             {slates.length === 0 ? 'No slates yet' : 'No slates match your filters'}
           </p>
           {slates.length === 0 && (
@@ -207,19 +207,19 @@ export default function CreatorSlates() {
           {filtered.map(slate => (
             <div
               key={slate.id}
-              className="bg-gray-800/50 border border-gray-700/50 rounded-xl overflow-hidden hover:border-gray-600 transition-colors group cursor-pointer"
+              className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-purple-300 hover:shadow-md transition-all group cursor-pointer"
               onClick={() => navigate(`/creator/slates/${slate.id}`)}
             >
               {/* Cover */}
-              <div className="h-32 bg-gradient-to-br from-indigo-900/40 to-purple-900/40 relative">
+              <div className="h-32 bg-gradient-to-br from-purple-100 to-indigo-100 relative">
                 {slate.cover_image && (
                   <img src={slate.cover_image} alt="" className="w-full h-full object-cover" />
                 )}
                 <div className="absolute top-2 right-2 flex gap-1">
                   <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                     slate.status === 'published'
-                      ? 'bg-green-500/20 text-green-400'
-                      : 'bg-gray-600/40 text-gray-300'
+                      ? 'bg-green-100 text-green-700 border border-green-200'
+                      : 'bg-gray-100 text-gray-700 border border-gray-200'
                   }`}>
                     {slate.status === 'published' ? 'Published' : 'Draft'}
                   </span>
@@ -228,22 +228,22 @@ export default function CreatorSlates() {
                 <div className="absolute top-2 left-2">
                   <button
                     onClick={e => { e.stopPropagation(); setMenuOpen(menuOpen === slate.id ? null : slate.id); }}
-                    className="p-1 rounded bg-black/40 text-gray-300 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="p-1 rounded bg-white/90 text-gray-600 hover:text-gray-900 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
                   >
                     <MoreVertical className="h-4 w-4" />
                   </button>
                   {menuOpen === slate.id && (
-                    <div className="absolute top-8 left-0 bg-gray-800 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[160px] z-10">
+                    <div className="absolute top-8 left-0 bg-white border border-gray-200 rounded-lg shadow-xl py-1 min-w-[160px] z-10">
                       <button
                         onClick={e => { e.stopPropagation(); handleTogglePublish(slate); }}
-                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-300 hover:bg-gray-700"
+                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
                       >
                         {slate.status === 'published' ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         {slate.status === 'published' ? 'Unpublish' : 'Publish'}
                       </button>
                       <button
                         onClick={e => { e.stopPropagation(); handleDelete(slate.id); }}
-                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-400 hover:bg-gray-700"
+                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
                       >
                         <Trash2 className="h-4 w-4" />
                         Delete
@@ -254,9 +254,9 @@ export default function CreatorSlates() {
               </div>
               {/* Info */}
               <div className="p-4">
-                <h3 className="text-white font-semibold truncate">{slate.title}</h3>
+                <h3 className="text-gray-900 font-semibold truncate">{slate.title}</h3>
                 {slate.description && (
-                  <p className="text-gray-400 text-sm mt-1 line-clamp-2">{slate.description}</p>
+                  <p className="text-gray-600 text-sm mt-1 line-clamp-2">{slate.description}</p>
                 )}
                 <div className="flex items-center gap-3 mt-3 text-sm text-gray-500">
                   <span className="flex items-center gap-1">

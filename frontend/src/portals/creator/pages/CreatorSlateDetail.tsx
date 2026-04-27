@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Layers, Pencil, Check, X, Trash2,
+  ArrowLeft, Pencil, Check, X, Trash2,
   GripVertical, Film, Eye, Heart, Plus, Globe,
   EyeOff, Search, ExternalLink
 } from 'lucide-react';
-import { SlateService, type SlateDetail, type SlatePitch } from '@/services/slate.service';
+import { SlateService, type SlateDetail } from '@/services/slate.service';
 import { apiClient } from '@/lib/api-client';
 
 interface PitchSearchResult {
@@ -156,16 +156,16 @@ export default function CreatorSlateDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-spin h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full" />
+        <div className="animate-spin h-8 w-8 border-2 border-purple-600 border-t-transparent rounded-full" />
       </div>
     );
   }
 
   if (!slate) {
     return (
-      <div className="text-center py-20">
-        <p className="text-gray-400">Slate not found</p>
-        <button onClick={() => navigate('/creator/slates')} className="text-indigo-400 hover:text-indigo-300 mt-2">
+      <div className="text-center py-20 bg-white border border-gray-200 rounded-xl">
+        <p className="text-gray-700">Slate not found</p>
+        <button onClick={() => navigate('/creator/slates')} className="text-purple-600 hover:text-purple-700 mt-2">
           Back to Slates
         </button>
       </div>
@@ -179,7 +179,7 @@ export default function CreatorSlateDetailPage() {
         <div className="flex items-start gap-3 min-w-0">
           <button
             onClick={() => navigate('/creator/slates')}
-            className="mt-1 p-1 text-gray-400 hover:text-white transition-colors"
+            className="mt-1 p-1 text-gray-500 hover:text-gray-900 transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
@@ -189,7 +189,7 @@ export default function CreatorSlateDetailPage() {
                 <input
                   value={editTitle}
                   onChange={e => setEditTitle(e.target.value)}
-                  className="text-2xl font-bold bg-gray-800 border border-gray-600 rounded-lg px-3 py-1 text-white focus:outline-none focus:border-indigo-500 w-full"
+                  className="text-2xl font-bold bg-white border border-gray-300 rounded-lg px-3 py-1 text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 w-full"
                   maxLength={150}
                   autoFocus
                 />
@@ -198,13 +198,13 @@ export default function CreatorSlateDetailPage() {
                   onChange={e => setEditDescription(e.target.value)}
                   placeholder="Description..."
                   rows={2}
-                  className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-1 text-gray-300 focus:outline-none focus:border-indigo-500 resize-none text-sm"
+                  className="w-full bg-white border border-gray-300 rounded-lg px-3 py-1 text-gray-700 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 resize-none text-sm"
                 />
                 <div className="flex gap-2">
-                  <button onClick={handleSaveDetails} disabled={saving} className="p-1 text-green-400 hover:text-green-300">
+                  <button onClick={handleSaveDetails} disabled={saving} className="p-1 text-green-600 hover:text-green-700">
                     <Check className="h-5 w-5" />
                   </button>
-                  <button onClick={() => { setEditing(false); setEditTitle(slate.title); setEditDescription(slate.description || ''); }} className="p-1 text-gray-400 hover:text-white">
+                  <button onClick={() => { setEditing(false); setEditTitle(slate.title); setEditDescription(slate.description || ''); }} className="p-1 text-gray-500 hover:text-gray-900">
                     <X className="h-5 w-5" />
                   </button>
                 </div>
@@ -212,17 +212,19 @@ export default function CreatorSlateDetailPage() {
             ) : (
               <>
                 <div className="flex items-center gap-2">
-                  <h1 className="text-2xl font-bold text-white truncate">{slate.title}</h1>
-                  <button onClick={() => setEditing(true)} className="p-1 text-gray-500 hover:text-white transition-colors">
+                  <h1 className="text-2xl font-bold text-gray-900 truncate">{slate.title}</h1>
+                  <button onClick={() => setEditing(true)} className="p-1 text-gray-400 hover:text-gray-900 transition-colors">
                     <Pencil className="h-4 w-4" />
                   </button>
                 </div>
-                {slate.description && <p className="text-gray-400 mt-1">{slate.description}</p>}
+                {slate.description && <p className="text-gray-600 mt-1">{slate.description}</p>}
               </>
             )}
             <div className="flex items-center gap-3 mt-2 text-sm text-gray-500">
-              <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                slate.status === 'published' ? 'bg-green-500/20 text-green-400' : 'bg-gray-600/40 text-gray-300'
+              <span className={`px-2 py-0.5 rounded text-xs font-medium border ${
+                slate.status === 'published'
+                  ? 'bg-green-100 text-green-700 border-green-200'
+                  : 'bg-gray-100 text-gray-700 border-gray-200'
               }`}>
                 {slate.status === 'published' ? 'Published' : 'Draft'}
               </span>
@@ -236,8 +238,8 @@ export default function CreatorSlateDetailPage() {
             onClick={handleTogglePublish}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
               slate.status === 'published'
-                ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                : 'bg-green-600 text-white hover:bg-green-500'
+                ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                : 'bg-green-600 text-white hover:bg-green-700'
             }`}
           >
             {slate.status === 'published' ? <EyeOff className="h-4 w-4" /> : <Globe className="h-4 w-4" />}
@@ -245,7 +247,7 @@ export default function CreatorSlateDetailPage() {
           </button>
           <button
             onClick={() => setShowAddPitch(true)}
-            className="flex items-center gap-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm transition-colors"
+            className="flex items-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm transition-colors"
           >
             <Plus className="h-4 w-4" />
             Add Pitch
@@ -255,13 +257,13 @@ export default function CreatorSlateDetailPage() {
 
       {/* Public link (if published) */}
       {slate.status === 'published' && (
-        <div className="bg-green-900/20 border border-green-800/50 rounded-lg px-4 py-3 flex items-center gap-2 text-sm">
-          <Globe className="h-4 w-4 text-green-400 shrink-0" />
-          <span className="text-green-300">Public link:</span>
-          <code className="text-green-400 truncate">/slates/s/{slate.id}</code>
+        <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 flex items-center gap-2 text-sm">
+          <Globe className="h-4 w-4 text-green-600 shrink-0" />
+          <span className="text-green-700">Public link:</span>
+          <code className="text-green-700 truncate font-mono">/slates/s/{slate.id}</code>
           <button
             onClick={() => navigator.clipboard.writeText(`${window.location.origin}/slates/s/${slate.id}`)}
-            className="ml-auto text-green-400 hover:text-green-300 shrink-0"
+            className="ml-auto text-green-700 hover:text-green-800 shrink-0"
             title="Copy link"
           >
             <ExternalLink className="h-4 w-4" />
@@ -271,12 +273,12 @@ export default function CreatorSlateDetailPage() {
 
       {/* Pitches */}
       {slate.pitches.length === 0 ? (
-        <div className="text-center py-16 border-2 border-dashed border-gray-700 rounded-xl">
-          <Film className="h-10 w-10 text-gray-600 mx-auto mb-3" />
-          <p className="text-gray-400">No pitches in this slate yet</p>
+        <div className="text-center py-16 border-2 border-dashed border-gray-300 rounded-xl bg-white">
+          <Film className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-700">No pitches in this slate yet</p>
           <button
             onClick={() => setShowAddPitch(true)}
-            className="mt-3 text-indigo-400 hover:text-indigo-300 text-sm"
+            className="mt-3 text-purple-600 hover:text-purple-700 text-sm font-medium"
           >
             Add your first pitch
           </button>
@@ -291,29 +293,29 @@ export default function CreatorSlateDetailPage() {
               onDragOver={e => handleDragOver(e, index)}
               onDrop={() => handleDrop(index)}
               onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
-              className={`flex items-center gap-3 bg-gray-800/50 border rounded-lg p-3 transition-all ${
-                dragOverIndex === index ? 'border-indigo-500 bg-indigo-900/20' : 'border-gray-700/50 hover:border-gray-600'
+              className={`flex items-center gap-3 bg-white border rounded-lg p-3 transition-all ${
+                dragOverIndex === index ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'
               } ${dragIndex === index ? 'opacity-50' : ''}`}
             >
-              <div className="cursor-grab text-gray-600 hover:text-gray-400">
+              <div className="cursor-grab text-gray-300 hover:text-gray-500">
                 <GripVertical className="h-5 w-5" />
               </div>
 
               {/* Thumbnail */}
-              <div className="h-16 w-24 bg-gray-700/50 rounded overflow-hidden shrink-0">
+              <div className="h-16 w-24 bg-gray-100 rounded overflow-hidden shrink-0">
                 {pitch.cover_image ? (
                   <img src={pitch.cover_image} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <Film className="h-5 w-5 text-gray-600" />
+                    <Film className="h-5 w-5 text-gray-300" />
                   </div>
                 )}
               </div>
 
               {/* Info */}
               <div className="min-w-0 flex-1">
-                <h3 className="text-white font-medium truncate">{pitch.title}</h3>
-                <p className="text-gray-500 text-sm truncate">{pitch.logline}</p>
+                <h3 className="text-gray-900 font-medium truncate">{pitch.title}</h3>
+                <p className="text-gray-600 text-sm truncate">{pitch.logline}</p>
                 <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
                   {pitch.genre && <span>{pitch.genre}</span>}
                   {pitch.format && <span>{pitch.format}</span>}
@@ -325,7 +327,7 @@ export default function CreatorSlateDetailPage() {
               {/* Remove */}
               <button
                 onClick={e => { e.stopPropagation(); handleRemovePitch(pitch.id); }}
-                className="p-2 text-gray-600 hover:text-red-400 transition-colors shrink-0"
+                className="p-2 text-gray-400 hover:text-red-600 transition-colors shrink-0"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -336,18 +338,18 @@ export default function CreatorSlateDetailPage() {
 
       {/* Add Pitch Modal */}
       {showAddPitch && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowAddPitch(false)}>
-          <div className="bg-gray-800 border border-gray-700 rounded-xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-gray-700">
-              <h2 className="text-lg font-semibold text-white">Add Pitch to Slate</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowAddPitch(false)}>
+          <div className="bg-white border border-gray-200 rounded-xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">Add Pitch to Slate</h2>
               <div className="relative mt-3">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
                   value={pitchSearch}
                   onChange={e => setPitchSearch(e.target.value)}
                   placeholder="Search your pitches..."
-                  className="w-full pl-10 pr-4 py-2 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                  className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
                   autoFocus
                 />
               </div>
@@ -355,7 +357,7 @@ export default function CreatorSlateDetailPage() {
             <div className="flex-1 overflow-y-auto p-4 space-y-2 min-h-[200px]">
               {searchingPitches ? (
                 <div className="flex justify-center py-8">
-                  <div className="animate-spin h-6 w-6 border-2 border-indigo-500 border-t-transparent rounded-full" />
+                  <div className="animate-spin h-6 w-6 border-2 border-purple-600 border-t-transparent rounded-full" />
                 </div>
               ) : pitchResults.length === 0 ? (
                 <p className="text-center text-gray-500 py-8">
@@ -363,23 +365,23 @@ export default function CreatorSlateDetailPage() {
                 </p>
               ) : (
                 pitchResults.map(pitch => (
-                  <div key={pitch.id} className="flex items-center gap-3 p-3 bg-gray-900/50 border border-gray-700/50 rounded-lg hover:border-gray-600">
-                    <div className="h-10 w-16 bg-gray-700/50 rounded overflow-hidden shrink-0">
+                  <div key={pitch.id} className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-gray-300">
+                    <div className="h-10 w-16 bg-gray-100 rounded overflow-hidden shrink-0">
                       {pitch.title_image ? (
                         <img src={pitch.title_image} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <Film className="h-4 w-4 text-gray-600" />
+                          <Film className="h-4 w-4 text-gray-300" />
                         </div>
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-white text-sm font-medium truncate">{pitch.title}</p>
+                      <p className="text-gray-900 text-sm font-medium truncate">{pitch.title}</p>
                       <p className="text-gray-500 text-xs truncate">{pitch.genre}{pitch.format ? ` · ${pitch.format}` : ''}</p>
                     </div>
                     <button
                       onClick={() => handleAddPitch(pitch.id)}
-                      className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded transition-colors shrink-0"
+                      className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded transition-colors shrink-0"
                     >
                       Add
                     </button>
@@ -387,8 +389,8 @@ export default function CreatorSlateDetailPage() {
                 ))
               )}
             </div>
-            <div className="p-4 border-t border-gray-700">
-              <button onClick={() => setShowAddPitch(false)} className="w-full py-2 text-gray-400 hover:text-white transition-colors">
+            <div className="p-4 border-t border-gray-200">
+              <button onClick={() => setShowAddPitch(false)} className="w-full py-2 text-gray-600 hover:text-gray-900 transition-colors">
                 Done
               </button>
             </div>
