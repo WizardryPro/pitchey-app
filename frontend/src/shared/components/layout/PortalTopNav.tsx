@@ -13,6 +13,7 @@ import {
 } from '@/config/navigation.routes';
 import { normalizeUserType, type UserTypeCanonical } from '@shared/types/user-type';
 import { setPendingReturnTo } from '@/utils/postLoginRedirect';
+import { getPortalTheme } from '@shared/hooks/usePortalTheme';
 
 type NavItem = { label: string; to: string };
 
@@ -66,12 +67,16 @@ const ANON_NAV: NavItem[] = [
   { label: 'About', to: '/about' },
 ];
 
+// Icon + label per role. Color comes from the brand portal theme so the badge
+// stays in sync with sidebars, login pages, and the portal identity strip.
+// Don't reintroduce hardcoded tints (`text-green-600` for investor was a bug
+// the usePortalTheme docs explicitly call out).
 function roleBadge(userType: UserTypeCanonical | null) {
   switch (userType) {
-    case 'production': return { Icon: Building2, label: 'Production', tint: 'text-purple-600' };
-    case 'investor':   return { Icon: Wallet, label: 'Investor', tint: 'text-green-600' };
-    case 'creator':    return { Icon: User, label: 'Creator', tint: 'text-blue-600' };
-    case 'watcher':    return { Icon: Eye, label: 'Watcher', tint: 'text-amber-600' };
+    case 'production': return { Icon: Building2, label: 'Production' };
+    case 'investor':   return { Icon: Wallet, label: 'Investor' };
+    case 'creator':    return { Icon: User, label: 'Creator' };
+    case 'watcher':    return { Icon: Eye, label: 'Watcher' };
     default:           return null;
   }
 }
@@ -85,6 +90,7 @@ export default function PortalTopNav() {
   const userType = normalizeUserType(user?.userType);
   const items = (isAuthenticated && userType && NAV_BY_ROLE[userType]) || ANON_NAV;
   const badge = roleBadge(userType);
+  const theme = getPortalTheme(userType);
 
   const isActive = (to: string) => {
     if (to === '/marketplace') return location.pathname === '/marketplace';
@@ -139,11 +145,14 @@ export default function PortalTopNav() {
               <>
                 <NotificationBell size="md" />
 
-                {/* Role badge — desktop only */}
+                {/* Role badge — desktop only. Tint comes from the portal theme
+                    (creator=#7B3FBF, investor=#5B4FC7, production=#4A5FD0,
+                    watcher=#06B6D4) so this stays in sync with sidebars and
+                    the identity strip. */}
                 {badge && (
-                  <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg border border-gray-200">
-                    <badge.Icon className={`w-4 h-4 ${badge.tint}`} />
-                    <span className="text-sm font-medium text-gray-700">{badge.label}</span>
+                  <div className={`hidden lg:flex items-center gap-2 px-3 py-1.5 ${theme.bgMuted} rounded-lg border border-gray-200`}>
+                    <badge.Icon className={`w-4 h-4 ${theme.textAccent}`} />
+                    <span className={`text-sm font-medium ${theme.textAccent}`}>{badge.label}</span>
                     <span className="text-xs text-gray-500">•</span>
                     <span className="text-sm text-gray-700 truncate max-w-[140px]">
                       {user.companyName || user.firstName || user.username || user.email}

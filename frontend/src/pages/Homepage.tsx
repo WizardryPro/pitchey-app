@@ -11,6 +11,7 @@ import GenrePlaceholder from '@shared/components/GenrePlaceholder';
 import HeatBadge, { getHeatScore, getPitcheyScore } from '../components/HeatBadge';
 import PitcheyRating from '../components/PitcheyRating';
 import { getPortalPath } from '@/utils/navigation';
+import { getPortalTheme } from '@shared/hooks/usePortalTheme';
 
 
 
@@ -114,31 +115,34 @@ export default function Homepage() {
             <div className="flex items-center gap-4">
               {isAuthenticated && user ? (
                 <>
-                  {/* User Status Badge */}
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 border border-purple-200 rounded-lg">
-                    {userType === 'production' && (
-                      <>
-                        <Building2 className="w-4 h-4 text-purple-400" />
-                        <span className="text-sm text-gray-700">Production</span>
-                      </>
-                    )}
-                    {userType === 'investor' && (
-                      <>
-                        <Wallet className="w-4 h-4 text-green-400" />
-                        <span className="text-sm text-gray-700">Investor</span>
-                      </>
-                    )}
-                    {userType === 'creator' && (
-                      <>
-                        <User className="w-4 h-4 text-blue-400" />
-                        <span className="text-sm text-gray-700">Creator</span>
-                      </>
-                    )}
-                    <span className="text-xs text-gray-400">•</span>
-                    <span className="text-sm text-gray-900">
-                      {userType === 'production' && user.companyName ? user.companyName : user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user.username}
-                    </span>
-                  </div>
+                  {/* User Status Badge — tint comes from the portal theme so the
+                      badge matches sidebars and the identity strip. Don't reintroduce
+                      hardcoded colors (investor was 'green' before — the bug
+                      usePortalTheme docs explicitly call out). */}
+                  {(() => {
+                    const theme = getPortalTheme(userType);
+                    const meta =
+                      userType === 'production' ? { Icon: Building2, label: 'Production' } :
+                      userType === 'investor'   ? { Icon: Wallet,    label: 'Investor'   } :
+                      userType === 'creator'    ? { Icon: User,      label: 'Creator'    } :
+                      userType === 'watcher'    ? { Icon: Eye,       label: 'Watcher'    } :
+                      null;
+                    if (!meta) return null;
+                    const displayName =
+                      userType === 'production' && user.companyName
+                        ? user.companyName
+                        : user.firstName
+                          ? `${user.firstName} ${user.lastName || ''}`.trim()
+                          : user.username;
+                    return (
+                      <div className={`flex items-center gap-2 px-3 py-1.5 ${theme.bgMuted} border border-gray-200 rounded-lg`}>
+                        <meta.Icon className={`w-4 h-4 ${theme.textAccent}`} />
+                        <span className={`text-sm font-medium ${theme.textAccent}`}>{meta.label}</span>
+                        <span className="text-xs text-gray-400">•</span>
+                        <span className="text-sm text-gray-900">{displayName}</span>
+                      </div>
+                    );
+                  })()}
 
                   {/* Dashboard Button */}
                   <button
