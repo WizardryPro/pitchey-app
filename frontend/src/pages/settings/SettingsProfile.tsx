@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Camera, Save, X,
+  Camera, Save, X, Lock, Eye, EyeOff,
   Twitter, Linkedin, Instagram, Youtube
 } from 'lucide-react';
 import { useBetterAuthStore } from '../../store/betterAuthStore';
+import { sessionManager } from '../../lib/session-manager';
 import { UserService } from '../../services/user.service';
 import { toast } from 'react-hot-toast';
 
@@ -34,6 +35,13 @@ export default function SettingsProfile() {
   const { user, checkSession } = useBetterAuthStore();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [showPasswords, setShowPasswords] = useState({ current: false, next: false });
   const [profileData, setProfileData] = useState<ProfileData>({
     firstName: '',
     lastName: '',
@@ -57,7 +65,7 @@ export default function SettingsProfile() {
         lastName: (user as any).lastName || nameParts.slice(1).join(' ') || '',
         username: user.username || '',
         email: user.email || '',
-        phone: '',
+        phone: (user as any).phone || '',
         bio: (user as any).bio || '',
         company: (user as any).professionalInfo?.company || (user as any).companyName || '',
         position: (user as any).professionalInfo?.position || '',
@@ -92,9 +100,15 @@ export default function SettingsProfile() {
     setLoading(true);
     try {
       const fullName = `${profileData.firstName} ${profileData.lastName}`.trim();
+      const originalEmail = (user?.email || '').trim().toLowerCase();
+      const newEmail = profileData.email.trim().toLowerCase();
+      const emailChanged = !!newEmail && newEmail !== originalEmail;
+
       await UserService.updateProfile({
         name: fullName || undefined,
         username: profileData.username || undefined,
+        email: emailChanged ? newEmail : undefined,
+        phone: profileData.phone || undefined,
         bio: profileData.bio || undefined,
         location: profileData.location || undefined,
         website: profileData.website || undefined,
@@ -104,7 +118,8 @@ export default function SettingsProfile() {
           position: profileData.position || undefined
         }
       });
-      // Refresh session store so other pages see the updated data
+      // Bypass the 60s sessionManager cache so we re-fetch the freshly-updated user
+      sessionManager.clearCache();
       await checkSession();
       toast.success('Profile updated successfully!');
     } catch (err) {
@@ -133,6 +148,7 @@ export default function SettingsProfile() {
           ...prev,
           [type === 'avatar' ? 'avatar' : 'coverImage']: imageUrl
         }));
+        sessionManager.clearCache();
         await checkSession();
         toast.success(`${type === 'avatar' ? 'Profile' : 'Cover'} image updated!`);
       } catch (err) {
@@ -143,6 +159,32 @@ export default function SettingsProfile() {
       }
     };
     input.click();
+  };
+
+  const handleChangePassword = async () => {
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    if (passwordData.newPassword.length < 8) {
+      toast.error('New password must be at least 8 characters');
+      return;
+    }
+    setPasswordLoading(true);
+    try {
+      await UserService.changePassword({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+        confirmPassword: passwordData.confirmPassword,
+      });
+      toast.success('Password changed');
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      toast.error(e.message || 'Failed to change password');
+    } finally {
+      setPasswordLoading(false);
+    }
   };
 
   return (
@@ -230,12 +272,25 @@ export default function SettingsProfile() {
                     <input
                       type="email"
                       value={profileData.email}
-                      disabled
-                      className="w-full px-4 py-2 border rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+                      onChange={(e) => handleInputChange('email', e.target.value)}
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                      placeholder="you@example.com"
                     />
+                    <p className="text-xs text-gray-500 mt-1">Changing this updates the email you sign in with.</p>
                   </div>
 
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                    <input
+                      type="tel"
+                      value={profileData.phone}
+                      onChange={(e) => handleInputChange('phone', e.target.value)}
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                      placeholder="+1 555 123 4567"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
                     <input
                       type="text"
@@ -354,6 +409,85 @@ export default function SettingsProfile() {
                       className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* Password */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Lock className="w-4 h-4" />
+                  Change Password
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+                    <div className="relative">
+                      <input
+                        type={showPasswords.current ? 'text' : 'password'}
+                        value={passwordData.currentPassword}
+                        onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                        autoComplete="current-password"
+                        className="w-full px-4 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                        placeholder="Enter your current password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswords(p => ({ ...p, current: !p.current }))}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-500 hover:text-gray-700"
+                        aria-label={showPasswords.current ? 'Hide password' : 'Show password'}
+                      >
+                        {showPasswords.current ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                    <div className="relative">
+                      <input
+                        type={showPasswords.next ? 'text' : 'password'}
+                        value={passwordData.newPassword}
+                        onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                        autoComplete="new-password"
+                        className="w-full px-4 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                        placeholder="At least 8 characters"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswords(p => ({ ...p, next: !p.next }))}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-500 hover:text-gray-700"
+                        aria-label={showPasswords.next ? 'Hide password' : 'Show password'}
+                      >
+                        {showPasswords.next ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+                    <input
+                      type={showPasswords.next ? 'text' : 'password'}
+                      value={passwordData.confirmPassword}
+                      onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                      autoComplete="new-password"
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                      placeholder="Repeat new password"
+                    />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <button
+                    onClick={handleChangePassword}
+                    disabled={passwordLoading || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword}
+                    className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {passwordLoading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    ) : (
+                      <Lock className="w-4 h-4" />
+                    )}
+                    Update Password
+                  </button>
                 </div>
               </div>
 

@@ -31,6 +31,8 @@ export default function PitchDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
   const [showEnhancedNDARequest, setShowEnhancedNDARequest] = useState(false);
   const [hasSignedNDA, setHasSignedNDA] = useState(false);
   const isOnline = useOnlineStatus();
@@ -188,6 +190,57 @@ export default function PitchDetail() {
     } catch (err) {
       console.error('Error toggling save:', err);
       setIsSaved(isSaved); // revert
+    }
+  };
+
+  // Like — anon click sends them to login; auth toggles via /api/pitches/:id/like.
+  // Endpoint mirrors AdvancedSearch.tsx (POST to add, DELETE to remove).
+  const handleLike = async () => {
+    if (!pitch) return;
+    if (!isAuthenticated) {
+      goToLogin();
+      return;
+    }
+    const next = !isLiked;
+    setIsLiked(next);
+    // Optimistic count bump
+    setPitch(p => p ? ({ ...p, likeCount: (p.likeCount || 0) + (next ? 1 : -1) } as Pitch) : p);
+    try {
+      const { API_URL } = await import('../config');
+      const res = await fetch(`${API_URL}/api/pitches/${pitch.id}/like`, {
+        method: next ? 'POST' : 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error(`Like failed: ${res.status}`);
+    } catch (err) {
+      console.error('Error toggling like:', err);
+      // Revert
+      setIsLiked(!next);
+      setPitch(p => p ? ({ ...p, likeCount: (p.likeCount || 0) + (next ? -1 : 1) } as Pitch) : p);
+    }
+  };
+
+  // Share — Web Share API on mobile/supported browsers, clipboard fallback
+  // elsewhere. The branded social-unfurl plumbing means whatever destination
+  // (DM / iMessage / FB / X / etc) gets a rich preview from the URL alone.
+  const handleShare = async () => {
+    const url = window.location.href;
+    const title = pitch?.title ? `${pitch.title} — Pitchey` : 'Pitchey';
+    const text = pitch?.logline || 'Check out this pitch on Pitchey.';
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text, url });
+        return;
+      } catch {
+        // User cancelled or share failed — fall through to clipboard
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    } catch (err) {
+      console.error('Share failed:', err);
     }
   };
 
@@ -407,9 +460,12 @@ export default function PitchDetail() {
                       NDA Signed
                     </span>
                   )}
-                  <button className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium">
+                  <button
+                    onClick={handleShare}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
+                  >
                     <Share2 className="w-4 h-4" />
-                    Share
+                    {shareCopied ? 'Link copied!' : 'Share'}
                   </button>
                 </>
               )}
@@ -783,15 +839,16 @@ export default function PitchDetail() {
               </div>
             )}
 
-            {/* Structured Feedback — hidden until NDA signed */}
-            {(hasSignedNDA || isOwner) && (
-              <FeedbackSection
-                pitchId={pitch.id}
-                isOwner={isOwner}
-                isAuthenticated={isAuthenticated}
-                userType={(user as any)?.userType || (user as any)?.user_type || ''}
-              />
-            )}
+            {/* Feedback & Ratings — visible to all viewers (anon included).
+                Quick-rate (1-5 stars) is open to anyone except the owner;
+                structured feedback form is auth-gated inside the component
+                via canLeaveFeedback. */}
+            <FeedbackSection
+              pitchId={pitch.id}
+              isOwner={isOwner}
+              isAuthenticated={isAuthenticated}
+              userType={(user as any)?.userType || (user as any)?.user_type || ''}
+            />
           </div>
 
           {/* Sidebar */}
@@ -836,21 +893,46 @@ export default function PitchDetail() {
             )}
 
             {/* Engagement Actions */}
-            <div className="bg-white rounded-xl shadow-sm p-4 flex flex-col gap-2">
-              {isAuthenticated && !isOwner && (
+            {!isOwner && (
+              <div className="bg-white rounded-xl shadow-sm p-4 flex flex-col gap-2">
+                {/* Like — visible to all (anon click → sign-in) */}
                 <button
-                  onClick={handleSave}
+                  onClick={handleLike}
                   className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition ${
-                    isSaved
-                      ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                    isLiked
+                      ? 'bg-red-50 text-red-600 hover:bg-red-100'
                       : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
                   }`}
                 >
-                  <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-current' : ''}`} />
-                  {isSaved ? 'Saved' : 'Save'}
+                  <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
+                  {isLiked ? 'Liked' : 'Like'}
                 </button>
-              )}
-            </div>
+
+                {/* Save — auth-only */}
+                {isAuthenticated && (
+                  <button
+                    onClick={handleSave}
+                    className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition ${
+                      isSaved
+                        ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-current' : ''}`} />
+                    {isSaved ? 'Saved' : 'Save'}
+                  </button>
+                )}
+
+                {/* Share — visible to all */}
+                <button
+                  onClick={handleShare}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium bg-gray-50 text-gray-600 hover:bg-gray-100 transition"
+                >
+                  <Share2 className="w-5 h-5" />
+                  {shareCopied ? 'Link copied!' : 'Share'}
+                </button>
+              </div>
+            )}
 
             {/* Project Info */}
             <div className="bg-white rounded-xl shadow-sm p-6">
@@ -927,25 +1009,15 @@ export default function PitchDetail() {
                         {hasSignedNDA ? 'NDA Signed' : 'Request NDA Access'}
                       </button>
                     )}
-                    <button className="w-full flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
-                      <Share2 className="w-4 h-4" />
-                      Share Pitch
-                    </button>
                   </>
                 ) : (
-                  <>
-                    <button
-                      onClick={goToLogin}
-                      className="w-full flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition"
-                    >
-                      <LogIn className="w-4 h-4" />
-                      Sign In to Interact
-                    </button>
-                    <button className="w-full flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
-                      <Share2 className="w-4 h-4" />
-                      Share Pitch
-                    </button>
-                  </>
+                  <button
+                    onClick={goToLogin}
+                    className="w-full flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    Sign In to Interact
+                  </button>
                 )}
               </div>
             </div>

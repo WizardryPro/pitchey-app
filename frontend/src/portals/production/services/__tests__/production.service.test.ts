@@ -328,29 +328,6 @@ describe('ProductionService', () => {
     })
   })
 
-  describe('getRevenue', () => {
-    it('returns revenue data', async () => {
-      const revenueData = { total: 500000, breakdown: [] }
-      mockApiClient.get.mockResolvedValue({ success: true, data: revenueData })
-
-      const result = await ProductionService.getRevenue()
-
-      expect(mockApiClient.get).toHaveBeenCalledWith('/api/production/revenue')
-      expect(result).toEqual(revenueData)
-    })
-
-    it('returns empty object when data missing', async () => {
-      mockApiClient.get.mockResolvedValue({ success: true, data: null })
-      const result = await ProductionService.getRevenue()
-      expect(result).toEqual({})
-    })
-
-    it('throws on failure', async () => {
-      mockApiClient.get.mockResolvedValue({ success: false, error: { message: 'Error' } })
-      await expect(ProductionService.getRevenue()).rejects.toThrow()
-    })
-  })
-
   describe('generateContract', () => {
     it('generates contract as blob', async () => {
       const blob = new Blob(['PDF'], { type: 'application/pdf' })

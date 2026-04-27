@@ -75,7 +75,6 @@ const ProductionSubmissionsShortlisted = lazy(() => import('@portals/production/
 const ProductionSubmissionsAccepted = lazy(() => import('@portals/production/pages/ProductionSubmissionsAccepted'));
 const ProductionSubmissionsRejected = lazy(() => import('@portals/production/pages/ProductionSubmissionsRejected'));
 const ProductionSubmissionsArchive = lazy(() => import('@portals/production/pages/ProductionSubmissionsArchive'));
-const ProductionRevenue = lazy(() => import('@portals/production/pages/ProductionRevenue'));
 const ProductionSaved = lazy(() => import('@portals/production/pages/ProductionSaved'));
 const ProductionCollaborations = lazy(() => import('@portals/production/pages/ProductionCollaborations'));
 const ProductionInvites = lazy(() => import('@portals/production/pages/ProductionInvites'));
@@ -351,9 +350,6 @@ export function AllProductionRoutes({ isAuthenticated, userType }: RoutesProps) 
       } />
 
       {/* Operations */}
-      <Route path={getRelativePath(PRODUCTION_ROUTES.revenue, '/production')} element={
-        isProduction ? <ProductionRevenue /> : <Navigate to="/login/production" />
-      } />
       <Route path={getRelativePath(PRODUCTION_ROUTES.saved, '/production')} element={
         isProduction ? <ProductionSaved /> : <Navigate to="/login/production" />
       } />

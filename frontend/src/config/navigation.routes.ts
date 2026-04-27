@@ -131,7 +131,6 @@ export const PRODUCTION_ROUTES = {
   submissionsArchive: '/production/submissions/archive',
   
   // Operations
-  revenue: '/production/revenue',
   saved: '/production/saved',
   collaborations: '/production/collaborations',
   myCollaborations: '/production/my-collaborations',

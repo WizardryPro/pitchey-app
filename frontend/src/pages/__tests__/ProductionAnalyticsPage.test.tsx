@@ -37,10 +37,6 @@ vi.mock('@portals/production/pages/ProductionStats', () => ({
   default: () => <div data-testid="production-stats-tab">Production Stats Component</div>,
 }))
 
-vi.mock('@portals/production/pages/ProductionRevenue', () => ({
-  default: () => <div data-testid="production-revenue-tab">Production Revenue Component</div>,
-}))
-
 // ─── Dynamic import ──────────────────────────────────────────────────
 let Component: React.ComponentType
 beforeAll(async () => {
@@ -84,12 +80,11 @@ describe('ProductionAnalyticsPage', () => {
   })
 
   describe('tab navigation', () => {
-    it('renders all four tab buttons', () => {
+    it('renders all three tab buttons', () => {
       renderComponent()
       expect(screen.getByRole('button', { name: /overview/i })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /activity/i })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /quick stats/i })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /revenue/i })).toBeInTheDocument()
     })
 
     it('shows Overview tab content by default', () => {
@@ -107,12 +102,6 @@ describe('ProductionAnalyticsPage', () => {
       renderComponent()
       fireEvent.click(screen.getByRole('button', { name: /quick stats/i }))
       expect(screen.getByTestId('production-stats-tab')).toBeInTheDocument()
-    })
-
-    it('switches to Revenue tab when clicked', () => {
-      renderComponent()
-      fireEvent.click(screen.getByRole('button', { name: /revenue/i }))
-      expect(screen.getByTestId('production-revenue-tab')).toBeInTheDocument()
     })
 
     it('hides other tab content when switching tabs', () => {

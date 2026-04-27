@@ -230,7 +230,6 @@ const TeamManagement = lazyRetry(() => import('./pages/TeamManagement'));
 // TeamMembers and TeamInvite routes now redirect to /team (TeamManagement)
 const TeamRoles = lazyRetry(() => import('@portals/production/pages/TeamRoles'));
 const ProductionCollaborations = lazyRetry(() => import('@portals/production/pages/ProductionCollaborations'));
-const ProductionRevenue = lazyRetry(() => import('@portals/production/pages/ProductionRevenue'));
 const ProductionSaved = lazyRetry(() => import('@portals/production/pages/ProductionSaved'));
 const AdvancedSearch = lazyRetry(() => import('./pages/AdvancedSearch'));
 const SearchPage = lazyRetry(() => import('./pages/SearchPage'));

@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import {
-  BarChart3, Activity, TrendingUp, DollarSign,
+  BarChart3, Activity, TrendingUp,
   Film, Award, Briefcase, Clock, Target
 } from 'lucide-react';
 import ProductionAnalytics from '@portals/production/pages/ProductionAnalytics';
 import ProductionActivity from '@portals/production/pages/ProductionActivity';
 import ProductionStats from '@portals/production/pages/ProductionStats';
-import ProductionRevenue from '@portals/production/pages/ProductionRevenue';
 import { ProductionService } from '@portals/production/services/production.service';
 
 export default function ProductionAnalyticsPage() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'activity' | 'stats' | 'revenue'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'activity' | 'stats'>('overview');
   const [overviewStats, setOverviewStats] = useState<{ completedProjects: number; activeProjects: number; pipelineProjects: number; totalBudget: number; spentPercent: number }>({ completedProjects: 0, activeProjects: 0, pipelineProjects: 0, totalBudget: 0, spentPercent: 0 });
 
   useEffect(() => {
@@ -41,8 +40,7 @@ export default function ProductionAnalyticsPage() {
   const tabs = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'activity', label: 'Activity', icon: Activity },
-    { id: 'stats', label: 'Quick Stats', icon: TrendingUp },
-    { id: 'revenue', label: 'Revenue', icon: DollarSign }
+    { id: 'stats', label: 'Quick Stats', icon: TrendingUp }
   ];
 
   return (
@@ -198,10 +196,6 @@ export default function ProductionAnalyticsPage() {
 
           {activeTab === 'stats' && (
             <ProductionStats />
-          )}
-
-          {activeTab === 'revenue' && (
-            <ProductionRevenue />
           )}
         </div>
       </div>

@@ -63,6 +63,8 @@ export interface User {
 export interface ProfileUpdateInput {
   name?: string;
   username?: string;
+  email?: string;
+  phone?: string;
   bio?: string;
   location?: string;
   website?: string;
@@ -184,8 +186,11 @@ export class UserService {
   // Change password
   static async changePassword(data: PasswordChangeInput): Promise<void> {
     const response = await apiClient.post<{ success: boolean }>(
-      '/api/user/change-password',
-      data
+      '/api/auth/change-password',
+      {
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword,
+      }
     );
 
     if (!response.success) {

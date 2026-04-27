@@ -68,11 +68,11 @@ export default function Register() {
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
           Create your account
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
+        <p className="mt-3 text-center text-base text-gray-600">
           Already have an account?{' '}
           <Link
             to={`/login/${formData.userType}`}
-            className="font-medium text-primary-600 hover:text-primary-500"
+            className="font-semibold text-purple-600 hover:text-purple-700 underline underline-offset-2 decoration-2"
           >
             Sign in
           </Link>

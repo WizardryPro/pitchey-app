@@ -534,15 +534,6 @@ export class ProductionService {
     return response.blob();
   }
 
-  // Get revenue data
-  static async getRevenue(): Promise<Record<string, unknown>> {
-    const response = await apiClient.get<Record<string, unknown>>('/api/production/revenue');
-    if (response.success !== true) {
-      throw new Error(getErrorMessage(response.error, 'Failed to fetch revenue data'));
-    }
-    return response.data ?? {};
-  }
-
   // --- Production Pitch Data (notes, checklist, team) ---
 
   static async getPitchNotes(pitchId: number): Promise<ProductionNoteResponse[]> {

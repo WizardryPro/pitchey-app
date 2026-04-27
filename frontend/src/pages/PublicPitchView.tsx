@@ -27,6 +27,30 @@ export default function PublicPitchView() {
   const [canRequestNDA, setCanRequestNDA] = useState(false);
   const [ndaCheckError, setNdaCheckError] = useState<string | null>(null);
   const [ndaLoading, setNdaLoading] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+
+  // Web Share API → clipboard fallback. The branded social-unfurl plumbing
+  // means whatever destination (DM / iMessage / FB / X) gets a rich preview.
+  const handleShare = async () => {
+    const url = window.location.href;
+    const title = pitch?.title ? `${pitch.title} — Pitchey` : 'Pitchey';
+    const text = (pitch as any)?.logline || 'Check out this pitch on Pitchey.';
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text, url });
+        return;
+      } catch {
+        // Fall through to clipboard
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    } catch (err) {
+      console.error('Share failed:', err);
+    }
+  };
 
   useEffect(() => {
     if (id) {
@@ -743,11 +767,12 @@ export default function PublicPitchView() {
                   </div>
                 )}
                 
-                <button 
+                <button
+                  onClick={handleShare}
                   className="w-full flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
                 >
                   <Share2 className="w-4 h-4" />
-                  Share Pitch
+                  {shareCopied ? 'Link copied!' : 'Share Pitch'}
                 </button>
                 
                 {!isAuthenticated && (
