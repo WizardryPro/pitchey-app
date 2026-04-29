@@ -89,6 +89,9 @@ import {
 
 // Import real pitch interaction handlers
 import {
+  pitchLikeHandler,
+  pitchUnlikeHandler,
+  pitchLikeStatusHandler,
   pitchSaveHandler as realPitchSaveHandler,
   pitchUnsaveHandler as realPitchUnsaveHandler,
   pitchPublishHandler,
@@ -2543,7 +2546,12 @@ class RouteRegistry {
     this.register('GET', '/api/creator/activities', (req) => creatorActivitiesHandler(req, this.env));
 
     // Pitch Like/Save endpoints (real DB handlers)
-    // Like routes removed — replaced by /api/pitches/:id/rate (Pitchey Score)
+    // Likes (boolean toggle) coexist with /api/pitches/:id/rate (1-5 stars).
+    // Removed in 0a92edb0 when rating launched, re-added because frontend
+    // still treats heart + stars as separate signals (28a0ed88).
+    this.register('GET', '/api/pitches/:id/like-status', (req) => pitchLikeStatusHandler(req, this.env));
+    this.register('POST', '/api/pitches/:id/like', (req) => pitchLikeHandler(req, this.env));
+    this.register('DELETE', '/api/pitches/:id/like', (req) => pitchUnlikeHandler(req, this.env));
     this.register('POST', '/api/pitches/:id/save', (req) => realPitchSaveHandler(req, this.env));
     this.register('DELETE', '/api/pitches/:id/save', (req) => realPitchUnsaveHandler(req, this.env));
 
