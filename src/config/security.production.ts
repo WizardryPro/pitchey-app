@@ -152,7 +152,7 @@ export interface APIValidationConfig {
 export const productionSecurityConfig: SecurityConfig = {
   cors: {
     origin: [
-      'https://pitchey.pages.dev',
+      'https://pitchey-5o8.pages.dev',
       'https://*.pitchey.com',
       /^https:\/\/.*\.pitchey\.com$/
     ],

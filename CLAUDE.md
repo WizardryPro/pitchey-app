@@ -11,6 +11,7 @@ See `docs/roadmap-post-launch-2026-04-20.md` for the post-launch execution plan.
 - **Auth**: Mixed model. Primary session handling is custom — legacy `users`/`sessions` tables, `pitchey-session` UUID cookie, custom login/logout/refresh handlers inlined in `src/worker-integrated.ts`. **Better Auth is also genuinely live**: `src/auth/better-auth-config.ts:51` calls `betterAuth({...})` and the resulting instance is reached from (a) `src/routes/user-profile.ts` via `auth-adapter.ts` for `/api/users/profile` + `/api/users/settings`, and (b) `src/services/worker-realtime.service.ts` via `better-auth-session-handler.ts` for WebSocket auth. What IS disabled is the separate `createAuthAdapter` import at `worker-integrated.ts:20` (commented since `41850ea1`, 2025-12-18) — a *different* adapter from a *different* file than the live BA wiring. Earlier doc revisions conflated the two and framed BA as "vestigial"; it isn't. Decision on rip-out vs migrate for the live BA paths still tracked in issue #19.
 - **Cache**: Upstash Redis (global)
 - **Storage**: Cloudflare R2
+- **`src/workflows/` is PARKED** — a self-contained, never-deployed Cloudflare Workflows worker (3 Workflow classes for investment/production/NDA orchestration). Has its own `wrangler.toml`/`package.json`/`tsconfig.json`. Do not modify, import from, or "helpfully wire up" — multiple session-ending decisions block revival (no main-worker bindings, placeholder CF account/Hyperdrive/KV IDs, DocuSign integration absent, contradicts the no-NDA-expiry decision from `0a92edb0`). Revive-vs-delete tracked in issue #60. If you find yourself editing files under `src/workflows/`, stop and check the issue.
 
 ## Quick Reference
 
@@ -36,6 +37,7 @@ See `docs/roadmap-post-launch-2026-04-20.md` for the post-launch execution plan.
 - `credentials: 'include'` on all API calls
 - Defensive utils (`safeAccess`, `safeNumber`, `safeArray`) for runtime safety
 - In `catch` blocks: `const e = err instanceof Error ? err : new Error(String(err))`
+- **Before adding a route or handler, grep for existing implementations.** Pitchey has accumulated multiple parallel handler trees across migrations (Era 0–6); the live one is wired through `src/worker-integrated.ts` — anything else is an orphan no matter how complete it looks. If two implementations of the same endpoint exist, the live one wins. Don't extend the orphan, don't migrate to it, don't "consolidate" without an explicit revive decision. Recent example: like-button bug (Apr 2026) — frontend was wired to call `/api/pitches/:id/like` while only `/api/pitches/:id/save` was registered; handlers existed in `pitch-interactions.ts` but were never imported. Cost weeks of broken UX. Pre-flight check before route/handler work: `grep -rn "register.*<endpoint>" src/worker-integrated.ts` and `grep -rn "<HandlerName>" src/worker-integrated.ts` — if zero hits, the handler is orphaned even if the file looks live.
 
 ## Subagent Routing
 

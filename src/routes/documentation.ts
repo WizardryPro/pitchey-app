@@ -15,7 +15,7 @@ const apiSpec = {
     description: "Comprehensive movie pitch platform API with modular architecture",
     contact: {
       name: "Pitchey Platform",
-      url: "https://pitchey.pages.dev"
+      url: "https://pitchey-5o8.pages.dev"
     }
   },
   servers: [

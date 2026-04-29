@@ -14,7 +14,7 @@ export const SESSION_CONFIG = {
   LEGACY_COOKIE_NAME: 'better-auth-session',
 
   // Cookie settings for cross-origin auth
-  // Frontend: https://pitchey.pages.dev
+  // Frontend: https://pitchey-5o8.pages.dev
   // Backend: https://pitchey-api-prod.ndlovucavelle.workers.dev
   // SameSite=None is REQUIRED for cross-origin fetch with credentials: 'include'
   COOKIE_MAX_AGE: 7 * 24 * 60 * 60, // 7 days in seconds

@@ -68,6 +68,33 @@ jobs:
               ...(incidentLabelExists ? { labels: ['incident'] } : {}),
             });
 
+      - name: Close stale drift issues on success
+        if: steps.audit.outcome == 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const titlePrefix = '🚨 Docs-vs-code drift audit failed';
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const query = `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open in:title "${titlePrefix}"`;
+            const { data: searchResults } = await github.rest.search.issuesAndPullRequests({
+              q: query,
+              per_page: 50,
+            });
+            for (const issue of searchResults.items) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `Audit passing again — closing. Latest green run: ${runUrl}`,
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed',
+              });
+            }
+
       - name: Fail workflow when drift audit fails
         if: steps.audit.outcome == 'failure'
         run: exit 1

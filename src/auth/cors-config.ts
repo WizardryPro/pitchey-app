@@ -8,7 +8,7 @@ interface CORSConfig {
   credentials: boolean;
 }
 
-const PRODUCTION_FRONTEND = 'https://pitchey.pages.dev';
+const PRODUCTION_FRONTEND = 'https://pitchey-5o8.pages.dev';
 const ALTERNATIVE_FRONTENDS = [
   'https://pitchey-api-prod.ndlovucavelle.workers.dev'
 ];
@@ -72,9 +72,9 @@ export function createCookieHeader(
 
   // CRITICAL: Domain attribute enables session sharing across subdomains
   // e.g., Domain=.pages.dev allows cookies to work across:
-  // - pitchey.pages.dev (main frontend)
-  // - creator.pitchey.pages.dev (creator portal)
-  // - investor.pitchey.pages.dev (investor portal)
+  // - pitchey-5o8.pages.dev (main frontend)
+  // - creator.pitchey-5o8.pages.dev (creator portal)
+  // - investor.pitchey-5o8.pages.dev (investor portal)
   if (domain) {
     cookie += `; Domain=${domain}`;
   }

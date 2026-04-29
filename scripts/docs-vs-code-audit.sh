@@ -52,7 +52,9 @@ URL_SOURCES=(
 )
 
 mapfile -t PAGES_URLS < <(
-  grep -RhoE "https://([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9.-]*[a-zA-Z0-9])\\.pages\\.dev" "${URL_SOURCES[@]}" 2>/dev/null | sort -u
+  # Exclude src/workflows/ — parked never-deployed worker per issue #60.
+  # Its URLs aren't expected to resolve and changes there are blocked by CLAUDE.md carve-out.
+  grep -RhoE --exclude-dir=workflows "https://([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9.-]*[a-zA-Z0-9])\\.pages\\.dev" "${URL_SOURCES[@]}" 2>/dev/null | sort -u
 )
 
 if [[ "${#PAGES_URLS[@]}" -eq 0 ]]; then

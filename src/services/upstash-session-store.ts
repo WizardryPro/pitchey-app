@@ -2,7 +2,7 @@
  * Upstash Redis Session Store for Cross-Origin Authentication
  *
  * Handles session storage for cross-domain auth between:
- * - Frontend: https://pitchey.pages.dev
+ * - Frontend: https://pitchey-5o8.pages.dev
  * - API: https://pitchey-api-prod.ndlovucavelle.workers.dev
  *
  * Uses cookie-based sessions with Upstash Redis as the backing store.

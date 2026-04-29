@@ -22,6 +22,15 @@ Content-Type, Authorization, X-Request-Id, X-Client-Id, sentry-trace, baggage, t
 ### Trace Headers — DONE
 - [x] `sentry-trace, baggage, traceparent` added to `Access-Control-Allow-Headers` (line 102 of response.ts)
 
+## Handler Signatures (Orphan Smell)
+
+Live handlers MUST type their parameters strictly. The deprecated signature `(request: Request, env: any, authResult: any)` is the canonical marker of dead code in this repo — every parallel-router file deleted in the 2026-04-29 sweep used it (12 functions in `nda-handlers.ts`, plus chained orphan modules under `worker-modules/`). If you find yourself writing `env: any` or `authResult: any`, stop: you're either (a) duplicating a live handler that already exists, or (b) extending the orphan tree.
+
+- ✅ Live convention: `async function fooHandler(request: Request, env: Env): Promise<Response>` — auth is extracted inside via `getUserId(request, env)` from `utils/auth-extract.ts`, not passed as a parameter.
+- ❌ Orphan convention: `async function handleFoo(request: Request, env: any, authResult: any): Promise<Response>` — pre-extracted auth, untyped env, paired with a separate router file under `worker-modules/`. None of these are live; if they look live to you, re-trace the import chain through to `wrangler.toml:8` (`main = "src/worker-integrated.ts"`).
+
+Pre-flight check before writing a new handler: grep `src/worker-integrated.ts` for an existing `register('METHOD', '/api/<path>', ...)` line. If the route exists, find and modify the existing handler. Don't add a parallel one.
+
 ## Cookie Configuration
 
 Live login writes the `pitchey-session` cookie from `handlePortalLogin()` in

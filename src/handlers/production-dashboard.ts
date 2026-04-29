@@ -15,14 +15,14 @@ import * as notificationQueries from '../db/queries/notifications';
 function getCorsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get('Origin') || '';
   const allowedOrigins = [
-    'https://pitchey.pages.dev',
+    'https://pitchey-5o8.pages.dev',
     'http://localhost:5173',
     'http://localhost:3000'
   ];
 
   // Allow any pitchey preview deployment
   const isAllowed = allowedOrigins.includes(origin) ||
-    origin.endsWith('.pitchey.pages.dev');
+    origin.endsWith('.pitchey-5o8.pages.dev');
 
   return {
     'Access-Control-Allow-Origin': isAllowed ? origin : allowedOrigins[0],

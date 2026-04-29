@@ -25,7 +25,7 @@ const app = new Hono<{ Bindings: Env }>();
 
 // CORS configuration
 app.use('*', cors({
-  origin: ['https://pitchey.pages.dev', 'https://pitchey-*.pages.dev', 'http://localhost:5173'],
+  origin: ['https://pitchey-5o8.pages.dev', 'https://pitchey-*.pages.dev', 'http://localhost:5173'],
   credentials: true,
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
