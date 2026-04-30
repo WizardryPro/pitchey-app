@@ -10,8 +10,16 @@ name: Smoke Tests (production)
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '*/30 * * * *'
+  # SCHEDULE PAUSED 2026-04-30 — Neon Free-tier compute quota exhausted.
+  # Smoke tests + health checks at every-30-min cadence kept Neon's compute
+  # warm for ~50% duty cycle, exceeding the ~191 compute-hours/month free
+  # quota. Re-enable AFTER one of:
+  #   (a) Neon plan upgraded to Launch tier (~750 compute-hours/month), OR
+  #   (b) Cadence reduced to 2hr+ AND smoke moved to a Neon preview branch
+  # Do NOT just uncomment without doing one of the above — quota will
+  # immediately re-exhaust on next billing cycle.
+  # schedule:
+  #   - cron: '*/30 * * * *'
   pull_request:
     paths:
       - 'frontend/**'
