@@ -16,6 +16,7 @@ import * as Sentry from '@sentry/cloudflare';
 import { createAxiomLogger } from './middleware/axiom-logging';
 // Per-request trace context for SQLCommenter + Axiom query correlation
 import { traceStorage } from './db/trace-context';
+import { safeQuery } from './db/safe-query';
 
 // import { createAuthAdapter } from './auth/auth-adapter';
 import { createDatabase } from './db/raw-sql-connection';
@@ -8420,12 +8421,17 @@ pitchey_analytics_datapoints_per_minute 1250
     const limit = parseInt(url.searchParams.get('limit') || '10');
     const timeWindow = parseInt(url.searchParams.get('days') || '7');
 
-    try {
-      const windowDate = new Date();
-      windowDate.setDate(windowDate.getDate() - timeWindow);
+    const windowDate = new Date();
+    windowDate.setDate(windowDate.getDate() - timeWindow);
 
-      const trending = await this.db.query(`
-        SELECT 
+    // safeQuery: outage stays observable. Previous catch swallowed DB errors
+    // and returned empty arrays as `success: true` — during the 2026-04-30
+    // Neon-quota outage, /api/pitches/trending returned 200 with empty data
+    // while adjacent endpoints honestly 500'd, making the marketplace look
+    // "quiet" instead of "down". Tracked in #66.
+    const result = await safeQuery(
+      () => this.db.query(`
+        SELECT
           p.*,
           CONCAT(u.first_name, ' ', u.last_name) as creator_name,
           COUNT(DISTINCT v.id) as view_count,
@@ -8435,21 +8441,30 @@ pitchey_analytics_datapoints_per_minute 1250
         LEFT JOIN users u ON p.user_id = u.id
         LEFT JOIN views v ON v.pitch_id = p.id
         LEFT JOIN likes l ON l.pitch_id = p.id
-        WHERE p.status = 'published' 
+        WHERE p.status = 'published'
           AND p.created_at >= $1
         GROUP BY p.id, u.first_name, u.last_name, u.user_type
         ORDER BY trending_score DESC
         LIMIT $2
-      `, [windowDate.toISOString(), limit]);
+      `, [windowDate.toISOString(), limit]),
+      {
+        fallback: [],
+        context: 'worker-integrated.getTrending',
+        tags: { timeWindow: String(timeWindow), limit: String(limit) },
+      },
+    );
 
-      return builder.success({
-        trending,
-        timeWindow,
-        generated: new Date().toISOString()
-      });
-    } catch (error) {
-      return builder.success({ trending: [], timeWindow, generated: new Date().toISOString() });
+    if (!result.ok) {
+      // Honest 503: marketplace consumers can render an outage state instead
+      // of an empty grid. Sentry already captured the underlying error.
+      return builder.error(ErrorCode.SERVICE_UNAVAILABLE, 'Trending data temporarily unavailable');
     }
+
+    return builder.success({
+      trending: result.rows,
+      timeWindow,
+      generated: new Date().toISOString()
+    });
   }
 
   private async getFacets(request: Request): Promise<Response> {

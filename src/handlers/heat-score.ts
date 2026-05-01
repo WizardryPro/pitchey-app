@@ -7,6 +7,7 @@ import { getDb } from '../db/connection';
 import type { Env } from '../db/connection';
 import { getCorsHeaders } from '../utils/response';
 import { getUserId } from '../utils/auth-extract';
+import * as Sentry from '@sentry/cloudflare';
 
 function jsonResponse(
   data: unknown,
@@ -158,9 +159,24 @@ export async function hotPitchesHandler(
 
     return jsonResponse({ success: true, data: { pitches } }, origin);
   } catch (err) {
+    // Outage stays observable. Previous fallback returned `success: true` with
+    // an empty array, so during the 2026-04-30 Neon-quota outage the
+    // /api/pitches/hot endpoint silently returned 200 while adjacent endpoints
+    // honestly 500'd, leaving the marketplace looking "empty" instead of "down".
+    // Tracked in #66.
     const e = err instanceof Error ? err : new Error(String(err));
     console.error('hotPitchesHandler error:', e.message);
-    return jsonResponse({ success: true, data: { pitches: [] } }, origin);
+    try {
+      Sentry.withScope((scope) => {
+        scope.setTag('handler.context', 'heat-score.hotPitchesHandler');
+        Sentry.captureException(e);
+      });
+    } catch { /* Sentry hub not initialized */ }
+    return jsonResponse(
+      { success: false, error: { code: 'SERVICE_UNAVAILABLE', message: 'Hot pitches temporarily unavailable' } },
+      origin,
+      503,
+    );
   }
 }
 
