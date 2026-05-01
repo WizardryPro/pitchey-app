@@ -2,13 +2,12 @@ name: Simple Health Check
 
 on:
   workflow_dispatch:
-  # SCHEDULE PAUSED 2026-04-30 — see smoke-tests.yml for context.
-  # Health check hits /api/health which does SELECT NOW() on every call,
-  # keeping Neon compute warm. At 30-min cadence this stacks with smoke
-  # tests and contributes to compute-quota exhaustion. Re-enable after
-  # Neon plan upgrade or cadence reduction (1hr+ is fine on Launch tier).
-  # schedule:
-  #   - cron: '*/30 * * * *'  # Every 30 minutes
+  # 2026-05-02: re-enabled at 1hr cadence after the 2026-04-30 Neon-quota
+  # outage (#65). At every-hour, with smoke at every-2hr, the two cron
+  # cycles align at :00 every 2hrs (smoke + health both fire) and miss-
+  # align at :00 odd hours (only health fires) — sustainable on Free tier.
+  schedule:
+    - cron: '0 * * * *'  # Every hour
 
 permissions:
   contents: read
