@@ -28,6 +28,11 @@
           {
             "type": "command",
             "command": "cd /home/supremeisbeing/pitcheymovie/pitchey_v0.2/frontend && npx tsc --noEmit -p tsconfig.app.json --pretty 2>&1 | tail -5"
+          },
+          {
+            "type": "command",
+            "command": "bash /home/supremeisbeing/pitcheymovie/pitchey_v0.2/scripts/docs-vs-code-audit.sh",
+            "timeout": 30
           }
         ]
       }
