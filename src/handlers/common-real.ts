@@ -7,6 +7,7 @@ import { getDb } from '../db/connection';
 import type { Env } from '../db/connection';
 import { getCorsHeaders } from '../utils/response';
 import { getUserId } from '../utils/auth-extract';
+import * as Sentry from '@sentry/cloudflare';
 
 function jsonResponse(data: unknown, status: number, origin: string | null): Response {
   return new Response(JSON.stringify(data), {
@@ -69,11 +70,22 @@ export async function notificationsRealHandler(request: Request, env: Env): Prom
       data: { notifications, unreadCount, total }
     }, 200, origin);
   } catch (error) {
-    console.error('notificationsRealHandler query error:', error);
-    return jsonResponse({
-      success: true,
-      data: { notifications: [], unreadCount: 0, total: 0 }
-    }, 200, origin);
+    // Critical UX surface — a silent fallback to `unreadCount: 0` would
+    // make every authenticated user see "0 unread" during a DB outage, with
+    // no error indication. Surface honestly instead. (#66)
+    const e = error instanceof Error ? error : new Error(String(error));
+    console.error('notificationsRealHandler query error:', e.message);
+    try {
+      Sentry.withScope((scope) => {
+        scope.setTag('handler.context', 'common-real.notificationsRealHandler');
+        Sentry.captureException(e);
+      });
+    } catch { /* Sentry hub not initialized */ }
+    return jsonResponse(
+      { success: false, error: { code: 'SERVICE_UNAVAILABLE', message: 'Notifications temporarily unavailable' } },
+      503,
+      origin,
+    );
   }
 }
 
@@ -129,11 +141,21 @@ export async function userFollowingRealHandler(request: Request, env: Env): Prom
       data: { following: rows || [], total }
     }, 200, origin);
   } catch (error) {
-    console.error('userFollowingRealHandler query error:', error);
-    return jsonResponse({
-      success: true,
-      data: { following: [], total: 0 }
-    }, 200, origin);
+    // Same anti-pattern as notificationsRealHandler — silent empty fallback
+    // would mask DB failures. Surface honestly. (#66)
+    const e = error instanceof Error ? error : new Error(String(error));
+    console.error('userFollowingRealHandler query error:', e.message);
+    try {
+      Sentry.withScope((scope) => {
+        scope.setTag('handler.context', 'common-real.userFollowingRealHandler');
+        Sentry.captureException(e);
+      });
+    } catch { /* Sentry hub not initialized */ }
+    return jsonResponse(
+      { success: false, error: { code: 'SERVICE_UNAVAILABLE', message: 'Following list temporarily unavailable' } },
+      503,
+      origin,
+    );
   }
 }
 

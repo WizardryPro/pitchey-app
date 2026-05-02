@@ -7,6 +7,7 @@ import { getDb } from '../db/connection';
 import type { Env } from '../db/connection';
 import { getCorsHeaders } from '../utils/response';
 import { getUserId } from '../utils/auth-extract';
+import * as Sentry from '@sentry/cloudflare';
 
 function jsonResponse(data: unknown, status: number, origin: string | null): Response {
   return new Response(JSON.stringify(data), {
@@ -41,8 +42,20 @@ export async function getCharactersHandler(request: Request, env: Env): Promise<
 
     return jsonResponse({ success: true, data: { characters: rows } }, 200, origin);
   } catch (error) {
-    console.error('Get characters error:', error);
-    return jsonResponse({ success: true, data: { characters: [] } }, 200, origin);
+    // Honest 503 on failure (was silent empty success). #66
+    const e = error instanceof Error ? error : new Error(String(error));
+    console.error('Get characters error:', e.message);
+    try {
+      Sentry.withScope((scope) => {
+        scope.setTag('handler.context', 'characters.getCharactersHandler');
+        Sentry.captureException(e);
+      });
+    } catch { /* Sentry hub not initialized */ }
+    return jsonResponse(
+      { success: false, error: { code: 'SERVICE_UNAVAILABLE', message: 'Characters temporarily unavailable' } },
+      503,
+      origin,
+    );
   }
 }
 
