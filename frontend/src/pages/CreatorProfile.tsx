@@ -147,21 +147,20 @@ const CreatorProfile = () => {
 
   const fetchCreatorPitches = async () => {
     if (!creatorId) return;
-    
+
     try {
-      // Fetch creator's published pitches via public search
-      const response = await fetch(`${config.API_URL}/api/pitches/public/search?q=*&limit=50&offset=0`, {
+      // /api/pitches?userId=N filters server-side and returns the array directly
+      // at body.data. The previous /api/pitches/public/search?q=* path 400'd
+      // ("query must be ≥ 2 characters"), so this list was always empty.
+      const response = await fetch(`${config.API_URL}/api/pitches?userId=${creatorId}&limit=50`, {
         method: 'GET',
         credentials: 'include'
       });
 
       if (response.ok) {
-        const data = await response.json() as Record<string, unknown>;
-        const dataObj = (data.data as Record<string, unknown>) ?? data;
-        const allPitches = Array.isArray(dataObj.pitches) ? dataObj.pitches as Record<string, unknown>[] : [];
-        // Filter pitches by this creator's ID
+        const body = await response.json() as { data?: Record<string, unknown>[] };
+        const allPitches = Array.isArray(body.data) ? body.data : [];
         const creatorPitches = allPitches
-          .filter(p => String(p.user_id) === String(creatorId))
           .map(p => ({
             id: Number(p.id),
             title: String(p.title ?? ''),
