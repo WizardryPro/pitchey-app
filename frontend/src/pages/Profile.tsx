@@ -4,6 +4,7 @@ import { Camera, Mail, Phone, MapPin, Building2, Calendar, Edit3, Save, X, Loade
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { API_URL } from '../config';
 import { usePortalTheme } from '@shared/hooks/usePortalTheme';
+import { prepareImageForUpload, PRE_COMPRESSION_MAX_BYTES } from '../utils/imageUpload';
 
 interface UserProfile {
   id: number;
@@ -139,22 +140,21 @@ export default function Profile() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type and size
-    if (!file.type.startsWith('image/')) {
-      alert('Please select an image file.');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Image must be under 5MB.');
+    // Sanity cap before reading into a Web Worker. HEIC files frequently
+    // lack a proper image/* MIME, so we don't gate on file.type here —
+    // prepareImageForUpload will reject non-images via libheic/canvas.
+    if (file.size > PRE_COMPRESSION_MAX_BYTES) {
+      alert('File too large. Please pick an image under 30MB.');
       return;
     }
 
     setUploadingImage(true);
     try {
-      // Upload the file
+      const compressed = await prepareImageForUpload(file, 'avatar');
+
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', 'profile-images');
+      formData.append('file', compressed);
+      formData.append('folder', 'profiles');
 
       const uploadRes = await fetch(`${API_URL}/api/upload/profile`, {
         method: 'POST',

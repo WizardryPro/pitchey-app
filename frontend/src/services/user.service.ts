@@ -1,6 +1,7 @@
 // User Service - Complete user management
 import { apiClient } from '../lib/api-client';
 import type { User as ApiUser, ApiResponse } from '@shared/types/api';
+import { prepareImageForUpload, PRE_COMPRESSION_MAX_BYTES } from '../utils/imageUpload';
 
 const isDev = import.meta.env.MODE === 'development';
 const API_BASE_URL = import.meta.env.VITE_API_URL || (isDev ? 'http://localhost:8001' : '');
@@ -198,10 +199,15 @@ export class UserService {
     }
   }
 
-  // Upload profile image — uses the free /api/upload/profile endpoint (no credits)
+  // Upload profile image — compresses on-device + uses the free /api/upload/profile endpoint (no credits)
   static async uploadProfileImage(file: File): Promise<string> {
+    if (file.size > PRE_COMPRESSION_MAX_BYTES) {
+      throw new Error('File too large. Please pick an image under 30MB.');
+    }
+    const compressed = await prepareImageForUpload(file, 'avatar');
+
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', compressed);
     formData.append('folder', 'profiles');
 
     const response = await fetch(`${API_BASE_URL}/api/upload/profile`, {
@@ -218,10 +224,15 @@ export class UserService {
     return data.url;
   }
 
-  // Upload cover image — uses the free /api/upload/profile endpoint (no credits)
+  // Upload cover image — compresses on-device + uses the free /api/upload/profile endpoint (no credits)
   static async uploadCoverImage(file: File): Promise<string> {
+    if (file.size > PRE_COMPRESSION_MAX_BYTES) {
+      throw new Error('File too large. Please pick an image under 30MB.');
+    }
+    const compressed = await prepareImageForUpload(file, 'cover');
+
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', compressed);
     formData.append('folder', 'covers');
 
     const response = await fetch(`${API_BASE_URL}/api/upload/profile`, {
