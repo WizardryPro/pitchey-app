@@ -82,6 +82,25 @@ const CreatorProfile = () => {
       if (response.ok) {
         const raw = await response.json() as Record<string, unknown>;
         const u = (raw.data as Record<string, unknown>) ?? (raw.user as Record<string, unknown>) ?? raw;
+
+        // /api/users/:id doesn't return follower/following counts — fetch them
+        // separately from /api/follows/stats which has them in data.stats.
+        let followersCount = Number(u.follower_count ?? u.followers) || 0;
+        let followingCount = Number(u.following_count ?? u.following) || 0;
+        try {
+          const statsRes = await fetch(`${config.API_URL}/api/follows/stats?userId=${creatorId}`, { credentials: 'include' });
+          if (statsRes.ok) {
+            const body = await statsRes.json() as { data?: { stats?: { followers?: number; following?: number } } };
+            const s = body.data?.stats;
+            if (s) {
+              followersCount = Number(s.followers ?? followersCount);
+              followingCount = Number(s.following ?? followingCount);
+            }
+          }
+        } catch {
+          // Non-critical — keep zero / inline fallback
+        }
+
         setCreator({
           id: Number(u.id) || 0,
           username: String(u.username ?? u.email ?? ''),
@@ -95,8 +114,8 @@ const CreatorProfile = () => {
           website: u.website as string | undefined,
           userType: (u.user_type ?? u.userType ?? 'creator') as CreatorData['userType'],
           joinedDate: String(u.created_at ?? u.joinedDate ?? ''),
-          followers: Number(u.follower_count ?? u.followers) || 0,
-          following: Number(u.following_count ?? u.following) || 0,
+          followers: followersCount,
+          following: followingCount,
           pitchesCount: Number(u.pitches_count ?? u.pitchesCount) || 0,
           viewsCount: Number(u.views_count ?? u.viewsCount) || 0,
           verified: Boolean(u.verified),
