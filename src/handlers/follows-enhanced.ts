@@ -10,9 +10,10 @@ import { sendNewFollowerEmail } from '../services/email/index';
 import * as Sentry from '@sentry/cloudflare';
 
 // Schema for follow/unfollow actions
-// Accepts both legacy {userId} and frontend {targetId, targetType} formats
+// Accepts both legacy {userId} and frontend {targetId, targetType} formats.
+// userId/targetId both accept string or number — toIntId() coerces to int for SQL.
 const FollowActionSchema = z.object({
-  userId: z.string().min(1).optional(),
+  userId: z.union([z.string().min(1), z.number()]).optional(),
   targetId: z.union([z.string().min(1), z.number()]).optional(),
   targetType: z.enum(['user', 'pitch']).optional().default('user'),
   action: z.enum(['follow', 'unfollow'])
@@ -22,7 +23,7 @@ const FollowActionSchema = z.object({
 
 // Schema for follow list queries
 const FollowListSchema = z.object({
-  userId: z.string().min(1).optional(),
+  userId: z.union([z.string().min(1), z.number()]).optional(),
   type: z.enum(['followers', 'following']).optional(),
   limit: z.number().min(1).max(100).default(50),
   offset: z.number().min(0).default(0)
@@ -324,9 +325,26 @@ export async function getFollowStatsHandler(request: Request, env: Env): Promise
   try {
     const url = new URL(request.url);
     const userId = url.searchParams.get('userId');
+    const username = url.searchParams.get('username');
 
     const currentUser = await getAuthUser(request, env);
-    const rawTargetId = userId || (currentUser?.id != null ? String(currentUser.id) : null);
+    const sql = postgres(env.DATABASE_URL);
+
+    // Resolve target: explicit userId > username lookup > current user.
+    let rawTargetId: string | null = userId;
+    if (!rawTargetId && username) {
+      const [row] = await sql`SELECT id FROM users WHERE username = ${username} LIMIT 1`;
+      if (!row) {
+        return new Response(JSON.stringify({ error: 'User not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      rawTargetId = String(row.id);
+    }
+    if (!rawTargetId) {
+      rawTargetId = currentUser?.id != null ? String(currentUser.id) : null;
+    }
 
     if (!rawTargetId) {
       return new Response(JSON.stringify({ error: 'User ID required' }), {
@@ -337,8 +355,6 @@ export async function getFollowStatsHandler(request: Request, env: Env): Promise
 
     const targetId = toIntId(rawTargetId);
     const currentId = toIntId(currentUser?.id);
-
-    const sql = postgres(env.DATABASE_URL);
 
     const [stats] = await sql`
       SELECT
