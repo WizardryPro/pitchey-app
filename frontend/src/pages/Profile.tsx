@@ -80,29 +80,18 @@ export default function Profile() {
     try {
       if (user?.id == null) return;
 
-      const response = await fetch(`${API_URL}/api/user/profile`, {
-        method: 'GET',
-        credentials: 'include' // Send cookies for Better Auth session
+      // /api/follows/stats returns { success, data: { stats: { followers, following, mutual, ... }, ... } }
+      // — earlier code read .followerCount/.followingCount which don't exist at any level, so the
+      // displayed counts were always 0 regardless of actual follow rows.
+      const response = await fetch(`${API_URL}/api/follows/stats`, { credentials: 'include' });
+      if (!response.ok) return;
+
+      const body = await response.json() as { data?: { stats?: { followers?: number; following?: number } } };
+      const stats = body.data?.stats;
+      setSocialStats({
+        followers: Number(stats?.followers ?? 0),
+        following: Number(stats?.following ?? 0),
       });
-
-      if (response.ok) {
-        const rawData = await response.json() as Record<string, unknown>;
-        const followers = (rawData['followerCount'] as number | undefined) ?? 0;
-
-        // Get following count from follows/stats endpoint
-        const followingResponse = await fetch(`${API_URL}/api/follows/stats`, {
-          credentials: 'include'
-        });
-
-        let following = 0;
-        if (followingResponse.ok) {
-          const followingData = await followingResponse.json() as Record<string, unknown>;
-          const data = (followingData['data'] as Record<string, unknown>) ?? followingData;
-          following = Number(data['followingCount'] ?? data['following_count']) || 0;
-        }
-
-        setSocialStats({ followers, following });
-      }
     } catch (error) {
       console.error('Failed to fetch social stats:', error);
     }
