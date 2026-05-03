@@ -198,13 +198,13 @@ export class UserService {
     }
   }
 
-  // Upload profile image
+  // Upload profile image — uses the free /api/upload/profile endpoint (no credits)
   static async uploadProfileImage(file: File): Promise<string> {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('folder', 'profiles');
 
-    const response = await fetch(`${API_BASE_URL}/api/upload`, {
+    const response = await fetch(`${API_BASE_URL}/api/upload/profile`, {
       method: 'POST',
       body: formData,
       credentials: 'include'
@@ -218,13 +218,13 @@ export class UserService {
     return data.url;
   }
 
-  // Upload cover image
+  // Upload cover image — uses the free /api/upload/profile endpoint (no credits)
   static async uploadCoverImage(file: File): Promise<string> {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('folder', 'covers');
 
-    const response = await fetch(`${API_BASE_URL}/api/upload`, {
+    const response = await fetch(`${API_BASE_URL}/api/upload/profile`, {
       method: 'POST',
       body: formData,
       credentials: 'include'

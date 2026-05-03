@@ -2285,6 +2285,8 @@ class RouteRegistry {
 
     // File upload routes
     this.register('POST', '/api/upload', this.handleUpload.bind(this));
+    // Profile + cover image upload — no credit charge (changing identity shouldn't cost)
+    this.register('POST', '/api/upload/profile', this.handleProfileUpload.bind(this));
     this.register('POST', '/api/upload/document', this.handleDocumentUpload.bind(this));
     this.register('POST', '/api/upload/documents/multiple', this.handleMultipleDocumentUpload.bind(this));
     this.register('POST', '/api/upload/multiple', this.handleMultipleDocumentUpload.bind(this)); // Frontend compatibility
@@ -6125,6 +6127,61 @@ pitchey_analytics_datapoints_per_minute 1250
       }), { status: 200, headers });
     } catch (error) {
       console.error('Upload error:', error);
+      return new Response(JSON.stringify({ message: 'Upload failed' }), { status: 500, headers });
+    }
+  }
+
+  /**
+   * POST /api/upload/profile
+   * Free upload path for profile + cover images. No credit charge — changing
+   * your identity shouldn't cost. Image-only, 5 MB cap, folder restricted to
+   * 'profiles' or 'covers'. Same response shape as /api/upload (minus credit
+   * fields) so existing frontend code reads `{ url }` unchanged.
+   */
+  private async handleProfileUpload(request: Request): Promise<Response> {
+    const authResult = await this.requireAuth(request);
+    if (!authResult.authorized) return authResult.response!;
+
+    const corsHeaders = getCorsHeaders(request.headers.get('Origin'));
+    const headers = { 'Content-Type': 'application/json', ...corsHeaders };
+
+    try {
+      const formData = await request.formData();
+      const file = formData.get('file') as File;
+      const folderInput = (formData.get('folder') as string) || 'profiles';
+      // Restrict to known identity folders. Anything else is a misuse and
+      // should go through /api/upload (which charges).
+      const folder = folderInput === 'covers' ? 'covers' : 'profiles';
+
+      if (!file) {
+        return new Response(JSON.stringify({ message: 'No file provided' }), { status: 400, headers });
+      }
+      if (!file.type.startsWith('image/')) {
+        return new Response(JSON.stringify({ message: 'Only image files are allowed' }), { status: 400, headers });
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        return new Response(JSON.stringify({ message: 'Image must be under 5MB.' }), { status: 400, headers });
+      }
+
+      const handler = new (await import('./handlers/media-access')).MediaAccessHandler(this.db, this.env);
+
+      const timestamp = Date.now();
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const storagePath = `${folder}/${authResult.user.id}/${timestamp}-${sanitizedName}`;
+      const uploadResult = await handler.uploadFileToR2(file, storagePath);
+
+      if (!uploadResult.success) {
+        return new Response(JSON.stringify({ message: uploadResult.error || 'Upload failed' }), { status: 500, headers });
+      }
+
+      return new Response(JSON.stringify({
+        url: uploadResult.url,
+        filename: file.name,
+        size: file.size,
+        type: file.type,
+      }), { status: 200, headers });
+    } catch (error) {
+      console.error('Profile upload error:', error);
       return new Response(JSON.stringify({ message: 'Upload failed' }), { status: 500, headers });
     }
   }
