@@ -60,6 +60,53 @@ export async function pitchLikeStatusHandler(request: Request, env: Env): Promis
 }
 
 /**
+ * GET /api/users/liked-pitches
+ * Returns the current user's liked pitches with pitch metadata, newest first.
+ * Shape matches /api/users/recently-viewed so the watcher library can reuse PitchGrid.
+ */
+export async function userLikedPitchesHandler(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin');
+  const sql = getDb(env);
+  const userId = await getUserId(request, env);
+
+  if (!userId) {
+    return jsonResponse({ success: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } }, 401, origin);
+  }
+  if (!sql) {
+    return jsonResponse({ success: true, data: [], total: 0 }, 200, origin);
+  }
+
+  try {
+    const url = new URL(request.url);
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '50', 10) || 50, 100);
+
+    const rows = await sql`
+      SELECT
+        l.pitch_id,
+        l.created_at AS liked_at,
+        p.id, p.title, p.logline, p.genre, p.format, p.status,
+        p.title_image, p.thumbnail_url, p.view_count, p.like_count,
+        p.require_nda, p.budget_bracket, p.rating_average,
+        p.user_id AS creator_id,
+        COALESCE(u.first_name || ' ' || u.last_name, u.company_name, u.username, u.email) AS creator_name,
+        COALESCE(u.verified, false) AS creator_verified
+      FROM likes l
+      JOIN pitches p ON p.id = l.pitch_id
+      LEFT JOIN users u ON u.id = p.user_id
+      WHERE l.user_id = ${userId}
+        AND p.status = 'published'
+      ORDER BY l.created_at DESC
+      LIMIT ${limit}
+    `;
+
+    return jsonResponse({ success: true, data: rows || [], total: rows?.length || 0 }, 200, origin);
+  } catch (error) {
+    console.error('Get liked pitches error:', error);
+    return jsonResponse({ success: true, data: [], total: 0 }, 200, origin);
+  }
+}
+
+/**
  * POST /api/creator/pitches/:id/like
  */
 export async function pitchLikeHandler(request: Request, env: Env): Promise<Response> {

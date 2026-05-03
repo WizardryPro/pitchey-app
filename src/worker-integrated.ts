@@ -93,6 +93,7 @@ import {
   pitchLikeHandler,
   pitchUnlikeHandler,
   pitchLikeStatusHandler,
+  userLikedPitchesHandler,
   pitchSaveHandler as realPitchSaveHandler,
   pitchUnsaveHandler as realPitchUnsaveHandler,
   pitchPublishHandler,
@@ -3423,6 +3424,9 @@ class RouteRegistry {
 
     // Recently viewed pitches (per-user watch history)
     this.register('GET', '/api/users/recently-viewed', this.getRecentlyViewed.bind(this));
+
+    // Liked pitches (per-user like history) — paired with /api/pitches/:id/like
+    this.register('GET', '/api/users/liked-pitches', (req) => userLikedPitchesHandler(req, this.env));
 
     // WebSocket upgrade - paid plan with Durable Objects
     this.register('GET', '/ws', this.handleWebSocketUpgrade.bind(this));

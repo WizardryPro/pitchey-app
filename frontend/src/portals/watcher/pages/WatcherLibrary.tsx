@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Heart, Clock, Users, Film, Eye, Star } from 'lucide-react';
+import { Heart, Clock, Users, Film, Eye, Star, Bookmark } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import GenrePlaceholder from '@shared/components/GenrePlaceholder';
 import EmptyState from '@/components/EmptyState';
 
-type TabId = 'saved' | 'recent' | 'following';
+type TabId = 'saved' | 'liked' | 'recent' | 'following';
 
 interface LibraryPitch {
   id: number;
@@ -25,6 +25,7 @@ interface LibraryPitch {
   creator_verified?: boolean;
   viewed_at?: string;
   saved_at?: string;
+  liked_at?: string;
 }
 
 interface FollowingCreator {
@@ -40,7 +41,8 @@ interface FollowingCreator {
 }
 
 const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
-  { id: 'saved', label: 'Saved', icon: Heart },
+  { id: 'saved', label: 'Saved', icon: Bookmark },
+  { id: 'liked', label: 'Liked', icon: Heart },
   { id: 'recent', label: 'Recently Viewed', icon: Clock },
   { id: 'following', label: 'Following', icon: Users },
 ];
@@ -56,6 +58,7 @@ export default function WatcherLibrary() {
   );
 
   const [saved, setSaved] = useState<LibraryPitch[]>([]);
+  const [liked, setLiked] = useState<LibraryPitch[]>([]);
   const [recent, setRecent] = useState<LibraryPitch[]>([]);
   const [following, setFollowing] = useState<FollowingCreator[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,8 +68,9 @@ export default function WatcherLibrary() {
     setLoading(true);
     setError(null);
     try {
-      const [savedRes, recentRes, followingRes] = await Promise.all([
+      const [savedRes, likedRes, recentRes, followingRes] = await Promise.all([
         apiClient.get<{ savedPitches: LibraryPitch[] }>('/api/saved-pitches'),
+        apiClient.get<{ data: LibraryPitch[] }>('/api/users/liked-pitches?limit=50'),
         apiClient.get<{ data: LibraryPitch[] }>('/api/users/recently-viewed?limit=30'),
         apiClient.get<{ following: FollowingCreator[] }>('/api/follows/following'),
       ]);
@@ -74,6 +78,10 @@ export default function WatcherLibrary() {
       if (savedRes.success && savedRes.data) {
         const raw: any = savedRes.data;
         setSaved(raw.savedPitches || raw.data?.savedPitches || []);
+      }
+      if (likedRes.success && likedRes.data) {
+        const raw: any = likedRes.data;
+        setLiked(raw.data || raw.likedPitches || []);
       }
       if (recentRes.success && recentRes.data) {
         const raw: any = recentRes.data;
@@ -109,6 +117,7 @@ export default function WatcherLibrary() {
 
   const tabCounts: Record<TabId, number> = {
     saved: saved.length,
+    liked: liked.length,
     recent: recent.length,
     following: following.length,
   };
@@ -180,7 +189,7 @@ export default function WatcherLibrary() {
       {!loading && !error && activeTab === 'saved' && (
         saved.length === 0 ? (
           <EmptyState
-            icon={Heart}
+            icon={Bookmark}
             title="No saved pitches yet"
             description="Browse the marketplace and save pitches you want to revisit."
             action={{
@@ -190,6 +199,22 @@ export default function WatcherLibrary() {
           />
         ) : (
           <PitchGrid pitches={saved} onClick={goToPitch} showTimestamp="saved" />
+        )
+      )}
+
+      {!loading && !error && activeTab === 'liked' && (
+        liked.length === 0 ? (
+          <EmptyState
+            icon={Heart}
+            title="No liked pitches yet"
+            description="Open a pitch and tap Like to add it here."
+            action={{
+              label: 'Browse Marketplace',
+              onClick: () => navigate('/marketplace'),
+            }}
+          />
+        ) : (
+          <PitchGrid pitches={liked} onClick={goToPitch} showTimestamp="liked" />
         )
       )}
 
@@ -267,7 +292,7 @@ export default function WatcherLibrary() {
 interface PitchGridProps {
   pitches: LibraryPitch[];
   onClick: (id: number) => void;
-  showTimestamp?: 'saved' | 'viewed';
+  showTimestamp?: 'saved' | 'viewed' | 'liked';
 }
 
 function PitchGrid({ pitches, onClick, showTimestamp }: PitchGridProps) {
@@ -293,7 +318,9 @@ function PitchGrid({ pitches, onClick, showTimestamp }: PitchGridProps) {
         const image = pitch.title_image || pitch.thumbnail_url;
         const timestamp = showTimestamp === 'saved'
           ? pitch.saved_at
-          : showTimestamp === 'viewed' ? pitch.viewed_at : undefined;
+          : showTimestamp === 'viewed' ? pitch.viewed_at
+          : showTimestamp === 'liked' ? pitch.liked_at
+          : undefined;
 
         return (
           <button
