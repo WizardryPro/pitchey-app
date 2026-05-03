@@ -156,7 +156,7 @@ export default function Profile() {
       formData.append('file', file);
       formData.append('folder', 'profile-images');
 
-      const uploadRes = await fetch(`${API_URL}/api/media/upload`, {
+      const uploadRes = await fetch(`${API_URL}/api/upload`, {
         method: 'POST',
         credentials: 'include',
         body: formData,
