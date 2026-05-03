@@ -92,6 +92,24 @@ export default function ProductionPitchDetail() {
       if (response.ok) {
         const raw = await response.json() as Record<string, unknown>;
         const p = (raw.data as Record<string, unknown>) ?? raw;
+
+        // Creator follower count isn't on the pitch payload — fetch it separately
+        // from /api/follows/stats. Without this, the "Followers" stat card silently
+        // showed 0 for every pitch regardless of the creator's actual reach.
+        const creatorId = p.user_id ?? p.creator_id;
+        let creatorFollowers = 0;
+        if (creatorId != null) {
+          try {
+            const statsRes = await fetch(`${API_URL}/api/follows/stats?userId=${creatorId}`, { credentials: 'include' });
+            if (statsRes.ok) {
+              const body = await statsRes.json() as { data?: { stats?: { followers?: number } } };
+              creatorFollowers = Number(body.data?.stats?.followers ?? 0);
+            }
+          } catch {
+            // Non-critical — leave at 0
+          }
+        }
+
         // Map snake_case API response to PitchDetails interface
         setPitch({
           id: Number(p.id) || 0,
@@ -114,7 +132,7 @@ export default function ProductionPitchDetail() {
           viewCount: Number(p.view_count ?? p.viewCount) || 0,
           likeCount: Number(p.like_count ?? p.likeCount) || 0,
           ndaCount: Number(p.nda_count ?? p.ndaCount) || 0,
-          followersCount: Number(p.followers_count ?? p.followersCount) || 0,
+          followersCount: creatorFollowers,
           status: String(p.status ?? 'draft'),
           createdAt: String(p.created_at ?? ''),
           publishedAt: p.published_at as string | undefined,

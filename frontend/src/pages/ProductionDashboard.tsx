@@ -1269,10 +1269,6 @@ function ProductionDashboard() {
                         <DollarSign className="w-4 h-4" />
                         <span>Budget: {pitch.budget}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Users className="w-4 h-4" />
-                        <span>{pitch.followersCount} followers</span>
-                      </div>
                     </div>
                     
                     <div className="flex flex-col space-y-2">

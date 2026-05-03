@@ -6,7 +6,6 @@ import { ThemeProvider } from './ThemeContext';
 import { NotificationProvider } from './NotificationContext';
 import { WebSocketProvider } from './WebSocketContext';
 import { PitchProvider } from './PitchContext';
-import { UserProvider } from './UserContext';
 import { PollingProvider } from './PollingContext';
 
 interface AppProviderProps {
@@ -20,19 +19,17 @@ interface AppProviderProps {
  */
 export const AppContextProvider: React.FC<AppProviderProps> = ({ children }) => {
   return (
-    <UserProvider>
-      <ThemeProvider>
-        <WebSocketProvider>
-          <PollingProvider defaultInterval={30000} enablePolling={true}>
-            <NotificationProvider>
-              <PitchProvider>
-                {children}
-              </PitchProvider>
-            </NotificationProvider>
-          </PollingProvider>
-        </WebSocketProvider>
-      </ThemeProvider>
-    </UserProvider>
+    <ThemeProvider>
+      <WebSocketProvider>
+        <PollingProvider defaultInterval={30000} enablePolling={true}>
+          <NotificationProvider>
+            <PitchProvider>
+              {children}
+            </PitchProvider>
+          </NotificationProvider>
+        </PollingProvider>
+      </WebSocketProvider>
+    </ThemeProvider>
   );
 };
 

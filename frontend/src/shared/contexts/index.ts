@@ -10,7 +10,6 @@ export { ThemeProvider, useTheme } from './ThemeContext';
 export { NotificationProvider, useNotifications } from './NotificationContext';
 export { WebSocketProvider } from './WebSocketContext';
 export { PitchProvider, usePitch } from './PitchContext';
-export { UserProvider, useUser } from './UserContext';
 export { PollingProvider } from './PollingContext';
 
 // Export types

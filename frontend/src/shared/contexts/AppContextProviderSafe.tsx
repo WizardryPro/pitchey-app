@@ -4,7 +4,6 @@ import React, { ReactNode, useEffect, useState } from 'react';
 import { ThemeProvider } from './ThemeContext';
 import { NotificationProvider } from './NotificationContext';
 import { PitchProvider } from './PitchContext';
-import { UserProvider } from './UserContext';
 import { WebSocketProvider } from './WebSocketContext';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 
@@ -39,20 +38,18 @@ export const AppContextProviderSafe: React.FC<AppProviderProps> = ({ children })
   }, [loading, isAuthenticated]);
 
   return (
-    <UserProvider>
-      <ThemeProvider>
-        <NotificationProvider>
-          <PitchProvider>
-            {shouldIncludeWebSocket ? (
-              <WebSocketProvider>
-                {children}
-              </WebSocketProvider>
-            ) : (
-              children
-            )}
-          </PitchProvider>
-        </NotificationProvider>
-      </ThemeProvider>
-    </UserProvider>
+    <ThemeProvider>
+      <NotificationProvider>
+        <PitchProvider>
+          {shouldIncludeWebSocket ? (
+            <WebSocketProvider>
+              {children}
+            </WebSocketProvider>
+          ) : (
+            children
+          )}
+        </PitchProvider>
+      </NotificationProvider>
+    </ThemeProvider>
   );
 };
