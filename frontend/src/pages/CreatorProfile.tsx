@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   Building2, User, Film, Calendar, MapPin, Globe, Mail, Phone,
@@ -26,8 +26,6 @@ interface CreatorData {
   joinedDate: string;
   followers: number;
   following: number;
-  pitchesCount: number;
-  viewsCount: number;
   verified?: boolean;
   profileImage?: string;
   coverImage?: string;
@@ -56,6 +54,13 @@ const CreatorProfile = () => {
   const { user } = useBetterAuthStore();
   const [creator, setCreator] = useState<CreatorData | null>(null);
   const [pitches, setPitches] = useState<CreatorPitch[]>([]);
+
+  // Derived from loaded pitches — neither /api/users/:id nor any other current
+  // endpoint returns these aggregated. Sum locally instead of leaving them at 0.
+  const totalViews = useMemo(
+    () => pitches.reduce((sum, p) => sum + (Number(p.viewCount) || 0), 0),
+    [pitches],
+  );
   const [activeTab, setActiveTab] = useState<'pitches' | 'about' | 'contact'>('pitches');
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -116,8 +121,6 @@ const CreatorProfile = () => {
           joinedDate: String(u.created_at ?? u.joinedDate ?? ''),
           followers: followersCount,
           following: followingCount,
-          pitchesCount: Number(u.pitches_count ?? u.pitchesCount) || 0,
-          viewsCount: Number(u.views_count ?? u.viewsCount) || 0,
           verified: Boolean(u.verified),
           profileImage: u.profile_image as string | undefined ?? u.image as string | undefined,
           specialties: Array.isArray(u.specialties) ? u.specialties as string[] : undefined,
@@ -278,11 +281,11 @@ const CreatorProfile = () => {
                     <span className="text-gray-600 ml-1">Following</span>
                   </div>
                   <div>
-                    <span className="font-bold text-gray-900">{creator.pitchesCount}</span>
+                    <span className="font-bold text-gray-900">{pitches.length}</span>
                     <span className="text-gray-600 ml-1">Pitches</span>
                   </div>
                   <div>
-                    <span className="font-bold text-gray-900">{creator.viewsCount.toLocaleString()}</span>
+                    <span className="font-bold text-gray-900">{totalViews.toLocaleString()}</span>
                     <span className="text-gray-600 ml-1">Total Views</span>
                   </div>
                 </div>
@@ -324,7 +327,7 @@ const CreatorProfile = () => {
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
-                Pitches ({creator.pitchesCount})
+                Pitches ({pitches.length})
               </button>
               <button
                 onClick={() => setActiveTab('about')}
