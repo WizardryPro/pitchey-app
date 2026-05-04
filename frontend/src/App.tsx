@@ -136,7 +136,6 @@ const ProductionAnalyticsPage = lazyRetry(() => import('./pages/ProductionAnalyt
 
 // Production Pages
 const ProductionPitchCreate = lazyRetry(() => import('./pages/ProductionPitchCreate'));
-const ProductionPitchDetail = lazyRetry(() => import('./pages/ProductionPitchDetail'));
 const ProductionPitchView = lazyRetry(() => import('@portals/production/pages/ProductionPitchView'));
 
 // Common Pages
