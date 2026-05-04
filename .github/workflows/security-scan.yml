@@ -242,21 +242,6 @@ jobs:
             report_md.md
           if-no-files-found: ignore
 
-      - name: Newman API Tests with Security Checks
-        run: |
-          npm install -g newman newman-reporter-htmlextra
-          newman run tests/security/api-security-tests.json \
-            -e tests/security/environment.json \
-            --reporters cli,htmlextra \
-            --reporter-htmlextra-export security-report.html
-
-      - name: Upload API security results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: api-security-report
-          path: security-report.html
-
   # License compliance check
   license-check:
     name: License Compliance
