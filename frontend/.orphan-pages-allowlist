@@ -1,0 +1,20 @@
+# Orphan-pages allowlist — read by scripts/check-orphan-page.sh and scripts/list-orphan-pages.sh.
+#
+# Format (one per line): `<repo-relative-path> # <required reason>`
+#   - Path must be the exact repo-relative .tsx path (e.g. frontend/src/pages/Foo.tsx).
+#   - Comment after `#` is REQUIRED. Lines without a comment are treated as invalid
+#     and ignored — this forces parking decisions to be conscious, the same way
+#     src/workflows/ is documented in CLAUDE.md.
+#
+# When to add an entry:
+#   - The page is parked for deliberate revival (cite the issue #).
+#   - The page is part of a refactor mid-flight (cite the branch / PR).
+#   - You're staging a new page before wiring its route (cite the next step).
+#
+# When NOT to add an entry:
+#   - You don't know why the file isn't routed. Investigate first; the warning
+#     exists exactly to prompt that investigation.
+#
+# Examples (commented out):
+# frontend/src/pages/SomeParkedPage.tsx # parked: see issue #999, revisiting Q3
+# frontend/src/portals/creator/pages/WipDashboardV2.tsx # in-progress: PR #123

@@ -7,6 +7,11 @@
             "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/ci-context.sh",
             "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/list-orphan-pages.sh",
+            "timeout": 10
           }
         ]
       }
@@ -18,6 +23,11 @@
           {
             "type": "command",
             "command": "cd /home/supremeisbeing/pitcheymovie/pitchey_v0.2/frontend && npx tsc --noEmit -p tsconfig.app.json --pretty 2>&1 | head -30"
+          },
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/check-orphan-page.sh",
+            "timeout": 5
           }
         ]
       }
