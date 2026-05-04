@@ -18,7 +18,6 @@ import { createAxiomLogger } from './middleware/axiom-logging';
 import { traceStorage } from './db/trace-context';
 import { safeQuery } from './db/safe-query';
 
-// import { createAuthAdapter } from './auth/auth-adapter';
 import { createDatabase } from './db/raw-sql-connection';
 import { UserProfileRoutes } from './routes/user-profile';
 import { ApiResponseBuilder, ErrorCode, errorHandler } from './utils/api-response';
@@ -29,7 +28,7 @@ import { createJWT, verifyJWT, extractJWT } from './utils/worker-jwt';
 import { hashPassword, verifyPassword, isHashedPassword } from './utils/worker-password';
 import { StripeService } from './services/stripe.service';
 import { CREDIT_PACKAGES } from './config/subscription-plans';
-import { createBetterAuthInstance, createPortalAuth, AuthEnv } from './auth/better-auth-neon-raw-sql';
+import { createSessionStore, type SessionStore, type SessionStoreEnv } from './auth/session-store';
 import { PortalAccessController, createPortalAccessMiddleware } from './middleware/portal-access-control';
 import { CreatorInvestorWorkflow } from './workflows/creator-investor-workflow';
 import { CreatorProductionWorkflow } from './workflows/creator-production-workflow';
@@ -628,14 +627,10 @@ class RouteRegistry {
   private db!: WorkerDatabase;
   private emailService: WorkerEmailService | null = null;
   private auditService!: AuditTrailService;
-  // private authAdapter: ReturnType<typeof createAuthAdapter>;
-  // private uploadHandler: R2UploadHandler;
-  // private emailMessagingRoutes?: EmailMessagingRoutes;
   private fileHandler!: WorkerFileHandler;
   private enhancedR2Handler?: any;
   private env: Env;
-  private betterAuth?: ReturnType<typeof createBetterAuthInstance>;
-  private portalAuth?: ReturnType<typeof createPortalAuth>;
+  private sessionStore?: SessionStore;
   private realtimeService!: WorkerRealtimeService;
   private containerIntegration!: ContainerWorkerIntegration;
   private intelligenceWebSocketService?: any;
@@ -758,24 +753,19 @@ class RouteRegistry {
       // Check for SESSION_STORE (wrangler.toml binding) or SESSIONS_KV or KV
       try {
         if (env.DATABASE_URL && (env.SESSION_STORE || env.SESSIONS_KV || env.KV || env.CACHE)) {
-          console.log('Initializing Better Auth with Cloudflare integration');
-          const authEnv = {
+          const sessionStoreEnv: SessionStoreEnv = {
             DATABASE_URL: env.DATABASE_URL,
             BETTER_AUTH_SECRET: env.BETTER_AUTH_SECRET,
             JWT_SECRET: env.JWT_SECRET,
             SESSIONS_KV: env.SESSION_STORE || env.SESSIONS_KV || env.KV || env.CACHE,
             KV: env.KV,
             FRONTEND_URL: env.FRONTEND_URL,
-            ENVIRONMENT: env.ENVIRONMENT
-          } as AuthEnv;
-          this.betterAuth = createBetterAuthInstance(authEnv);
-          this.portalAuth = createPortalAuth(this.betterAuth);
-        } else {
-          console.log('Better Auth not initialized - missing DATABASE_URL or KV namespace');
+            ENVIRONMENT: env.ENVIRONMENT,
+          };
+          this.sessionStore = createSessionStore(sessionStoreEnv);
         }
       } catch (authError) {
-        console.error('Failed to initialize Better Auth (non-fatal):', authError);
-        // Continue without Better Auth - handleLoginSimple will handle auth via direct DB
+        console.error('Failed to initialize session store (non-fatal):', authError);
       }
 
       // Initialize email and messaging routes if configuration is available
@@ -796,9 +786,6 @@ class RouteRegistry {
         this.fileHandler = new WorkerFileHandler(this.db);
       }
     }
-
-    // Initialize Better Auth adapter (commented out - causing runtime error)
-    // this.authAdapter = createAuthAdapter(env);
 
     // Initialize upload handler (commented out for debugging)
     // this.uploadHandler = new R2UploadHandler(env.R2_BUCKET, {
@@ -4061,13 +4048,13 @@ class RouteRegistry {
     }
 
     // First try Better Auth's raw SQL implementation if available
-    if (this.betterAuth && this.betterAuth.dbAdapter) {
+    if (this.sessionStore) {
       try {
         const body = await request.clone().json() as LoginBody;
         const { email, password } = body;
 
         // Get user from database using Better Auth's adapter
-        const user = await this.betterAuth.dbAdapter.findUser(email) as UserRecord | undefined;
+        const user = await this.sessionStore!.findUser(email) as UserRecord | undefined;
 
         if (!user) {
           return new Response(
@@ -4146,7 +4133,7 @@ class RouteRegistry {
 
         // Create session
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-        const sessionId = await this.betterAuth.dbAdapter.createSession(String(user.id), expiresAt);
+        const sessionId = await this.sessionStore!.createSession(String(user.id), expiresAt);
 
         // Store session in KV if available
         const kvStore = this.env.SESSION_STORE || this.env.SESSIONS_KV || this.env.KV || this.env.CACHE;
@@ -4217,8 +4204,7 @@ class RouteRegistry {
 
   private async handlePortalLogin(request: Request, portal: 'creator' | 'investor' | 'production' | 'watcher'): Promise<Response> {
     console.log('handlePortalLogin called for portal:', portal);
-    console.log('Better Auth available:', !!this.betterAuth);
-    console.log('Better Auth dbAdapter available:', !!(this.betterAuth && this.betterAuth.dbAdapter));
+    console.log('Session store available:', !!this.sessionStore);
 
     // Verify Turnstile token (skip for known demo accounts — password is fixed, no sensitive data)
     const clonedBody = await request.clone().json() as any;
@@ -4240,13 +4226,13 @@ class RouteRegistry {
     }
 
     // First try Better Auth's raw SQL implementation
-    if (this.betterAuth && this.betterAuth.dbAdapter) {
+    if (this.sessionStore) {
       try {
         const body = await request.clone().json() as LoginBody;
         const { email, password } = body;
 
         // Get user from database using Better Auth's adapter
-        const user = await this.betterAuth.dbAdapter.findUser(email) as UserRecord | undefined;
+        const user = await this.sessionStore!.findUser(email) as UserRecord | undefined;
 
         // Map portal name to DB user_type (watcher portal stores as 'viewer')
         const expectedType = portal === 'watcher' ? 'viewer' : portal;
@@ -4409,7 +4395,7 @@ class RouteRegistry {
 
         // Create new session
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-        const sessionId = await this.betterAuth.dbAdapter.createSession(String(user.id), expiresAt);
+        const sessionId = await this.sessionStore!.createSession(String(user.id), expiresAt);
 
         // Store session in KV if available (check for all possible KV bindings)
         const kvStore = this.env.SESSION_STORE || this.env.SESSIONS_KV || this.env.KV || this.env.CACHE;
@@ -5075,7 +5061,7 @@ pitchey_analytics_datapoints_per_minute 1250
 
   private async handleSession(request: Request): Promise<Response> {
     // Check Better Auth session first
-    if (this.betterAuth && this.betterAuth.dbAdapter) {
+    if (this.sessionStore) {
       try {
         const cookieHeader = request.headers.get('Cookie');
         const { parseSessionCookie } = await import('./config/session.config');
@@ -5089,7 +5075,7 @@ pitchey_analytics_datapoints_per_minute 1250
             if (cached) {
               const session = cached as any;
               if (new Date(session.expiresAt) > new Date()) {
-                const userResult = await this.betterAuth.dbAdapter.findUserById(session.userId) as UserRecord | undefined;
+                const userResult = await this.sessionStore!.findUserById(session.userId) as UserRecord | undefined;
                 if (userResult) {
                   return new Response(
                     JSON.stringify({
@@ -5122,7 +5108,7 @@ pitchey_analytics_datapoints_per_minute 1250
           }
 
           // Check database
-          const sessionData = await this.betterAuth.dbAdapter.findSession(sessionId) as Record<string, unknown> | undefined;
+          const sessionData = await this.sessionStore!.findSession(sessionId) as Record<string, unknown> | undefined;
           if (sessionData) {
             return new Response(
               JSON.stringify({
