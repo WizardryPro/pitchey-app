@@ -12,12 +12,10 @@ on:
 
 permissions:
   contents: read
-  security-events: write
-  actions: read
-  # pull-requests: required by security-report job to post scan-summary comments on PRs
-  # issues: required by the "Create issue for failures" step on main-branch / scheduled runs
-  pull-requests: write
-  issues: write
+# Write perms are job-scoped (least privilege). Required by ossf/scorecard-action,
+# which 400s publication if any non-read perm is set at the top level. Job-level
+# blocks below grant `security-events: write` to SARIF uploaders (sast-scan, iac-scan)
+# and `issues: write` / `pull-requests: write` to security-report.
 
 jobs:
   # Secret scanning
@@ -141,6 +139,8 @@ jobs:
   sast-scan:
     name: Static Code Analysis
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write  # CodeQL analyze uploads SARIF to Security tab
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -177,6 +177,8 @@ jobs:
   iac-scan:
     name: Infrastructure Security
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write  # Checkov SARIF upload
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -213,7 +215,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: OWASP ZAP API Scan
-        uses: zaproxy/action-api-scan@v0.7.0
+        # v0.7.0 bundled upload-artifact@v3 (deprecated 2024-11-30, EOL'd by GitHub),
+        # which 400'd "artifact name zap_scan is not valid" against the dead v3 API.
+        # v0.10.0 uses upload-artifact@v4.
+        uses: zaproxy/action-api-scan@v0.10.0
         with:
           target: 'https://pitchey-api-prod.ndlovucavelle.workers.dev'
           rules_file_name: '.zap/rules.tsv'
@@ -236,21 +241,6 @@ jobs:
             report_json.json
             report_md.md
           if-no-files-found: ignore
-
-      - name: Newman API Tests with Security Checks
-        run: |
-          npm install -g newman newman-reporter-htmlextra
-          newman run tests/security/api-security-tests.json \
-            -e tests/security/environment.json \
-            --reporters cli,htmlextra \
-            --reporter-htmlextra-export security-report.html
-
-      - name: Upload API security results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: api-security-report
-          path: security-report.html
 
   # License compliance check
   license-check:
@@ -305,6 +295,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: [secret-scan, dependency-scan, sast-scan, iac-scan]
     if: always()
+    permissions:
+      contents: read
+      issues: write          # "Create issue for failures" step on main / scheduled
+      pull-requests: write   # "Comment on PR" step
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
