@@ -37,19 +37,23 @@ Live login writes the `pitchey-session` cookie from `handlePortalLogin()` in
 `worker-integrated.ts`. `pitchey-session` holds a UUID, is keyed to a row in the
 legacy `sessions` table, and is validated by the custom session handler.
 
-Better Auth ALSO runs alongside, not instead: `src/auth/better-auth-config.ts`
-line 51 invokes `betterAuth({...})`, and that instance is live on
-`/api/users/profile` + `/api/users/settings` (via `routes/user-profile.ts` →
-`auth-adapter.ts`) and on WebSocket session auth (via `worker-realtime.service.ts`
-→ `better-auth-session-handler.ts`). Mixed model is deliberate for now;
-full rip-or-migrate tracked in issue #19.
+Better Auth was ripped 2026-05-04 (issue #19, path a). Live auth path now:
+- HTTP login/register/logout: inline in `src/worker-integrated.ts` using
+  `src/auth/session-store.ts` (4 raw-SQL methods).
+- `/api/users/profile` + `/api/users/settings`: `routes/user-profile.ts` →
+  `src/auth/auth-adapter.ts` (cookie + JWT bearer fallback).
+- WebSocket auth: `src/services/worker-realtime.service.ts` →
+  `src/auth/legacy-session-handler.ts` (raw SQL, no BA library).
+
+Deps `better-auth` and `better-auth-cloudflare` remain in `package.json` for
+the 1-week Phase 1.5 reversibility window before uninstall.
 
 - Name: `pitchey-session`
 - `SameSite=None`, `Secure`, `HttpOnly`, 30-day expiry, `path=/`
 - Session lookup: legacy `sessions` table, UUID key, refresh-on-use
 - Legacy cookie name `better-auth-session` is still *read* on sign-in
   (backward-compat fallback in `utils/auth.ts`, `utils/auth-extract.ts`)
-  and cleared on sign-out. Writers are the BA paths mentioned above.
+  and cleared on sign-out. No code writes that name anymore.
 
 **Gotcha**: The Pages Functions proxy (`frontend/functions/api/[[path]].ts`) rewrites
 `SameSite=None` to `Lax` and strips `Domain`. This is correct for same-origin API calls
