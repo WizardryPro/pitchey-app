@@ -20693,8 +20693,54 @@ async function cleanupDatabase(env: any, ctx: ExecutionContext): Promise<void> {
   console.log("Cleaning up database...");
 }
 
-async function updateTrendingAlgorithm(env: any, ctx: ExecutionContext): Promise<void> {
-  console.log("Updating trending algorithm...");
+async function updateTrendingAlgorithm(env: any, _ctx: ExecutionContext): Promise<void> {
+  // Recompute heat_score for all published pitches via the Postgres function
+  // recalculate_heat_scores() (see migration 080). 15-min cadence keeps the
+  // engagement (14-day half-life) and rating components fresh. Prior to this
+  // body landing, the cron fired but did nothing — heat scores were frozen at
+  // whatever value the last manual POST /api/admin/heat-scores/recalculate
+  // produced.
+  const startedAt = Date.now();
+  try {
+    const { getDb } = await import('./db');
+    const sql = getDb(env);
+    if (!sql) {
+      console.log(JSON.stringify({
+        level: 'warn',
+        category: 'heat_score',
+        action: 'recalculate_cron',
+        outcome: 'skipped_no_db',
+      }));
+      return;
+    }
+
+    const rows = await sql`SELECT recalculate_heat_scores() AS updated_count`;
+    const updated = Number((rows as any[])[0]?.updated_count ?? 0);
+    console.log(JSON.stringify({
+      level: 'info',
+      category: 'heat_score',
+      action: 'recalculate_cron',
+      outcome: 'success',
+      updated,
+      duration_ms: Date.now() - startedAt,
+    }));
+  } catch (err) {
+    const e = err instanceof Error ? err : new Error(String(err));
+    console.error(JSON.stringify({
+      level: 'error',
+      category: 'heat_score',
+      action: 'recalculate_cron',
+      outcome: 'failed',
+      error: e.message,
+      duration_ms: Date.now() - startedAt,
+    }));
+    try {
+      const SentryMod = await import('@sentry/cloudflare');
+      SentryMod.captureException?.(e, { tags: { cron: 'recalculate_heat_scores' } });
+    } catch {
+      /* Sentry not available in scheduled context — swallow */
+    }
+  }
 }
 
 /**

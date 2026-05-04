@@ -724,24 +724,12 @@ export default function MarketplaceEnhanced() {
             <GenrePlaceholder genre={pitch.genre} />
           )}
 
-          {/* Overlay with quick info — always visible on mobile (no hover), hover on desktop */}
+          {/* Overlay with logline — always visible on mobile (no hover), hover on desktop.
+              Stats (views/likes/rating) live only in the persistent footer below the title
+              to avoid the double-rendering that hits mobile users (gradient is always visible). */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent sm:from-black/80 sm:via-black/20 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
             <div className="absolute bottom-0 left-0 right-0 p-2.5 sm:p-4 text-white">
-              <p className="text-xs sm:text-sm line-clamp-2 sm:line-clamp-3 mb-1 sm:mb-2">{pitch.logline}</p>
-              <div className="flex gap-2 text-[10px] sm:text-xs">
-                <span className="flex items-center gap-1">
-                  <Eye className="w-3 h-3" />
-                  {pitch.viewCount || 0}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Heart className="w-3 h-3 text-red-500 fill-red-500" />
-                  {(pitch as any).likeCount ?? (pitch as any).like_count ?? 0}
-                </span>
-                {(() => {
-                  const r = Number((pitch as any).rating_average) || Number((pitch as any).ratingAverage) || 0;
-                  return r > 0 ? <PitcheyRating mode="stars" value={r} showNumber /> : null;
-                })()}
-              </div>
+              <p className="text-xs sm:text-sm line-clamp-2 sm:line-clamp-3">{pitch.logline}</p>
             </div>
           </div>
 
