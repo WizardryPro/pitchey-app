@@ -5,7 +5,7 @@
 
 import { getCorsHeaders } from '../utils/response';
 import { WorkerDatabase } from './worker-database';
-import { BetterAuthSessionHandler } from '../auth/better-auth-session-handler';
+import { LegacySessionHandler } from '../auth/legacy-session-handler';
 
 interface RealtimeMessage {
   type: 'notification' | 'dashboard_update' | 'chat_message' | 'presence_update' | 'typing_indicator' | 'upload_progress' | 'pitch_view_update' | 'connection' | 'ping' | 'pong';
@@ -39,7 +39,7 @@ export class WorkerRealtimeService {
   private db: WorkerDatabase;
   private config: WorkerRealtimeConfig;
   private env: any;
-  private sessionHandler: BetterAuthSessionHandler | null = null;
+  private sessionHandler: LegacySessionHandler | null = null;
   private startTime: number = Date.now(); // Track service start time for uptime calculation
 
   constructor(env: any, db: WorkerDatabase) {
@@ -47,10 +47,9 @@ export class WorkerRealtimeService {
     this.db = db;
     
     try {
-      this.sessionHandler = new BetterAuthSessionHandler(env);
+      this.sessionHandler = new LegacySessionHandler(env);
     } catch (error) {
-      console.error('Error initializing BetterAuthSessionHandler:', error);
-      // For now, we'll continue without session handler and fail gracefully
+      console.error('Error initializing LegacySessionHandler:', error);
     }
     
     this.config = {
