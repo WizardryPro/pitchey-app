@@ -15,12 +15,15 @@ fail() {
 
 echo "Running docs-vs-code drift audit..."
 
-# 1) Better Auth adapter still commented out in worker-integrated.ts
-if grep -nE "^[[:space:]]*//[[:space:]]*this\\.authAdapter[[:space:]]*=[[:space:]]*createAuthAdapter\\(env\\);" \
-  "$ROOT_DIR/src/worker-integrated.ts" >/dev/null; then
-  pass "Better Auth adapter remains commented out in src/worker-integrated.ts."
+# 1) Better Auth library is out of the active runtime (Issue #19, ripped 2026-05-04).
+#    Watches for accidental re-introduction during the Phase 1.5 reversibility window
+#    (deps remain in package.json, so a stray `import { betterAuth }` would type-check).
+#    After Phase 1.5 uninstalls the deps, this check still serves as a tripwire.
+BA_IMPORT_COUNT=$({ grep -rE "from ['\"]better-auth(-cloudflare)?['\"]" "$ROOT_DIR/src" --include="*.ts" 2>/dev/null || true; } | wc -l | tr -d ' ')
+if [[ "$BA_IMPORT_COUNT" -eq 0 ]]; then
+  pass "Zero Better Auth library imports in src/ (Issue #19 path a state preserved)."
 else
-  fail "Expected commented Better Auth adapter line was not found in src/worker-integrated.ts."
+  fail "Found $BA_IMPORT_COUNT Better Auth import(s) in src/. Issue #19 was ripped — re-introduction needs explicit decision."
 fi
 
 # 2) FRONTEND_URL in deployed config matches CLAUDE.md claim

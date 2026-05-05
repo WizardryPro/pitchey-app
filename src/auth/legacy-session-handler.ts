@@ -1,6 +1,11 @@
 /**
- * Better Auth Session Handler for Worker Integration
- * Provides session-based authentication alongside JWT for gradual migration
+ * Legacy session handler used for WebSocket auth and a few HTTP fallback paths.
+ *
+ * History: this file was previously named `better-auth-session-handler.ts` and
+ * its class was `BetterAuthSessionHandler`. It never imported the BA library —
+ * the name was misleading. Renamed during the issue #19 rip (2026-05-04) to
+ * reflect what the code actually does: raw SQL against the legacy `sessions`
+ * table + KV cache.
  */
 
 import { neon } from '@neondatabase/serverless';
@@ -12,7 +17,7 @@ import {
   createClearSessionCookie
 } from '../config/session.config';
 
-export interface BetterAuthSession {
+export interface LegacySession {
   id: string;
   userId: string;
   userEmail: string;
@@ -20,7 +25,7 @@ export interface BetterAuthSession {
   expiresAt: Date;
 }
 
-export class BetterAuthSessionHandler {
+export class LegacySessionHandler {
   private sql: ReturnType<typeof neon>;
   private sessionsKV?: KVNamespace;
 
@@ -79,7 +84,7 @@ export class BetterAuthSessionHandler {
       if (this.sessionsKV) {
         const cached = await this.sessionsKV.get(`session:${sessionId}`, 'json');
         if (cached) {
-          const session = cached as BetterAuthSession;
+          const session = cached as LegacySession;
           if (new Date(session.expiresAt) > new Date()) {
             // Fetch user details
             const [user] = (await this.sql`

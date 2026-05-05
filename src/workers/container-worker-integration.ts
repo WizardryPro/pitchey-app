@@ -7,7 +7,8 @@ import { DatabaseConnectionManager, CachedQueryExecutor } from '../config/hyperd
 import { ContainerOrchestrator, ContainerJob, ContainerMetrics } from '../services/container-orchestrator';
 import { ApiResponseBuilder, ErrorCode, errorHandler } from '../utils/api-response';
 import { getCorsHeaders } from '../utils/response';
-import { createBetterAuthInstance } from '../auth/better-auth-neon-raw-sql';
+import { createSessionStore } from '../auth/session-store';
+import { parseSessionCookie } from '../config/session.config';
 import { PortalAccessController } from '../middleware/portal-access-control';
 import { KVCacheService } from '../services/kv-cache.service';
 import type { Env } from '../worker-integrated';
@@ -598,25 +599,20 @@ export class APIGatewayLayer {
   }
 }
 
-/**
- * Authentication Integration for Better Auth
- */
 export class AuthenticationIntegration {
   constructor(private env: Env) {}
 
   async validateRequest(request: Request): Promise<{ success: boolean; user?: any; error?: string }> {
     try {
-      const auth = createBetterAuthInstance(this.env as any);
+      const store = createSessionStore(this.env as any);
 
-      // Extract session from cookie
       const sessionId = this.extractSessionFromCookie(request.headers.get('Cookie') || '');
 
       if (!sessionId) {
         return { success: false, error: 'No session found' };
       }
 
-      // Validate session with Better Auth
-      const session = await (auth as any).dbAdapter.findSession(sessionId);
+      const session = await store.findSession(sessionId);
 
       if (!session) {
         return { success: false, error: 'Invalid session' };
@@ -630,9 +626,7 @@ export class AuthenticationIntegration {
   }
 
   private extractSessionFromCookie(cookieHeader: string): string | null {
-    const cookies = cookieHeader.split(';').map(cookie => cookie.trim());
-    const sessionCookie = cookies.find(cookie => cookie.startsWith('better-auth.session='));
-    return sessionCookie ? sessionCookie.split('=')[1] : null;
+    return parseSessionCookie(cookieHeader);
   }
 }
 
