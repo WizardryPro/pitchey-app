@@ -6,6 +6,14 @@ why each site matters). This doc is the working artifact for the actual migratio
 
 Read-only prep — no migrations performed on this branch.
 
+## Status
+
+**The original gate-feeding bug surface is closed.** All six Tier-1 files from the 2026-04-17 audit are at zero `.catch(() => …)` residue: `follows`, `follows-enhanced`, `pitch-feedback`, `pitch-interactions`, plus the deleted `worker-modules/analytics-endpoints.ts`. The class of bug the audit was originally written to address — consumption-gate-style failures where a query exception looks identical to legitimate empty data on paths that feed quotas, trust signals, or gates — no longer has a hiding place in the live request paths.
+
+**The remaining 114 untagged sites are second-tier residue, not Tier 1 leftover.** Most are dashboard-read fall-back-to-empty-state patterns where the user-facing UI behavior is acceptable but the operator-visibility cost is the issue. None of them are on a path that silently corrupts gate state.
+
+**The headline gate count (114) is currently uninterpretable.** See the next section: with zero `// fire-and-forget` tags applied anywhere in the tree, a count of "untagged residue" cannot distinguish genuine swallows from legitimate telemetry. Phase 1 of the work below is a tag-sweep that makes the count meaningful before any migration begins.
+
 ## Headline numbers
 
 | Metric | 2026-04-17 | 2026-05-05 | Δ |
@@ -15,13 +23,15 @@ Read-only prep — no migrations performed on this branch.
 | `worker-integrated.ts` only | 59 | 59 | 0 |
 | Files with residue (excl worker) | 26 | 20 | -6 |
 | Sites tagged `// fire-and-forget` | 0 | 0 | 0 |
-| **Orchestrator gate** (untagged, excl worker, target **<30**) | — | **114** | gap **85+** |
+| **Orchestrator gate** (untagged, excl worker, target **<30**) | — | **114**¹ | (uninterpretable¹) |
+
+¹ The 114 figure is what the gate would currently report, but it is a mix of genuine swallows and legitimate fire-and-forget telemetry that has never been distinguished. Until Phase 1 tag-sweep lands, you cannot tell from this number whether 30 swallows remain or 84 remain. Don't use it for status reporting.
 
 `safeQuery` adopted in 8 files (the 6 originally tagged Tier 1 + `creator-dashboard.ts` + `slates.ts`).
 
-## Tier 1 — complete
+## Tier 1 — closed (migration ledger)
 
-All six Tier-1 files from 2026-04-17 are at zero residue. Migrations + file deletions:
+Backing detail for the milestone surfaced in §Status. All six Tier-1 files from 2026-04-17 plus the originally-Tier-1-adjacent `slates`/`portfolio-share` are at or near zero residue:
 
 | File | Was | Now | Notes |
 |---|---:|---:|---|
@@ -105,31 +115,54 @@ This means the audit work has two components, not one:
 1. **Migrate genuine swallows to `safeQuery`** — the dashboard cluster, AI handlers, etc.
 2. **Tag legitimate telemetry catches with `// fire-and-forget`** — currently invisible to the gate. Most likely live in `worker-integrated.ts` (Stripe cleanup, password rehash, etc.).
 
-Without (2), even after migrating every Tier 2/3 site, the worker-integrated 59 will still need per-site classification to land below 30. Tagging-only is the cheaper half of the work; doing it first reduces noise during the migration PRs.
+Without it, every migration PR's diff against the gate is illegible: you cannot tell whether a PR moved the count by fixing a swallow or by deleting telemetry that should have been preserved. Phase 1 below addresses this directly.
 
-## Suggested PR sequencing
+## Suggested sequencing — Phase 1 (tag sweep) before Phase 2 (migration)
 
-Goal: clear the orchestrator gate (untagged < 30, excl worker-integrated) in 3–4 reviewable PRs, then tackle worker-integrated separately.
+The work has two phases. Phase 1 must complete tree-wide before Phase 2 begins, because Phase 2's review hinges on the gate count being interpretable.
 
-| PR | Scope | Sites cleared | Running total |
-|---|---|---:|---:|
-| 1 | `production-dashboard-extended.ts` + `production-dashboard.ts` | 32 | 114 → 82 |
-| 2 | `creator-dashboard-extended.ts` + `creator-dashboard.ts` (finish) | 23 | 82 → 59 |
-| 3 | `production-sidebar.ts` + `production-deals.ts` | 28 | 59 → 31 |
-| 4 | Tier 3 sweep (any 2+ files) | 4–10 | 31 → ≤27 |
-| 5 | `worker-integrated.ts` audit + tagging pass | varies | bring worker-integrated to a defensible state independently |
+### Phase 1 — tree-wide tag sweep
 
-PR 1–4 each ship a meaningful chunk that's reviewable on its own and produces real Sentry signal increase (per the original doc's expectation: "After each tier, re-query Sentry for a week; expect new event volume from the now-visible failures").
+Visit every `.catch(() => …)` site in `src/` (all 173) and apply one of three classifications. **No behavioral change beyond tagging + breadcrumbs** — this is observability hygiene, not bug fixing.
 
-PR 5 is a different shape — every site needs classification rather than mechanical migration. Likely 2–3× the review effort of any other PR. Sequence it last so it can absorb learnings from the earlier migrations.
+| Bucket | Code shape | Criteria |
+|---|---|---|
+| **A. `// fire-and-forget`** | one-line comment immediately above the catch, code unchanged | Best-effort write or telemetry; failure is non-fatal AND caller does not act on the result. Examples: post-login password rehash, Stripe payment-method detach, Axiom log fire. Spec'd in CLAUDE.md as gate-exclusion mechanism. |
+| **B. defensible-default + Sentry breadcrumb** | replace `.catch(() => default)` with a typed catch that adds a Sentry breadcrumb then returns the same default | Caller legitimately uses the default value, but error volume needs to be visible. Examples: Stripe API reads where null is checked, idempotent reads where transient failure is OK but pool exhaustion shouldn't be silent. |
+| **C. migrate** | leave the catch in place but mark it for Phase 2 (e.g. `// TODO(catch-swallow): migrate to safeQuery`) | Read-side query where the fallback masks data semantics. The consumption-gate class — every Tier 2 dashboard catch is almost certainly this. |
 
-## Prerequisites before the first migration PR opens
+Rough size estimate from the 12-site spot-check of `worker-integrated.ts`: ~50% bucket C, ~25% bucket B, ~25% bucket A. The dashboard handler files are likely close to 100% bucket C — read-path SQL aggregates with no fire-and-forget legitimacy.
 
+**Suggested split** (one PR per row, in order):
+
+| PR | Scope | Site count | Output |
+|---|---|---:|---|
+| Phase 1a | `src/handlers/*` + `src/services/*` + `src/utils/*` (everything except worker-integrated) | 114 | every site classified A/B/C |
+| Phase 1b | `src/worker-integrated.ts` | 59 | every site classified A/B/C |
+
+Splitting at the worker-integrated boundary because that file's per-site judgment density is much higher and it deserves its own focused review. Phase 1a should be mostly mechanical; Phase 1b will be where most of the bucket-A tags land.
+
+After Phase 1 lands, the gate count (untagged residue) genuinely measures sites needing migration. The original target of <30 becomes meaningful.
+
+### Phase 2 — migration of bucket-C residue, tier-ordered
+
+Triggered once Phase 1 is in. Sites still marked `// TODO(catch-swallow): migrate` get their handlers ported to the `safeQuery` discriminated-union pattern. The tier ordering in the working list above (production+creator dashboard cluster first, then supporting handlers) drives PR sequencing here.
+
+Because the bucket-C subset will be smaller than the raw 114 (excluded sites are now tagged or breadcrumbed), the original "3–4 PR" estimate is probably an over-count. Re-estimate after Phase 1a lands.
+
+Per the original doc: after each Phase 2 PR, re-query Sentry for a week and expect new event volume from the now-visible failures. Each surfaced error is evidence the catch was hiding something — fix it at the root (schema drift → migration; network → retry policy), don't re-suppress.
+
+## Prerequisites
+
+Before Phase 1a opens:
 - [ ] Main is green (axios CVE PR `fix/axios-cve-bump` merged, Security Scan passes)
+- [ ] Confirm Sentry breadcrumb context-tag convention (Phase 1a should grep one of the live exemplars and match its tag shape — bucket B emits the breadcrumbs)
+
+Before Phase 2's first migration PR opens:
+- [ ] Phase 1a + 1b both merged; gate count under <30 target *or* documented why the residue can't reach it without code changes
 - [ ] Confirm `safeQuery` API hasn't drifted since the exemplar in `handlers/creator-dashboard.ts:creatorRevenueHandler`
-- [ ] Confirm Sentry breadcrumb context-tag convention (PR 1 should grep one of the live exemplars and match its tag shape)
 
 ## What this branch contains
 
 - This document (`docs/catch-swallow-prep-2026-05-05.md`) only.
-- No code changes. The migration work begins on a separate branch after main is green.
+- No code changes. Phase 1a (tag sweep across `src/handlers` + `src/services` + `src/utils`) opens on a separate branch once main is green.
