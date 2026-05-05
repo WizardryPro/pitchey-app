@@ -12,6 +12,9 @@ if (typeof process === 'undefined') {
 // Sentry Error Tracking
 import * as Sentry from '@sentry/cloudflare';
 
+// OpenTelemetry — Pillar 1.6 (Position A wrap; see docs/otel-handler-wrap-decision-2026-05-05.md)
+import { instrument, instrumentDO, type ResolveConfigFn } from '@microlabs/otel-cf-workers';
+
 // Axiom Request Logging
 import { createAxiomLogger } from './middleware/axiom-logging';
 // Per-request trace context for SQLCommenter + Axiom query correlation
@@ -190,6 +193,9 @@ import {
 
 // Import implementation status checker
 import { implementationStatusHandler } from './handlers/implementation-status';
+
+// Pillar 1.6 — OTel envelope proxy for frontend RUM
+import { otelTracesHandler } from './handlers/otel-traces';
 
 import {
   changePasswordHandler,
@@ -1807,6 +1813,9 @@ class RouteRegistry {
     this.register('GET', '/api/monitoring/metrics', this.handleMonitoringMetrics.bind(this));
     this.register('GET', '/api/monitoring/synthetic', this.handleSyntheticResults.bind(this));
     this.register('GET', '/api/ws/health', this.handleWebSocketHealth.bind(this));
+
+    // OTel envelope proxy — frontend RUM uploads OTLP envelopes here; we attach AXIOM_TOKEN server-side
+    this.register('POST', '/api/_otel/v1/traces', (req) => otelTracesHandler(req, this.env));
 
     // Authentication routes
     this.register('POST', '/api/auth/login', this.handleLogin.bind(this));
@@ -20648,15 +20657,39 @@ const websocketSafeHandler = {
   }
 };
 
-export default websocketSafeHandler;
+// OpenTelemetry config — see docs/otel-handler-wrap-decision-2026-05-05.md
+// AXIOM_TOKEN reuses the existing secret already gated by checkProdAxiomTokenOnce.
+// Separate dataset (`pitchey-traces-api`) so trace volume doesn't perturb log queries
+// like the `login_failed` brute-force monitor on `pitchey-logs`.
+const otelConfig: ResolveConfigFn = (env: any) => ({
+  exporter: {
+    url: 'https://api.axiom.co/v1/traces',
+    headers: {
+      'Authorization': `Bearer ${env.AXIOM_TOKEN ?? ''}`,
+      'X-Axiom-Dataset': env.AXIOM_TRACES_DATASET ?? 'pitchey-traces-api',
+    },
+  },
+  service: {
+    name: 'pitchey-worker',
+    version: env.CF_VERSION_METADATA?.id ?? env.VERSION ?? 'unknown',
+  },
+  handlers: {
+    fetch: { acceptTraceContext: true },
+  },
+});
+
+export default instrument(websocketSafeHandler, otelConfig);
 
 // Export Durable Objects
 export { WebSocketDurableObject };
 // Export aliases for migration compatibility
 export const NotificationRoom = WebSocketDurableObject;
-// Durable Object Exports (Premium Feature)
-export { NotificationHub } from './durable-objects/notification-hub';
-export { WebSocketRoom } from './durable-objects/websocket-room';
+// Durable Object Exports (Premium Feature) — wrapped with instrumentDO for trace nesting under Worker spans
+import { NotificationHub as RawNotificationHub } from './durable-objects/notification-hub';
+import { WebSocketRoom as RawWebSocketRoom } from './durable-objects/websocket-room';
+export const NotificationHub = instrumentDO(RawNotificationHub, otelConfig);
+export const WebSocketRoom = instrumentDO(RawWebSocketRoom, otelConfig);
+// Unbound DO classes (no wrangler.toml binding) — left unwrapped, harmless
 export { ContainerOrchestrator } from './durable-objects/container-orchestrator-do';
 export { JobScheduler } from './durable-objects/job-scheduler-do';
 

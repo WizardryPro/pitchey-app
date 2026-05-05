@@ -216,6 +216,8 @@ SENTRY_TRACES_SAMPLE_RATE = "0.1"
 # Axiom Log Aggregation (set via wrangler secret)
 # AXIOM_TOKEN = "your-axiom-api-token"
 AXIOM_DATASET = "pitchey-logs"
+# Pillar 1.6 — frontend RUM trace dataset; written by src/handlers/otel-traces.ts envelope proxy
+AXIOM_RUM_TRACES_DATASET = "pitchey-traces-rum"
 
 # Observability Settings
 LOG_LEVEL = "info"

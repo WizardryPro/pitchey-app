@@ -29,6 +29,18 @@ import { initSentry } from './monitoring/sentry-config'
 // Initialize Sentry for production error tracking
 initSentry()
 
+// OpenTelemetry RUM — lazy-loaded after first paint so the SDK doesn't block initial render.
+// Exports spans to /api/_otel/v1/traces (proxied to Axiom by the worker envelope handler).
+// setTimeout fallback exists for Safari (no requestIdleCallback support as of 2026); don't simplify.
+const scheduleIdle: (cb: () => void) => unknown =
+  (window as Window & { requestIdleCallback?: (cb: () => void) => unknown }).requestIdleCallback
+  ?? ((cb) => setTimeout(cb, 1500));
+scheduleIdle(() => {
+  import('./monitoring/otel-init')
+    .then((m) => m.initOtel())
+    .catch((err) => console.warn('[otel] dynamic import failed', err));
+});
+
 // Handle stale chunk errors after deployment — Vite fires this when a
 // lazy-loaded module can't be fetched (e.g. old hash no longer on CDN).
 // Auto-reload once to pick up the new index.html with correct hashes.
