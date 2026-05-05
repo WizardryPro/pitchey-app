@@ -46,11 +46,9 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
     "@neondatabase/serverless": "^1.0.2",
-    "@sendgrid/mail": "^8.1.6",
     "@sentry/cloudflare": "^8.40.0",
     "@types/bcryptjs": "^2.4.6",
     "@upstash/redis": "^1.35.7",
-    "axios": "^1.15.0",
     "bcryptjs": "^3.0.3",
     "better-auth": "^1.4.9",
     "better-auth-cloudflare": "^0.3.0",
