@@ -101,7 +101,7 @@ jobs:
           projectName: pitchey
           directory: frontend/dist
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-          deploymentName: pr-${{ github.event.pull_request.number }}
+          branch: pr-${{ github.event.pull_request.number }}
           wranglerVersion: '3'
         env:
           VITE_API_URL: https://pitchey-pr-${{ github.event.pull_request.number }}.ndlovucavelle.workers.dev
@@ -153,13 +153,15 @@ jobs:
             const neonBranch = 'preview/pr-' + prNumber;
             const dbHost = '${{ steps.create-branch.outputs.host }}';
             const previewUrl = 'https://pr-' + prNumber + '.pitchey-5o8.pages.dev';
-            const apiUrl = 'https://pitchey-pr-' + prNumber + '.workers.dev';
+            const directUrl = '${{ steps.cloudflare.outputs.url }}';
+            const apiUrl = 'https://pitchey-pr-' + prNumber + '.ndlovucavelle.workers.dev';
             
             const comment = `## 🚀 Preview Environment Ready!
             
             | Component | URL/Details |
             |-----------|-------------|
-            | 🌐 **Frontend** | [${previewUrl}](${previewUrl}) |
+            | 🌐 **Frontend (alias)** | [${previewUrl}](${previewUrl}) |
+            | 🌐 **Frontend (deployment)** | [${directUrl}](${directUrl}) |
             | ⚡ **API** | [${apiUrl}](${apiUrl}) |
             | 🗄️ **Database** | \`${neonBranch}\` |
             | 🔌 **DB Host** | \`${dbHost}\` |
