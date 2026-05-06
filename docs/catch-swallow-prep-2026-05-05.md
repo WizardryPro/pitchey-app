@@ -33,7 +33,7 @@ Phase 1b finalized counts (worker-integrated.ts only):
 
 Distribution: 25% A / 14% B / 61% C — close to the spot-check prediction of 25/25/50. Each site received per-site human classification (no bulk-by-file shortcut available — file is too mixed). Tagger config preserved as the audit artifact: see PR diff for the line→bucket mapping.
 
-**Residual risk this PR does not fix.** The 4 bucket-B sites (`ai-pitch-extract.ts:191/197`, `ai-production-autofill.ts:211/217`) are credit-deduction and transaction-log writes that can still fail silently between now and Phase 2 landing. They're tagged but not yet wrapped with breadcrumbs. The breadcrumb wrap is the smallest follow-up that actually changes runtime behavior — schedule it before Phase 2 begins, not after.
+**~~Residual risk this PR does not fix.~~ Closed 2026-05-06 by B-site wrap PR.** The 4 bucket-B sites (`ai-pitch-extract.ts:191/197`, `ai-production-autofill.ts:211/217`) were credit-deduction and transaction-log writes that could still fail silently. The B-site wrap landed `observedSwallow` (a `safeQuery`-style helper for best-effort writes) and converted all four sites; revenue/audit-trail leakage is now visible in Sentry under the `catch_swallow.context` tag. Bucket B count is now 0; total `.catch(() => …)` sites in scope dropped from 109 to 105.
 
 **Gate-feeding sites identified during Phase 1a** — 3 sites on paths the original audit was written to address:
 - `services/file-validation.service.ts:394` — fail-open quota bypass; '0' on error lets user upload past quota

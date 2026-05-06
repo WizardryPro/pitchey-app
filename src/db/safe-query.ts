@@ -87,3 +87,43 @@ export async function safeQueryOne<T>(
     error: result.ok ? undefined : result.error,
   };
 }
+
+/**
+ * observedSwallow — for best-effort writes where the caller does not act on
+ * the result, but a silent failure represents real cost (revenue leakage,
+ * audit-trail loss, etc.). Catches the error, reports to Sentry with a
+ * context tag so volume is visible, then returns void.
+ *
+ * Use for: post-success cleanup writes (credit deduction after successful AI
+ * call, transaction-log inserts, idempotent state syncs). The original
+ * `.catch(() => {})` pattern was correct in shape — caller cannot recover —
+ * but invisible. This restores observability without changing call-site
+ * semantics.
+ *
+ * Do NOT use for: reads (use `safeQuery`), writes the caller acts on (let
+ * them throw), or true fire-and-forget telemetry where failure isn't a cost
+ * (use plain `.catch(() => {})` with `// fire-and-forget` tag).
+ *
+ *   await observedSwallow(
+ *     () => sql`UPDATE user_credits SET balance = balance - ${cost} ...`,
+ *     'ai-pitch-extract.credit-deduction',
+ *   );
+ */
+export async function observedSwallow(
+  fn: () => Promise<unknown>,
+  context: string,
+): Promise<void> {
+  try {
+    await fn();
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    try {
+      Sentry.withScope((scope) => {
+        scope.setTag('catch_swallow.context', context);
+        Sentry.captureException(error);
+      });
+    } catch {
+      // Sentry hub not initialized (test env, standalone scripts) — swallow.
+    }
+  }
+}
