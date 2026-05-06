@@ -1399,6 +1399,7 @@ class RouteRegistry {
           // Upgrade plaintext to hash on successful login
           if (passwordValid) {
             const hashed = await hashPassword(password);
+            // fire-and-forget — post-login plaintext-to-hash upgrade; non-fatal
             await this.db.query(`UPDATE users SET password = $1 WHERE id = $2`, [hashed, result.id]).catch(() => {});
           }
         }
@@ -4108,6 +4109,7 @@ class RouteRegistry {
             // Upgrade plaintext to hash on successful login
             if (passwordValid) {
               const hashed = await hashPassword(password);
+              // fire-and-forget — post-login plaintext-to-hash upgrade; non-fatal
               await this.db.query(`UPDATE users SET password = $1 WHERE id = $2`, [hashed, user.id]).catch(() => {});
             }
           }
@@ -4289,6 +4291,7 @@ class RouteRegistry {
             // Upgrade plaintext to hash on successful login
             if (passwordValid) {
               const hashed = await hashPassword(password);
+              // fire-and-forget — post-login plaintext-to-hash upgrade; non-fatal
               await this.db!.query(`UPDATE users SET password = $1 WHERE id = $2`, [hashed, user.id]).catch(() => {});
             }
           }
@@ -8734,6 +8737,7 @@ pitchey_analytics_datapoints_per_minute 1250
       `, [userId]);
 
       // 1b. Time-filtered views/likes from event tables + fallback from cumulative counters
+      // TODO(catch-swallow): migrate to safeQuery
       const periodMetricsResult = await this.db.query(`
         SELECT
           (SELECT COUNT(*) FROM pitch_views pv JOIN pitches p ON pv.pitch_id = p.id
@@ -8821,6 +8825,7 @@ pitchey_analytics_datapoints_per_minute 1250
       `, []);
 
       // 8. Views timeline from event table (for charts)
+      // TODO(catch-swallow): migrate to safeQuery
       const viewsTimelineResult = await this.db.query(`
         SELECT DATE(pv.viewed_at) as date, COUNT(*) as views
         FROM pitch_views pv
@@ -8832,6 +8837,7 @@ pitchey_analytics_datapoints_per_minute 1250
       `, [userId]).catch(() => []);
 
       // 8b. Likes timeline from event table
+      // TODO(catch-swallow): migrate to safeQuery
       const likesTimelineResult = await this.db.query(`
         SELECT DATE(pl.created_at) as date, COUNT(*) as likes
         FROM pitch_likes pl
@@ -8843,6 +8849,7 @@ pitchey_analytics_datapoints_per_minute 1250
       `, [userId]).catch(() => []);
 
       // 8c. Pitches created in period (for pitch count chart + fallback)
+      // TODO(catch-swallow): migrate to safeQuery
       const pitchTimelineResult = await this.db.query(`
         SELECT
           p.id, p.title, p.genre,
@@ -8856,6 +8863,7 @@ pitchey_analytics_datapoints_per_minute 1250
       `, [userId]).catch(() => []);
 
       // 9. Investments received over time
+      // TODO(catch-swallow): migrate to safeQuery
       const investmentTimeSeriesResult = await this.db.query(`
         SELECT
           DATE(i.created_at) as date,
@@ -8870,6 +8878,7 @@ pitchey_analytics_datapoints_per_minute 1250
       `, [userId]).catch(() => []);
 
       // 10. NDA requests over time (as engagement proxy)
+      // TODO(catch-swallow): migrate to safeQuery
       const ndaTimelineResult = await this.db.query(`
         SELECT
           DATE(nr.created_at) as date,
@@ -9694,6 +9703,7 @@ pitchey_analytics_datapoints_per_minute 1250
             WHERE id = ${paymentMethodId} AND user_id = ${authResult.user.id}
           `;
           if (rows.length > 0 && rows[0].stripe_payment_method_id) {
+            // fire-and-forget — Stripe payment-method detach cleanup
             await stripe.detachPaymentMethod(rows[0].stripe_payment_method_id).catch(() => {});
           }
         }
@@ -9970,6 +9980,7 @@ pitchey_analytics_datapoints_per_minute 1250
             const subId = session.subscription;
             let sub = null;
             if (subId) {
+              // TODO(catch-swallow): bucket-B breadcrumb pending — stripe.getSubscription, caller checks null
               sub = await stripe.getSubscription(subId).catch(() => null);
             }
 
@@ -10098,6 +10109,7 @@ pitchey_analytics_datapoints_per_minute 1250
             userId = historyRows[0].user_id;
             tierId = historyRows[0].new_tier;
           } else {
+            // TODO(catch-swallow): bucket-B breadcrumb pending — stripe.getSubscription, caller checks null
             const sub = await stripe.getSubscription(subId).catch(() => null);
             const metaUserId = parseInt(sub?.metadata?.userId || '');
             const metaTier = sub?.metadata?.tier;
@@ -12025,6 +12037,7 @@ pitchey_analytics_datapoints_per_minute 1250
     const builder = new ApiResponseBuilder(request);
     try {
       const [trends, genreList, summary] = await Promise.all([
+        // TODO(catch-swallow): migrate to safeQuery
         this.db.query(`
           SELECT p.genre, COUNT(i.*) as total_projects,
                  COALESCE(AVG(i.amount), 0) as avg_budget,
@@ -12037,7 +12050,9 @@ pitchey_analytics_datapoints_per_minute 1250
           WHERE p.genre IS NOT NULL
           GROUP BY p.genre ORDER BY total_projects DESC LIMIT 10
         `).catch(() => []),
+        // TODO(catch-swallow): migrate to safeQuery
         this.db.query(`SELECT DISTINCT genre FROM pitches WHERE genre IS NOT NULL ORDER BY genre`).catch(() => []),
+        // TODO(catch-swallow): migrate to safeQuery
         this.db.query(`
           SELECT COUNT(*) as total_opportunities,
                  (SELECT genre FROM pitches GROUP BY genre ORDER BY COUNT(*) DESC LIMIT 1) as top_genre
@@ -12068,6 +12083,7 @@ pitchey_analytics_datapoints_per_minute 1250
   private async getGenrePerformance(request: Request): Promise<Response> {
     const builder = new ApiResponseBuilder(request);
     try {
+      // TODO(catch-swallow): migrate to safeQuery
       const genres = await this.db.query(`
         SELECT p.genre,
                COALESCE(AVG(i.roi_percentage), 0) as avg_roi,
@@ -12097,6 +12113,7 @@ pitchey_analytics_datapoints_per_minute 1250
     const builder = new ApiResponseBuilder(request);
     try {
       // Monthly pitch creation + investment trends over the last 12 months
+      // TODO(catch-swallow): migrate to safeQuery
       const trends = await this.db.query(`
         SELECT
           TO_CHAR(date_trunc('month', p.created_at), 'YYYY-MM') as month,
@@ -12703,6 +12720,7 @@ pitchey_analytics_datapoints_per_minute 1250
       // Fetch multiple data sources in parallel
       const [notifications, unreadCount, dashboardStats, presenceUsers, recentMessages] = await Promise.all([
         // Get recent notifications
+        // TODO(catch-swallow): migrate to safeQuery
         this.db.query(`
           SELECT id, type, title, message, created_at, is_read
           FROM notifications
@@ -12712,6 +12730,7 @@ pitchey_analytics_datapoints_per_minute 1250
         `, [authResult.user.id]).catch(() => []),
 
         // Get unread notification count
+        // TODO(catch-swallow): migrate to safeQuery
         this.db.query(`
           SELECT COUNT(*) as count
           FROM notifications
@@ -12722,6 +12741,7 @@ pitchey_analytics_datapoints_per_minute 1250
         this.getDashboardStatsForUser(authResult.user),
 
         // Get online users
+        // TODO(catch-swallow): migrate to safeQuery
         this.db.query(`
           SELECT
             up.user_id as "userId",
@@ -12737,6 +12757,7 @@ pitchey_analytics_datapoints_per_minute 1250
         `).catch(() => []),
 
         // Get recent unread messages
+        // TODO(catch-swallow): migrate to safeQuery
         this.db.query(`
           SELECT m.id, m.sender_id, m.content, m.created_at,
                  COALESCE(u.name, u.username, u.email) as sender_name
@@ -12844,26 +12865,31 @@ pitchey_analytics_datapoints_per_minute 1250
     try {
       // Fetch real analytics data in parallel (each query resilient to missing tables)
       const [activeUsers, viewsLastHour, newPitchesToday, investmentsToday, trendingGenres] = await Promise.all([
+        // TODO(catch-swallow): migrate to safeQuery
         this.db.query(`
           SELECT COUNT(*) as count FROM user_presence
           WHERE updated_at > NOW() - INTERVAL '5 minutes' AND status != 'offline'
         `).then(([r]) => this.safeParseInt(r?.count)).catch(() => 0),
 
+        // TODO(catch-swallow): migrate to safeQuery
         this.db.query(`
           SELECT COALESCE(SUM(views), 0) as total FROM pitch_analytics
           WHERE date = CURRENT_DATE
         `).then(([r]) => this.safeParseInt(r?.total)).catch(() => 0),
 
+        // TODO(catch-swallow): migrate to safeQuery
         this.db.query(`
           SELECT COUNT(*) as count FROM pitches
           WHERE created_at >= CURRENT_DATE
         `).then(([r]) => this.safeParseInt(r?.count)).catch(() => 0),
 
+        // TODO(catch-swallow): migrate to safeQuery
         this.db.query(`
           SELECT COUNT(*) as count FROM investments
           WHERE created_at >= CURRENT_DATE
         `).then(([r]) => this.safeParseInt(r?.count)).catch(() => 0),
 
+        // TODO(catch-swallow): migrate to safeQuery
         this.db.query(`
           SELECT genre, COUNT(*) as count FROM pitches
           WHERE status = 'published' AND genre IS NOT NULL
@@ -12944,6 +12970,7 @@ pitchey_analytics_datapoints_per_minute 1250
       const { contentType, contentId, platform } = body;
 
       // Log the share event
+      // fire-and-forget — share-event analytics insert; tracker noted as fire-and-forget in caller
       await this.db.query(`
         INSERT INTO analytics_events (user_id, event_type, event_data, created_at)
         VALUES ($1, 'share', $2, NOW())
@@ -12963,6 +12990,7 @@ pitchey_analytics_datapoints_per_minute 1250
     try {
       const body = await request.json() as Record<string, unknown>;
 
+      // TODO(catch-swallow): bucket-B breadcrumb pending — INSERT scheduled_reports returning null; caller checks null
       const result = await this.db.query(`
         INSERT INTO scheduled_reports (user_id, report_type, frequency, filters, next_run, created_at)
         VALUES ($1, $2, $3, $4, NOW() + INTERVAL '1 day', NOW())
@@ -12985,6 +13013,7 @@ pitchey_analytics_datapoints_per_minute 1250
 
     const builder = new ApiResponseBuilder(request);
     try {
+      // TODO(catch-swallow): migrate to safeQuery
       const reports = await this.db.query(`
         SELECT id, report_type, frequency, filters, next_run, created_at
         FROM scheduled_reports WHERE user_id = $1 ORDER BY created_at DESC
@@ -13003,6 +13032,7 @@ pitchey_analytics_datapoints_per_minute 1250
     const builder = new ApiResponseBuilder(request);
     const params = (request as any).params;
     try {
+      // fire-and-forget — DELETE scheduled_reports; non-fatal cleanup
       await this.db.query(`DELETE FROM scheduled_reports WHERE id = $1 AND user_id = $2`, [params.id, authResult.user!.id]).catch(() => {});
       return builder.success({ success: true });
     } catch (error) {
@@ -13021,6 +13051,7 @@ pitchey_analytics_datapoints_per_minute 1250
     const limit = parseInt(url.searchParams.get('limit') || '10', 10);
 
     try {
+      // TODO(catch-swallow): migrate to safeQuery
       const history = await this.db.query(`
         SELECT id, query, filters, results_count, created_at
         FROM search_history WHERE user_id = $1
@@ -13042,6 +13073,7 @@ pitchey_analytics_datapoints_per_minute 1250
       const body = await request.json() as Record<string, unknown>;
 
       // Fire-and-forget click tracking
+      // fire-and-forget — search-click tracking insert; caller noted fire-and-forget
       await this.db.query(`
         INSERT INTO search_clicks (user_id, pitch_id, query, result_position, search_history_id, created_at)
         VALUES ($1, $2, $3, $4, $5, NOW())
@@ -13064,6 +13096,7 @@ pitchey_analytics_datapoints_per_minute 1250
   private async handleBrowseGenres(request: Request): Promise<Response> {
     const builder = new ApiResponseBuilder(request);
     try {
+      // TODO(catch-swallow): migrate to safeQuery
       const genres = await this.db.query(`
         SELECT genre, COUNT(*) as pitch_count,
                COALESCE(AVG(
@@ -13117,6 +13150,7 @@ pitchey_analytics_datapoints_per_minute 1250
       }
 
       const [pitches, countResult] = await Promise.all([
+        // TODO(catch-swallow): migrate to safeQuery
         this.db.query(`
           SELECT p.id, p.title, p.genre, p.logline, p.title_image, p.created_at,
                  COALESCE(u.name, u.first_name || ' ' || u.last_name) as creator_name,
@@ -13128,6 +13162,7 @@ pitchey_analytics_datapoints_per_minute 1250
           ORDER BY like_count DESC, view_count DESC
           LIMIT $${paramIdx++} OFFSET $${paramIdx++}
         `, [...queryParams, limit, offset]).catch(() => []),
+        // TODO(catch-swallow): migrate to safeQuery
         this.db.query(`SELECT COUNT(*) as total FROM pitches p ${whereClause}`, queryParams).catch(() => [{ total: 0 }])
       ]);
 
@@ -13152,6 +13187,7 @@ pitchey_analytics_datapoints_per_minute 1250
   private async handleBrowseTopRatedStats(request: Request): Promise<Response> {
     try {
       const [statsResult] = await Promise.all([
+        // TODO(catch-swallow): migrate to safeQuery
         this.db.query(`
           SELECT
             COUNT(*) as total_rated,
@@ -13191,6 +13227,7 @@ pitchey_analytics_datapoints_per_minute 1250
       const body = await request.json() as Record<string, unknown>;
 
       // Create a calendar event for the meeting
+      // TODO(catch-swallow): bucket-B breadcrumb pending — INSERT calendar_events returning null; caller checks null
       const result = await this.db.query(`
         INSERT INTO calendar_events (user_id, title, description, start_date, end_date, event_type, color, created_at)
         VALUES ($1, $2, $3, $4, $5, 'meeting', '#3b82f6', NOW())
@@ -13229,11 +13266,13 @@ pitchey_analytics_datapoints_per_minute 1250
       // Generate CSV export based on type
       let csvContent = '';
       if (exportType === 'pitches') {
+        // TODO(catch-swallow): migrate to safeQuery
         const pitches = await this.db.query(`
           SELECT id, title, genre, status, created_at FROM pitches WHERE user_id = $1 ORDER BY created_at DESC
         `, [authResult.user!.id]).catch(() => []);
         csvContent = 'ID,Title,Genre,Status,Created\n' + pitches.map((p: any) => `${p.id},"${p.title}",${p.genre},${p.status},${p.created_at}`).join('\n');
       } else if (exportType === 'analytics') {
+        // TODO(catch-swallow): migrate to safeQuery
         const analytics = await this.db.query(`
           SELECT pa.date, pa.views, pa.likes FROM pitch_analytics pa JOIN pitches p ON pa.pitch_id = p.id WHERE p.user_id = $1 ORDER BY pa.date DESC LIMIT 90
         `, [authResult.user!.id]).catch(() => []);
@@ -13264,6 +13303,7 @@ pitchey_analytics_datapoints_per_minute 1250
     try {
       // Store verification request
       const verificationId = `ver_${Date.now()}_${authResult.user!.id}`;
+      // fire-and-forget — verification status flip; non-fatal
       await this.db.query(`
         UPDATE users SET verification_status = 'pending', updated_at = NOW() WHERE id = $1
       `, [authResult.user!.id]).catch(() => {});
@@ -13284,6 +13324,7 @@ pitchey_analytics_datapoints_per_minute 1250
 
     const builder = new ApiResponseBuilder(request);
     try {
+      // TODO(catch-swallow): migrate to safeQuery
       const user = await this.db.query(`
         SELECT verification_status, company_name FROM users WHERE id = $1
       `, [authResult.user!.id]).catch(() => []);
@@ -13305,6 +13346,7 @@ pitchey_analytics_datapoints_per_minute 1250
     const builder = new ApiResponseBuilder(request);
     try {
       const body = await request.json() as Record<string, unknown>;
+      // fire-and-forget — company-name update; non-fatal
       await this.db.query(`
         UPDATE users SET company_name = $1, verification_status = 'pending', updated_at = NOW() WHERE id = $2
       `, [body.companyName as string | null, authResult.user!.id]).catch(() => {});
@@ -13322,12 +13364,14 @@ pitchey_analytics_datapoints_per_minute 1250
     const builder = new ApiResponseBuilder(request);
     try {
       const [incoming, outgoing] = await Promise.all([
+        // TODO(catch-swallow): migrate to safeQuery
         this.db.query(`
           SELECT ir.*, COALESCE(u.name, u.first_name || ' ' || u.last_name) as requester_name
           FROM info_requests ir
           LEFT JOIN users u ON ir.requester_id = u.id
           WHERE ir.target_user_id = $1 ORDER BY ir.created_at DESC
         `, [authResult.user!.id]).catch(() => []),
+        // TODO(catch-swallow): migrate to safeQuery
         this.db.query(`
           SELECT ir.*, COALESCE(u.name, u.first_name || ' ' || u.last_name) as target_name
           FROM info_requests ir
@@ -13349,6 +13393,7 @@ pitchey_analytics_datapoints_per_minute 1250
     const builder = new ApiResponseBuilder(request);
     try {
       const body = await request.json() as Record<string, unknown>;
+      // TODO(catch-swallow): bucket-B breadcrumb pending — INSERT info_requests returning null; caller checks null
       const result = await this.db.query(`
         INSERT INTO info_requests (requester_id, target_user_id, pitch_id, message, status, created_at)
         VALUES ($1, $2, $3, $4, 'pending', NOW()) RETURNING *
@@ -13371,6 +13416,7 @@ pitchey_analytics_datapoints_per_minute 1250
     const params = (request as any).params;
     try {
       const body = await request.json() as Record<string, unknown>;
+      // TODO(catch-swallow): bucket-B breadcrumb pending — UPDATE info_requests returning null; caller checks null
       const result = await this.db.query(`
         UPDATE info_requests SET response = $1, status = 'responded', updated_at = NOW()
         WHERE id = $2 AND target_user_id = $3 RETURNING *
@@ -13393,6 +13439,7 @@ pitchey_analytics_datapoints_per_minute 1250
     const params = (request as any).params;
     try {
       const body = await request.json() as Record<string, unknown>;
+      // TODO(catch-swallow): bucket-B breadcrumb pending — UPDATE info_requests returning null; caller checks null
       const result = await this.db.query(`
         UPDATE info_requests SET status = $1, updated_at = NOW()
         WHERE id = $2 AND (requester_id = $3 OR target_user_id = $3) RETURNING *
@@ -13413,8 +13460,10 @@ pitchey_analytics_datapoints_per_minute 1250
       const body = await request.json() as Record<string, unknown>;
 
       // Log demo request (may or may not have auth)
+      // TODO(catch-swallow): bucket-B breadcrumb pending — auth-optional fallback; auth backend errors should be visible
       const authResult = await this.requireAuth(request).catch(() => ({ authorized: false, user: null }));
 
+      // fire-and-forget — demo-request insert; non-fatal
       await this.db.query(`
         INSERT INTO demo_requests (user_id, name, email, company, request_type, message, preferred_time, created_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
@@ -13982,6 +14031,7 @@ pitchey_analytics_datapoints_per_minute 1250
       }
 
       // Invalidate old sessions
+      // fire-and-forget — DELETE old sessions; non-fatal cleanup
       await this.db.query(`DELETE FROM sessions WHERE user_id = $1`, [user.id]).catch(() => {});
 
       // Create session
@@ -14232,6 +14282,7 @@ pitchey_analytics_datapoints_per_minute 1250
       }
 
       // Invalidate old sessions
+      // fire-and-forget — DELETE old sessions; non-fatal cleanup
       await this.db.query(`DELETE FROM sessions WHERE user_id = $1`, [user.id]).catch(() => {});
 
       // Create session
@@ -15409,6 +15460,7 @@ pitchey_analytics_datapoints_per_minute 1250
       const ndaId = parseInt(url.pathname.split('/')[3]);
 
       // Try to find the NDA document in R2
+      // TODO(catch-swallow): migrate to safeQuery
       const ndaDoc = await this.db.query(`SELECT document_url FROM ndas WHERE id = $1`, [ndaId]).catch(() => []);
       if (ndaDoc[0]?.document_url) {
         return this.jsonResponse({ success: true, data: { downloadUrl: ndaDoc[0].document_url, message: 'NDA document ready for download' }});
@@ -15431,6 +15483,7 @@ pitchey_analytics_datapoints_per_minute 1250
       const url = new URL(request.url);
       const ndaId = parseInt(url.pathname.split('/')[3]);
 
+      // TODO(catch-swallow): migrate to safeQuery
       const ndaDoc = await this.db.query(`SELECT signed_document_url FROM ndas WHERE id = $1`, [ndaId]).catch(() => []);
       if (ndaDoc[0]?.signed_document_url) {
         return this.jsonResponse({ success: true, data: { downloadUrl: ndaDoc[0].signed_document_url, message: 'Signed NDA document ready for download' }});
@@ -17941,6 +17994,7 @@ Signatures: [To be completed upon signing]
         );
 
         // Top pitches by views
+        // TODO(catch-swallow): migrate to safeQuery
         const topPitchesRes = await this.db.query(
           `SELECT id, title, COALESCE(view_count, 0) as views, COALESCE(like_count, 0) as likes
            FROM pitches WHERE user_id = $1 AND status = 'published'
@@ -17949,6 +18003,7 @@ Signatures: [To be completed upon signing]
         ).catch(() => []);
 
         // NDA counts
+        // TODO(catch-swallow): migrate to safeQuery
         const ndaRes = await this.db.query(
           `SELECT
             COUNT(*) FILTER (WHERE nr.status = 'pending') as nda_requests,
@@ -17963,6 +18018,7 @@ Signatures: [To be completed upon signing]
         const ndas = ndaRes[0] || {};
 
         // Audience breakdown from views table
+        // TODO(catch-swallow): migrate to safeQuery
         const viewerTypesRes = await this.db.query(
           `SELECT COALESCE(u.user_type, 'visitor') AS user_type, COUNT(*)::int AS count
            FROM views v
@@ -19997,6 +20053,7 @@ Signatures: [To be completed upon signing]
     if (!this.db) return builder.error(ErrorCode.INTERNAL_ERROR, 'Database unavailable');
 
     try {
+      // fire-and-forget — request body parse; empty default and parse-error treated identically
       const body = await request.json().catch(() => ({})) as { email?: string };
       const code = this.generateInviteCode();
       const userName = authResult.user?.name || authResult.user?.username || 'A producer';
@@ -20566,6 +20623,7 @@ const websocketSafeHandler = {
       const e = err instanceof Error ? err : new Error(String(err));
       // Log the error to Axiom in the background — never block the throw
       ctx.waitUntil(
+        // fire-and-forget — Axiom error-log fire-and-forget
         axiomLogger.logError(e, request, { duration }).catch(() => {})
       );
       throw err;
@@ -20575,6 +20633,7 @@ const websocketSafeHandler = {
     // AXIOM_TOKEN absence is handled inside logRequest — it returns early without throwing.
     const duration = Date.now() - startTime;
     ctx.waitUntil(
+      // fire-and-forget — Axiom request-log fire-and-forget
       axiomLogger.logRequest(request, response, duration).catch(() => {})
     );
 

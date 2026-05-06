@@ -24,7 +24,14 @@ Phase 1a finalized counts:
 - **B — breadcrumb pending**: 4 sites (credit deduction + transaction log writes; Phase 2 prerequisite)
 - **C — TODO(catch-swallow): migrate**: 97 sites (read-side dashboard fallbacks + 3 gate-feeding sites flagged in TODO text)
 
-**Worker-integrated baseline** (Phase 1b scope): 59 untagged sites, 0 tagged. Including this scope, gate metric is 59/168. Phase 1b's job is to apply the same A/B/C framework with the higher per-site judgment density the prep doc spot-check anticipated (~50% C, ~25% B, ~25% A) — the file is too mixed for the bulk tagger; expect mostly hand-classification.
+**Worker-integrated baseline** (Phase 1b scope): ~~59 untagged sites, 0 tagged~~ — closed 2026-05-06 by Phase 1b PR. Tree-wide gate metric across `src/` is now **0/168**.
+
+Phase 1b finalized counts (worker-integrated.ts only):
+- **A — fire-and-forget**: 15 sites (post-login password rehash, Stripe cleanup, Axiom logging, search-click tracking, session DELETEs, share-event INSERTs)
+- **B — breadcrumb pending**: 8 sites (Stripe `getSubscription` reads, INSERT-RETURNING patterns where caller checks null, auth-optional fallback)
+- **C — TODO(catch-swallow): migrate**: 36 sites (analytics dashboard reads, browse aggregates, info_requests reads, NDA document lookups)
+
+Distribution: 25% A / 14% B / 61% C — close to the spot-check prediction of 25/25/50. Each site received per-site human classification (no bulk-by-file shortcut available — file is too mixed). Tagger config preserved as the audit artifact: see PR diff for the line→bucket mapping.
 
 **Residual risk this PR does not fix.** The 4 bucket-B sites (`ai-pitch-extract.ts:191/197`, `ai-production-autofill.ts:211/217`) are credit-deduction and transaction-log writes that can still fail silently between now and Phase 2 landing. They're tagged but not yet wrapped with breadcrumbs. The breadcrumb wrap is the smallest follow-up that actually changes runtime behavior — schedule it before Phase 2 begins, not after.
 
