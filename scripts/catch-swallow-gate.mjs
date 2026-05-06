@@ -55,7 +55,9 @@ const TAG_BUCKET_B = /\/\/\s*TODO\(catch-swallow\):\s*bucket-B\b/;
 const TAG_TODO = /\/\/\s*TODO\(catch-swallow\)/;
 
 // STMT_START: `sql\`` and `\w+\.\w+\(` included so each Promise.all element is its own statement.
-const STMT_START = /^(await\s|return\s|const\s|let\s|var\s|this\.|\w+\s*=|sql`|\(sql`|\w+\.\w+\()/;
+// `\w+\s*=\s*\(?\s*await\s` (not bare `\w+\s*=`) — see scripts/catch-swallow-tag.mjs for rationale.
+// `\(?` allows for `x = (await sql\`...\`.catch(...))` parenthesized form.
+const STMT_START = /^(await\s|return\s|const\s|let\s|var\s|this\.|\w+\s*=\s*\(?\s*await\s|\w+\s*=\s*sql`|sql`|\(sql`|\w+\.\w+\()/;
 
 function classify(lines, idx) {
   // Walk backwards from the `.catch(...)` line through the statement body
@@ -76,8 +78,41 @@ function classify(lines, idx) {
   return 'untagged';
 }
 
+// findMidTemplateComments — flags `// TODO(catch-swallow)` or `// fire-and-forget`
+// lines that sit *inside* a `sql\`…\`` template literal. PostgreSQL has no `//`
+// comment syntax, so any such line breaks the SQL at runtime — the breakage is
+// invisible because the catch swallows it. PR #85's tagger had a STMT_START
+// regex bug that produced 5 of these in handlers (fixed in this PR).
+function findMidTemplateComments(lines) {
+  const out = [];
+  // Track `sql\`…\`` template depth — only reset when a closing backtick is
+  // followed (after .catch chain or end-of-statement) by a non-template line.
+  // For our codebase, every `sql\`` template terminates with `\`` on its own
+  // line, optionally with `.catch(...)` or `;`. We treat any line containing a
+  // bare backtick (not preceded by `\\`) as the closer when a template is open.
+  let inTemplate = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!inTemplate) {
+      if (/\bsql`/.test(line) && !/sql`[^`]*`/.test(line)) inTemplate = true;
+      continue;
+    }
+    // In template — check for closing backtick
+    if (/`/.test(line)) inTemplate = false;
+    // Tag lines inside the template are bugs.
+    // `\b` only attached to `fire-and-forget` (after the word `forget`); not to
+    // `TODO(catch-swallow)` because `)` is non-word and the next char (`:` or EOL)
+    // is also non-word — `\b` would never fire and the bug detector silently passes.
+    if (/^[ \t]*\/\/\s*(?:TODO\(catch-swallow\)|fire-and-forget\b)/.test(line)) {
+      out.push(i + 1); // 1-based
+    }
+  }
+  return out;
+}
+
 const files = walk(SRC);
 const buckets = { A: [], B: [], C: [], untagged: [] };
+const midTemplateBugs = []; // { file, line }[]
 
 for (const file of files) {
   const rel = file.slice(SRC.length + 1);
@@ -88,6 +123,9 @@ for (const file of files) {
     if (!CATCH_RE.test(lines[i])) continue;
     const bucket = classify(lines, i);
     buckets[bucket].push(`${rel}:${i + 1}`);
+  }
+  for (const ln of findMidTemplateComments(lines)) {
+    midTemplateBugs.push(`${rel}:${ln}`);
   }
 }
 
@@ -104,6 +142,12 @@ console.log(`  Untagged (gate metric):         ${untagged}`);
 if (list && untagged > 0) {
   console.log('\nUntagged sites:');
   for (const site of buckets.untagged) console.log(`  ${site}`);
+}
+
+if (midTemplateBugs.length > 0) {
+  console.error(`\nGate FAIL: ${midTemplateBugs.length} mid-template comment(s) — these break SQL at runtime, masked by .catch:`);
+  for (const site of midTemplateBugs) console.error(`  ${site}`);
+  process.exit(1);
 }
 
 if (threshold !== null && untagged > threshold) {

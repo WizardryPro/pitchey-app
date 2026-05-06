@@ -147,13 +147,13 @@ export async function creatorContractUpdateHandler(request: Request, env: Env): 
     const status = typeof body.status === 'string' ? body.status : undefined;
     const notes = typeof body.notes === 'string' ? body.notes : undefined;
 
+    // TODO(catch-swallow): migrate to safeQuery
     const result = await sql`
       UPDATE contracts
       SET
         title = COALESCE(${title ?? null}, title),
         status = COALESCE(${status ?? null}, status),
         notes = COALESCE(${notes ?? null}, notes),
-        // TODO(catch-swallow): migrate to safeQuery
         updated_at = NOW()
       WHERE id = ${contractId} AND creator_id = ${userId}
       RETURNING *

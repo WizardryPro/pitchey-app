@@ -253,13 +253,13 @@ export async function productionProjectStatusHandler(request: Request, env: Env)
       return errorResponse(`Invalid stage. Must be one of: ${validStages.join(', ')}`, origin);
     }
 
+    // TODO(catch-swallow): migrate to safeQuery
     const result = await sql`
       UPDATE production_pipeline
       SET
         status = COALESCE(${status ?? null}, status),
         stage = COALESCE(${stage ?? null}, stage),
         completion_percentage = COALESCE(${completionPercentage ?? null}, completion_percentage),
-        // TODO(catch-swallow): migrate to safeQuery
         updated_at = NOW()
       WHERE id = ${projectId} AND production_company_id = ${Number(userId)}
       RETURNING *
@@ -300,6 +300,7 @@ export async function productionBudgetUpdateHandler(request: Request, env: Env):
     const contingencyPercentage = typeof body.contingency_percentage === 'number' ? body.contingency_percentage : undefined;
     const contingencyUsed = typeof body.contingency_used === 'number' ? body.contingency_used : undefined;
 
+    // TODO(catch-swallow): migrate to safeQuery
     const result = await sql`
       UPDATE production_pipeline
       SET
@@ -308,7 +309,6 @@ export async function productionBudgetUpdateHandler(request: Request, env: Env):
         budget_remaining = COALESCE(${budgetAllocated ?? null}, budget_allocated) - COALESCE(${budgetSpent ?? null}, budget_spent),
         contingency_percentage = COALESCE(${contingencyPercentage ?? null}, contingency_percentage),
         contingency_used = COALESCE(${contingencyUsed ?? null}, contingency_used),
-        // TODO(catch-swallow): migrate to safeQuery
         updated_at = NOW()
       WHERE id = ${projectId} AND production_company_id = ${Number(userId)}
       RETURNING id, budget_allocated, budget_spent, budget_remaining, contingency_percentage, contingency_used
@@ -410,6 +410,7 @@ export async function productionScheduleUpdateHandler(request: Request, env: Env
 
       if (!scheduledDate) continue;
 
+      // TODO(catch-swallow): migrate to safeQuery
       const row = await sql`
         INSERT INTO production_schedules (project_id, scene_number, scene_description, scheduled_date, call_time, wrap_time, status)
         VALUES (${projectId}, ${sceneNumber}, ${sceneDescription}, ${scheduledDate}, ${callTime}, ${wrapTime}, ${schedStatus})
@@ -420,7 +421,6 @@ export async function productionScheduleUpdateHandler(request: Request, env: Env
           call_time = EXCLUDED.call_time,
           wrap_time = EXCLUDED.wrap_time,
           status = EXCLUDED.status,
-          // TODO(catch-swallow): migrate to safeQuery
           updated_at = NOW()
         RETURNING *
       `.catch(() => []);
