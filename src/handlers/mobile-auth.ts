@@ -340,6 +340,7 @@ export async function mobileLogout(context: MobileAuthContext, userId: number, d
     );
 
     // Mark device as inactive if requested
+    // fire-and-forget
     const body = await context.request.json().catch(() => ({}));
     if (body.deactivateDevice) {
       await context.db.executeQuery(

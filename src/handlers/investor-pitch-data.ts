@@ -46,6 +46,7 @@ export async function getInvestorNotes(request: Request, env: Env): Promise<Resp
   if (!sql) return jsonResponse({ success: true, data: { notes: [] } }, origin);
 
   try {
+    // TODO(catch-swallow): migrate to safeQuery
     const notes = await sql`
       SELECT id, content, category, is_private, created_at, updated_at
       FROM investor_notes
@@ -148,6 +149,7 @@ export async function getInvestorDiligence(request: Request, env: Env): Promise<
   if (!sql) return jsonResponse({ success: true, data: { checklist: {} } }, origin);
 
   try {
+    // TODO(catch-swallow): migrate to safeQuery
     const rows = await sql`
       SELECT checklist
       FROM investor_diligence_checklists

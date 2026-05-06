@@ -127,10 +127,11 @@ export class SimpleMessagingHandler {
 
       // Update conversation timestamp
       if (convId) {
+        // fire-and-forget
         await this.db.query(
           `UPDATE conversations SET updated_at = NOW() WHERE id = $1`,
           [convId]
-        ).catch(() => { /* non-fatal */ });
+        ).catch(() => {});
       }
 
       return { success: true, data: { message: message[0] } };

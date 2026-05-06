@@ -478,6 +478,7 @@ export async function creatorPitchAnalyticsHandler(request: Request, env: Env): 
 
     if (isAllPitches) {
       // Get analytics for all creator pitches
+      // TODO(catch-swallow): migrate to safeQuery
       const pitchesAnalytics = await sql`
         SELECT
           p.id,
@@ -517,6 +518,7 @@ export async function creatorPitchAnalyticsHandler(request: Request, env: Env): 
       `.catch(() => []);
 
       // Get overall analytics summary
+      // TODO(catch-swallow): migrate to safeQuery
       const summary = await sql`
         SELECT
           COALESCE(SUM(pv.view_count), 0) as total_views,
@@ -559,6 +561,7 @@ export async function creatorPitchAnalyticsHandler(request: Request, env: Env): 
 
     if (!tableCheck[0]?.exists) {
       // Return basic pitch info without analytics
+      // TODO(catch-swallow): migrate to safeQuery
       const pitchInfo = await sql`
         SELECT id, title, genre, status, created_at
         FROM pitches WHERE id::text = ${pitchId}
@@ -577,6 +580,7 @@ export async function creatorPitchAnalyticsHandler(request: Request, env: Env): 
     }
 
     // Get view history
+    // TODO(catch-swallow): migrate to safeQuery
     const viewHistory = await sql`
       SELECT
         DATE_TRUNC('day', viewed_at) as date,
@@ -590,6 +594,7 @@ export async function creatorPitchAnalyticsHandler(request: Request, env: Env): 
     `.catch(() => []);
 
     // Get basic analytics
+    // TODO(catch-swallow): migrate to safeQuery
     const overview = await sql`
       SELECT
         COALESCE(SUM(view_count), 0) as total_views,
@@ -662,6 +667,7 @@ export async function creatorInvestorsHandler(request: Request, env: Env): Promi
 
   try {
     // Check if investments table exists
+    // TODO(catch-swallow): migrate to safeQuery
     const investmentsExist = await sql`
       SELECT EXISTS (
         SELECT FROM information_schema.tables
@@ -677,6 +683,7 @@ export async function creatorInvestorsHandler(request: Request, env: Env): Promi
     }
 
     // Get investors who have invested in creator's pitches - simplified query
+    // TODO(catch-swallow): migrate to safeQuery
     const investors = await sql`
       SELECT
         u.id,

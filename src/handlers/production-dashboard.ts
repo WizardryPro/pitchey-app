@@ -118,6 +118,7 @@ export async function productionDashboardHandler(request: Request, env: Env) {
     const sql = neon(env.DATABASE_URL);
 
     // Check if production_pipeline table exists
+    // TODO(catch-swallow): migrate to safeQuery
     const tableCheck = await sql`
       SELECT EXISTS (
         SELECT FROM information_schema.tables
@@ -134,6 +135,7 @@ export async function productionDashboardHandler(request: Request, env: Env) {
     }
 
     // Get active projects in pipeline
+    // TODO(catch-swallow): migrate to safeQuery
     const activeProjects = await sql`
       SELECT
         COUNT(DISTINCT pp.id) as total_projects,
@@ -148,6 +150,7 @@ export async function productionDashboardHandler(request: Request, env: Env) {
     `.catch(() => [emptyDashboard.dashboard.activeProjects]);
 
     // Check if production_talent table exists
+    // TODO(catch-swallow): migrate to safeQuery
     const talentTableCheck = await sql`
       SELECT EXISTS (
         SELECT FROM information_schema.tables
@@ -157,6 +160,7 @@ export async function productionDashboardHandler(request: Request, env: Env) {
 
     let talentStats = [emptyDashboard.dashboard.talentStats];
     if (talentTableCheck[0]?.exists) {
+      // TODO(catch-swallow): migrate to safeQuery
       talentStats = (await sql`
         SELECT
           COUNT(DISTINCT talent_id) as total_talent,
@@ -169,6 +173,7 @@ export async function productionDashboardHandler(request: Request, env: Env) {
     }
 
     // Get upcoming deadlines
+    // TODO(catch-swallow): migrate to safeQuery
     const upcomingDeadlines = await sql`
       SELECT
         pp.title,
@@ -185,6 +190,7 @@ export async function productionDashboardHandler(request: Request, env: Env) {
     `.catch(() => []);
 
     // Get budget overview
+    // TODO(catch-swallow): migrate to safeQuery
     const budgetOverview = await sql`
       SELECT
         COALESCE(SUM(budget_allocated), 0) as total_allocated,
@@ -199,6 +205,7 @@ export async function productionDashboardHandler(request: Request, env: Env) {
     `.catch(() => [emptyDashboard.dashboard.budgetOverview]);
 
     // Check if crew_assignments table exists
+    // TODO(catch-swallow): migrate to safeQuery
     const crewTableCheck = await sql`
       SELECT EXISTS (
         SELECT FROM information_schema.tables
@@ -208,6 +215,7 @@ export async function productionDashboardHandler(request: Request, env: Env) {
 
     let recentAssignments: any[] = [];
     if (crewTableCheck[0]?.exists) {
+      // TODO(catch-swallow): migrate to safeQuery
       recentAssignments = await sql`
         SELECT
           ca.id,
@@ -225,6 +233,7 @@ export async function productionDashboardHandler(request: Request, env: Env) {
     }
 
     // Check if location_scouts table exists
+    // TODO(catch-swallow): migrate to safeQuery
     const locationTableCheck = await sql`
       SELECT EXISTS (
         SELECT FROM information_schema.tables
@@ -234,6 +243,7 @@ export async function productionDashboardHandler(request: Request, env: Env) {
 
     let locationUpdates: any[] = [];
     if (locationTableCheck[0]?.exists) {
+      // TODO(catch-swallow): migrate to safeQuery
       locationUpdates = await sql`
         SELECT
           ls.id,

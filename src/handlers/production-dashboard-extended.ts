@@ -46,6 +46,7 @@ export async function productionTalentSearchHandler(request: Request, env: Env):
     const limit = Math.min(50, Math.max(1, Number(url.searchParams.get('limit')) || 20));
     const offset = Math.max(0, Number(url.searchParams.get('offset')) || 0);
 
+    // TODO(catch-swallow): migrate to safeQuery
     const talent = await sql`
       SELECT id, first_name, last_name, stage_name, talent_type,
              day_rate, currency, availability_status, location,
@@ -63,6 +64,7 @@ export async function productionTalentSearchHandler(request: Request, env: Env):
       LIMIT ${limit} OFFSET ${offset}
     `.catch(() => []);
 
+    // TODO(catch-swallow): migrate to safeQuery
     const countResult = await sql`
       SELECT COUNT(*)::int AS total FROM production_talent
       WHERE 1=1
@@ -98,6 +100,7 @@ export async function productionTalentDetailsHandler(request: Request, env: Env)
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
   try {
+    // TODO(catch-swallow): migrate to safeQuery
     const result = await sql`
       SELECT t.*, u.email, u.name as user_name
       FROM production_talent t
@@ -136,6 +139,7 @@ export async function productionTalentContactHandler(request: Request, env: Env)
     if (!message) return errorResponse('Message is required', origin);
 
     // Look up talent to find associated user_id
+    // TODO(catch-swallow): migrate to safeQuery
     const talent = await sql`
       SELECT user_id, first_name, last_name FROM production_talent WHERE id = ${Number(talentId)}
     `.catch(() => []);
@@ -146,6 +150,7 @@ export async function productionTalentContactHandler(request: Request, env: Env)
 
     // Insert notification for the talent's user if they have one
     if (talent[0].user_id) {
+      // TODO(catch-swallow): migrate to safeQuery
       await sql`
         INSERT INTO notifications (user_id, type, title, message, related_user_id, created_at)
         VALUES (
@@ -184,6 +189,7 @@ export async function productionProjectDetailsHandler(request: Request, env: Env
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
   try {
+    // TODO(catch-swallow): migrate to safeQuery
     const result = await sql`
       SELECT pp.*,
              p.title AS pitch_title, p.genre, p.logline, p.format, p.estimated_budget,
@@ -199,6 +205,7 @@ export async function productionProjectDetailsHandler(request: Request, env: Env
     }
 
     // Fetch milestones for the project
+    // TODO(catch-swallow): migrate to safeQuery
     const milestones = await sql`
       SELECT id, title, description, due_date, completed, completed_at
       FROM project_milestones
@@ -252,6 +259,7 @@ export async function productionProjectStatusHandler(request: Request, env: Env)
         status = COALESCE(${status ?? null}, status),
         stage = COALESCE(${stage ?? null}, stage),
         completion_percentage = COALESCE(${completionPercentage ?? null}, completion_percentage),
+        // TODO(catch-swallow): migrate to safeQuery
         updated_at = NOW()
       WHERE id = ${projectId} AND production_company_id = ${Number(userId)}
       RETURNING *
@@ -300,6 +308,7 @@ export async function productionBudgetUpdateHandler(request: Request, env: Env):
         budget_remaining = COALESCE(${budgetAllocated ?? null}, budget_allocated) - COALESCE(${budgetSpent ?? null}, budget_spent),
         contingency_percentage = COALESCE(${contingencyPercentage ?? null}, contingency_percentage),
         contingency_used = COALESCE(${contingencyUsed ?? null}, contingency_used),
+        // TODO(catch-swallow): migrate to safeQuery
         updated_at = NOW()
       WHERE id = ${projectId} AND production_company_id = ${Number(userId)}
       RETURNING id, budget_allocated, budget_spent, budget_remaining, contingency_percentage, contingency_used
@@ -330,6 +339,7 @@ export async function productionBudgetVarianceHandler(request: Request, env: Env
   if (!sql) return jsonResponse({ success: true, data: { budgetAllocated: 0, budgetSpent: 0, budgetRemaining: 0, variance: 0 } }, origin);
 
   try {
+    // TODO(catch-swallow): migrate to safeQuery
     const result = await sql`
       SELECT budget_allocated, budget_spent, budget_remaining,
              contingency_percentage, contingency_used,
@@ -410,6 +420,7 @@ export async function productionScheduleUpdateHandler(request: Request, env: Env
           call_time = EXCLUDED.call_time,
           wrap_time = EXCLUDED.wrap_time,
           status = EXCLUDED.status,
+          // TODO(catch-swallow): migrate to safeQuery
           updated_at = NOW()
         RETURNING *
       `.catch(() => []);
@@ -439,6 +450,7 @@ export async function productionScheduleConflictsHandler(request: Request, env: 
 
   try {
     // Find overlapping scheduled dates with same cast/crew in the same project
+    // TODO(catch-swallow): migrate to safeQuery
     const conflicts = await sql`
       SELECT a.id AS schedule_a, b.id AS schedule_b,
              a.scene_number AS scene_a, b.scene_number AS scene_b,
@@ -484,6 +496,7 @@ export async function productionLocationSearchHandler(request: Request, env: Env
     const limit = Math.min(50, Math.max(1, Number(url.searchParams.get('limit')) || 20));
     const offset = Math.max(0, Number(url.searchParams.get('offset')) || 0);
 
+    // TODO(catch-swallow): migrate to safeQuery
     const locations = await sql`
       SELECT id, name, type, city, state_province, country,
              daily_rate, weekly_rate, currency, availability_status,
@@ -500,6 +513,7 @@ export async function productionLocationSearchHandler(request: Request, env: Env
       LIMIT ${limit} OFFSET ${offset}
     `.catch(() => []);
 
+    // TODO(catch-swallow): migrate to safeQuery
     const countResult = await sql`
       SELECT COUNT(*)::int AS total FROM location_scouts
       WHERE 1=1
@@ -534,6 +548,7 @@ export async function productionLocationDetailsHandler(request: Request, env: En
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
   try {
+    // TODO(catch-swallow): migrate to safeQuery
     const result = await sql`
       SELECT ls.*,
              (SELECT COUNT(*)::int FROM location_bookings lb WHERE lb.location_id = ls.id) AS booking_count
@@ -577,6 +592,7 @@ export async function productionLocationBookHandler(request: Request, env: Env):
     }
 
     // Calculate total cost from location daily rate and date range
+    // TODO(catch-swallow): migrate to safeQuery
     const location = await sql`
       SELECT daily_rate FROM location_scouts WHERE id = ${locationId}
     `.catch(() => []);
@@ -597,6 +613,7 @@ export async function productionLocationBookHandler(request: Request, env: Env):
     `;
 
     // Increment times_booked on the location
+    // TODO(catch-swallow): migrate to safeQuery
     await sql`
       UPDATE location_scouts SET times_booked = times_booked + 1 WHERE id = ${locationId}
     `.catch(() => []);
@@ -630,6 +647,7 @@ export async function productionCrewSearchHandler(request: Request, env: Env): P
     const limit = Math.min(50, Math.max(1, Number(url.searchParams.get('limit')) || 20));
     const offset = Math.max(0, Number(url.searchParams.get('offset')) || 0);
 
+    // TODO(catch-swallow): migrate to safeQuery
     const crew = await sql`
       SELECT id, first_name, last_name, department, position,
              day_rate, kit_rental_rate, currency, availability_status,
@@ -647,6 +665,7 @@ export async function productionCrewSearchHandler(request: Request, env: Env): P
       LIMIT ${limit} OFFSET ${offset}
     `.catch(() => []);
 
+    // TODO(catch-swallow): migrate to safeQuery
     const countResult = await sql`
       SELECT COUNT(*)::int AS total FROM production_crew
       WHERE 1=1
@@ -681,6 +700,7 @@ export async function productionCrewDetailsHandler(request: Request, env: Env): 
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
   try {
+    // TODO(catch-swallow): migrate to safeQuery
     const result = await sql`
       SELECT * FROM production_crew WHERE id = ${crewId}
     `.catch(() => []);
@@ -719,6 +739,7 @@ export async function productionCrewHireHandler(request: Request, env: Env): Pro
     if (!projectId) return errorResponse('projectId is required', origin);
 
     // Verify crew exists
+    // TODO(catch-swallow): migrate to safeQuery
     const crew = await sql`
       SELECT id, first_name, last_name, availability_status FROM production_crew WHERE id = ${crewId}
     `.catch(() => []);
@@ -728,6 +749,7 @@ export async function productionCrewHireHandler(request: Request, env: Env): Pro
     }
 
     // Get project title for the current_project field
+    // TODO(catch-swallow): migrate to safeQuery
     const project = await sql`
       SELECT title FROM production_pipeline WHERE id = ${projectId} AND production_company_id = ${Number(userId)}
     `.catch(() => []);

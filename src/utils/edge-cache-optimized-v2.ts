@@ -117,6 +117,7 @@ export class EdgeCacheV2 {
           console.log(`Cache EXPIRED: ${key} (age: ${age}s, ttl: ${cached.ttl}s) - Hit rate: ${this.getHitRatePercent()}%`);
         }
         // Clean up expired entry
+        // fire-and-forget
         this.kv.delete(key).catch(() => {});
         return null;
       }

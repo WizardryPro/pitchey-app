@@ -57,6 +57,7 @@ export async function createSlateHandler(
   if (denied) return denied;
 
   try {
+    // fire-and-forget
     const body = await request.json().catch(() => ({})) as {
       title?: string;
       description?: string;
@@ -217,6 +218,7 @@ export async function updateSlateHandler(
       return jsonResponse({ success: false, error: 'Invalid slate ID' }, origin, 400);
     }
 
+    // fire-and-forget
     const body = await request.json().catch(() => ({})) as {
       title?: string;
       description?: string;
@@ -356,6 +358,7 @@ export async function addPitchToSlateHandler(
       return jsonResponse({ success: false, error: 'Invalid slate ID' }, origin, 400);
     }
 
+    // fire-and-forget
     const body = await request.json().catch(() => ({})) as { pitch_id?: number };
     const pitchId = body.pitch_id;
     if (!pitchId || typeof pitchId !== 'number') {
@@ -476,6 +479,7 @@ export async function reorderSlatePitchesHandler(
       return jsonResponse({ success: false, error: 'Invalid slate ID' }, origin, 400);
     }
 
+    // fire-and-forget
     const body = await request.json().catch(() => ({})) as { pitch_ids?: number[] };
     const pitchIds = body.pitch_ids;
     if (!Array.isArray(pitchIds) || pitchIds.length === 0) {
