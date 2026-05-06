@@ -50,16 +50,18 @@ Phase 1a finalized counts:
 - **B — breadcrumb pending**: 4 sites (credit deduction + transaction log writes; Phase 2 prerequisite)
 - **C — TODO(catch-swallow): migrate**: 97 sites (read-side dashboard fallbacks + 3 gate-feeding sites flagged in TODO text)
 
-**Worker-integrated baseline** (Phase 1b scope): ~~59 untagged sites, 0 tagged~~ — closed 2026-05-06 by Phase 1b PR. Tree-wide gate metric across `src/` is now **0/168**.
+**Worker-integrated baseline** (Phase 1b scope): ~~59 untagged sites, 0 tagged~~ — closed 2026-05-06 by Phase 1b PR. Tree-wide gate metric across `src/` is now **0 untagged / 156 total** (164 after Phase 1b tag sweep, then -8 by Phase 1b B-site wrap below).
 
 Phase 1b finalized counts (worker-integrated.ts only):
 - **A — fire-and-forget**: 15 sites (post-login password rehash, Stripe cleanup, Axiom logging, search-click tracking, session DELETEs, share-event INSERTs)
-- **B — breadcrumb pending**: 8 sites (Stripe `getSubscription` reads, INSERT-RETURNING patterns where caller checks null, auth-optional fallback)
+- **B — breadcrumb pending**: ~~8 sites~~ → 0 sites (closed 2026-05-06 by Phase 1b B-site wrap; see below). Were: Stripe `getSubscription` reads (×2), INSERT/UPDATE-RETURNING with caller null-check (×5), auth-optional fallback (×1).
 - **C — TODO(catch-swallow): migrate**: 36 sites (analytics dashboard reads, browse aggregates, info_requests reads, NDA document lookups)
 
 Distribution: 25% A / 14% B / 61% C — close to the spot-check prediction of 25/25/50. Each site received per-site human classification (no bulk-by-file shortcut available — file is too mixed). Tagger config preserved as the audit artifact: see PR diff for the line→bucket mapping.
 
 **~~Residual risk this PR does not fix.~~ Closed 2026-05-06 by B-site wrap PR.** The 4 bucket-B sites (`ai-pitch-extract.ts:191/197`, `ai-production-autofill.ts:211/217`) were credit-deduction and transaction-log writes that could still fail silently. The B-site wrap landed `observedSwallow` (a `safeQuery`-style helper for best-effort writes) and converted all four sites; revenue/audit-trail leakage is now visible in Sentry under the `catch_swallow.context` tag. Bucket B count is now 0; total `.catch(() => …)` sites in scope dropped from 109 to 105.
+
+**Phase 1b B-site wrap (2026-05-06)** — sibling helper `observedSwallowReturning<T, F>` added to `src/db/safe-query.ts` for best-effort operations where the caller reads the result but accepts a fallback (typically `null`). Converted all 8 bucket-B sites in `worker-integrated.ts`: 2× `stripe.getSubscription` (Stripe webhook → invoice paid / checkout session), 3× INSERT-RETURNING with null-check (scheduled_reports, calendar_events, info_requests), 2× UPDATE-RETURNING with null-check (info_requests respond/update), 1× auth-optional fallback (demo request). Failures now produce a Sentry event tagged with the call site (e.g. `stripe-webhook.invoice-paid.get-subscription`, `info-request.update`, `demo-request.auth-optional`). Bucket B in `worker-integrated.ts` is 0; total `.catch(() => …)` sites in `src/` dropped from 164 to 156.
 
 **Gate-feeding sites identified during Phase 1a** — 3 sites on paths the original audit was written to address:
 - `services/file-validation.service.ts:394` — fail-open quota bypass; '0' on error lets user upload past quota
