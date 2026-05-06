@@ -46,6 +46,7 @@ export async function getProductionNotes(request: Request, env: Env): Promise<Re
   if (!sql) return jsonResponse({ success: true, data: { notes: [] } }, origin);
 
   try {
+    // TODO(catch-swallow): migrate to safeQuery
     const notes = await sql`
       SELECT id, content, category, author, shared, created_at, updated_at
       FROM production_notes
@@ -159,6 +160,7 @@ export async function getProductionChecklist(request: Request, env: Env): Promis
   if (!sql) return jsonResponse({ success: true, data: { checklist: {} } }, origin);
 
   try {
+    // TODO(catch-swallow): migrate to safeQuery
     const result = await sql`
       SELECT checklist FROM production_checklists
       WHERE user_id = ${Number(userId)} AND pitch_id = ${pitchId}
@@ -230,6 +232,7 @@ export async function getProductionTeam(request: Request, env: Env): Promise<Res
   if (!sql) return jsonResponse({ success: true, data: { team: [] } }, origin);
 
   try {
+    // TODO(catch-swallow): migrate to safeQuery
     const result = await sql`
       SELECT team FROM production_team_assignments
       WHERE user_id = ${Number(userId)} AND pitch_id = ${pitchId}
@@ -358,6 +361,7 @@ export async function getCreatorPitchFeedback(request: Request, env: Env): Promi
     }
 
     // Fetch all shared notes from any production user, with author info
+    // TODO(catch-swallow): migrate to safeQuery
     const feedback = await sql`
       SELECT
         n.id, n.content, n.category, n.author, n.created_at,

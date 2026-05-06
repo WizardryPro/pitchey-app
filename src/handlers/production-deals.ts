@@ -46,6 +46,7 @@ export async function getProductionDeals(request: Request, env: Env): Promise<Re
     };
     const orderCol = validSorts[sortBy] || 'created_at';
 
+    // TODO(catch-swallow): migrate to safeQuery
     const deals = await sql`
       SELECT d.*,
              d.deal_state AS status,
@@ -66,6 +67,7 @@ export async function getProductionDeals(request: Request, env: Env): Promise<Re
       LIMIT ${limit} OFFSET ${offset}
     `.catch(() => []);
 
+    // TODO(catch-swallow): migrate to safeQuery
     const countResult = await sql`
       SELECT COUNT(*)::int AS total FROM production_deals
       WHERE production_company_id = ${Number(userId)}
@@ -109,6 +111,7 @@ export async function createProductionDeal(request: Request, env: Env): Promise<
     }
 
     // Lookup pitch for creator_id
+    // TODO(catch-swallow): migrate to safeQuery
     const pitch = await sql`SELECT user_id FROM pitches WHERE id = ${pitchId}`.catch(() => []);
     const creatorId = pitch.length > 0 ? pitch[0].user_id : null;
 
@@ -120,6 +123,7 @@ export async function createProductionDeal(request: Request, env: Env): Promise<
 
     // Notify the creator
     if (creatorId) {
+      // TODO(catch-swallow): migrate to safeQuery
       await sql`
         INSERT INTO notifications (user_id, type, title, message, related_user_id, related_pitch_id, created_at)
         VALUES (
@@ -152,6 +156,7 @@ export async function getProductionContract(request: Request, env: Env): Promise
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
   try {
+    // TODO(catch-swallow): migrate to safeQuery
     const result = await sql`
       SELECT d.*,
              p.title AS pitch_title, p.genre, p.logline,
@@ -223,6 +228,7 @@ export async function getDistributionChannels(request: Request, env: Env): Promi
 
   try {
     // Verify ownership
+    // TODO(catch-swallow): migrate to safeQuery
     const project = await sql`
       SELECT id FROM production_pipeline WHERE id = ${projectId} AND production_company_id = ${Number(userId)}
     `.catch(() => []);
@@ -231,6 +237,7 @@ export async function getDistributionChannels(request: Request, env: Env): Promi
       return errorResponse('Project not found', origin, 404);
     }
 
+    // TODO(catch-swallow): migrate to safeQuery
     const channels = await sql`
       SELECT * FROM distribution_channels
       WHERE project_id = ${projectId}
@@ -263,6 +270,7 @@ export async function exportProjectData(request: Request, env: Env): Promise<Res
 
   try {
     // Fetch project
+    // TODO(catch-swallow): migrate to safeQuery
     const projectResult = await sql`
       SELECT pp.*,
              p.title AS pitch_title, p.genre, p.logline, p.format, p.estimated_budget
@@ -277,8 +285,11 @@ export async function exportProjectData(request: Request, env: Env): Promise<Res
 
     // Fetch related data in parallel
     const [milestones, channels, deals] = await Promise.all([
+      // TODO(catch-swallow): migrate to safeQuery
       sql`SELECT * FROM project_milestones WHERE project_id = ${projectId} ORDER BY due_date`.catch(() => []),
+      // TODO(catch-swallow): migrate to safeQuery
       sql`SELECT * FROM distribution_channels WHERE project_id = ${projectId}`.catch(() => []),
+      // TODO(catch-swallow): migrate to safeQuery
       sql`SELECT * FROM production_deals WHERE pitch_id = ${projectResult[0].pitch_id}`.catch(() => []),
     ]);
 
@@ -319,6 +330,7 @@ export async function updateProjectMilestone(request: Request, env: Env): Promis
 
   try {
     // Verify project ownership
+    // TODO(catch-swallow): migrate to safeQuery
     const project = await sql`
       SELECT id FROM production_pipeline WHERE id = ${projectId} AND production_company_id = ${Number(userId)}
     `.catch(() => []);
@@ -346,6 +358,7 @@ export async function updateProjectMilestone(request: Request, env: Env): Promis
           WHEN ${completed ?? null} = false THEN NULL
           ELSE completed_at
         END,
+        // TODO(catch-swallow): migrate to safeQuery
         updated_at = NOW()
       WHERE id = ${milestoneId} AND project_id = ${projectId}
       RETURNING *

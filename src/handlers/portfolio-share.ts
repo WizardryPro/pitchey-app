@@ -44,6 +44,7 @@ export async function createShareLinkHandler(
   }
 
   try {
+    // fire-and-forget
     const body = await request.json().catch(() => ({})) as { label?: string };
     const label = body.label?.trim().slice(0, 100) || null;
     const token = crypto.randomUUID();

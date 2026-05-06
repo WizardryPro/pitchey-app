@@ -86,6 +86,7 @@ export async function aiProductionAutofill(request: Request, env: Env): Promise<
 
   try {
     // Credit check
+    // TODO(catch-swallow): migrate to safeQuery — gate-feeding, fail-closed but operator-blind on credit table outage
     const creditRows = await sql`
       SELECT balance FROM user_credits WHERE user_id = ${Number(userId)}
     `.catch(() => []);
@@ -205,12 +206,14 @@ export async function aiProductionAutofill(request: Request, env: Env): Promise<
     }
 
     // Deduct credits
+    // TODO(catch-swallow): bucket-B breadcrumb pending — revenue leakage if silent
     await sql`
       UPDATE user_credits SET balance = balance - ${AUTOFILL_CREDIT_COST}, total_used = total_used + ${AUTOFILL_CREDIT_COST}, last_updated = NOW()
       WHERE user_id = ${Number(userId)}
     `.catch(() => {});
 
     // Log credit transaction
+    // TODO(catch-swallow): bucket-B breadcrumb pending — audit trail loss if silent
     await sql`
       INSERT INTO credit_transactions (user_id, type, amount, description, balance_before, balance_after, usage_type, created_at)
       VALUES (${Number(userId)}, 'usage', ${-AUTOFILL_CREDIT_COST}, 'AI production auto-fill', ${balance}, ${balance - AUTOFILL_CREDIT_COST}, 'ai_autofill', NOW())

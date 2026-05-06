@@ -198,6 +198,7 @@ export async function productionActivityHandler(
     const timeFilter = (timeRange && intervalMap[timeRange]) ? sql.unsafe(intervalMap[timeRange]) : sql``;
 
     const [activities, countResult] = await Promise.all([
+      // TODO(catch-swallow): migrate to safeQuery
       sql`
         SELECT
           id,
@@ -218,6 +219,7 @@ export async function productionActivityHandler(
         LIMIT ${limit}
         OFFSET ${offset}
       `.catch(() => []),
+      // TODO(catch-swallow): migrate to safeQuery
       sql`
         SELECT COUNT(*)::int AS total
         FROM notifications
@@ -285,6 +287,7 @@ export async function productionSubmissionsHandler(
     // Other statuses = saved_pitches entries with matching review_status
     if (statusFilter === 'new') {
       const [submissions, countResult] = await Promise.all([
+        // TODO(catch-swallow): migrate to safeQuery
         sql`
           SELECT
             p.id, p.user_id, p.title, p.genre, p.logline, p.short_synopsis, p.format,
@@ -307,6 +310,7 @@ export async function productionSubmissionsHandler(
           ORDER BY p.created_at DESC
           LIMIT ${limit} OFFSET ${offset}
         `.catch(() => []),
+        // TODO(catch-swallow): migrate to safeQuery
         sql`
           SELECT COUNT(*)::int AS total
           FROM pitches p
@@ -331,6 +335,7 @@ export async function productionSubmissionsHandler(
 
     // For review, shortlisted, accepted, rejected, archived — query saved_pitches
     const [submissions, countResult] = await Promise.all([
+      // TODO(catch-swallow): migrate to safeQuery
       sql`
         SELECT
           p.id, p.user_id, p.title, p.genre, p.logline, p.short_synopsis, p.format,
@@ -349,6 +354,7 @@ export async function productionSubmissionsHandler(
         ORDER BY COALESCE(sp.reviewed_at, sp.saved_at) DESC
         LIMIT ${limit} OFFSET ${offset}
       `.catch(() => []),
+      // TODO(catch-swallow): migrate to safeQuery
       sql`
         SELECT COUNT(*)::int AS total
         FROM saved_pitches sp
@@ -470,6 +476,7 @@ export async function productionRevenueHandler(
 
   try {
     // Check if production_pipeline exists
+    // TODO(catch-swallow): migrate to safeQuery
     const tableCheck = await sql`
       SELECT EXISTS (
         SELECT FROM information_schema.tables
@@ -482,6 +489,7 @@ export async function productionRevenueHandler(
     }
 
     // Aggregate revenue by time periods
+    // TODO(catch-swallow): migrate to safeQuery
     const revenueSummary = await sql`
       SELECT
         COALESCE(SUM(i.amount), 0) AS total_revenue,
@@ -506,6 +514,7 @@ export async function productionRevenueHandler(
     const yearlyRevenue = Number(revenueSummary[0]?.yearly_revenue) || 0;
 
     // Revenue by project
+    // TODO(catch-swallow): migrate to safeQuery
     const revenueByProject = await sql`
       SELECT
         pp.id AS project_id,
@@ -523,6 +532,7 @@ export async function productionRevenueHandler(
     `.catch(() => []);
 
     // Revenue by month (last 12 months)
+    // TODO(catch-swallow): migrate to safeQuery
     const revenueByMonth = await sql`
       SELECT
         TO_CHAR(DATE_TRUNC('month', i.created_at), 'YYYY-MM') AS month,
@@ -549,6 +559,7 @@ export async function productionRevenueHandler(
 
     // Average deal size from production_deals table
     let avgDealSize = 0;
+    // TODO(catch-swallow): migrate to safeQuery
     const dealCheck = await sql`
       SELECT EXISTS (
         SELECT FROM information_schema.tables
@@ -557,6 +568,7 @@ export async function productionRevenueHandler(
     `.catch(() => [{ exists: false }]);
 
     if (dealCheck[0]?.exists) {
+      // TODO(catch-swallow): migrate to safeQuery
       const dealStats = await sql`
         SELECT
           AVG(COALESCE(NULLIF(option_amount, 0), NULLIF(purchase_price, 0), NULLIF(development_fee, 0))) AS avg_deal
@@ -577,6 +589,7 @@ export async function productionRevenueHandler(
     }
 
     // Revenue by category (pitch format)
+    // TODO(catch-swallow): migrate to safeQuery
     const revenueByCategory = await sql`
       SELECT
         COALESCE(p.format, 'Other') AS category,
@@ -653,6 +666,7 @@ export async function productionSavedPitchesHandler(
 
   try {
     const [savedPitches, countResult] = await Promise.all([
+      // TODO(catch-swallow): migrate to safeQuery
       sql`
         SELECT
           sp.id AS saved_id,
@@ -681,6 +695,7 @@ export async function productionSavedPitchesHandler(
         ORDER BY sp.saved_at DESC
         LIMIT 50
       `.catch(() => []),
+      // TODO(catch-swallow): migrate to safeQuery
       sql`
         SELECT COUNT(*)::int AS total
         FROM saved_pitches

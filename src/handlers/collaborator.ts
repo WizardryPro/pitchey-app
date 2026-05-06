@@ -660,6 +660,7 @@ export async function getCollaborationChecklist(request: Request, env: Env): Pro
     `;
     if (pipeline.length === 0) return errorResponse('Project not found', origin, 404);
 
+    // TODO(catch-swallow): migrate to safeQuery — empty result hides schema drift on production_checklists
     const result = await sql`
       SELECT checklist FROM production_checklists
       WHERE user_id = ${pipeline[0].production_company_id} AND pitch_id = ${projectId}
@@ -764,6 +765,7 @@ export async function getCollaborationNotes(request: Request, env: Env): Promise
 
     // Get notes from production_notes (owner's notes) + collaborator-created notes
     const pitchId = pipeline[0].pitch_id || projectId;
+    // TODO(catch-swallow): migrate to safeQuery — empty result hides schema drift on production_notes
     const notes = await sql`
       SELECT id, content, category, author, created_at, updated_at
       FROM production_notes

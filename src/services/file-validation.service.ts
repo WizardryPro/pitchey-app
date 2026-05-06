@@ -388,10 +388,12 @@ export class FileValidationService {
     if (db) {
       try {
         const [usageResult, userResult] = await Promise.all([
+          // TODO(catch-swallow): migrate to safeQuery — fail-open quota bypass; '0' on error lets user upload past quota
           db.query(
             `SELECT COALESCE(SUM(file_size), 0)::bigint AS total_bytes FROM file_storage WHERE user_id = $1`,
             [userId]
           ).catch(() => [{ total_bytes: '0' }]),
+          // TODO(catch-swallow): migrate to safeQuery
           db.query(
             `SELECT subscription_tier FROM users WHERE id = $1`,
             [userId]

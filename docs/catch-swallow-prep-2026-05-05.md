@@ -8,11 +8,32 @@ Read-only prep — no migrations performed on this branch.
 
 ## Status
 
-**The original gate-feeding bug surface is closed.** All six Tier-1 files from the 2026-04-17 audit are at zero `.catch(() => …)` residue: `follows`, `follows-enhanced`, `pitch-feedback`, `pitch-interactions`, plus the deleted `worker-modules/analytics-endpoints.ts`. The class of bug the audit was originally written to address — consumption-gate-style failures where a query exception looks identical to legitimate empty data on paths that feed quotas, trust signals, or gates — no longer has a hiding place in the live request paths.
+**Phase 1a complete (2026-05-06)** — every `.catch(() => …)` site in `src/handlers/`, `src/services/`, `src/utils/` carries an A/B/C tag. Gate metric (untagged residue, excl. `worker-integrated.ts`): **0 of 109**.
 
-**The remaining 114 untagged sites are second-tier residue, not Tier 1 leftover.** Most are dashboard-read fall-back-to-empty-state patterns where the user-facing UI behavior is acceptable but the operator-visibility cost is the issue. None of them are on a path that silently corrupts gate state.
+**What 0/109 means and doesn't mean.** The gate metric measures "tagged vs untagged" — Phase 1a hits zero because every site now carries a marker. It does **not** mean every site has received per-site human judgment of the kind the May-2 framing originally anticipated. The actual shape of the work:
 
-**The headline gate count (114) is currently uninterpretable.** See the next section: with zero `// fire-and-forget` tags applied anywhere in the tree, a count of "untagged residue" cannot distinguish genuine swallows from legitimate telemetry. Phase 1 of the work below is a tag-sweep that makes the count meaningful before any migration begins.
+- **Bucket A (8 sites)**: per-site human classification — each judged as legitimately fire-and-forget (telemetry writes, request-body parse defaults).
+- **Bucket B (4 sites)**: per-site human classification — each judged as a defensible-default-with-visibility-gap that needs a breadcrumb wrap.
+- **Bucket C (97 sites)**: heuristic auto-classification — bulk tagger labelled them as migration candidates and the TODO marker carries that intent forward. The per-site judgment of "is this the right migration target?" is deferred to Phase 2, when each site gets ported to `safeQuery`.
+- **3 gate-feeding C sites**: per-site human classification, flagged with rationale text in the TODO.
+
+So the honest reading is: Phase 1a establishes A/B/C *classification* for every site; bucket-C sites are tagged as migration candidates, not yet individually-judged. Phase 1b covers `worker-integrated.ts`; Phase 2 is the per-site migration pass that retires the TODO markers. The gate count's interpretability problem (per the §"fire-and-forget tagging gap") is solved — A and C are now distinguishable in the count — but the orchestrator-prerequisite reading of "<30 untagged" should be understood as "<30 sites still pending any classification," not "<30 sites still pending migration."
+
+Phase 1a finalized counts:
+- **A — fire-and-forget**: 8 sites (telemetry writes, request-body parse fallbacks)
+- **B — breadcrumb pending**: 4 sites (credit deduction + transaction log writes; Phase 2 prerequisite)
+- **C — TODO(catch-swallow): migrate**: 97 sites (read-side dashboard fallbacks + 3 gate-feeding sites flagged in TODO text)
+
+**Worker-integrated baseline** (Phase 1b scope): 59 untagged sites, 0 tagged. Including this scope, gate metric is 59/168. Phase 1b's job is to apply the same A/B/C framework with the higher per-site judgment density the prep doc spot-check anticipated (~50% C, ~25% B, ~25% A) — the file is too mixed for the bulk tagger; expect mostly hand-classification.
+
+**Residual risk this PR does not fix.** The 4 bucket-B sites (`ai-pitch-extract.ts:191/197`, `ai-production-autofill.ts:211/217`) are credit-deduction and transaction-log writes that can still fail silently between now and Phase 2 landing. They're tagged but not yet wrapped with breadcrumbs. The breadcrumb wrap is the smallest follow-up that actually changes runtime behavior — schedule it before Phase 2 begins, not after.
+
+**Gate-feeding sites identified during Phase 1a** — 3 sites on paths the original audit was written to address:
+- `services/file-validation.service.ts:394` — fail-open quota bypass; '0' on error lets user upload past quota
+- `handlers/ai-pitch-extract.ts:72` — credit-balance check before AI charge; fail-closed but operator-blind
+- `handlers/ai-production-autofill.ts:91` — same as above for autofill
+
+**The original gate-feeding bug surface from 2026-04-17 is closed.** All six Tier-1 files are at zero `.catch(() => …)` residue. The 3 gate-feeding sites listed above are Phase 1a discoveries — newly-surfaced sites worth Phase 2 priority, not Tier-1 leftover.
 
 ## Headline numbers
 
@@ -162,7 +183,21 @@ Before Phase 2's first migration PR opens:
 - [ ] Phase 1a + 1b both merged; gate count under <30 target *or* documented why the residue can't reach it without code changes
 - [ ] Confirm `safeQuery` API hasn't drifted since the exemplar in `handlers/creator-dashboard.ts:creatorRevenueHandler`
 
+## Tooling — Phase 1a deliverables
+
+Two scripts ship with the Phase 1a PR (branch `phase-1a/catch-swallow-tag-sweep`):
+
+- `scripts/catch-swallow-gate.mjs` — counts tagged vs untagged sites, breaks down by bucket. Supports `--list`, `--include-worker`, `--threshold N` (exit non-zero if untagged > N — for CI gate use). Default scope excludes `worker-integrated.ts`.
+- `scripts/catch-swallow-tag.mjs` — bulk tagger for buckets A and C. Idempotent: re-running skips already-tagged sites. Walks back from `.catch` line through statement body to statement-start (`await`, `const`, `sql\``, method-call openers like `db.query(`), then inserts tag on the line above. Bucket B sites must be hand-tagged with the special `// TODO(catch-swallow): bucket-B breadcrumb pending — <reason>` marker (the gate counter recognizes this distinct from regular C).
+
+Tag conventions (mirrors CLAUDE.md gate spec):
+- `// fire-and-forget` — bucket A
+- `// TODO(catch-swallow): bucket-B breadcrumb pending — <reason>` — bucket B
+- `// TODO(catch-swallow): migrate to safeQuery[ — <reason>]` — bucket C
+
 ## What this branch contains
 
-- This document (`docs/catch-swallow-prep-2026-05-05.md`) only.
-- No code changes. Phase 1a (tag sweep across `src/handlers` + `src/services` + `src/utils`) opens on a separate branch once main is green.
+Phase 1a PR (branch `phase-1a/catch-swallow-tag-sweep`):
+- 18 files, +110/-1 lines, comment-only diff
+- 2 new scripts (`catch-swallow-gate.mjs`, `catch-swallow-tag.mjs`)
+- Original prep doc (`docs/catch-swallow-prep-2026-05-05.md`) updated with finalized counts

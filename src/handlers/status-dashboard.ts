@@ -124,6 +124,7 @@ export async function statusDashboardHandler(
     });
 
     // Get request/error counts
+    // TODO(catch-swallow): migrate to safeQuery
     const metricsQuery = await db.query(`
       SELECT
         COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '24 hours') as requests_24h,
@@ -135,6 +136,7 @@ export async function statusDashboardHandler(
     `).catch(() => [{ requests_24h: 0, errors_24h: 0, avg_response_time: 0, p95_response_time: 0 }]);
 
     // Get active users
+    // TODO(catch-swallow): migrate to safeQuery
     const activeUsersQuery = await db.query(`
       SELECT COUNT(DISTINCT user_id) as active_users
       FROM sessions

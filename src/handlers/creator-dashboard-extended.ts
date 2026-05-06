@@ -25,6 +25,7 @@ export async function creatorRevenueTrendsHandler(request: Request, env: Env): P
     const url = new URL(request.url);
     const months = Math.min(24, Math.max(1, Number(url.searchParams.get('months')) || 12));
 
+    // TODO(catch-swallow): migrate to safeQuery
     const trends = await sql`
       SELECT
         TO_CHAR(transaction_date, 'YYYY-MM') AS month,
@@ -56,6 +57,7 @@ export async function creatorRevenueBreakdownHandler(request: Request, env: Env)
   try {
     const userId = Number(roleCheck.user.id);
 
+    // TODO(catch-swallow): migrate to safeQuery
     const breakdown = await sql`
       SELECT
         revenue_type AS type,
@@ -67,6 +69,7 @@ export async function creatorRevenueBreakdownHandler(request: Request, env: Env)
       ORDER BY total DESC
     `.catch(() => []);
 
+    // TODO(catch-swallow): migrate to safeQuery
     const totalResult = await sql`
       SELECT COALESCE(SUM(amount), 0)::numeric AS grand_total
       FROM creator_revenue
@@ -103,6 +106,7 @@ export async function creatorContractDetailsHandler(request: Request, env: Env):
   try {
     const userId = Number(roleCheck.user.id);
 
+    // TODO(catch-swallow): migrate to safeQuery
     const result = await sql`
       SELECT c.*,
              COALESCE(u.name, u.first_name || ' ' || u.last_name) AS counterparty_display_name
@@ -149,6 +153,7 @@ export async function creatorContractUpdateHandler(request: Request, env: Env): 
         title = COALESCE(${title ?? null}, title),
         status = COALESCE(${status ?? null}, status),
         notes = COALESCE(${notes ?? null}, notes),
+        // TODO(catch-swallow): migrate to safeQuery
         updated_at = NOW()
       WHERE id = ${contractId} AND creator_id = ${userId}
       RETURNING *
@@ -182,6 +187,7 @@ export async function creatorEngagementHandler(request: Request, env: Env): Prom
     const userId = Number(roleCheck.user.id);
 
     // Aggregate views and likes across all creator's pitches
+    // TODO(catch-swallow): migrate to safeQuery
     const viewStats = await sql`
       SELECT
         COUNT(*)::int AS total_views,
@@ -192,6 +198,7 @@ export async function creatorEngagementHandler(request: Request, env: Env): Prom
       WHERE p.user_id = ${userId}
     `.catch(() => [{ total_views: 0, unique_viewers: 0, avg_view_duration: 0 }]);
 
+    // TODO(catch-swallow): migrate to safeQuery
     const likeStats = await sql`
       SELECT COUNT(*)::int AS total_likes
       FROM pitch_likes pl
@@ -200,6 +207,7 @@ export async function creatorEngagementHandler(request: Request, env: Env): Prom
     `.catch(() => [{ total_likes: 0 }]);
 
     // Per-pitch breakdown
+    // TODO(catch-swallow): migrate to safeQuery
     const pitchEngagement = await sql`
       SELECT
         p.id, p.title,
@@ -250,6 +258,7 @@ export async function creatorDemographicsHandler(request: Request, env: Env): Pr
     const userId = Number(roleCheck.user.id);
 
     // Viewer types (creator, investor, production)
+    // TODO(catch-swallow): migrate to safeQuery
     const viewerTypes = await sql`
       SELECT
         COALESCE(u.user_type, 'anonymous') AS viewer_type,
@@ -263,6 +272,7 @@ export async function creatorDemographicsHandler(request: Request, env: Env): Pr
     `.catch(() => []);
 
     // View types (direct, browse, search, etc.)
+    // TODO(catch-swallow): migrate to safeQuery
     const viewSources = await sql`
       SELECT
         COALESCE(pv.view_type, 'direct') AS source,
@@ -308,6 +318,7 @@ export async function creatorInvestorCommunicationHandler(request: Request, env:
     const userId = Number(roleCheck.user.id);
 
     // Find conversations where both users are participants
+    // TODO(catch-swallow): migrate to safeQuery
     const conversations = await sql`
       SELECT DISTINCT c.id, c.title, c.type, c.created_at, c.updated_at
       FROM conversations c
@@ -322,6 +333,7 @@ export async function creatorInvestorCommunicationHandler(request: Request, env:
     let messages: unknown[] = [];
 
     if (conversationIds.length > 0) {
+      // TODO(catch-swallow): migrate to safeQuery
       messages = await sql`
         SELECT m.id, m.conversation_id, m.sender_id, m.content, m.message_type,
                m.created_at, m.is_edited,
@@ -368,6 +380,7 @@ export async function creatorMessageInvestorHandler(request: Request, env: Env):
     if (!content) return ApiResponseBuilder.error(ErrorCode.VALIDATION_ERROR, 'Message content is required');
 
     // Check if an existing conversation exists between the two users
+    // TODO(catch-swallow): migrate to safeQuery
     const existing = await sql`
       SELECT c.id
       FROM conversations c
@@ -383,6 +396,7 @@ export async function creatorMessageInvestorHandler(request: Request, env: Env):
     if (existing.length > 0) {
       conversationId = Number(existing[0].id);
       // Update conversation timestamp
+      // TODO(catch-swallow): migrate to safeQuery
       await sql`UPDATE conversations SET updated_at = NOW() WHERE id = ${conversationId}`.catch(() => []);
     } else {
       // Create new conversation
@@ -394,6 +408,7 @@ export async function creatorMessageInvestorHandler(request: Request, env: Env):
       conversationId = Number(conv[0].id);
 
       // Add both participants
+      // TODO(catch-swallow): migrate to safeQuery
       await sql`
         INSERT INTO conversation_participants (conversation_id, user_id, joined_at, is_admin)
         VALUES (${conversationId}, ${userId}, NOW(), true),
@@ -409,6 +424,7 @@ export async function creatorMessageInvestorHandler(request: Request, env: Env):
     `;
 
     // Notify the investor
+    // TODO(catch-swallow): migrate to safeQuery
     await sql`
       INSERT INTO notifications (user_id, type, title, message, related_user_id, created_at)
       VALUES (
