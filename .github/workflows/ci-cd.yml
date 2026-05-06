@@ -118,6 +118,15 @@ jobs:
           echo "🔍 Validating Worker syntax..."
           node -c dist/worker.js || echo "⚠️ Worker validation failed"
 
+      - name: 🪝 Catch-swallow gate (untagged residue)
+        # Blocks regression: every new `.catch(() => …)` site must carry an
+        # A/B/C tag (`// fire-and-forget` | `// TODO(catch-swallow): bucket-B`
+        # | `// TODO(catch-swallow)`). Default scope excludes worker-integrated.ts
+        # — that file's enforcement is a follow-up after PR #87 + #88 land.
+        # See docs/catch-swallow-prep-2026-05-05.md and
+        # docs/catch-swallow-audit-2026-04-17.md.
+        run: node scripts/catch-swallow-gate.mjs --threshold 0 --list
+
   # =================================================================
   # DATABASE TESTS
   # =================================================================
