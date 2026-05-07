@@ -7,6 +7,7 @@ import { getDb } from '../db/connection';
 import type { Env } from '../db/connection';
 import { ApiResponseBuilder, ErrorCode } from '../utils/api-response';
 import { requireRole } from '../utils/auth-extract';
+import { safeQuery } from '../db/safe-query';
 
 // ---------------------------------------------------------------------------
 // Revenue
@@ -25,8 +26,7 @@ export async function creatorRevenueTrendsHandler(request: Request, env: Env): P
     const url = new URL(request.url);
     const months = Math.min(24, Math.max(1, Number(url.searchParams.get('months')) || 12));
 
-    // TODO(catch-swallow): migrate to safeQuery
-    const trends = await sql`
+    const trendsResult = await safeQuery(() => sql`
       SELECT
         TO_CHAR(transaction_date, 'YYYY-MM') AS month,
         SUM(amount)::numeric AS total,
@@ -36,9 +36,9 @@ export async function creatorRevenueTrendsHandler(request: Request, env: Env): P
         AND transaction_date >= NOW() - (${months} || ' months')::interval
       GROUP BY TO_CHAR(transaction_date, 'YYYY-MM')
       ORDER BY month ASC
-    `.catch(() => []);
+    `, { fallback: [], context: 'creator-dashboard.revenue.trends' });
 
-    return ApiResponseBuilder.success({ trends });
+    return ApiResponseBuilder.success({ trends: trendsResult.rows });
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
     console.error('creatorRevenueTrendsHandler error:', e.message);
@@ -57,8 +57,7 @@ export async function creatorRevenueBreakdownHandler(request: Request, env: Env)
   try {
     const userId = Number(roleCheck.user.id);
 
-    // TODO(catch-swallow): migrate to safeQuery
-    const breakdown = await sql`
+    const breakdownResult = await safeQuery(() => sql`
       SELECT
         revenue_type AS type,
         SUM(amount)::numeric AS total,
@@ -67,18 +66,17 @@ export async function creatorRevenueBreakdownHandler(request: Request, env: Env)
       WHERE creator_id = ${userId}
       GROUP BY revenue_type
       ORDER BY total DESC
-    `.catch(() => []);
+    `, { fallback: [], context: 'creator-dashboard.revenue.breakdown' });
 
-    // TODO(catch-swallow): migrate to safeQuery
-    const totalResult = await sql`
+    const totalResult = await safeQuery<{ grand_total: number }>(() => sql`
       SELECT COALESCE(SUM(amount), 0)::numeric AS grand_total
       FROM creator_revenue
       WHERE creator_id = ${userId}
-    `.catch(() => [{ grand_total: 0 }]);
+    `, { fallback: [{ grand_total: 0 }], context: 'creator-dashboard.revenue.total' });
 
     return ApiResponseBuilder.success({
-      breakdown,
-      total: Number(totalResult[0]?.grand_total) || 0,
+      breakdown: breakdownResult.rows,
+      total: Number(totalResult.rows[0]?.grand_total) || 0,
     });
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
@@ -106,20 +104,20 @@ export async function creatorContractDetailsHandler(request: Request, env: Env):
   try {
     const userId = Number(roleCheck.user.id);
 
-    // TODO(catch-swallow): migrate to safeQuery
-    const result = await sql`
+    const result = await safeQuery<Record<string, unknown>>(() => sql`
       SELECT c.*,
              COALESCE(u.name, u.first_name || ' ' || u.last_name) AS counterparty_display_name
       FROM contracts c
       LEFT JOIN users u ON c.counterparty_id = u.id
       WHERE c.id = ${contractId} AND c.creator_id = ${userId}
-    `.catch(() => []);
+    `, { fallback: [], context: 'creator-dashboard.contract.details' });
 
-    if (result.length === 0) {
+    if (!result.ok) return ApiResponseBuilder.error(ErrorCode.INTERNAL_ERROR, 'Failed to fetch contract');
+    if (result.rows.length === 0) {
       return ApiResponseBuilder.error(ErrorCode.NOT_FOUND, 'Contract not found');
     }
 
-    return ApiResponseBuilder.success({ contract: result[0] });
+    return ApiResponseBuilder.success({ contract: result.rows[0] });
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
     console.error('creatorContractDetailsHandler error:', e.message);
@@ -147,8 +145,7 @@ export async function creatorContractUpdateHandler(request: Request, env: Env): 
     const status = typeof body.status === 'string' ? body.status : undefined;
     const notes = typeof body.notes === 'string' ? body.notes : undefined;
 
-    // TODO(catch-swallow): migrate to safeQuery
-    const result = await sql`
+    const result = await safeQuery<Record<string, unknown>>(() => sql`
       UPDATE contracts
       SET
         title = COALESCE(${title ?? null}, title),
@@ -157,13 +154,14 @@ export async function creatorContractUpdateHandler(request: Request, env: Env): 
         updated_at = NOW()
       WHERE id = ${contractId} AND creator_id = ${userId}
       RETURNING *
-    `.catch(() => []);
+    `, { fallback: [], context: 'creator-dashboard.contract.update' });
 
-    if (result.length === 0) {
+    if (!result.ok) return ApiResponseBuilder.error(ErrorCode.INTERNAL_ERROR, 'Failed to update contract');
+    if (result.rows.length === 0) {
       return ApiResponseBuilder.error(ErrorCode.NOT_FOUND, 'Contract not found');
     }
 
-    return ApiResponseBuilder.success({ contract: result[0] });
+    return ApiResponseBuilder.success({ contract: result.rows[0] });
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
     console.error('creatorContractUpdateHandler error:', e.message);
@@ -187,8 +185,8 @@ export async function creatorEngagementHandler(request: Request, env: Env): Prom
     const userId = Number(roleCheck.user.id);
 
     // Aggregate views and likes across all creator's pitches
-    // TODO(catch-swallow): migrate to safeQuery
-    const viewStats = await sql`
+    type ViewStatsRow = { total_views: number; unique_viewers: number; avg_view_duration: number };
+    const viewStats = await safeQuery<ViewStatsRow>(() => sql`
       SELECT
         COUNT(*)::int AS total_views,
         COUNT(DISTINCT pv.viewer_id)::int AS unique_viewers,
@@ -196,19 +194,17 @@ export async function creatorEngagementHandler(request: Request, env: Env): Prom
       FROM pitch_views pv
       JOIN pitches p ON pv.pitch_id = p.id
       WHERE p.user_id = ${userId}
-    `.catch(() => [{ total_views: 0, unique_viewers: 0, avg_view_duration: 0 }]);
+    `, { fallback: [{ total_views: 0, unique_viewers: 0, avg_view_duration: 0 }], context: 'creator-dashboard.engagement.views' });
 
-    // TODO(catch-swallow): migrate to safeQuery
-    const likeStats = await sql`
+    const likeStats = await safeQuery<{ total_likes: number }>(() => sql`
       SELECT COUNT(*)::int AS total_likes
       FROM pitch_likes pl
       JOIN pitches p ON pl.pitch_id = p.id
       WHERE p.user_id = ${userId}
-    `.catch(() => [{ total_likes: 0 }]);
+    `, { fallback: [{ total_likes: 0 }], context: 'creator-dashboard.engagement.likes' });
 
     // Per-pitch breakdown
-    // TODO(catch-swallow): migrate to safeQuery
-    const pitchEngagement = await sql`
+    const pitchEngagement = await safeQuery<Record<string, unknown>>(() => sql`
       SELECT
         p.id, p.title,
         COUNT(DISTINCT pv.id)::int AS views,
@@ -220,19 +216,19 @@ export async function creatorEngagementHandler(request: Request, env: Env): Prom
       GROUP BY p.id, p.title
       ORDER BY views DESC
       LIMIT 20
-    `.catch(() => []);
+    `, { fallback: [], context: 'creator-dashboard.engagement.per-pitch' });
 
-    const totalViews = Number(viewStats[0]?.total_views) || 0;
-    const totalLikes = Number(likeStats[0]?.total_likes) || 0;
+    const totalViews = Number(viewStats.rows[0]?.total_views) || 0;
+    const totalLikes = Number(likeStats.rows[0]?.total_likes) || 0;
 
     return ApiResponseBuilder.success({
       engagement: {
         totalViews,
-        uniqueViewers: Number(viewStats[0]?.unique_viewers) || 0,
+        uniqueViewers: Number(viewStats.rows[0]?.unique_viewers) || 0,
         totalLikes,
-        avgViewDuration: Number(viewStats[0]?.avg_view_duration) || 0,
+        avgViewDuration: Number(viewStats.rows[0]?.avg_view_duration) || 0,
         engagementRate: totalViews > 0 ? Math.round((totalLikes / totalViews) * 100) : 0,
-        pitchBreakdown: pitchEngagement,
+        pitchBreakdown: pitchEngagement.rows,
       },
     });
   } catch (err) {
@@ -258,8 +254,7 @@ export async function creatorDemographicsHandler(request: Request, env: Env): Pr
     const userId = Number(roleCheck.user.id);
 
     // Viewer types (creator, investor, production)
-    // TODO(catch-swallow): migrate to safeQuery
-    const viewerTypes = await sql`
+    const viewerTypes = await safeQuery<Record<string, unknown>>(() => sql`
       SELECT
         COALESCE(u.user_type, 'anonymous') AS viewer_type,
         COUNT(*)::int AS count
@@ -269,11 +264,10 @@ export async function creatorDemographicsHandler(request: Request, env: Env): Pr
       WHERE p.user_id = ${userId}
       GROUP BY COALESCE(u.user_type, 'anonymous')
       ORDER BY count DESC
-    `.catch(() => []);
+    `, { fallback: [], context: 'creator-dashboard.demographics.viewer-types' });
 
     // View types (direct, browse, search, etc.)
-    // TODO(catch-swallow): migrate to safeQuery
-    const viewSources = await sql`
+    const viewSources = await safeQuery<Record<string, unknown>>(() => sql`
       SELECT
         COALESCE(pv.view_type, 'direct') AS source,
         COUNT(*)::int AS count
@@ -282,12 +276,12 @@ export async function creatorDemographicsHandler(request: Request, env: Env): Pr
       WHERE p.user_id = ${userId}
       GROUP BY COALESCE(pv.view_type, 'direct')
       ORDER BY count DESC
-    `.catch(() => []);
+    `, { fallback: [], context: 'creator-dashboard.demographics.view-sources' });
 
     return ApiResponseBuilder.success({
       demographics: {
-        viewerTypes,
-        viewSources,
+        viewerTypes: viewerTypes.rows,
+        viewSources: viewSources.rows,
       },
     });
   } catch (err) {
@@ -318,23 +312,21 @@ export async function creatorInvestorCommunicationHandler(request: Request, env:
     const userId = Number(roleCheck.user.id);
 
     // Find conversations where both users are participants
-    // TODO(catch-swallow): migrate to safeQuery
-    const conversations = await sql`
+    const conversationsResult = await safeQuery<Record<string, unknown>>(() => sql`
       SELECT DISTINCT c.id, c.title, c.type, c.created_at, c.updated_at
       FROM conversations c
       JOIN conversation_participants cp1 ON cp1.conversation_id = c.id AND cp1.user_id = ${userId}
       JOIN conversation_participants cp2 ON cp2.conversation_id = c.id AND cp2.user_id = ${investorId}
       ORDER BY c.updated_at DESC
       LIMIT 10
-    `.catch(() => []);
+    `, { fallback: [], context: 'creator-dashboard.communication.conversations' });
 
     // Fetch recent messages from those conversations
-    const conversationIds = conversations.map((c: Record<string, unknown>) => Number(c.id));
+    const conversationIds = conversationsResult.rows.map((c) => Number(c.id));
     let messages: unknown[] = [];
 
     if (conversationIds.length > 0) {
-      // TODO(catch-swallow): migrate to safeQuery
-      messages = await sql`
+      const messagesResult = await safeQuery<Record<string, unknown>>(() => sql`
         SELECT m.id, m.conversation_id, m.sender_id, m.content, m.message_type,
                m.created_at, m.is_edited,
                COALESCE(u.name, u.first_name || ' ' || u.last_name) AS sender_name
@@ -344,11 +336,12 @@ export async function creatorInvestorCommunicationHandler(request: Request, env:
           AND m.is_deleted = false
         ORDER BY m.created_at DESC
         LIMIT 50
-      `.catch(() => []);
+      `, { fallback: [], context: 'creator-dashboard.communication.messages' });
+      messages = messagesResult.rows;
     }
 
     return ApiResponseBuilder.success({
-      communications: conversations,
+      communications: conversationsResult.rows,
       messages,
     });
   } catch (err) {
@@ -380,8 +373,7 @@ export async function creatorMessageInvestorHandler(request: Request, env: Env):
     if (!content) return ApiResponseBuilder.error(ErrorCode.VALIDATION_ERROR, 'Message content is required');
 
     // Check if an existing conversation exists between the two users
-    // TODO(catch-swallow): migrate to safeQuery
-    const existing = await sql`
+    const existing = await safeQuery<{ id: number }>(() => sql`
       SELECT c.id
       FROM conversations c
       JOIN conversation_participants cp1 ON cp1.conversation_id = c.id AND cp1.user_id = ${userId}
@@ -389,15 +381,15 @@ export async function creatorMessageInvestorHandler(request: Request, env: Env):
       WHERE c.type = 'direct'
       ORDER BY c.updated_at DESC
       LIMIT 1
-    `.catch(() => []);
+    `, { fallback: [], context: 'creator-dashboard.message.existing-conversation' });
 
     let conversationId: number;
 
-    if (existing.length > 0) {
-      conversationId = Number(existing[0].id);
-      // Update conversation timestamp
-      // TODO(catch-swallow): migrate to safeQuery
-      await sql`UPDATE conversations SET updated_at = NOW() WHERE id = ${conversationId}`.catch(() => []);
+    if (existing.rows.length > 0) {
+      conversationId = Number(existing.rows[0].id);
+      // Update conversation timestamp — best-effort
+      await safeQuery(() => sql`UPDATE conversations SET updated_at = NOW() WHERE id = ${conversationId}`,
+        { fallback: [], context: 'creator-dashboard.message.touch-conversation' });
     } else {
       // Create new conversation
       const conv = await sql`
@@ -407,13 +399,12 @@ export async function creatorMessageInvestorHandler(request: Request, env: Env):
       `;
       conversationId = Number(conv[0].id);
 
-      // Add both participants
-      // TODO(catch-swallow): migrate to safeQuery
-      await sql`
+      // Add both participants — best-effort (Sentry-reported via safeQuery)
+      await safeQuery(() => sql`
         INSERT INTO conversation_participants (conversation_id, user_id, joined_at, is_admin)
         VALUES (${conversationId}, ${userId}, NOW(), true),
                (${conversationId}, ${investorId}, NOW(), false)
-      `.catch(() => []);
+      `, { fallback: [], context: 'creator-dashboard.message.add-participants' });
     }
 
     // Insert the message
@@ -423,16 +414,15 @@ export async function creatorMessageInvestorHandler(request: Request, env: Env):
       RETURNING id, conversation_id, sender_id, content, created_at
     `;
 
-    // Notify the investor
-    // TODO(catch-swallow): migrate to safeQuery
-    await sql`
+    // Notify the investor — best-effort (Sentry-reported via safeQuery)
+    await safeQuery(() => sql`
       INSERT INTO notifications (user_id, type, title, message, related_user_id, created_at)
       VALUES (
         ${investorId}, 'new_message', 'New Message',
         ${'You have a new message from a creator'},
         ${userId}, NOW()
       )
-    `.catch(() => []);
+    `, { fallback: [], context: 'creator-dashboard.message.notify' });
 
     return ApiResponseBuilder.success({
       messageSent: true,

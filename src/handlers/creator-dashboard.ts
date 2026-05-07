@@ -478,8 +478,7 @@ export async function creatorPitchAnalyticsHandler(request: Request, env: Env): 
 
     if (isAllPitches) {
       // Get analytics for all creator pitches
-      // TODO(catch-swallow): migrate to safeQuery
-      const pitchesAnalytics = await sql`
+      const pitchesAnalytics = await safeQuery<Record<string, unknown>>(() => sql`
         SELECT
           p.id,
           p.title,
@@ -515,11 +514,11 @@ export async function creatorPitchAnalyticsHandler(request: Request, env: Env): 
         ) inv_count ON p.id = inv_count.pitch_id
         WHERE p.user_id::text = ${userId}
         ORDER BY p.created_at DESC
-      `.catch(() => []);
+      `, { fallback: [], context: 'creator-dashboard.analytics.all-pitches' });
 
       // Get overall analytics summary
-      // TODO(catch-swallow): migrate to safeQuery
-      const summary = await sql`
+      type SummaryRow = { total_views: number; unique_viewers: number; total_saves: number; total_nda_requests: number };
+      const summary = await safeQuery<SummaryRow>(() => sql`
         SELECT
           COALESCE(SUM(pv.view_count), 0) as total_views,
           COALESCE(COUNT(DISTINCT pv.viewer_id), 0) as unique_viewers,
@@ -530,13 +529,13 @@ export async function creatorPitchAnalyticsHandler(request: Request, env: Env): 
         LEFT JOIN saved_pitches sp ON p.id = sp.pitch_id
         LEFT JOIN nda_requests nr ON p.id = nr.pitch_id
         WHERE p.user_id::text = ${userId}
-      `.catch(() => [{ total_views: 0, unique_viewers: 0, total_saves: 0, total_nda_requests: 0 }]);
+      `, { fallback: [{ total_views: 0, unique_viewers: 0, total_saves: 0, total_nda_requests: 0 }], context: 'creator-dashboard.analytics.summary' });
 
       return new Response(JSON.stringify({
         success: true,
         data: {
-          pitches: pitchesAnalytics || [],
-          overview: summary[0] || emptyAnalytics.data.overview,
+          pitches: pitchesAnalytics.rows,
+          overview: summary.rows[0] || emptyAnalytics.data.overview,
           viewHistory: [],
           recommendations: []
         }
@@ -561,17 +560,16 @@ export async function creatorPitchAnalyticsHandler(request: Request, env: Env): 
 
     if (!tableCheck[0]?.exists) {
       // Return basic pitch info without analytics
-      // TODO(catch-swallow): migrate to safeQuery
-      const pitchInfo = await sql`
+      const pitchInfo = await safeQuery<Record<string, unknown>>(() => sql`
         SELECT id, title, genre, status, created_at
         FROM pitches WHERE id::text = ${pitchId}
-      `.catch(() => []);
+      `, { fallback: [], context: 'creator-dashboard.analytics.pitch-info' });
 
       return new Response(JSON.stringify({
         success: true,
         data: {
           ...emptyAnalytics.data,
-          pitch: pitchInfo[0] || null
+          pitch: pitchInfo.rows[0] || null
         }
       }), {
         status: 200,
@@ -580,8 +578,7 @@ export async function creatorPitchAnalyticsHandler(request: Request, env: Env): 
     }
 
     // Get view history
-    // TODO(catch-swallow): migrate to safeQuery
-    const viewHistory = await sql`
+    const viewHistory = await safeQuery<Record<string, unknown>>(() => sql`
       SELECT
         DATE_TRUNC('day', viewed_at) as date,
         COUNT(*) as views,
@@ -591,24 +588,24 @@ export async function creatorPitchAnalyticsHandler(request: Request, env: Env): 
         AND viewed_at >= ${startDate}
       GROUP BY DATE_TRUNC('day', viewed_at)
       ORDER BY date ASC
-    `.catch(() => []);
+    `, { fallback: [], context: 'creator-dashboard.analytics.view-history' });
 
     // Get basic analytics
-    // TODO(catch-swallow): migrate to safeQuery
-    const overview = await sql`
+    type OverviewRow = { total_views: number; unique_viewers: number; avg_view_duration: number };
+    const overview = await safeQuery<OverviewRow>(() => sql`
       SELECT
         COALESCE(SUM(view_count), 0) as total_views,
         COUNT(DISTINCT user_id) as unique_viewers,
         0 as avg_view_duration
       FROM pitch_views
       WHERE pitch_id::text = ${pitchId}
-    `.catch(() => [{ total_views: 0, unique_viewers: 0, avg_view_duration: 0 }]);
+    `, { fallback: [{ total_views: 0, unique_viewers: 0, avg_view_duration: 0 }], context: 'creator-dashboard.analytics.overview' });
 
     return new Response(JSON.stringify({
       success: true,
       data: {
-        overview: overview[0] || emptyAnalytics.data.overview,
-        viewHistory: viewHistory || [],
+        overview: overview.rows[0] || emptyAnalytics.data.overview,
+        viewHistory: viewHistory.rows,
         investment: { total_invested: 0, investor_count: 0 },
         documents: { total: 0, signed: 0 },
         audience: [],
@@ -666,16 +663,15 @@ export async function creatorInvestorsHandler(request: Request, env: Env): Promi
   }
 
   try {
-    // Check if investments table exists
-    // TODO(catch-swallow): migrate to safeQuery
-    const investmentsExist = await sql`
+    // Check if investments table exists — schema probe; don't report to Sentry
+    const investmentsExist = await safeQuery<{ exists: boolean }>(() => sql`
       SELECT EXISTS (
         SELECT FROM information_schema.tables
         WHERE table_schema = 'public' AND table_name = 'investments'
       ) as exists
-    `.catch(() => [{ exists: false }]);
+    `, { fallback: [{ exists: false }], context: 'creator-dashboard.investors.table-probe', report: false });
 
-    if (!investmentsExist[0]?.exists) {
+    if (!investmentsExist.rows[0]?.exists) {
       return new Response(JSON.stringify(emptyResponse), {
         status: 200,
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
@@ -683,8 +679,7 @@ export async function creatorInvestorsHandler(request: Request, env: Env): Promi
     }
 
     // Get investors who have invested in creator's pitches - simplified query
-    // TODO(catch-swallow): migrate to safeQuery
-    const investors = await sql`
+    const investorsResult = await safeQuery<Record<string, unknown>>(() => sql`
       SELECT
         u.id,
         COALESCE(u.name, CONCAT(u.first_name, ' ', u.last_name), u.email) as name,
@@ -710,17 +705,18 @@ export async function creatorInvestorsHandler(request: Request, env: Env): Promi
       GROUP BY u.id, u.name, u.first_name, u.last_name, u.email, u.company_name, u.profile_image, u.location, u.bio
       ORDER BY total_invested DESC
       LIMIT 100
-    `.catch(() => []);
+    `, { fallback: [], context: 'creator-dashboard.investors.list' });
+    const investors = investorsResult.rows;
 
     return new Response(JSON.stringify({
       success: true,
       data: {
-        investors: investors || [],
+        investors,
         communicationSummary: [],
         stats: {
-          totalInvestors: investors?.length || 0,
-          activeInvestors: (investors || []).filter((i: any) => i.activity_status === 'active' || i.activity_status === 'highly_active').length,
-          totalRaised: (investors || []).reduce((sum: number, i: any) => sum + Number(i.total_invested || 0), 0)
+          totalInvestors: investors.length,
+          activeInvestors: investors.filter((i) => i.activity_status === 'active' || i.activity_status === 'highly_active').length,
+          totalRaised: investors.reduce((sum: number, i) => sum + Number(i.total_invested || 0), 0)
         }
       }
     }), {
