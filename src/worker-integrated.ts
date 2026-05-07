@@ -8737,8 +8737,8 @@ pitchey_analytics_datapoints_per_minute 1250
       `, [userId]);
 
       // 1b. Time-filtered views/likes from event tables + fallback from cumulative counters
-      // TODO(catch-swallow): migrate to safeQuery
-      const periodMetricsResult = await this.db.query(`
+      type PeriodMetricsRow = { current_views: number; prev_views: number; current_likes: number; prev_likes: number; fallback_views: number; fallback_likes: number };
+      const periodMetricsQuery = await safeQuery<PeriodMetricsRow>(() => this.db.query(`
         SELECT
           (SELECT COUNT(*) FROM pitch_views pv JOIN pitches p ON pv.pitch_id = p.id
            WHERE (p.user_id = $1 OR p.creator_id = $1) AND pv.viewed_at >= NOW() - INTERVAL '${days} days') as current_views,
@@ -8752,7 +8752,8 @@ pitchey_analytics_datapoints_per_minute 1250
            WHERE (p.user_id = $1 OR p.creator_id = $1) AND p.created_at >= NOW() - INTERVAL '${days} days') as fallback_views,
           (SELECT COALESCE(SUM(p.like_count), 0) FROM pitches p
            WHERE (p.user_id = $1 OR p.creator_id = $1) AND p.created_at >= NOW() - INTERVAL '${days} days') as fallback_likes
-      `, [userId]).catch(() => [{ current_views: 0, prev_views: 0, current_likes: 0, prev_likes: 0, fallback_views: 0, fallback_likes: 0 }]);
+      `, [userId]), { fallback: [{ current_views: 0, prev_views: 0, current_likes: 0, prev_likes: 0, fallback_views: 0, fallback_likes: 0 }], context: 'worker.analytics.period-metrics' });
+      const periodMetricsResult = periodMetricsQuery.rows;
 
       // 2. Follower count — total + gained in current/previous period
       const followerResult = await this.db.query(`
@@ -8825,8 +8826,7 @@ pitchey_analytics_datapoints_per_minute 1250
       `, []);
 
       // 8. Views timeline from event table (for charts)
-      // TODO(catch-swallow): migrate to safeQuery
-      const viewsTimelineResult = await this.db.query(`
+      const viewsTimelineQuery = await safeQuery<Record<string, unknown>>(() => this.db.query(`
         SELECT DATE(pv.viewed_at) as date, COUNT(*) as views
         FROM pitch_views pv
         JOIN pitches p ON pv.pitch_id = p.id
@@ -8834,11 +8834,11 @@ pitchey_analytics_datapoints_per_minute 1250
           AND pv.viewed_at >= NOW() - INTERVAL '${days} days'
         GROUP BY DATE(pv.viewed_at)
         ORDER BY date ASC
-      `, [userId]).catch(() => []);
+      `, [userId]), { fallback: [], context: 'worker.analytics.views-timeline' });
+      const viewsTimelineResult = viewsTimelineQuery.rows;
 
       // 8b. Likes timeline from event table
-      // TODO(catch-swallow): migrate to safeQuery
-      const likesTimelineResult = await this.db.query(`
+      const likesTimelineQuery = await safeQuery<Record<string, unknown>>(() => this.db.query(`
         SELECT DATE(pl.created_at) as date, COUNT(*) as likes
         FROM pitch_likes pl
         JOIN pitches p ON pl.pitch_id = p.id
@@ -8846,11 +8846,11 @@ pitchey_analytics_datapoints_per_minute 1250
           AND pl.created_at >= NOW() - INTERVAL '${days} days'
         GROUP BY DATE(pl.created_at)
         ORDER BY date ASC
-      `, [userId]).catch(() => []);
+      `, [userId]), { fallback: [], context: 'worker.analytics.likes-timeline' });
+      const likesTimelineResult = likesTimelineQuery.rows;
 
       // 8c. Pitches created in period (for pitch count chart + fallback)
-      // TODO(catch-swallow): migrate to safeQuery
-      const pitchTimelineResult = await this.db.query(`
+      const pitchTimelineQuery = await safeQuery<Record<string, unknown>>(() => this.db.query(`
         SELECT
           p.id, p.title, p.genre,
           DATE(p.created_at) as created_date,
@@ -8860,11 +8860,11 @@ pitchey_analytics_datapoints_per_minute 1250
         WHERE (p.user_id = $1 OR p.creator_id = $1)
           AND p.created_at >= NOW() - INTERVAL '${days} days'
         ORDER BY p.created_at ASC
-      `, [userId]).catch(() => []);
+      `, [userId]), { fallback: [], context: 'worker.analytics.pitch-timeline' });
+      const pitchTimelineResult = pitchTimelineQuery.rows;
 
       // 9. Investments received over time
-      // TODO(catch-swallow): migrate to safeQuery
-      const investmentTimeSeriesResult = await this.db.query(`
+      const investmentTimeSeriesQuery = await safeQuery<Record<string, unknown>>(() => this.db.query(`
         SELECT
           DATE(i.created_at) as date,
           COUNT(*) as count,
@@ -8875,11 +8875,11 @@ pitchey_analytics_datapoints_per_minute 1250
           AND i.created_at >= NOW() - INTERVAL '${days} days'
         GROUP BY DATE(i.created_at)
         ORDER BY date ASC
-      `, [userId]).catch(() => []);
+      `, [userId]), { fallback: [], context: 'worker.analytics.investment-timeseries' });
+      const investmentTimeSeriesResult = investmentTimeSeriesQuery.rows;
 
       // 10. NDA requests over time (as engagement proxy)
-      // TODO(catch-swallow): migrate to safeQuery
-      const ndaTimelineResult = await this.db.query(`
+      const ndaTimelineQuery = await safeQuery<Record<string, unknown>>(() => this.db.query(`
         SELECT
           DATE(nr.created_at) as date,
           COUNT(*) as count
@@ -8889,7 +8889,8 @@ pitchey_analytics_datapoints_per_minute 1250
           AND nr.created_at >= NOW() - INTERVAL '${days} days'
         GROUP BY DATE(nr.created_at)
         ORDER BY date ASC
-      `, [userId]).catch(() => []);
+      `, [userId]), { fallback: [], context: 'worker.analytics.nda-timeline' });
+      const ndaTimelineResult = ndaTimelineQuery.rows;
 
       // Normalize any date value to YYYY-MM-DD string
       const toDateStr = (d: any): string => {
@@ -12042,9 +12043,8 @@ pitchey_analytics_datapoints_per_minute 1250
   private async getMarketTrends(request: Request): Promise<Response> {
     const builder = new ApiResponseBuilder(request);
     try {
-      const [trends, genreList, summary] = await Promise.all([
-        // TODO(catch-swallow): migrate to safeQuery
-        this.db.query(`
+      const [trendsQ, genreListQ, summaryQ] = await Promise.all([
+        safeQuery<Record<string, unknown>>(() => this.db.query(`
           SELECT p.genre, COUNT(i.*) as total_projects,
                  COALESCE(AVG(i.amount), 0) as avg_budget,
                  COALESCE(AVG(i.roi_percentage), 0) as avg_roi,
@@ -12055,28 +12055,32 @@ pitchey_analytics_datapoints_per_minute 1250
           LEFT JOIN investments i ON i.pitch_id = p.id
           WHERE p.genre IS NOT NULL
           GROUP BY p.genre ORDER BY total_projects DESC LIMIT 10
-        `).catch(() => []),
-        // TODO(catch-swallow): migrate to safeQuery
-        this.db.query(`SELECT DISTINCT genre FROM pitches WHERE genre IS NOT NULL ORDER BY genre`).catch(() => []),
-        // TODO(catch-swallow): migrate to safeQuery
-        this.db.query(`
+        `), { fallback: [], context: 'worker.market.trends' }),
+        safeQuery<{ genre: string }>(
+          () => this.db.query(`SELECT DISTINCT genre FROM pitches WHERE genre IS NOT NULL ORDER BY genre`),
+          { fallback: [], context: 'worker.market.genres' }
+        ),
+        safeQuery<{ total_opportunities: number; top_genre: string }>(() => this.db.query(`
           SELECT COUNT(*) as total_opportunities,
                  (SELECT genre FROM pitches GROUP BY genre ORDER BY COUNT(*) DESC LIMIT 1) as top_genre
           FROM pitches WHERE status = 'published'
-        `).catch(() => [{ total_opportunities: 0, top_genre: 'N/A' }])
+        `), { fallback: [{ total_opportunities: 0, top_genre: 'N/A' }], context: 'worker.market.summary' })
       ]);
+      const trends = trendsQ.rows;
+      const genreList = genreListQ.rows;
+      const summary = summaryQ.rows;
 
-      const s = summary[0] || {};
+      const s = summary[0] || ({} as { total_opportunities?: number; top_genre?: string });
       return builder.success({
-        trends: (trends || []).map((t: any) => ({
+        trends: trends.map((t) => ({
           date: new Date().toISOString(), genre: t.genre,
           avgBudget: parseFloat(String(t.avg_budget || '0')), avgROI: parseFloat(parseFloat(String(t.avg_roi || '0')).toFixed(2)),
           totalProjects: parseInt(String(t.total_projects || '0'), 10), successRate: parseFloat(parseFloat(String(t.success_rate || '0')).toFixed(2))
         })),
-        genres: (genreList || []).map((g: any) => g.genre),
+        genres: genreList.map((g) => g.genre),
         summary: {
           totalInvestmentOpportunities: parseInt(String(s.total_opportunities || '0'), 10),
-          avgSuccessRate: (trends || []).length > 0 ? parseFloat(((trends as any[]).reduce((acc: number, t: any) => acc + parseFloat(String(t.success_rate || '0')), 0) / (trends as any[]).length).toFixed(2)) : 0,
+          avgSuccessRate: trends.length > 0 ? parseFloat((trends.reduce((acc: number, t) => acc + parseFloat(String(t.success_rate || '0')), 0) / trends.length).toFixed(2)) : 0,
           topPerformingGenre: s.top_genre || 'N/A',
           marketGrowth: 0
         }
@@ -12089,8 +12093,7 @@ pitchey_analytics_datapoints_per_minute 1250
   private async getGenrePerformance(request: Request): Promise<Response> {
     const builder = new ApiResponseBuilder(request);
     try {
-      // TODO(catch-swallow): migrate to safeQuery
-      const genres = await this.db.query(`
+      const genresQuery = await safeQuery<Record<string, unknown>>(() => this.db.query(`
         SELECT p.genre,
                COALESCE(AVG(i.roi_percentage), 0) as avg_roi,
                COUNT(DISTINCT p.id) as total_projects,
@@ -12102,9 +12105,10 @@ pitchey_analytics_datapoints_per_minute 1250
         LEFT JOIN investments i ON i.pitch_id = p.id
         WHERE p.genre IS NOT NULL
         GROUP BY p.genre ORDER BY total_projects DESC
-      `).catch(() => []);
+      `), { fallback: [], context: 'worker.genre-performance' });
+      const genres = genresQuery.rows;
 
-      return builder.success({ genres: (genres || []).map((g: any) => ({
+      return builder.success({ genres: genres.map((g) => ({
         genre: g.genre, avg_roi: parseFloat(parseFloat(String(g.avg_roi || '0')).toFixed(2)),
         total_projects: parseInt(String(g.total_projects || '0'), 10),
         avg_budget: parseFloat(String(g.avg_budget || '0')),
@@ -12119,8 +12123,7 @@ pitchey_analytics_datapoints_per_minute 1250
     const builder = new ApiResponseBuilder(request);
     try {
       // Monthly pitch creation + investment trends over the last 12 months
-      // TODO(catch-swallow): migrate to safeQuery
-      const trends = await this.db.query(`
+      const trendsQuery = await safeQuery<Record<string, unknown>>(() => this.db.query(`
         SELECT
           TO_CHAR(date_trunc('month', p.created_at), 'YYYY-MM') as month,
           COUNT(*)::int as pitches_created,
@@ -12135,9 +12138,10 @@ pitchey_analytics_datapoints_per_minute 1250
         WHERE p.created_at >= NOW() - INTERVAL '12 months'
         GROUP BY date_trunc('month', p.created_at)
         ORDER BY month
-      `).catch(() => []);
+      `), { fallback: [], context: 'worker.market-forecast' });
+      const trends = trendsQuery.rows;
 
-      return builder.success({ forecast: trends.map((t: any) => ({
+      return builder.success({ forecast: trends.map((t) => ({
         month: t.month,
         pitchesCreated: parseInt(String(t.pitches_created || '0'), 10),
         totalInvested: parseFloat(String(t.total_invested || '0')),
@@ -12724,31 +12728,25 @@ pitchey_analytics_datapoints_per_minute 1250
 
     try {
       // Fetch multiple data sources in parallel
-      const [notifications, unreadCount, dashboardStats, presenceUsers, recentMessages] = await Promise.all([
-        // Get recent notifications
-        // TODO(catch-swallow): migrate to safeQuery
-        this.db.query(`
+      const [notificationsQ, unreadCountQ, dashboardStats, presenceUsersQ, recentMessagesQ] = await Promise.all([
+        safeQuery<Record<string, unknown>>(() => this.db.query(`
           SELECT id, type, title, message, created_at, is_read
           FROM notifications
           WHERE user_id = $1
           ORDER BY created_at DESC
           LIMIT 10
-        `, [authResult.user.id]).catch(() => []),
+        `, [authResult.user.id]), { fallback: [], context: 'worker.poll-all.notifications' }),
 
-        // Get unread notification count
-        // TODO(catch-swallow): migrate to safeQuery
-        this.db.query(`
+        safeQuery<{ count: number }>(() => this.db.query(`
           SELECT COUNT(*) as count
           FROM notifications
           WHERE user_id = $1 AND is_read = false
-        `, [authResult.user.id]).then(([result]) => result?.count || 0).catch(() => 0),
+        `, [authResult.user.id]), { fallback: [{ count: 0 }], context: 'worker.poll-all.unread-count' }),
 
         // Get basic dashboard stats based on user type
         this.getDashboardStatsForUser(authResult.user),
 
-        // Get online users
-        // TODO(catch-swallow): migrate to safeQuery
-        this.db.query(`
+        safeQuery<Record<string, unknown>>(() => this.db.query(`
           SELECT
             up.user_id as "userId",
             COALESCE(u.name, u.username, u.email) as username,
@@ -12760,11 +12758,9 @@ pitchey_analytics_datapoints_per_minute 1250
           WHERE up.updated_at > NOW() - INTERVAL '5 minutes'
             AND up.status != 'offline'
           ORDER BY up.updated_at DESC
-        `).catch(() => []),
+        `), { fallback: [], context: 'worker.poll-all.presence' }),
 
-        // Get recent unread messages
-        // TODO(catch-swallow): migrate to safeQuery
-        this.db.query(`
+        safeQuery<Record<string, unknown>>(() => this.db.query(`
           SELECT m.id, m.sender_id, m.content, m.created_at,
                  COALESCE(u.name, u.username, u.email) as sender_name
           FROM messages m
@@ -12772,11 +12768,15 @@ pitchey_analytics_datapoints_per_minute 1250
           WHERE m.recipient_id = $1 AND m.read_at IS NULL
           ORDER BY m.created_at DESC
           LIMIT 5
-        `, [authResult.user.id]).catch(() => [])
+        `, [authResult.user.id]), { fallback: [], context: 'worker.poll-all.unread-messages' })
       ]);
+      const notifications = notificationsQ.rows;
+      const unreadCount = unreadCountQ.rows[0]?.count || 0;
+      const presenceUsers = presenceUsersQ.rows;
+      const recentMessages = recentMessagesQ.rows;
 
       // Determine next poll interval based on activity
-      const hasNewNotifications = notifications.length > 0 && notifications.some((n: any) => !n.is_read);
+      const hasNewNotifications = notifications.length > 0 && notifications.some((n) => !n.is_read);
       const nextPollIn = hasNewNotifications ? 15000 : 30000; // 15s if new notifications, 30s otherwise
 
       return builder.success({
@@ -12870,38 +12870,38 @@ pitchey_analytics_datapoints_per_minute 1250
 
     try {
       // Fetch real analytics data in parallel (each query resilient to missing tables)
-      const [activeUsers, viewsLastHour, newPitchesToday, investmentsToday, trendingGenres] = await Promise.all([
-        // TODO(catch-swallow): migrate to safeQuery
-        this.db.query(`
+      const [activeUsersQ, viewsLastHourQ, newPitchesTodayQ, investmentsTodayQ, trendingGenresQ] = await Promise.all([
+        safeQuery<{ count: number }>(() => this.db.query(`
           SELECT COUNT(*) as count FROM user_presence
           WHERE updated_at > NOW() - INTERVAL '5 minutes' AND status != 'offline'
-        `).then(([r]) => this.safeParseInt(r?.count)).catch(() => 0),
+        `), { fallback: [{ count: 0 }], context: 'worker.realtime.active-users' }),
 
-        // TODO(catch-swallow): migrate to safeQuery
-        this.db.query(`
+        safeQuery<{ total: number }>(() => this.db.query(`
           SELECT COALESCE(SUM(views), 0) as total FROM pitch_analytics
           WHERE date = CURRENT_DATE
-        `).then(([r]) => this.safeParseInt(r?.total)).catch(() => 0),
+        `), { fallback: [{ total: 0 }], context: 'worker.realtime.views-last-hour' }),
 
-        // TODO(catch-swallow): migrate to safeQuery
-        this.db.query(`
+        safeQuery<{ count: number }>(() => this.db.query(`
           SELECT COUNT(*) as count FROM pitches
           WHERE created_at >= CURRENT_DATE
-        `).then(([r]) => this.safeParseInt(r?.count)).catch(() => 0),
+        `), { fallback: [{ count: 0 }], context: 'worker.realtime.new-pitches-today' }),
 
-        // TODO(catch-swallow): migrate to safeQuery
-        this.db.query(`
+        safeQuery<{ count: number }>(() => this.db.query(`
           SELECT COUNT(*) as count FROM investments
           WHERE created_at >= CURRENT_DATE
-        `).then(([r]) => this.safeParseInt(r?.count)).catch(() => 0),
+        `), { fallback: [{ count: 0 }], context: 'worker.realtime.investments-today' }),
 
-        // TODO(catch-swallow): migrate to safeQuery
-        this.db.query(`
+        safeQuery<{ genre: string }>(() => this.db.query(`
           SELECT genre, COUNT(*) as count FROM pitches
           WHERE status = 'published' AND genre IS NOT NULL
           GROUP BY genre ORDER BY count DESC LIMIT 3
-        `).then(rows => rows.map((r: any) => r.genre)).catch(() => ['Action', 'Drama', 'Comedy'])
+        `), { fallback: [{ genre: 'Action' }, { genre: 'Drama' }, { genre: 'Comedy' }], context: 'worker.realtime.trending-genres' })
       ]);
+      const activeUsers = this.safeParseInt(activeUsersQ.rows[0]?.count);
+      const viewsLastHour = this.safeParseInt(viewsLastHourQ.rows[0]?.total);
+      const newPitchesToday = this.safeParseInt(newPitchesTodayQ.rows[0]?.count);
+      const investmentsToday = this.safeParseInt(investmentsTodayQ.rows[0]?.count);
+      const trendingGenres = trendingGenresQ.rows.map((r) => r.genre);
 
       const analytics = {
         active_users: activeUsers,
@@ -13022,13 +13022,15 @@ pitchey_analytics_datapoints_per_minute 1250
 
     const builder = new ApiResponseBuilder(request);
     try {
-      // TODO(catch-swallow): migrate to safeQuery
-      const reports = await this.db.query(`
-        SELECT id, report_type, frequency, filters, next_run, created_at
-        FROM scheduled_reports WHERE user_id = $1 ORDER BY created_at DESC
-      `, [authResult.user!.id]).catch(() => []);
+      const reportsQuery = await safeQuery<Record<string, unknown>>(
+        () => this.db.query(`
+          SELECT id, report_type, frequency, filters, next_run, created_at
+          FROM scheduled_reports WHERE user_id = $1 ORDER BY created_at DESC
+        `, [authResult.user!.id]),
+        { fallback: [], context: 'worker.scheduled-reports.list' }
+      );
 
-      return builder.success({ success: true, reports });
+      return builder.success({ success: true, reports: reportsQuery.rows });
     } catch (error) {
       return builder.success({ success: true, reports: [] });
     }
@@ -13060,14 +13062,16 @@ pitchey_analytics_datapoints_per_minute 1250
     const limit = parseInt(url.searchParams.get('limit') || '10', 10);
 
     try {
-      // TODO(catch-swallow): migrate to safeQuery
-      const history = await this.db.query(`
-        SELECT id, query, filters, results_count, created_at
-        FROM search_history WHERE user_id = $1
-        ORDER BY created_at DESC LIMIT $2
-      `, [authResult.user!.id, limit]).catch(() => []);
+      const historyQuery = await safeQuery<Record<string, unknown>>(
+        () => this.db.query(`
+          SELECT id, query, filters, results_count, created_at
+          FROM search_history WHERE user_id = $1
+          ORDER BY created_at DESC LIMIT $2
+        `, [authResult.user!.id, limit]),
+        { fallback: [], context: 'worker.search.history' }
+      );
 
-      return builder.success({ searchHistory: history });
+      return builder.success({ searchHistory: historyQuery.rows });
     } catch (error) {
       return builder.success({ searchHistory: [] });
     }
@@ -13105,8 +13109,7 @@ pitchey_analytics_datapoints_per_minute 1250
   private async handleBrowseGenres(request: Request): Promise<Response> {
     const builder = new ApiResponseBuilder(request);
     try {
-      // TODO(catch-swallow): migrate to safeQuery
-      const genres = await this.db.query(`
+      const genresQuery = await safeQuery<Record<string, unknown>>(() => this.db.query(`
         SELECT genre, COUNT(*) as pitch_count,
                COALESCE(AVG(
                  (SELECT COUNT(*) FROM views WHERE views.pitch_id = p.id)
@@ -13114,9 +13117,9 @@ pitchey_analytics_datapoints_per_minute 1250
         FROM pitches p
         WHERE status = 'published' AND genre IS NOT NULL
         GROUP BY genre ORDER BY pitch_count DESC
-      `).catch(() => []);
+      `), { fallback: [], context: 'worker.browse.genres' });
 
-      return new Response(JSON.stringify({ genres: genres || [] }), {
+      return new Response(JSON.stringify({ genres: genresQuery.rows }), {
         headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request.headers.get('Origin')) },
         status: 200
       });
@@ -13158,9 +13161,8 @@ pitchey_analytics_datapoints_per_minute 1250
         queryParams.push(genre);
       }
 
-      const [pitches, countResult] = await Promise.all([
-        // TODO(catch-swallow): migrate to safeQuery
-        this.db.query(`
+      const [pitchesQ, countResultQ] = await Promise.all([
+        safeQuery<Record<string, unknown>>(() => this.db.query(`
           SELECT p.id, p.title, p.genre, p.logline, p.title_image, p.created_at,
                  COALESCE(u.name, u.first_name || ' ' || u.last_name) as creator_name,
                  COALESCE(p.view_count, 0) as view_count,
@@ -13170,12 +13172,15 @@ pitchey_analytics_datapoints_per_minute 1250
           ${whereClause}
           ORDER BY like_count DESC, view_count DESC
           LIMIT $${paramIdx++} OFFSET $${paramIdx++}
-        `, [...queryParams, limit, offset]).catch(() => []),
-        // TODO(catch-swallow): migrate to safeQuery
-        this.db.query(`SELECT COUNT(*) as total FROM pitches p ${whereClause}`, queryParams).catch(() => [{ total: 0 }])
+        `, [...queryParams, limit, offset]), { fallback: [], context: 'worker.browse.top-rated.list' }),
+        safeQuery<{ total: number }>(
+          () => this.db.query(`SELECT COUNT(*) as total FROM pitches p ${whereClause}`, queryParams),
+          { fallback: [{ total: 0 }], context: 'worker.browse.top-rated.count' }
+        )
       ]);
+      const pitches = pitchesQ.rows;
 
-      const total = parseInt(String(countResult[0]?.total || '0'), 10);
+      const total = parseInt(String(countResultQ.rows[0]?.total || '0'), 10);
       const responseBody = JSON.stringify({ items: pitches, total, totalPages: Math.ceil(total / limit) });
 
       // Cache the result for 5 minutes
@@ -13195,18 +13200,18 @@ pitchey_analytics_datapoints_per_minute 1250
 
   private async handleBrowseTopRatedStats(request: Request): Promise<Response> {
     try {
-      const [statsResult] = await Promise.all([
-        // TODO(catch-swallow): migrate to safeQuery
-        this.db.query(`
+      type TopRatedStatsRow = { total_rated: number; avg_rating: number; genre_count: number };
+      const [statsQuery] = await Promise.all([
+        safeQuery<TopRatedStatsRow>(() => this.db.query(`
           SELECT
             COUNT(*) as total_rated,
             COALESCE(AVG(p.like_count), 0) as avg_rating,
             COUNT(DISTINCT genre) as genre_count
           FROM pitches p WHERE status = 'published'
-        `).catch(() => [{ total_rated: 0, avg_rating: 0, genre_count: 0 }])
+        `), { fallback: [{ total_rated: 0, avg_rating: 0, genre_count: 0 }], context: 'worker.browse.top-rated.stats' })
       ]);
 
-      const stats = statsResult[0] || { total_rated: 0, avg_rating: 0, genre_count: 0 };
+      const stats = statsQuery.rows[0] || { total_rated: 0, avg_rating: 0, genre_count: 0 };
       return new Response(JSON.stringify({
         stats: {
           totalRated: parseInt(String(stats.total_rated || '0'), 10),
@@ -13278,17 +13283,21 @@ pitchey_analytics_datapoints_per_minute 1250
       // Generate CSV export based on type
       let csvContent = '';
       if (exportType === 'pitches') {
-        // TODO(catch-swallow): migrate to safeQuery
-        const pitches = await this.db.query(`
-          SELECT id, title, genre, status, created_at FROM pitches WHERE user_id = $1 ORDER BY created_at DESC
-        `, [authResult.user!.id]).catch(() => []);
-        csvContent = 'ID,Title,Genre,Status,Created\n' + pitches.map((p: any) => `${p.id},"${p.title}",${p.genre},${p.status},${p.created_at}`).join('\n');
+        const pitchesQuery = await safeQuery<Record<string, unknown>>(
+          () => this.db.query(`
+            SELECT id, title, genre, status, created_at FROM pitches WHERE user_id = $1 ORDER BY created_at DESC
+          `, [authResult.user!.id]),
+          { fallback: [], context: 'worker.export.pitches' }
+        );
+        csvContent = 'ID,Title,Genre,Status,Created\n' + pitchesQuery.rows.map((p) => `${p.id},"${p.title}",${p.genre},${p.status},${p.created_at}`).join('\n');
       } else if (exportType === 'analytics') {
-        // TODO(catch-swallow): migrate to safeQuery
-        const analytics = await this.db.query(`
-          SELECT pa.date, pa.views, pa.likes FROM pitch_analytics pa JOIN pitches p ON pa.pitch_id = p.id WHERE p.user_id = $1 ORDER BY pa.date DESC LIMIT 90
-        `, [authResult.user!.id]).catch(() => []);
-        csvContent = 'Date,Views,Likes\n' + analytics.map((a: any) => `${a.date},${a.views},${a.likes}`).join('\n');
+        const analyticsQuery = await safeQuery<Record<string, unknown>>(
+          () => this.db.query(`
+            SELECT pa.date, pa.views, pa.likes FROM pitch_analytics pa JOIN pitches p ON pa.pitch_id = p.id WHERE p.user_id = $1 ORDER BY pa.date DESC LIMIT 90
+          `, [authResult.user!.id]),
+          { fallback: [], context: 'worker.export.analytics' }
+        );
+        csvContent = 'Date,Views,Likes\n' + analyticsQuery.rows.map((a) => `${a.date},${a.views},${a.likes}`).join('\n');
       } else {
         csvContent = 'Export type not supported';
       }
@@ -13336,10 +13345,13 @@ pitchey_analytics_datapoints_per_minute 1250
 
     const builder = new ApiResponseBuilder(request);
     try {
-      // TODO(catch-swallow): migrate to safeQuery
-      const user = await this.db.query(`
-        SELECT verification_status, company_name FROM users WHERE id = $1
-      `, [authResult.user!.id]).catch(() => []);
+      const userQuery = await safeQuery<{ verification_status: string | null; company_name: string | null }>(
+        () => this.db.query(`
+          SELECT verification_status, company_name FROM users WHERE id = $1
+        `, [authResult.user!.id]),
+        { fallback: [], context: 'worker.company-verify.status' }
+      );
+      const user = userQuery.rows;
 
       return builder.success({
         verified: user[0]?.verification_status === 'verified',
@@ -13375,24 +13387,22 @@ pitchey_analytics_datapoints_per_minute 1250
 
     const builder = new ApiResponseBuilder(request);
     try {
-      const [incoming, outgoing] = await Promise.all([
-        // TODO(catch-swallow): migrate to safeQuery
-        this.db.query(`
+      const [incomingQ, outgoingQ] = await Promise.all([
+        safeQuery<Record<string, unknown>>(() => this.db.query(`
           SELECT ir.*, COALESCE(u.name, u.first_name || ' ' || u.last_name) as requester_name
           FROM info_requests ir
           LEFT JOIN users u ON ir.requester_id = u.id
           WHERE ir.target_user_id = $1 ORDER BY ir.created_at DESC
-        `, [authResult.user!.id]).catch(() => []),
-        // TODO(catch-swallow): migrate to safeQuery
-        this.db.query(`
+        `, [authResult.user!.id]), { fallback: [], context: 'worker.info-requests.incoming' }),
+        safeQuery<Record<string, unknown>>(() => this.db.query(`
           SELECT ir.*, COALESCE(u.name, u.first_name || ' ' || u.last_name) as target_name
           FROM info_requests ir
           LEFT JOIN users u ON ir.target_user_id = u.id
           WHERE ir.requester_id = $1 ORDER BY ir.created_at DESC
-        `, [authResult.user!.id]).catch(() => [])
+        `, [authResult.user!.id]), { fallback: [], context: 'worker.info-requests.outgoing' })
       ]);
 
-      return builder.success({ incoming, outgoing });
+      return builder.success({ incoming: incomingQ.rows, outgoing: outgoingQ.rows });
     } catch (error) {
       return builder.success({ incoming: [], outgoing: [] });
     }
@@ -15484,10 +15494,12 @@ pitchey_analytics_datapoints_per_minute 1250
       const ndaId = parseInt(url.pathname.split('/')[3]);
 
       // Try to find the NDA document in R2
-      // TODO(catch-swallow): migrate to safeQuery
-      const ndaDoc = await this.db.query(`SELECT document_url FROM ndas WHERE id = $1`, [ndaId]).catch(() => []);
-      if (ndaDoc[0]?.document_url) {
-        return this.jsonResponse({ success: true, data: { downloadUrl: ndaDoc[0].document_url, message: 'NDA document ready for download' }});
+      const ndaDocQuery = await safeQuery<{ document_url: string | null }>(
+        () => this.db.query(`SELECT document_url FROM ndas WHERE id = $1`, [ndaId]),
+        { fallback: [], context: 'worker.nda.download' }
+      );
+      if (ndaDocQuery.rows[0]?.document_url) {
+        return this.jsonResponse({ success: true, data: { downloadUrl: ndaDocQuery.rows[0].document_url, message: 'NDA document ready for download' }});
       }
       return this.jsonResponse({ success: false, error: { message: 'NDA document not yet generated. Please sign the NDA first.' }}, 404);
 
@@ -15507,10 +15519,12 @@ pitchey_analytics_datapoints_per_minute 1250
       const url = new URL(request.url);
       const ndaId = parseInt(url.pathname.split('/')[3]);
 
-      // TODO(catch-swallow): migrate to safeQuery
-      const ndaDoc = await this.db.query(`SELECT signed_document_url FROM ndas WHERE id = $1`, [ndaId]).catch(() => []);
-      if (ndaDoc[0]?.signed_document_url) {
-        return this.jsonResponse({ success: true, data: { downloadUrl: ndaDoc[0].signed_document_url, message: 'Signed NDA document ready for download' }});
+      const ndaDocQuery = await safeQuery<{ signed_document_url: string | null }>(
+        () => this.db.query(`SELECT signed_document_url FROM ndas WHERE id = $1`, [ndaId]),
+        { fallback: [], context: 'worker.nda.download-signed' }
+      );
+      if (ndaDocQuery.rows[0]?.signed_document_url) {
+        return this.jsonResponse({ success: true, data: { downloadUrl: ndaDocQuery.rows[0].signed_document_url, message: 'Signed NDA document ready for download' }});
       }
       return this.jsonResponse({ success: false, error: { message: 'Signed NDA document not available.' }}, 404);
 
@@ -18018,43 +18032,52 @@ Signatures: [To be completed upon signing]
         );
 
         // Top pitches by views
-        // TODO(catch-swallow): migrate to safeQuery
-        const topPitchesRes = await this.db.query(
-          `SELECT id, title, COALESCE(view_count, 0) as views, COALESCE(like_count, 0) as likes
-           FROM pitches WHERE user_id = $1 AND status = 'published'
-           ORDER BY view_count DESC NULLS LAST LIMIT 5`,
-          [userId]
-        ).catch(() => []);
+        const topPitchesQuery = await safeQuery<Record<string, unknown>>(
+          () => this.db.query(
+            `SELECT id, title, COALESCE(view_count, 0) as views, COALESCE(like_count, 0) as likes
+             FROM pitches WHERE user_id = $1 AND status = 'published'
+             ORDER BY view_count DESC NULLS LAST LIMIT 5`,
+            [userId]
+          ),
+          { fallback: [], context: 'worker.creator-analytics.top-pitches' }
+        );
+        const topPitchesRes = topPitchesQuery.rows;
 
         // NDA counts
-        // TODO(catch-swallow): migrate to safeQuery
-        const ndaRes = await this.db.query(
-          `SELECT
-            COUNT(*) FILTER (WHERE nr.status = 'pending') as nda_requests,
-            COUNT(*) FILTER (WHERE nr.status = 'approved') as nda_signed
-           FROM nda_requests nr
-           JOIN pitches p ON nr.pitch_id = p.id
-           WHERE p.user_id = $1`,
-          [userId]
-        ).catch(() => [{ nda_requests: 0, nda_signed: 0 }]);
+        const ndaQuery = await safeQuery<{ nda_requests: number; nda_signed: number }>(
+          () => this.db.query(
+            `SELECT
+              COUNT(*) FILTER (WHERE nr.status = 'pending') as nda_requests,
+              COUNT(*) FILTER (WHERE nr.status = 'approved') as nda_signed
+             FROM nda_requests nr
+             JOIN pitches p ON nr.pitch_id = p.id
+             WHERE p.user_id = $1`,
+            [userId]
+          ),
+          { fallback: [{ nda_requests: 0, nda_signed: 0 }], context: 'worker.creator-analytics.nda-counts' }
+        );
+        const ndaRes = ndaQuery.rows;
 
         const stats = pitchStats[0] || {};
-        const ndas = ndaRes[0] || {};
+        const ndas = ndaRes[0] || { nda_requests: 0, nda_signed: 0 };
 
         // Audience breakdown from views table
-        // TODO(catch-swallow): migrate to safeQuery
-        const viewerTypesRes = await this.db.query(
-          `SELECT COALESCE(u.user_type, 'visitor') AS user_type, COUNT(*)::int AS count
-           FROM views v
-           JOIN pitches p ON p.id = v.pitch_id
-           LEFT JOIN users u ON u.id = v.viewer_id
-           WHERE p.user_id = $1 AND v.viewer_id IS DISTINCT FROM $1
-           GROUP BY u.user_type`,
-          [userId]
-        ).catch(() => []);
+        const viewerTypesQuery = await safeQuery<{ user_type: string | null; count: number }>(
+          () => this.db.query(
+            `SELECT COALESCE(u.user_type, 'visitor') AS user_type, COUNT(*)::int AS count
+             FROM views v
+             JOIN pitches p ON p.id = v.pitch_id
+             LEFT JOIN users u ON u.id = v.viewer_id
+             WHERE p.user_id = $1 AND v.viewer_id IS DISTINCT FROM $1
+             GROUP BY u.user_type`,
+            [userId]
+          ),
+          { fallback: [], context: 'worker.creator-analytics.viewer-types' }
+        );
+        const viewerTypesRes = viewerTypesQuery.rows;
 
-        const viewerTotal = viewerTypesRes.reduce((sum: number, r: any) => sum + Number(r.count), 0);
-        const audienceBreakdown = viewerTypesRes.map((r: any) => ({
+        const viewerTotal = viewerTypesRes.reduce((sum: number, r) => sum + Number(r.count), 0);
+        const audienceBreakdown = viewerTypesRes.map((r) => ({
           userType: r.user_type || 'visitor',
           count: Number(r.count),
           percentage: viewerTotal > 0 ? Math.round((Number(r.count) / viewerTotal) * 100) : 0
