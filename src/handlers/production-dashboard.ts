@@ -5,6 +5,7 @@
 
 import { neon } from '@neondatabase/serverless';
 import type { Env } from '../db/connection';
+import { safeQuery } from '../db/safe-query';
 import * as pitchQueries from '../db/queries/pitches';
 import * as userQueries from '../db/queries/users';
 import * as investmentQueries from '../db/queries/investments';
@@ -117,16 +118,15 @@ export async function productionDashboardHandler(request: Request, env: Env) {
 
     const sql = neon(env.DATABASE_URL);
 
-    // Check if production_pipeline table exists
-    // TODO(catch-swallow): migrate to safeQuery
-    const tableCheck = await sql`
+    // Check if production_pipeline table exists — schema probe; don't report to Sentry
+    const tableCheck = await safeQuery<{ exists: boolean }>(() => sql`
       SELECT EXISTS (
         SELECT FROM information_schema.tables
         WHERE table_schema = 'public' AND table_name = 'production_pipeline'
       ) as exists
-    `.catch(() => [{ exists: false }]);
+    `, { fallback: [{ exists: false }], context: 'production-dashboard.overview.table-probe.pipeline', report: false });
 
-    if (!tableCheck[0]?.exists) {
+    if (!tableCheck.rows[0]?.exists) {
       // Return empty dashboard if tables don't exist yet
       return new Response(JSON.stringify(emptyDashboard), {
         status: 200,
@@ -135,8 +135,8 @@ export async function productionDashboardHandler(request: Request, env: Env) {
     }
 
     // Get active projects in pipeline
-    // TODO(catch-swallow): migrate to safeQuery
-    const activeProjects = await sql`
+    type ActiveProjectsRow = typeof emptyDashboard.dashboard.activeProjects;
+    const activeProjectsResult = await safeQuery<ActiveProjectsRow>(() => sql`
       SELECT
         COUNT(DISTINCT pp.id) as total_projects,
         COUNT(CASE WHEN pp.stage = 'pre_production' THEN 1 END) as pre_production,
@@ -147,21 +147,21 @@ export async function productionDashboardHandler(request: Request, env: Env) {
       FROM production_pipeline pp
       WHERE pp.production_company_id::text = ${user.id}::text
         AND pp.status = 'active'
-    `.catch(() => [emptyDashboard.dashboard.activeProjects]);
+    `, { fallback: [emptyDashboard.dashboard.activeProjects], context: 'production-dashboard.overview.active-projects' });
+    const activeProjects = activeProjectsResult.rows;
 
-    // Check if production_talent table exists
-    // TODO(catch-swallow): migrate to safeQuery
-    const talentTableCheck = await sql`
+    // Check if production_talent table exists — schema probe; don't report to Sentry
+    const talentTableCheck = await safeQuery<{ exists: boolean }>(() => sql`
       SELECT EXISTS (
         SELECT FROM information_schema.tables
         WHERE table_schema = 'public' AND table_name = 'production_talent'
       ) as exists
-    `.catch(() => [{ exists: false }]);
+    `, { fallback: [{ exists: false }], context: 'production-dashboard.overview.table-probe.talent', report: false });
 
-    let talentStats = [emptyDashboard.dashboard.talentStats];
-    if (talentTableCheck[0]?.exists) {
-      // TODO(catch-swallow): migrate to safeQuery
-      talentStats = (await sql`
+    type TalentStatsRow = typeof emptyDashboard.dashboard.talentStats;
+    let talentStats: TalentStatsRow[] = [emptyDashboard.dashboard.talentStats];
+    if (talentTableCheck.rows[0]?.exists) {
+      const talentStatsResult = await safeQuery<TalentStatsRow>(() => sql`
         SELECT
           COUNT(DISTINCT talent_id) as total_talent,
           COUNT(CASE WHEN status = 'available' THEN 1 END) as available,
@@ -169,12 +169,12 @@ export async function productionDashboardHandler(request: Request, env: Env) {
           COALESCE(AVG(rating), 0) as avg_rating
         FROM production_talent
         WHERE production_company_id::text = ${user.id}::text
-      `.catch(() => [emptyDashboard.dashboard.talentStats])) as { total_talent: number; available: number; contracted: number; avg_rating: number; }[];
+      `, { fallback: [emptyDashboard.dashboard.talentStats], context: 'production-dashboard.overview.talent-stats' });
+      talentStats = talentStatsResult.rows;
     }
 
     // Get upcoming deadlines
-    // TODO(catch-swallow): migrate to safeQuery
-    const upcomingDeadlines = await sql`
+    const upcomingDeadlinesResult = await safeQuery<Record<string, unknown>>(() => sql`
       SELECT
         pp.title,
         pp.stage,
@@ -187,11 +187,12 @@ export async function productionDashboardHandler(request: Request, env: Env) {
         AND pp.milestone_date > NOW()
       ORDER BY pp.milestone_date ASC
       LIMIT 5
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-dashboard.overview.upcoming-deadlines' });
+    const upcomingDeadlines = upcomingDeadlinesResult.rows;
 
     // Get budget overview
-    // TODO(catch-swallow): migrate to safeQuery
-    const budgetOverview = await sql`
+    type BudgetOverviewRow = typeof emptyDashboard.dashboard.budgetOverview;
+    const budgetOverviewResult = await safeQuery<BudgetOverviewRow>(() => sql`
       SELECT
         COALESCE(SUM(budget_allocated), 0) as total_allocated,
         COALESCE(SUM(budget_spent), 0) as total_spent,
@@ -202,21 +203,20 @@ export async function productionDashboardHandler(request: Request, env: Env) {
       FROM production_pipeline
       WHERE production_company_id::text = ${user.id}::text
         AND status IN ('active', 'completed')
-    `.catch(() => [emptyDashboard.dashboard.budgetOverview]);
+    `, { fallback: [emptyDashboard.dashboard.budgetOverview], context: 'production-dashboard.overview.budget-overview' });
+    const budgetOverview = budgetOverviewResult.rows;
 
-    // Check if crew_assignments table exists
-    // TODO(catch-swallow): migrate to safeQuery
-    const crewTableCheck = await sql`
+    // Check if crew_assignments table exists — schema probe; don't report to Sentry
+    const crewTableCheck = await safeQuery<{ exists: boolean }>(() => sql`
       SELECT EXISTS (
         SELECT FROM information_schema.tables
         WHERE table_schema = 'public' AND table_name = 'crew_assignments'
       ) as exists
-    `.catch(() => [{ exists: false }]);
+    `, { fallback: [{ exists: false }], context: 'production-dashboard.overview.table-probe.crew', report: false });
 
-    let recentAssignments: any[] = [];
-    if (crewTableCheck[0]?.exists) {
-      // TODO(catch-swallow): migrate to safeQuery
-      recentAssignments = await sql`
+    let recentAssignments: Record<string, unknown>[] = [];
+    if (crewTableCheck.rows[0]?.exists) {
+      const recentAssignmentsResult = await safeQuery<Record<string, unknown>>(() => sql`
         SELECT
           ca.id,
           ca.crew_member_name,
@@ -229,22 +229,21 @@ export async function productionDashboardHandler(request: Request, env: Env) {
         WHERE pp.production_company_id::text = ${user.id}::text
         ORDER BY ca.assigned_date DESC
         LIMIT 10
-      `.catch(() => []);
+      `, { fallback: [], context: 'production-dashboard.overview.recent-assignments' });
+      recentAssignments = recentAssignmentsResult.rows;
     }
 
-    // Check if location_scouts table exists
-    // TODO(catch-swallow): migrate to safeQuery
-    const locationTableCheck = await sql`
+    // Check if location_scouts table exists — schema probe; don't report to Sentry
+    const locationTableCheck = await safeQuery<{ exists: boolean }>(() => sql`
       SELECT EXISTS (
         SELECT FROM information_schema.tables
         WHERE table_schema = 'public' AND table_name = 'location_scouts'
       ) as exists
-    `.catch(() => [{ exists: false }]);
+    `, { fallback: [{ exists: false }], context: 'production-dashboard.overview.table-probe.locations', report: false });
 
-    let locationUpdates: any[] = [];
-    if (locationTableCheck[0]?.exists) {
-      // TODO(catch-swallow): migrate to safeQuery
-      locationUpdates = await sql`
+    let locationUpdates: Record<string, unknown>[] = [];
+    if (locationTableCheck.rows[0]?.exists) {
+      const locationUpdatesResult = await safeQuery<Record<string, unknown>>(() => sql`
         SELECT
           ls.id,
           ls.location_name,
@@ -258,7 +257,8 @@ export async function productionDashboardHandler(request: Request, env: Env) {
           AND ls.scouted_date > NOW() - INTERVAL '7 days'
         ORDER BY ls.scouted_date DESC
         LIMIT 5
-      `.catch(() => []);
+      `, { fallback: [], context: 'production-dashboard.overview.location-updates' });
+      locationUpdates = locationUpdatesResult.rows;
     }
 
     return new Response(JSON.stringify({

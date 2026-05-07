@@ -8,6 +8,7 @@ import { getDb } from '../db/connection';
 import type { Env } from '../db/connection';
 import { getCorsHeaders } from '../utils/response';
 import { getUserId } from '../utils/auth-extract';
+import { safeQuery } from '../db/safe-query';
 
 function jsonResponse(data: unknown, origin: string | null, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -46,15 +47,14 @@ export async function getProductionNotes(request: Request, env: Env): Promise<Re
   if (!sql) return jsonResponse({ success: true, data: { notes: [] } }, origin);
 
   try {
-    // TODO(catch-swallow): migrate to safeQuery
-    const notes = await sql`
+    const notesResult = await safeQuery(() => sql`
       SELECT id, content, category, author, shared, created_at, updated_at
       FROM production_notes
       WHERE user_id = ${Number(userId)} AND pitch_id = ${pitchId}
       ORDER BY created_at ASC
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-pitch-data.notes.list' });
 
-    return jsonResponse({ success: true, data: { notes } }, origin);
+    return jsonResponse({ success: true, data: { notes: notesResult.rows } }, origin);
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
     console.error('getProductionNotes error:', e.message);
@@ -160,13 +160,12 @@ export async function getProductionChecklist(request: Request, env: Env): Promis
   if (!sql) return jsonResponse({ success: true, data: { checklist: {} } }, origin);
 
   try {
-    // TODO(catch-swallow): migrate to safeQuery
-    const result = await sql`
+    const result = await safeQuery<{ checklist: Record<string, unknown> }>(() => sql`
       SELECT checklist FROM production_checklists
       WHERE user_id = ${Number(userId)} AND pitch_id = ${pitchId}
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-pitch-data.checklist.read' });
 
-    const checklist = result.length > 0 ? result[0].checklist : {};
+    const checklist = result.rows.length > 0 ? result.rows[0].checklist : {};
     return jsonResponse({ success: true, data: { checklist } }, origin);
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
@@ -232,13 +231,12 @@ export async function getProductionTeam(request: Request, env: Env): Promise<Res
   if (!sql) return jsonResponse({ success: true, data: { team: [] } }, origin);
 
   try {
-    // TODO(catch-swallow): migrate to safeQuery
-    const result = await sql`
+    const result = await safeQuery<{ team: unknown[] }>(() => sql`
       SELECT team FROM production_team_assignments
       WHERE user_id = ${Number(userId)} AND pitch_id = ${pitchId}
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-pitch-data.team.read' });
 
-    const team = result.length > 0 ? result[0].team : [];
+    const team = result.rows.length > 0 ? result.rows[0].team : [];
     return jsonResponse({ success: true, data: { team } }, origin);
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
@@ -361,8 +359,7 @@ export async function getCreatorPitchFeedback(request: Request, env: Env): Promi
     }
 
     // Fetch all shared notes from any production user, with author info
-    // TODO(catch-swallow): migrate to safeQuery
-    const feedback = await sql`
+    const feedbackResult = await safeQuery(() => sql`
       SELECT
         n.id, n.content, n.category, n.author, n.created_at,
         u.company_name,
@@ -372,9 +369,9 @@ export async function getCreatorPitchFeedback(request: Request, env: Env): Promi
       JOIN users u ON u.id = n.user_id
       WHERE n.pitch_id = ${pitchId} AND n.shared = true
       ORDER BY n.created_at DESC
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-pitch-data.creator-feedback' });
 
-    return jsonResponse({ success: true, data: { feedback } }, origin);
+    return jsonResponse({ success: true, data: { feedback: feedbackResult.rows } }, origin);
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
     console.error('getCreatorPitchFeedback error:', e.message);
