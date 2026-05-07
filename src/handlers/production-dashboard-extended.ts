@@ -7,6 +7,7 @@ import { getDb } from '../db/connection';
 import type { Env } from '../db/connection';
 import { getCorsHeaders } from '../utils/response';
 import { getUserId } from '../utils/auth-extract';
+import { safeQuery } from '../db/safe-query';
 
 function jsonResponse(data: unknown, origin: string | null, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -46,8 +47,7 @@ export async function productionTalentSearchHandler(request: Request, env: Env):
     const limit = Math.min(50, Math.max(1, Number(url.searchParams.get('limit')) || 20));
     const offset = Math.max(0, Number(url.searchParams.get('offset')) || 0);
 
-    // TODO(catch-swallow): migrate to safeQuery
-    const talent = await sql`
+    const talentResult = await safeQuery(() => sql`
       SELECT id, first_name, last_name, stage_name, talent_type,
              day_rate, currency, availability_status, location,
              rating, years_experience, credits_count, skills,
@@ -62,10 +62,9 @@ export async function productionTalentSearchHandler(request: Request, env: Env):
              OR stage_name ILIKE ${'%' + search + '%'})
       ORDER BY rating DESC NULLS LAST, created_at DESC
       LIMIT ${limit} OFFSET ${offset}
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-dashboard.talent.search.list' });
 
-    // TODO(catch-swallow): migrate to safeQuery
-    const countResult = await sql`
+    const countResult = await safeQuery<{ total: number }>(() => sql`
       SELECT COUNT(*)::int AS total FROM production_talent
       WHERE 1=1
         AND (${role} = '' OR talent_type = ${role})
@@ -74,11 +73,11 @@ export async function productionTalentSearchHandler(request: Request, env: Env):
         AND (${search} = '' OR first_name ILIKE ${'%' + search + '%'}
              OR last_name ILIKE ${'%' + search + '%'}
              OR stage_name ILIKE ${'%' + search + '%'})
-    `.catch(() => [{ total: 0 }]);
+    `, { fallback: [{ total: 0 }], context: 'production-dashboard.talent.search.count' });
 
     return jsonResponse({
       success: true,
-      data: { talent, total: countResult[0]?.total || 0 }
+      data: { talent: talentResult.rows, total: countResult.rows[0]?.total || 0 }
     }, origin);
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
@@ -100,19 +99,19 @@ export async function productionTalentDetailsHandler(request: Request, env: Env)
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
   try {
-    // TODO(catch-swallow): migrate to safeQuery
-    const result = await sql`
+    const result = await safeQuery(() => sql`
       SELECT t.*, u.email, u.name as user_name
       FROM production_talent t
       LEFT JOIN users u ON t.user_id = u.id
       WHERE t.id = ${talentId}
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-dashboard.talent.details' });
 
-    if (result.length === 0) {
+    if (!result.ok) return errorResponse('Failed to fetch talent details', origin, 500);
+    if (result.rows.length === 0) {
       return errorResponse('Talent not found', origin, 404);
     }
 
-    return jsonResponse({ success: true, data: { talent: result[0] } }, origin);
+    return jsonResponse({ success: true, data: { talent: result.rows[0] } }, origin);
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
     console.error('productionTalentDetailsHandler error:', e.message);
@@ -139,29 +138,29 @@ export async function productionTalentContactHandler(request: Request, env: Env)
     if (!message) return errorResponse('Message is required', origin);
 
     // Look up talent to find associated user_id
-    // TODO(catch-swallow): migrate to safeQuery
-    const talent = await sql`
+    const talentLookup = await safeQuery<{ user_id: number | null; first_name: string; last_name: string }>(() => sql`
       SELECT user_id, first_name, last_name FROM production_talent WHERE id = ${Number(talentId)}
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-dashboard.talent.contact.lookup' });
 
-    if (talent.length === 0) {
+    if (!talentLookup.ok) return errorResponse('Failed to contact talent', origin, 500);
+    if (talentLookup.rows.length === 0) {
       return errorResponse('Talent not found', origin, 404);
     }
 
-    // Insert notification for the talent's user if they have one
-    if (talent[0].user_id) {
-      // TODO(catch-swallow): migrate to safeQuery
-      await sql`
+    // Insert notification for the talent's user if they have one — best-effort
+    // (Sentry will report failure via safeQuery; the contact request itself still succeeds)
+    if (talentLookup.rows[0].user_id) {
+      await safeQuery(() => sql`
         INSERT INTO notifications (user_id, type, title, message, related_user_id, created_at)
         VALUES (
-          ${Number(talent[0].user_id)},
+          ${Number(talentLookup.rows[0].user_id)},
           'talent_contact',
           'Production Company Contact',
           ${message},
           ${Number(userId)},
           NOW()
         )
-      `.catch(() => []);
+      `, { fallback: [], context: 'production-dashboard.talent.contact.notify' });
     }
 
     return jsonResponse({ success: true, data: { contacted: true } }, origin);
@@ -189,8 +188,7 @@ export async function productionProjectDetailsHandler(request: Request, env: Env
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
   try {
-    // TODO(catch-swallow): migrate to safeQuery
-    const result = await sql`
+    const result = await safeQuery<Record<string, unknown>>(() => sql`
       SELECT pp.*,
              p.title AS pitch_title, p.genre, p.logline, p.format, p.estimated_budget,
              COALESCE(u.name, u.first_name || ' ' || u.last_name) AS creator_name
@@ -198,24 +196,24 @@ export async function productionProjectDetailsHandler(request: Request, env: Env
       LEFT JOIN pitches p ON pp.pitch_id = p.id
       LEFT JOIN users u ON p.user_id = u.id
       WHERE pp.id = ${projectId} AND pp.production_company_id = ${Number(userId)}
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-dashboard.project.details' });
 
-    if (result.length === 0) {
+    if (!result.ok) return errorResponse('Failed to fetch project details', origin, 500);
+    if (result.rows.length === 0) {
       return errorResponse('Project not found', origin, 404);
     }
 
-    // Fetch milestones for the project
-    // TODO(catch-swallow): migrate to safeQuery
-    const milestones = await sql`
+    // Fetch milestones for the project — non-critical; render project even if it fails
+    const milestonesResult = await safeQuery(() => sql`
       SELECT id, title, description, due_date, completed, completed_at
       FROM project_milestones
       WHERE project_id = ${projectId}
       ORDER BY due_date ASC NULLS LAST
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-dashboard.project.details.milestones' });
 
     return jsonResponse({
       success: true,
-      data: { project: { ...result[0], milestones } }
+      data: { project: { ...result.rows[0], milestones: milestonesResult.rows } }
     }, origin);
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
@@ -253,8 +251,7 @@ export async function productionProjectStatusHandler(request: Request, env: Env)
       return errorResponse(`Invalid stage. Must be one of: ${validStages.join(', ')}`, origin);
     }
 
-    // TODO(catch-swallow): migrate to safeQuery
-    const result = await sql`
+    const result = await safeQuery(() => sql`
       UPDATE production_pipeline
       SET
         status = COALESCE(${status ?? null}, status),
@@ -263,13 +260,14 @@ export async function productionProjectStatusHandler(request: Request, env: Env)
         updated_at = NOW()
       WHERE id = ${projectId} AND production_company_id = ${Number(userId)}
       RETURNING *
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-dashboard.project.status.update' });
 
-    if (result.length === 0) {
+    if (!result.ok) return errorResponse('Failed to update project status', origin, 500);
+    if (result.rows.length === 0) {
       return errorResponse('Project not found', origin, 404);
     }
 
-    return jsonResponse({ success: true, data: { project: result[0] } }, origin);
+    return jsonResponse({ success: true, data: { project: result.rows[0] } }, origin);
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
     console.error('productionProjectStatusHandler error:', e.message);
@@ -300,8 +298,7 @@ export async function productionBudgetUpdateHandler(request: Request, env: Env):
     const contingencyPercentage = typeof body.contingency_percentage === 'number' ? body.contingency_percentage : undefined;
     const contingencyUsed = typeof body.contingency_used === 'number' ? body.contingency_used : undefined;
 
-    // TODO(catch-swallow): migrate to safeQuery
-    const result = await sql`
+    const result = await safeQuery(() => sql`
       UPDATE production_pipeline
       SET
         budget_allocated = COALESCE(${budgetAllocated ?? null}, budget_allocated),
@@ -312,13 +309,14 @@ export async function productionBudgetUpdateHandler(request: Request, env: Env):
         updated_at = NOW()
       WHERE id = ${projectId} AND production_company_id = ${Number(userId)}
       RETURNING id, budget_allocated, budget_spent, budget_remaining, contingency_percentage, contingency_used
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-dashboard.project.budget.update' });
 
-    if (result.length === 0) {
+    if (!result.ok) return errorResponse('Failed to update budget', origin, 500);
+    if (result.rows.length === 0) {
       return errorResponse('Project not found', origin, 404);
     }
 
-    return jsonResponse({ success: true, data: { budget: result[0] } }, origin);
+    return jsonResponse({ success: true, data: { budget: result.rows[0] } }, origin);
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
     console.error('productionBudgetUpdateHandler error:', e.message);
@@ -339,8 +337,7 @@ export async function productionBudgetVarianceHandler(request: Request, env: Env
   if (!sql) return jsonResponse({ success: true, data: { budgetAllocated: 0, budgetSpent: 0, budgetRemaining: 0, variance: 0 } }, origin);
 
   try {
-    // TODO(catch-swallow): migrate to safeQuery
-    const result = await sql`
+    const result = await safeQuery<Record<string, unknown>>(() => sql`
       SELECT budget_allocated, budget_spent, budget_remaining,
              contingency_percentage, contingency_used,
              CASE WHEN budget_allocated > 0
@@ -349,13 +346,16 @@ export async function productionBudgetVarianceHandler(request: Request, env: Env
              END AS variance_percentage
       FROM production_pipeline
       WHERE id = ${projectId} AND production_company_id = ${Number(userId)}
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-dashboard.project.budget.variance' });
 
-    if (result.length === 0) {
+    if (!result.ok) {
+      return jsonResponse({ success: true, data: { budgetAllocated: 0, budgetSpent: 0, budgetRemaining: 0, variance: 0 } }, origin);
+    }
+    if (result.rows.length === 0) {
       return errorResponse('Project not found', origin, 404);
     }
 
-    const row = result[0];
+    const row = result.rows[0];
     return jsonResponse({
       success: true,
       data: {
@@ -398,7 +398,7 @@ export async function productionScheduleUpdateHandler(request: Request, env: Env
       return errorResponse('At least one schedule entry is required', origin);
     }
 
-    const results = [];
+    const results: Record<string, unknown>[] = [];
     for (const entry of entries) {
       const e = entry as Record<string, unknown>;
       const sceneNumber = typeof e.scene_number === 'string' ? e.scene_number : null;
@@ -410,8 +410,7 @@ export async function productionScheduleUpdateHandler(request: Request, env: Env
 
       if (!scheduledDate) continue;
 
-      // TODO(catch-swallow): migrate to safeQuery
-      const row = await sql`
+      const row = await safeQuery<Record<string, unknown>>(() => sql`
         INSERT INTO production_schedules (project_id, scene_number, scene_description, scheduled_date, call_time, wrap_time, status)
         VALUES (${projectId}, ${sceneNumber}, ${sceneDescription}, ${scheduledDate}, ${callTime}, ${wrapTime}, ${schedStatus})
         ON CONFLICT (id) DO UPDATE SET
@@ -423,9 +422,9 @@ export async function productionScheduleUpdateHandler(request: Request, env: Env
           status = EXCLUDED.status,
           updated_at = NOW()
         RETURNING *
-      `.catch(() => []);
+      `, { fallback: [], context: 'production-dashboard.project.schedule.upsert' });
 
-      if (row.length > 0) results.push(row[0]);
+      if (row.rows.length > 0) results.push(row.rows[0]);
     }
 
     return jsonResponse({ success: true, data: { schedule: results } }, origin);
@@ -450,8 +449,7 @@ export async function productionScheduleConflictsHandler(request: Request, env: 
 
   try {
     // Find overlapping scheduled dates with same cast/crew in the same project
-    // TODO(catch-swallow): migrate to safeQuery
-    const conflicts = await sql`
+    const conflictsResult = await safeQuery(() => sql`
       SELECT a.id AS schedule_a, b.id AS schedule_b,
              a.scene_number AS scene_a, b.scene_number AS scene_b,
              a.scheduled_date, a.call_time AS call_a, a.wrap_time AS wrap_a,
@@ -464,9 +462,9 @@ export async function productionScheduleConflictsHandler(request: Request, env: 
         AND a.status != 'cancelled'
         AND b.status != 'cancelled'
       ORDER BY a.scheduled_date
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-dashboard.project.schedule.conflicts' });
 
-    return jsonResponse({ success: true, data: { conflicts } }, origin);
+    return jsonResponse({ success: true, data: { conflicts: conflictsResult.rows } }, origin);
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
     console.error('productionScheduleConflictsHandler error:', e.message);
@@ -496,8 +494,7 @@ export async function productionLocationSearchHandler(request: Request, env: Env
     const limit = Math.min(50, Math.max(1, Number(url.searchParams.get('limit')) || 20));
     const offset = Math.max(0, Number(url.searchParams.get('offset')) || 0);
 
-    // TODO(catch-swallow): migrate to safeQuery
-    const locations = await sql`
+    const locationsResult = await safeQuery(() => sql`
       SELECT id, name, type, city, state_province, country,
              daily_rate, weekly_rate, currency, availability_status,
              square_footage, parking_spaces, power_available, rating,
@@ -511,10 +508,9 @@ export async function productionLocationSearchHandler(request: Request, env: Env
              OR address ILIKE ${'%' + search + '%'})
       ORDER BY rating DESC NULLS LAST, times_booked DESC
       LIMIT ${limit} OFFSET ${offset}
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-dashboard.location.search.list' });
 
-    // TODO(catch-swallow): migrate to safeQuery
-    const countResult = await sql`
+    const countResult = await safeQuery<{ total: number }>(() => sql`
       SELECT COUNT(*)::int AS total FROM location_scouts
       WHERE 1=1
         AND (${type} = '' OR type = ${type})
@@ -522,11 +518,11 @@ export async function productionLocationSearchHandler(request: Request, env: Env
         AND (${maxRate} = 0 OR daily_rate <= ${maxRate})
         AND (${search} = '' OR name ILIKE ${'%' + search + '%'}
              OR address ILIKE ${'%' + search + '%'})
-    `.catch(() => [{ total: 0 }]);
+    `, { fallback: [{ total: 0 }], context: 'production-dashboard.location.search.count' });
 
     return jsonResponse({
       success: true,
-      data: { locations, total: countResult[0]?.total || 0 }
+      data: { locations: locationsResult.rows, total: countResult.rows[0]?.total || 0 }
     }, origin);
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
@@ -548,19 +544,19 @@ export async function productionLocationDetailsHandler(request: Request, env: En
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
   try {
-    // TODO(catch-swallow): migrate to safeQuery
-    const result = await sql`
+    const result = await safeQuery(() => sql`
       SELECT ls.*,
              (SELECT COUNT(*)::int FROM location_bookings lb WHERE lb.location_id = ls.id) AS booking_count
       FROM location_scouts ls
       WHERE ls.id = ${locationId}
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-dashboard.location.details' });
 
-    if (result.length === 0) {
+    if (!result.ok) return errorResponse('Failed to fetch location details', origin, 500);
+    if (result.rows.length === 0) {
       return errorResponse('Location not found', origin, 404);
     }
 
-    return jsonResponse({ success: true, data: { location: result[0] } }, origin);
+    return jsonResponse({ success: true, data: { location: result.rows[0] } }, origin);
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
     console.error('productionLocationDetailsHandler error:', e.message);
@@ -592,19 +588,19 @@ export async function productionLocationBookHandler(request: Request, env: Env):
     }
 
     // Calculate total cost from location daily rate and date range
-    // TODO(catch-swallow): migrate to safeQuery
-    const location = await sql`
+    const locationLookup = await safeQuery<{ daily_rate: number | null }>(() => sql`
       SELECT daily_rate FROM location_scouts WHERE id = ${locationId}
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-dashboard.location.book.lookup' });
 
-    if (location.length === 0) {
+    if (!locationLookup.ok) return errorResponse('Failed to book location', origin, 500);
+    if (locationLookup.rows.length === 0) {
       return errorResponse('Location not found', origin, 404);
     }
 
     const start = new Date(startDate);
     const end = new Date(endDate);
     const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
-    const totalCost = (Number(location[0].daily_rate) || 0) * days;
+    const totalCost = (Number(locationLookup.rows[0].daily_rate) || 0) * days;
 
     const booking = await sql`
       INSERT INTO location_bookings (location_id, project_id, booked_by, start_date, end_date, total_cost, status)
@@ -612,11 +608,10 @@ export async function productionLocationBookHandler(request: Request, env: Env):
       RETURNING *
     `;
 
-    // Increment times_booked on the location
-    // TODO(catch-swallow): migrate to safeQuery
-    await sql`
+    // Increment times_booked on the location — best-effort counter (Sentry-reported via safeQuery)
+    await safeQuery(() => sql`
       UPDATE location_scouts SET times_booked = times_booked + 1 WHERE id = ${locationId}
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-dashboard.location.book.counter' });
 
     return jsonResponse({ success: true, data: { booking: booking[0] } }, origin, 201);
   } catch (err) {
@@ -647,8 +642,7 @@ export async function productionCrewSearchHandler(request: Request, env: Env): P
     const limit = Math.min(50, Math.max(1, Number(url.searchParams.get('limit')) || 20));
     const offset = Math.max(0, Number(url.searchParams.get('offset')) || 0);
 
-    // TODO(catch-swallow): migrate to safeQuery
-    const crew = await sql`
+    const crewResult = await safeQuery(() => sql`
       SELECT id, first_name, last_name, department, position,
              day_rate, kit_rental_rate, currency, availability_status,
              current_project, available_from, years_experience,
@@ -663,10 +657,9 @@ export async function productionCrewSearchHandler(request: Request, env: Env): P
              OR position ILIKE ${'%' + search + '%'})
       ORDER BY rating DESC NULLS LAST, completed_projects DESC
       LIMIT ${limit} OFFSET ${offset}
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-dashboard.crew.search.list' });
 
-    // TODO(catch-swallow): migrate to safeQuery
-    const countResult = await sql`
+    const countResult = await safeQuery<{ total: number }>(() => sql`
       SELECT COUNT(*)::int AS total FROM production_crew
       WHERE 1=1
         AND (${department} = '' OR department = ${department})
@@ -674,11 +667,11 @@ export async function productionCrewSearchHandler(request: Request, env: Env): P
         AND (${search} = '' OR first_name ILIKE ${'%' + search + '%'}
              OR last_name ILIKE ${'%' + search + '%'}
              OR position ILIKE ${'%' + search + '%'})
-    `.catch(() => [{ total: 0 }]);
+    `, { fallback: [{ total: 0 }], context: 'production-dashboard.crew.search.count' });
 
     return jsonResponse({
       success: true,
-      data: { crew, total: countResult[0]?.total || 0 }
+      data: { crew: crewResult.rows, total: countResult.rows[0]?.total || 0 }
     }, origin);
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
@@ -700,16 +693,16 @@ export async function productionCrewDetailsHandler(request: Request, env: Env): 
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
   try {
-    // TODO(catch-swallow): migrate to safeQuery
-    const result = await sql`
+    const result = await safeQuery(() => sql`
       SELECT * FROM production_crew WHERE id = ${crewId}
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-dashboard.crew.details' });
 
-    if (result.length === 0) {
+    if (!result.ok) return errorResponse('Failed to fetch crew details', origin, 500);
+    if (result.rows.length === 0) {
       return errorResponse('Crew member not found', origin, 404);
     }
 
-    return jsonResponse({ success: true, data: { crew: result[0] } }, origin);
+    return jsonResponse({ success: true, data: { crew: result.rows[0] } }, origin);
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
     console.error('productionCrewDetailsHandler error:', e.message);
@@ -739,22 +732,23 @@ export async function productionCrewHireHandler(request: Request, env: Env): Pro
     if (!projectId) return errorResponse('projectId is required', origin);
 
     // Verify crew exists
-    // TODO(catch-swallow): migrate to safeQuery
-    const crew = await sql`
+    const crewLookup = await safeQuery<{ id: number; first_name: string; last_name: string; availability_status: string | null }>(() => sql`
       SELECT id, first_name, last_name, availability_status FROM production_crew WHERE id = ${crewId}
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-dashboard.crew.hire.lookup' });
 
-    if (crew.length === 0) {
+    if (!crewLookup.ok) return errorResponse('Failed to hire crew member', origin, 500);
+    if (crewLookup.rows.length === 0) {
       return errorResponse('Crew member not found', origin, 404);
     }
 
-    // Get project title for the current_project field
-    // TODO(catch-swallow): migrate to safeQuery
-    const project = await sql`
+    // Get project title for the current_project field — non-critical; fall back to placeholder name
+    const projectLookup = await safeQuery<{ title: string | null }>(() => sql`
       SELECT title FROM production_pipeline WHERE id = ${projectId} AND production_company_id = ${Number(userId)}
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-dashboard.crew.hire.project-lookup' });
 
-    const projectTitle = project.length > 0 ? (project[0].title || `Project #${projectId}`) : `Project #${projectId}`;
+    const projectTitle = projectLookup.rows.length > 0
+      ? (projectLookup.rows[0].title || `Project #${projectId}`)
+      : `Project #${projectId}`;
 
     // Update crew member
     await sql`
@@ -773,7 +767,7 @@ export async function productionCrewHireHandler(request: Request, env: Env): Pro
         hired: true,
         crewId,
         projectId,
-        crewName: `${crew[0].first_name} ${crew[0].last_name}`,
+        crewName: `${crewLookup.rows[0].first_name} ${crewLookup.rows[0].last_name}`,
         startDate: startDate || null
       }
     }, origin);
