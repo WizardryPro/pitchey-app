@@ -8752,7 +8752,7 @@ pitchey_analytics_datapoints_per_minute 1250
            WHERE (p.user_id = $1 OR p.creator_id = $1) AND p.created_at >= NOW() - INTERVAL '${days} days') as fallback_views,
           (SELECT COALESCE(SUM(p.like_count), 0) FROM pitches p
            WHERE (p.user_id = $1 OR p.creator_id = $1) AND p.created_at >= NOW() - INTERVAL '${days} days') as fallback_likes
-      `, [userId]), { fallback: [{ current_views: 0, prev_views: 0, current_likes: 0, prev_likes: 0, fallback_views: 0, fallback_likes: 0 }], context: 'worker.analytics.period-metrics' });
+      `, [userId]), { fallback: [{ current_views: 0, prev_views: 0, current_likes: 0, prev_likes: 0, fallback_views: 0, fallback_likes: 0 }], context: 'worker-integrated.analytics.period-metrics' });
       const periodMetricsResult = periodMetricsQuery.rows;
 
       // 2. Follower count — total + gained in current/previous period
@@ -8834,7 +8834,7 @@ pitchey_analytics_datapoints_per_minute 1250
           AND pv.viewed_at >= NOW() - INTERVAL '${days} days'
         GROUP BY DATE(pv.viewed_at)
         ORDER BY date ASC
-      `, [userId]), { fallback: [], context: 'worker.analytics.views-timeline' });
+      `, [userId]), { fallback: [], context: 'worker-integrated.analytics.views-timeline' });
       const viewsTimelineResult = viewsTimelineQuery.rows;
 
       // 8b. Likes timeline from event table
@@ -8846,7 +8846,7 @@ pitchey_analytics_datapoints_per_minute 1250
           AND pl.created_at >= NOW() - INTERVAL '${days} days'
         GROUP BY DATE(pl.created_at)
         ORDER BY date ASC
-      `, [userId]), { fallback: [], context: 'worker.analytics.likes-timeline' });
+      `, [userId]), { fallback: [], context: 'worker-integrated.analytics.likes-timeline' });
       const likesTimelineResult = likesTimelineQuery.rows;
 
       // 8c. Pitches created in period (for pitch count chart + fallback)
@@ -8860,7 +8860,7 @@ pitchey_analytics_datapoints_per_minute 1250
         WHERE (p.user_id = $1 OR p.creator_id = $1)
           AND p.created_at >= NOW() - INTERVAL '${days} days'
         ORDER BY p.created_at ASC
-      `, [userId]), { fallback: [], context: 'worker.analytics.pitch-timeline' });
+      `, [userId]), { fallback: [], context: 'worker-integrated.analytics.pitch-timeline' });
       const pitchTimelineResult = pitchTimelineQuery.rows;
 
       // 9. Investments received over time
@@ -8875,7 +8875,7 @@ pitchey_analytics_datapoints_per_minute 1250
           AND i.created_at >= NOW() - INTERVAL '${days} days'
         GROUP BY DATE(i.created_at)
         ORDER BY date ASC
-      `, [userId]), { fallback: [], context: 'worker.analytics.investment-timeseries' });
+      `, [userId]), { fallback: [], context: 'worker-integrated.analytics.investment-timeseries' });
       const investmentTimeSeriesResult = investmentTimeSeriesQuery.rows;
 
       // 10. NDA requests over time (as engagement proxy)
@@ -8889,7 +8889,7 @@ pitchey_analytics_datapoints_per_minute 1250
           AND nr.created_at >= NOW() - INTERVAL '${days} days'
         GROUP BY DATE(nr.created_at)
         ORDER BY date ASC
-      `, [userId]), { fallback: [], context: 'worker.analytics.nda-timeline' });
+      `, [userId]), { fallback: [], context: 'worker-integrated.analytics.nda-timeline' });
       const ndaTimelineResult = ndaTimelineQuery.rows;
 
       // Normalize any date value to YYYY-MM-DD string
@@ -12055,16 +12055,16 @@ pitchey_analytics_datapoints_per_minute 1250
           LEFT JOIN investments i ON i.pitch_id = p.id
           WHERE p.genre IS NOT NULL
           GROUP BY p.genre ORDER BY total_projects DESC LIMIT 10
-        `), { fallback: [], context: 'worker.market.trends' }),
+        `), { fallback: [], context: 'worker-integrated.market.trends' }),
         safeQuery<{ genre: string }>(
           () => this.db.query(`SELECT DISTINCT genre FROM pitches WHERE genre IS NOT NULL ORDER BY genre`),
-          { fallback: [], context: 'worker.market.genres' }
+          { fallback: [], context: 'worker-integrated.market.genres' }
         ),
         safeQuery<{ total_opportunities: number; top_genre: string }>(() => this.db.query(`
           SELECT COUNT(*) as total_opportunities,
                  (SELECT genre FROM pitches GROUP BY genre ORDER BY COUNT(*) DESC LIMIT 1) as top_genre
           FROM pitches WHERE status = 'published'
-        `), { fallback: [{ total_opportunities: 0, top_genre: 'N/A' }], context: 'worker.market.summary' })
+        `), { fallback: [{ total_opportunities: 0, top_genre: 'N/A' }], context: 'worker-integrated.market.summary' })
       ]);
       const trends = trendsQ.rows;
       const genreList = genreListQ.rows;
@@ -12105,7 +12105,7 @@ pitchey_analytics_datapoints_per_minute 1250
         LEFT JOIN investments i ON i.pitch_id = p.id
         WHERE p.genre IS NOT NULL
         GROUP BY p.genre ORDER BY total_projects DESC
-      `), { fallback: [], context: 'worker.genre-performance' });
+      `), { fallback: [], context: 'worker-integrated.genre-performance' });
       const genres = genresQuery.rows;
 
       return builder.success({ genres: genres.map((g) => ({
@@ -12138,7 +12138,7 @@ pitchey_analytics_datapoints_per_minute 1250
         WHERE p.created_at >= NOW() - INTERVAL '12 months'
         GROUP BY date_trunc('month', p.created_at)
         ORDER BY month
-      `), { fallback: [], context: 'worker.market-forecast' });
+      `), { fallback: [], context: 'worker-integrated.market-forecast' });
       const trends = trendsQuery.rows;
 
       return builder.success({ forecast: trends.map((t) => ({
@@ -12735,13 +12735,13 @@ pitchey_analytics_datapoints_per_minute 1250
           WHERE user_id = $1
           ORDER BY created_at DESC
           LIMIT 10
-        `, [authResult.user.id]), { fallback: [], context: 'worker.poll-all.notifications' }),
+        `, [authResult.user.id]), { fallback: [], context: 'worker-integrated.poll-all.notifications' }),
 
         safeQuery<{ count: number }>(() => this.db.query(`
           SELECT COUNT(*) as count
           FROM notifications
           WHERE user_id = $1 AND is_read = false
-        `, [authResult.user.id]), { fallback: [{ count: 0 }], context: 'worker.poll-all.unread-count' }),
+        `, [authResult.user.id]), { fallback: [{ count: 0 }], context: 'worker-integrated.poll-all.unread-count' }),
 
         // Get basic dashboard stats based on user type
         this.getDashboardStatsForUser(authResult.user),
@@ -12758,7 +12758,7 @@ pitchey_analytics_datapoints_per_minute 1250
           WHERE up.updated_at > NOW() - INTERVAL '5 minutes'
             AND up.status != 'offline'
           ORDER BY up.updated_at DESC
-        `), { fallback: [], context: 'worker.poll-all.presence' }),
+        `), { fallback: [], context: 'worker-integrated.poll-all.presence' }),
 
         safeQuery<Record<string, unknown>>(() => this.db.query(`
           SELECT m.id, m.sender_id, m.content, m.created_at,
@@ -12768,7 +12768,7 @@ pitchey_analytics_datapoints_per_minute 1250
           WHERE m.recipient_id = $1 AND m.read_at IS NULL
           ORDER BY m.created_at DESC
           LIMIT 5
-        `, [authResult.user.id]), { fallback: [], context: 'worker.poll-all.unread-messages' })
+        `, [authResult.user.id]), { fallback: [], context: 'worker-integrated.poll-all.unread-messages' })
       ]);
       const notifications = notificationsQ.rows;
       const unreadCount = unreadCountQ.rows[0]?.count || 0;
@@ -12874,28 +12874,28 @@ pitchey_analytics_datapoints_per_minute 1250
         safeQuery<{ count: number }>(() => this.db.query(`
           SELECT COUNT(*) as count FROM user_presence
           WHERE updated_at > NOW() - INTERVAL '5 minutes' AND status != 'offline'
-        `), { fallback: [{ count: 0 }], context: 'worker.realtime.active-users' }),
+        `), { fallback: [{ count: 0 }], context: 'worker-integrated.realtime.active-users' }),
 
         safeQuery<{ total: number }>(() => this.db.query(`
           SELECT COALESCE(SUM(views), 0) as total FROM pitch_analytics
           WHERE date = CURRENT_DATE
-        `), { fallback: [{ total: 0 }], context: 'worker.realtime.views-last-hour' }),
+        `), { fallback: [{ total: 0 }], context: 'worker-integrated.realtime.views-last-hour' }),
 
         safeQuery<{ count: number }>(() => this.db.query(`
           SELECT COUNT(*) as count FROM pitches
           WHERE created_at >= CURRENT_DATE
-        `), { fallback: [{ count: 0 }], context: 'worker.realtime.new-pitches-today' }),
+        `), { fallback: [{ count: 0 }], context: 'worker-integrated.realtime.new-pitches-today' }),
 
         safeQuery<{ count: number }>(() => this.db.query(`
           SELECT COUNT(*) as count FROM investments
           WHERE created_at >= CURRENT_DATE
-        `), { fallback: [{ count: 0 }], context: 'worker.realtime.investments-today' }),
+        `), { fallback: [{ count: 0 }], context: 'worker-integrated.realtime.investments-today' }),
 
         safeQuery<{ genre: string }>(() => this.db.query(`
           SELECT genre, COUNT(*) as count FROM pitches
           WHERE status = 'published' AND genre IS NOT NULL
           GROUP BY genre ORDER BY count DESC LIMIT 3
-        `), { fallback: [{ genre: 'Action' }, { genre: 'Drama' }, { genre: 'Comedy' }], context: 'worker.realtime.trending-genres' })
+        `), { fallback: [{ genre: 'Action' }, { genre: 'Drama' }, { genre: 'Comedy' }], context: 'worker-integrated.realtime.trending-genres' })
       ]);
       const activeUsers = this.safeParseInt(activeUsersQ.rows[0]?.count);
       const viewsLastHour = this.safeParseInt(viewsLastHourQ.rows[0]?.total);
@@ -13027,7 +13027,7 @@ pitchey_analytics_datapoints_per_minute 1250
           SELECT id, report_type, frequency, filters, next_run, created_at
           FROM scheduled_reports WHERE user_id = $1 ORDER BY created_at DESC
         `, [authResult.user!.id]),
-        { fallback: [], context: 'worker.scheduled-reports.list' }
+        { fallback: [], context: 'worker-integrated.scheduled-reports.list' }
       );
 
       return builder.success({ success: true, reports: reportsQuery.rows });
@@ -13068,7 +13068,7 @@ pitchey_analytics_datapoints_per_minute 1250
           FROM search_history WHERE user_id = $1
           ORDER BY created_at DESC LIMIT $2
         `, [authResult.user!.id, limit]),
-        { fallback: [], context: 'worker.search.history' }
+        { fallback: [], context: 'worker-integrated.search.history' }
       );
 
       return builder.success({ searchHistory: historyQuery.rows });
@@ -13117,7 +13117,7 @@ pitchey_analytics_datapoints_per_minute 1250
         FROM pitches p
         WHERE status = 'published' AND genre IS NOT NULL
         GROUP BY genre ORDER BY pitch_count DESC
-      `), { fallback: [], context: 'worker.browse.genres' });
+      `), { fallback: [], context: 'worker-integrated.browse.genres' });
 
       return new Response(JSON.stringify({ genres: genresQuery.rows }), {
         headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request.headers.get('Origin')) },
@@ -13172,10 +13172,10 @@ pitchey_analytics_datapoints_per_minute 1250
           ${whereClause}
           ORDER BY like_count DESC, view_count DESC
           LIMIT $${paramIdx++} OFFSET $${paramIdx++}
-        `, [...queryParams, limit, offset]), { fallback: [], context: 'worker.browse.top-rated.list' }),
+        `, [...queryParams, limit, offset]), { fallback: [], context: 'worker-integrated.browse.top-rated.list' }),
         safeQuery<{ total: number }>(
           () => this.db.query(`SELECT COUNT(*) as total FROM pitches p ${whereClause}`, queryParams),
-          { fallback: [{ total: 0 }], context: 'worker.browse.top-rated.count' }
+          { fallback: [{ total: 0 }], context: 'worker-integrated.browse.top-rated.count' }
         )
       ]);
       const pitches = pitchesQ.rows;
@@ -13208,7 +13208,7 @@ pitchey_analytics_datapoints_per_minute 1250
             COALESCE(AVG(p.like_count), 0) as avg_rating,
             COUNT(DISTINCT genre) as genre_count
           FROM pitches p WHERE status = 'published'
-        `), { fallback: [{ total_rated: 0, avg_rating: 0, genre_count: 0 }], context: 'worker.browse.top-rated.stats' })
+        `), { fallback: [{ total_rated: 0, avg_rating: 0, genre_count: 0 }], context: 'worker-integrated.browse.top-rated.stats' })
       ]);
 
       const stats = statsQuery.rows[0] || { total_rated: 0, avg_rating: 0, genre_count: 0 };
@@ -13287,7 +13287,7 @@ pitchey_analytics_datapoints_per_minute 1250
           () => this.db.query(`
             SELECT id, title, genre, status, created_at FROM pitches WHERE user_id = $1 ORDER BY created_at DESC
           `, [authResult.user!.id]),
-          { fallback: [], context: 'worker.export.pitches' }
+          { fallback: [], context: 'worker-integrated.export.pitches' }
         );
         csvContent = 'ID,Title,Genre,Status,Created\n' + pitchesQuery.rows.map((p) => `${p.id},"${p.title}",${p.genre},${p.status},${p.created_at}`).join('\n');
       } else if (exportType === 'analytics') {
@@ -13295,7 +13295,7 @@ pitchey_analytics_datapoints_per_minute 1250
           () => this.db.query(`
             SELECT pa.date, pa.views, pa.likes FROM pitch_analytics pa JOIN pitches p ON pa.pitch_id = p.id WHERE p.user_id = $1 ORDER BY pa.date DESC LIMIT 90
           `, [authResult.user!.id]),
-          { fallback: [], context: 'worker.export.analytics' }
+          { fallback: [], context: 'worker-integrated.export.analytics' }
         );
         csvContent = 'Date,Views,Likes\n' + analyticsQuery.rows.map((a) => `${a.date},${a.views},${a.likes}`).join('\n');
       } else {
@@ -13349,7 +13349,7 @@ pitchey_analytics_datapoints_per_minute 1250
         () => this.db.query(`
           SELECT verification_status, company_name FROM users WHERE id = $1
         `, [authResult.user!.id]),
-        { fallback: [], context: 'worker.company-verify.status' }
+        { fallback: [], context: 'worker-integrated.company-verify.status' }
       );
       const user = userQuery.rows;
 
@@ -13393,13 +13393,13 @@ pitchey_analytics_datapoints_per_minute 1250
           FROM info_requests ir
           LEFT JOIN users u ON ir.requester_id = u.id
           WHERE ir.target_user_id = $1 ORDER BY ir.created_at DESC
-        `, [authResult.user!.id]), { fallback: [], context: 'worker.info-requests.incoming' }),
+        `, [authResult.user!.id]), { fallback: [], context: 'worker-integrated.info-requests.incoming' }),
         safeQuery<Record<string, unknown>>(() => this.db.query(`
           SELECT ir.*, COALESCE(u.name, u.first_name || ' ' || u.last_name) as target_name
           FROM info_requests ir
           LEFT JOIN users u ON ir.target_user_id = u.id
           WHERE ir.requester_id = $1 ORDER BY ir.created_at DESC
-        `, [authResult.user!.id]), { fallback: [], context: 'worker.info-requests.outgoing' })
+        `, [authResult.user!.id]), { fallback: [], context: 'worker-integrated.info-requests.outgoing' })
       ]);
 
       return builder.success({ incoming: incomingQ.rows, outgoing: outgoingQ.rows });
@@ -15496,7 +15496,7 @@ pitchey_analytics_datapoints_per_minute 1250
       // Try to find the NDA document in R2
       const ndaDocQuery = await safeQuery<{ document_url: string | null }>(
         () => this.db.query(`SELECT document_url FROM ndas WHERE id = $1`, [ndaId]),
-        { fallback: [], context: 'worker.nda.download' }
+        { fallback: [], context: 'worker-integrated.nda.download' }
       );
       if (ndaDocQuery.rows[0]?.document_url) {
         return this.jsonResponse({ success: true, data: { downloadUrl: ndaDocQuery.rows[0].document_url, message: 'NDA document ready for download' }});
@@ -15521,7 +15521,7 @@ pitchey_analytics_datapoints_per_minute 1250
 
       const ndaDocQuery = await safeQuery<{ signed_document_url: string | null }>(
         () => this.db.query(`SELECT signed_document_url FROM ndas WHERE id = $1`, [ndaId]),
-        { fallback: [], context: 'worker.nda.download-signed' }
+        { fallback: [], context: 'worker-integrated.nda.download-signed' }
       );
       if (ndaDocQuery.rows[0]?.signed_document_url) {
         return this.jsonResponse({ success: true, data: { downloadUrl: ndaDocQuery.rows[0].signed_document_url, message: 'Signed NDA document ready for download' }});
@@ -18039,7 +18039,7 @@ Signatures: [To be completed upon signing]
              ORDER BY view_count DESC NULLS LAST LIMIT 5`,
             [userId]
           ),
-          { fallback: [], context: 'worker.creator-analytics.top-pitches' }
+          { fallback: [], context: 'worker-integrated.creator-analytics.top-pitches' }
         );
         const topPitchesRes = topPitchesQuery.rows;
 
@@ -18054,7 +18054,7 @@ Signatures: [To be completed upon signing]
              WHERE p.user_id = $1`,
             [userId]
           ),
-          { fallback: [{ nda_requests: 0, nda_signed: 0 }], context: 'worker.creator-analytics.nda-counts' }
+          { fallback: [{ nda_requests: 0, nda_signed: 0 }], context: 'worker-integrated.creator-analytics.nda-counts' }
         );
         const ndaRes = ndaQuery.rows;
 
@@ -18072,7 +18072,7 @@ Signatures: [To be completed upon signing]
              GROUP BY u.user_type`,
             [userId]
           ),
-          { fallback: [], context: 'worker.creator-analytics.viewer-types' }
+          { fallback: [], context: 'worker-integrated.creator-analytics.viewer-types' }
         );
         const viewerTypesRes = viewerTypesQuery.rows;
 
