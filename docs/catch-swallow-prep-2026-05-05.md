@@ -8,6 +8,32 @@ Read-only prep — no migrations performed on this branch.
 
 ## Status
 
+**Phase 2 structurally complete (2026-05-07)** — all bucket-C sites migrated to `safeQuery` across the entire `src/` tree. Four PRs (#92, #93, #94, #95) cover the 133-site migration. When all four land, the gate counts **0 untagged AND 0 bucket-C** in both scopes (with and without `worker-integrated.ts`). The orchestrator-prerequisite gate (a) — "<30 untagged residue" — is met with margin.
+
+Phase 2 PR ledger:
+
+| PR | Branch | Sites | Scope |
+|---|---|---:|---|
+| #92 | `phase-2.1/safequery-production-dashboard-extended` | 22 | `production-dashboard-extended.ts` (canary) |
+| #93 | `phase-2.2/safequery-production-family` | 42 | `production-sidebar.ts` (15) + `production-deals.ts` (13) + `production-dashboard.ts` (10) + `production-pitch-data.ts` (4) |
+| #94 | `phase-2.3/safequery-creator-and-grab-bag` | 33 | `creator-dashboard-extended.ts` (16) + `creator-dashboard.ts` (7) + `ai-production-autofill.ts` (1) + `ai-pitch-extract.ts` (1) + `file-validation.service.ts` (2) + `status-dashboard.ts` (2) + `investor-pitch-data.ts` (2) + `collaborator.ts` (2) |
+| #95 | `phase-2.4/safequery-worker-integrated` | 36 | `worker-integrated.ts` |
+| | | **133** | |
+
+**Gate-feeding sites — all closed in #94.** The three sites originally flagged as "Phase 2 priority" all received fail-closed-with-Sentry-report treatment:
+
+- `services/file-validation.service.ts:394` (quota usage + tier lookup) — was returning `currentUsage=0, tier=free` on SQL error, allowing uploads past quota. Now sets `quotaLookupFailed=true` and returns `allowed: false` so the caller refuses the upload.
+- `handlers/ai-pitch-extract.ts:72` (credit-balance gate) — was returning `balance=0` silently on outage (operator-blind). Now returns 503 "credit check temporarily unavailable" and reports to Sentry under `ai-pitch-extract.credit-check`.
+- `handlers/ai-production-autofill.ts:91` (credit-balance gate) — same pattern, same fix, context tag `ai-production-autofill.credit-check`.
+
+These were the original case study for why `.catch(() => default)` is dangerous. They are now operator-visible.
+
+**Pillar 1 acceptance gate (orchestrator prerequisite) — open after Phase 2 lands.** Post-Phase-2 numbers: **0 untagged**, 8 fire-and-forget (legitimate), 0 bucket-B (all wrapped via `observedSwallow` / `observedSwallowReturning`), 0 bucket-C (all migrated). The companion gate (b) — Phase C.1 rollback drill verified end-to-end — remains the open prerequisite for Phase D.4.
+
+**Mid-template comment fix (#90)** — Phase 1a's tagger had a `STMT_START` regex bug that inserted 5 `// TODO(catch-swallow)` comments *inside* `sql\`…\`` template literals, breaking those queries at parse time (PostgreSQL has no `//` comment syntax). The breakage was invisible because each affected query was wrapped in `.catch(() => [])`. PR #90 relocates the 5 comments, tightens the tagger regex (require `await` after `=` so SQL column-assignment lines like `updated_at = NOW()` no longer match), and adds a `findMidTemplateComments()` walker to the gate that hard-fails on any future occurrence.
+
+---
+
 **Phase 1a complete (2026-05-06)** — every `.catch(() => …)` site in `src/handlers/`, `src/services/`, `src/utils/` carries an A/B/C tag. Gate metric (untagged residue, excl. `worker-integrated.ts`): **0 of 109**.
 
 **What 0/109 means and doesn't mean.** The gate metric measures "tagged vs untagged" — Phase 1a hits zero because every site now carries a marker. It does **not** mean every site has received per-site human judgment of the kind the May-2 framing originally anticipated. The actual shape of the work:
