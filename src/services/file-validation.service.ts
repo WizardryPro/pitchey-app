@@ -1,3 +1,5 @@
+import { safeQuery } from '../db/safe-query';
+
 export interface FileValidationResult {
   isValid: boolean;
   errors: string[];
@@ -384,25 +386,33 @@ export class FileValidationService {
 
     let currentUsage = 0;
     let tier = 'free';
+    let quotaLookupFailed = false;
 
     if (db) {
-      try {
-        const [usageResult, userResult] = await Promise.all([
-          // TODO(catch-swallow): migrate to safeQuery — fail-open quota bypass; '0' on error lets user upload past quota
-          db.query(
+      const [usageResult, userResult] = await Promise.all([
+        safeQuery<{ total_bytes: string }>(
+          () => db.query(
             `SELECT COALESCE(SUM(file_size), 0)::bigint AS total_bytes FROM file_storage WHERE user_id = $1`,
             [userId]
-          ).catch(() => [{ total_bytes: '0' }]),
-          // TODO(catch-swallow): migrate to safeQuery
-          db.query(
+          ),
+          { fallback: [{ total_bytes: '0' }], context: 'file-validation.quota.usage' }
+        ),
+        safeQuery<{ subscription_tier: string | null }>(
+          () => db.query(
             `SELECT subscription_tier FROM users WHERE id = $1`,
             [userId]
-          ).catch(() => []),
-        ]);
-        currentUsage = Number(usageResult[0]?.total_bytes) || 0;
-        tier = userResult[0]?.subscription_tier || 'free';
-      } catch {
-        // DB unavailable — allow upload with default quota
+          ),
+          { fallback: [], context: 'file-validation.quota.tier' }
+        ),
+      ]);
+
+      // Fail closed on quota lookup failure — previously this was fail-open (currentUsage=0,
+      // tier=free), which let users upload past quota during a DB outage.
+      if (!usageResult.ok || !userResult.ok) {
+        quotaLookupFailed = true;
+      } else {
+        currentUsage = Number(usageResult.rows[0]?.total_bytes) || 0;
+        tier = userResult.rows[0]?.subscription_tier || 'free';
       }
     }
 
@@ -410,7 +420,7 @@ export class FileValidationService {
     const remainingQuota = maxQuota - currentUsage;
 
     return {
-      allowed: currentUsage + fileSize <= maxQuota,
+      allowed: !quotaLookupFailed && currentUsage + fileSize <= maxQuota,
       currentUsage,
       maxQuota,
       remainingQuota,

@@ -8,6 +8,7 @@ import { getDb } from '../db/connection';
 import type { Env } from '../db/connection';
 import { getCorsHeaders } from '../utils/response';
 import { getUserId } from '../utils/auth-extract';
+import { safeQuery } from '../db/safe-query';
 
 function jsonResponse(data: unknown, origin: string | null, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -46,15 +47,14 @@ export async function getInvestorNotes(request: Request, env: Env): Promise<Resp
   if (!sql) return jsonResponse({ success: true, data: { notes: [] } }, origin);
 
   try {
-    // TODO(catch-swallow): migrate to safeQuery
-    const notes = await sql`
+    const notesResult = await safeQuery(() => sql`
       SELECT id, content, category, is_private, created_at, updated_at
       FROM investor_notes
       WHERE user_id = ${Number(userId)} AND pitch_id = ${pitchId}
       ORDER BY created_at ASC
-    `.catch(() => []);
+    `, { fallback: [], context: 'investor-pitch-data.notes.list' });
 
-    return jsonResponse({ success: true, data: { notes } }, origin);
+    return jsonResponse({ success: true, data: { notes: notesResult.rows } }, origin);
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
     console.error('getInvestorNotes error:', e.message);
@@ -149,14 +149,13 @@ export async function getInvestorDiligence(request: Request, env: Env): Promise<
   if (!sql) return jsonResponse({ success: true, data: { checklist: {} } }, origin);
 
   try {
-    // TODO(catch-swallow): migrate to safeQuery
-    const rows = await sql`
+    const rows = await safeQuery<{ checklist: Record<string, unknown> }>(() => sql`
       SELECT checklist
       FROM investor_diligence_checklists
       WHERE user_id = ${Number(userId)} AND pitch_id = ${pitchId}
-    `.catch(() => []);
+    `, { fallback: [], context: 'investor-pitch-data.diligence.read' });
 
-    const checklist = rows[0]?.checklist || {};
+    const checklist = rows.rows[0]?.checklist || {};
     return jsonResponse({ success: true, data: { checklist } }, origin);
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));

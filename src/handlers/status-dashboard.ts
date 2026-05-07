@@ -5,6 +5,7 @@
 
 import { WorkerDatabase } from '../services/worker-database';
 import { getCorsHeaders } from '../utils/response';
+import { safeQuery } from '../db/safe-query';
 
 interface ServiceStatus {
   name: string;
@@ -124,31 +125,36 @@ export async function statusDashboardHandler(
     });
 
     // Get request/error counts
-    // TODO(catch-swallow): migrate to safeQuery
-    const metricsQuery = await db.query(`
-      SELECT
-        COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '24 hours') as requests_24h,
-        COUNT(*) FILTER (WHERE status_code >= 500 AND created_at > NOW() - INTERVAL '24 hours') as errors_24h,
-        AVG(response_time) FILTER (WHERE created_at > NOW() - INTERVAL '1 hour') as avg_response_time,
-        PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY response_time)
-          FILTER (WHERE created_at > NOW() - INTERVAL '1 hour') as p95_response_time
-      FROM request_logs
-    `).catch(() => [{ requests_24h: 0, errors_24h: 0, avg_response_time: 0, p95_response_time: 0 }]);
+    type MetricsRow = { requests_24h: number; errors_24h: number; avg_response_time: number; p95_response_time: number };
+    const metricsQuery = await safeQuery<MetricsRow>(
+      () => db.query(`
+        SELECT
+          COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '24 hours') as requests_24h,
+          COUNT(*) FILTER (WHERE status_code >= 500 AND created_at > NOW() - INTERVAL '24 hours') as errors_24h,
+          AVG(response_time) FILTER (WHERE created_at > NOW() - INTERVAL '1 hour') as avg_response_time,
+          PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY response_time)
+            FILTER (WHERE created_at > NOW() - INTERVAL '1 hour') as p95_response_time
+        FROM request_logs
+      `),
+      { fallback: [{ requests_24h: 0, errors_24h: 0, avg_response_time: 0, p95_response_time: 0 }], context: 'status-dashboard.metrics.request-logs' }
+    );
 
     // Get active users
-    // TODO(catch-swallow): migrate to safeQuery
-    const activeUsersQuery = await db.query(`
-      SELECT COUNT(DISTINCT user_id) as active_users
-      FROM sessions
-      WHERE expires_at > NOW()
-    `).catch(() => [{ active_users: 0 }]);
+    const activeUsersQuery = await safeQuery<{ active_users: number }>(
+      () => db.query(`
+        SELECT COUNT(DISTINCT user_id) as active_users
+        FROM sessions
+        WHERE expires_at > NOW()
+      `),
+      { fallback: [{ active_users: 0 }], context: 'status-dashboard.metrics.active-users' }
+    );
 
-    if (metricsQuery && metricsQuery[0]) {
-      const m = metricsQuery[0] as any;
-      dashboard.metrics.requestsLast24h = parseInt(m.requests_24h) || 0;
-      dashboard.metrics.errorsLast24h = parseInt(m.errors_24h) || 0;
-      dashboard.metrics.avgResponseTime = Math.round(parseFloat(m.avg_response_time) || 0);
-      dashboard.metrics.p95ResponseTime = Math.round(parseFloat(m.p95_response_time) || 0);
+    if (metricsQuery.rows[0]) {
+      const m = metricsQuery.rows[0] as Record<string, unknown>;
+      dashboard.metrics.requestsLast24h = parseInt(String(m.requests_24h)) || 0;
+      dashboard.metrics.errorsLast24h = parseInt(String(m.errors_24h)) || 0;
+      dashboard.metrics.avgResponseTime = Math.round(parseFloat(String(m.avg_response_time)) || 0);
+      dashboard.metrics.p95ResponseTime = Math.round(parseFloat(String(m.p95_response_time)) || 0);
 
       const errorRate = dashboard.metrics.requestsLast24h > 0
         ? (dashboard.metrics.errorsLast24h / dashboard.metrics.requestsLast24h * 100).toFixed(2)
@@ -156,8 +162,8 @@ export async function statusDashboardHandler(
       dashboard.metrics.errorRate = `${errorRate}%`;
     }
 
-    if (activeUsersQuery && activeUsersQuery[0]) {
-      dashboard.metrics.activeUsers = parseInt((activeUsersQuery[0] as any).active_users) || 0;
+    if (activeUsersQuery.rows[0]) {
+      dashboard.metrics.activeUsers = parseInt(String(activeUsersQuery.rows[0].active_users)) || 0;
     }
 
   } catch (error) {
