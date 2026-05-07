@@ -15,6 +15,7 @@ import { getDb } from '../db/connection';
 import type { Env } from '../db/connection';
 import { getCorsHeaders } from '../utils/response';
 import { getUserId } from '../utils/auth-extract';
+import { safeQuery } from '../db/safe-query';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -197,9 +198,8 @@ export async function productionActivityHandler(
     };
     const timeFilter = (timeRange && intervalMap[timeRange]) ? sql.unsafe(intervalMap[timeRange]) : sql``;
 
-    const [activities, countResult] = await Promise.all([
-      // TODO(catch-swallow): migrate to safeQuery
-      sql`
+    const [activitiesResult, countResult] = await Promise.all([
+      safeQuery(() => sql`
         SELECT
           id,
           type,
@@ -218,23 +218,22 @@ export async function productionActivityHandler(
         ORDER BY created_at DESC
         LIMIT ${limit}
         OFFSET ${offset}
-      `.catch(() => []),
-      // TODO(catch-swallow): migrate to safeQuery
-      sql`
+      `, { fallback: [], context: 'production-sidebar.activity.list' }),
+      safeQuery<{ total: number }>(() => sql`
         SELECT COUNT(*)::int AS total
         FROM notifications
         WHERE user_id = ${Number(userId)}
         ${timeFilter}
-      `.catch(() => [{ total: 0 }]),
+      `, { fallback: [{ total: 0 }], context: 'production-sidebar.activity.count' }),
     ]);
 
-    const total = Number(countResult[0]?.total) || 0;
+    const total = Number(countResult.rows[0]?.total) || 0;
     const totalPages = Math.ceil(total / limit) || 0;
 
     return jsonResponse({
       success: true,
       data: {
-        activities,
+        activities: activitiesResult.rows,
         pagination: { page, limit, total, totalPages },
       },
     }, origin);
@@ -286,9 +285,8 @@ export async function productionSubmissionsHandler(
     // Only shows pitches where this user has a signed NDA (via ndas or nda_requests table)
     // Other statuses = saved_pitches entries with matching review_status
     if (statusFilter === 'new') {
-      const [submissions, countResult] = await Promise.all([
-        // TODO(catch-swallow): migrate to safeQuery
-        sql`
+      const [submissionsResult, countResult] = await Promise.all([
+        safeQuery(() => sql`
           SELECT
             p.id, p.user_id, p.title, p.genre, p.logline, p.short_synopsis, p.format,
             p.estimated_budget, p.budget_range, p.status, p.view_count,
@@ -309,9 +307,8 @@ export async function productionSubmissionsHandler(
             )
           ORDER BY p.created_at DESC
           LIMIT ${limit} OFFSET ${offset}
-        `.catch(() => []),
-        // TODO(catch-swallow): migrate to safeQuery
-        sql`
+        `, { fallback: [], context: 'production-sidebar.submissions.new.list' }),
+        safeQuery<{ total: number }>(() => sql`
           SELECT COUNT(*)::int AS total
           FROM pitches p
           LEFT JOIN saved_pitches sp ON sp.pitch_id = p.id AND sp.user_id = ${userId}
@@ -323,20 +320,19 @@ export async function productionSubmissionsHandler(
               EXISTS (SELECT 1 FROM ndas n WHERE n.pitch_id = p.id AND COALESCE(n.signer_id, n.user_id) = ${userId} AND n.status = 'signed')
               OR EXISTS (SELECT 1 FROM nda_requests nr WHERE nr.pitch_id = p.id AND nr.requester_id = ${userId} AND nr.status = 'approved')
             )
-        `.catch(() => [{ total: 0 }]),
+        `, { fallback: [{ total: 0 }], context: 'production-sidebar.submissions.new.count' }),
       ]);
 
-      const total = Number(countResult[0]?.total) || 0;
+      const total = Number(countResult.rows[0]?.total) || 0;
       return jsonResponse({
         success: true,
-        data: { submissions, filter: statusFilter, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 0 } },
+        data: { submissions: submissionsResult.rows, filter: statusFilter, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 0 } },
       }, origin);
     }
 
     // For review, shortlisted, accepted, rejected, archived — query saved_pitches
-    const [submissions, countResult] = await Promise.all([
-      // TODO(catch-swallow): migrate to safeQuery
-      sql`
+    const [submissionsResult, countResult] = await Promise.all([
+      safeQuery(() => sql`
         SELECT
           p.id, p.user_id, p.title, p.genre, p.logline, p.short_synopsis, p.format,
           p.estimated_budget, p.budget_range, p.status, p.view_count,
@@ -353,22 +349,21 @@ export async function productionSubmissionsHandler(
           AND (p.creator_id IS NULL OR p.creator_id != ${userId})
         ORDER BY COALESCE(sp.reviewed_at, sp.saved_at) DESC
         LIMIT ${limit} OFFSET ${offset}
-      `.catch(() => []),
-      // TODO(catch-swallow): migrate to safeQuery
-      sql`
+      `, { fallback: [], context: 'production-sidebar.submissions.review.list', tags: { filter: statusFilter } }),
+      safeQuery<{ total: number }>(() => sql`
         SELECT COUNT(*)::int AS total
         FROM saved_pitches sp
         JOIN pitches p ON p.id = sp.pitch_id
         WHERE sp.user_id = ${userId} AND sp.review_status = ${statusFilter}
           AND p.user_id != ${userId}
           AND (p.creator_id IS NULL OR p.creator_id != ${userId})
-      `.catch(() => [{ total: 0 }]),
+      `, { fallback: [{ total: 0 }], context: 'production-sidebar.submissions.review.count', tags: { filter: statusFilter } }),
     ]);
 
-    const total = Number(countResult[0]?.total) || 0;
+    const total = Number(countResult.rows[0]?.total) || 0;
     return jsonResponse({
       success: true,
-      data: { submissions, filter: statusFilter, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 0 } },
+      data: { submissions: submissionsResult.rows, filter: statusFilter, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 0 } },
     }, origin);
   } catch (error) {
     console.error('productionSubmissionsHandler error:', error);
@@ -475,22 +470,21 @@ export async function productionRevenueHandler(
   }
 
   try {
-    // Check if production_pipeline exists
-    // TODO(catch-swallow): migrate to safeQuery
-    const tableCheck = await sql`
+    // Check if production_pipeline exists — schema probe; don't report to Sentry
+    const tableCheck = await safeQuery<{ exists: boolean }>(() => sql`
       SELECT EXISTS (
         SELECT FROM information_schema.tables
         WHERE table_schema = 'public' AND table_name = 'production_pipeline'
       ) AS exists
-    `.catch(() => [{ exists: false }]);
+    `, { fallback: [{ exists: false }], context: 'production-sidebar.revenue.table-probe.pipeline', report: false });
 
-    if (!tableCheck[0]?.exists) {
+    if (!tableCheck.rows[0]?.exists) {
       return jsonResponse({ success: true, data: defaultData }, origin);
     }
 
     // Aggregate revenue by time periods
-    // TODO(catch-swallow): migrate to safeQuery
-    const revenueSummary = await sql`
+    type RevenueSummaryRow = { total_revenue: number; monthly_revenue: number; quarterly_revenue: number; yearly_revenue: number };
+    const revenueSummaryResult = await safeQuery<RevenueSummaryRow>(() => sql`
       SELECT
         COALESCE(SUM(i.amount), 0) AS total_revenue,
         COALESCE(SUM(
@@ -506,16 +500,15 @@ export async function productionRevenueHandler(
       JOIN production_pipeline pp ON i.pitch_id = pp.pitch_id
       WHERE pp.production_company_id::text = ${String(userId)}
         AND i.status IN ('active', 'funded', 'committed', 'completed')
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-sidebar.revenue.summary' });
 
-    const totalRevenue = Number(revenueSummary[0]?.total_revenue) || 0;
-    const monthlyRevenue = Number(revenueSummary[0]?.monthly_revenue) || 0;
-    const quarterlyRevenue = Number(revenueSummary[0]?.quarterly_revenue) || 0;
-    const yearlyRevenue = Number(revenueSummary[0]?.yearly_revenue) || 0;
+    const totalRevenue = Number(revenueSummaryResult.rows[0]?.total_revenue) || 0;
+    const monthlyRevenue = Number(revenueSummaryResult.rows[0]?.monthly_revenue) || 0;
+    const quarterlyRevenue = Number(revenueSummaryResult.rows[0]?.quarterly_revenue) || 0;
+    const yearlyRevenue = Number(revenueSummaryResult.rows[0]?.yearly_revenue) || 0;
 
     // Revenue by project
-    // TODO(catch-swallow): migrate to safeQuery
-    const revenueByProject = await sql`
+    const revenueByProjectResult = await safeQuery<Record<string, unknown>>(() => sql`
       SELECT
         pp.id AS project_id,
         COALESCE(pp.title, p.title, 'Untitled') AS project_title,
@@ -529,11 +522,11 @@ export async function productionRevenueHandler(
       GROUP BY pp.id, pp.title, p.title
       ORDER BY revenue DESC
       LIMIT 20
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-sidebar.revenue.by-project' });
+    const revenueByProject = revenueByProjectResult.rows;
 
     // Revenue by month (last 12 months)
-    // TODO(catch-swallow): migrate to safeQuery
-    const revenueByMonth = await sql`
+    const revenueByMonthResult = await safeQuery<Record<string, unknown>>(() => sql`
       SELECT
         TO_CHAR(DATE_TRUNC('month', i.created_at), 'YYYY-MM') AS month,
         COALESCE(SUM(i.amount), 0) AS revenue,
@@ -545,7 +538,8 @@ export async function productionRevenueHandler(
         AND i.created_at >= NOW() - INTERVAL '12 months'
       GROUP BY DATE_TRUNC('month', i.created_at)
       ORDER BY month ASC
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-sidebar.revenue.by-month' });
+    const revenueByMonth = revenueByMonthResult.rows;
 
     // Simple projected revenue: average of last 3 months extrapolated
     let projectedRevenue = 0;
@@ -559,25 +553,24 @@ export async function productionRevenueHandler(
 
     // Average deal size from production_deals table
     let avgDealSize = 0;
-    // TODO(catch-swallow): migrate to safeQuery
-    const dealCheck = await sql`
+    // schema probe; don't report to Sentry
+    const dealCheck = await safeQuery<{ exists: boolean }>(() => sql`
       SELECT EXISTS (
         SELECT FROM information_schema.tables
         WHERE table_schema = 'public' AND table_name = 'production_deals'
       ) AS exists
-    `.catch(() => [{ exists: false }]);
+    `, { fallback: [{ exists: false }], context: 'production-sidebar.revenue.table-probe.deals', report: false });
 
-    if (dealCheck[0]?.exists) {
-      // TODO(catch-swallow): migrate to safeQuery
-      const dealStats = await sql`
+    if (dealCheck.rows[0]?.exists) {
+      const dealStats = await safeQuery<{ avg_deal: number | null }>(() => sql`
         SELECT
           AVG(COALESCE(NULLIF(option_amount, 0), NULLIF(purchase_price, 0), NULLIF(development_fee, 0))) AS avg_deal
         FROM production_deals
         WHERE production_company_id = ${Number(userId)}
           AND deal_state NOT IN ('rejected', 'cancelled')
-      `.catch(() => []);
+      `, { fallback: [], context: 'production-sidebar.revenue.deal-stats' });
 
-      avgDealSize = Number(dealStats[0]?.avg_deal) || 0;
+      avgDealSize = Number(dealStats.rows[0]?.avg_deal) || 0;
     }
 
     // Fallback: derive from revenueByProject if no deals exist
@@ -589,8 +582,7 @@ export async function productionRevenueHandler(
     }
 
     // Revenue by category (pitch format)
-    // TODO(catch-swallow): migrate to safeQuery
-    const revenueByCategory = await sql`
+    const revenueByCategoryResult = await safeQuery<Record<string, unknown>>(() => sql`
       SELECT
         COALESCE(p.format, 'Other') AS category,
         COALESCE(SUM(i.amount), 0) AS revenue
@@ -601,7 +593,8 @@ export async function productionRevenueHandler(
       WHERE pp.production_company_id::text = ${String(userId)}
       GROUP BY p.format
       ORDER BY revenue DESC
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-sidebar.revenue.by-category' });
+    const revenueByCategory = revenueByCategoryResult.rows;
 
     // Compute percentages for each category
     const categoryTotal = revenueByCategory.reduce(
@@ -665,9 +658,8 @@ export async function productionSavedPitchesHandler(
   }
 
   try {
-    const [savedPitches, countResult] = await Promise.all([
-      // TODO(catch-swallow): migrate to safeQuery
-      sql`
+    const [savedPitchesResult, countResult] = await Promise.all([
+      safeQuery(() => sql`
         SELECT
           sp.id AS saved_id,
           sp.notes,
@@ -694,21 +686,20 @@ export async function productionSavedPitchesHandler(
         WHERE sp.user_id = ${Number(userId)}
         ORDER BY sp.saved_at DESC
         LIMIT 50
-      `.catch(() => []),
-      // TODO(catch-swallow): migrate to safeQuery
-      sql`
+      `, { fallback: [], context: 'production-sidebar.saved-pitches.list' }),
+      safeQuery<{ total: number }>(() => sql`
         SELECT COUNT(*)::int AS total
         FROM saved_pitches
         WHERE user_id = ${Number(userId)}
-      `.catch(() => [{ total: 0 }]),
+      `, { fallback: [{ total: 0 }], context: 'production-sidebar.saved-pitches.count' }),
     ]);
 
-    const total = Number(countResult[0]?.total) || 0;
+    const total = Number(countResult.rows[0]?.total) || 0;
 
     return jsonResponse({
       success: true,
       data: {
-        savedPitches,
+        savedPitches: savedPitchesResult.rows,
         total,
       },
     }, origin);

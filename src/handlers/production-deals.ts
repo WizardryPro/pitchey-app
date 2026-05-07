@@ -6,6 +6,7 @@ import { getDb } from '../db/connection';
 import type { Env } from '../db/connection';
 import { getCorsHeaders } from '../utils/response';
 import { getUserId } from '../utils/auth-extract';
+import { safeQuery } from '../db/safe-query';
 
 function jsonResponse(data: unknown, origin: string | null, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -46,8 +47,7 @@ export async function getProductionDeals(request: Request, env: Env): Promise<Re
     };
     const orderCol = validSorts[sortBy] || 'created_at';
 
-    // TODO(catch-swallow): migrate to safeQuery
-    const deals = await sql`
+    const dealsResult = await safeQuery(() => sql`
       SELECT d.*,
              d.deal_state AS status,
              COALESCE(d.option_amount, d.purchase_price, d.development_fee, 0) AS amount,
@@ -65,18 +65,17 @@ export async function getProductionDeals(request: Request, env: Env): Promise<Re
         CASE WHEN ${orderCol} = 'created_at' THEN d.created_at END DESC NULLS LAST,
         d.created_at DESC NULLS LAST
       LIMIT ${limit} OFFSET ${offset}
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-deals.list' });
 
-    // TODO(catch-swallow): migrate to safeQuery
-    const countResult = await sql`
+    const countResult = await safeQuery<{ total: number }>(() => sql`
       SELECT COUNT(*)::int AS total FROM production_deals
       WHERE production_company_id = ${Number(userId)}
         AND (${status} = '' OR deal_state::text = ${status})
-    `.catch(() => [{ total: 0 }]);
+    `, { fallback: [{ total: 0 }], context: 'production-deals.count' });
 
     return jsonResponse({
       success: true,
-      data: { deals, total: countResult[0]?.total || 0 }
+      data: { deals: dealsResult.rows, total: countResult.rows[0]?.total || 0 }
     }, origin);
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
@@ -111,9 +110,10 @@ export async function createProductionDeal(request: Request, env: Env): Promise<
     }
 
     // Lookup pitch for creator_id
-    // TODO(catch-swallow): migrate to safeQuery
-    const pitch = await sql`SELECT user_id FROM pitches WHERE id = ${pitchId}`.catch(() => []);
-    const creatorId = pitch.length > 0 ? pitch[0].user_id : null;
+    const pitchLookup = await safeQuery<{ user_id: number | null }>(() => sql`
+      SELECT user_id FROM pitches WHERE id = ${pitchId}
+    `, { fallback: [], context: 'production-deals.create.pitch-lookup' });
+    const creatorId = pitchLookup.rows.length > 0 ? pitchLookup.rows[0].user_id : null;
 
     const result = await sql`
       INSERT INTO production_deals (pitch_id, production_company_id, creator_id, deal_type, option_amount, backend_percentage, notes)
@@ -121,17 +121,16 @@ export async function createProductionDeal(request: Request, env: Env): Promise<
       RETURNING *, deal_state AS status, option_amount AS amount
     `;
 
-    // Notify the creator
+    // Notify the creator — best-effort (Sentry-reported via safeQuery)
     if (creatorId) {
-      // TODO(catch-swallow): migrate to safeQuery
-      await sql`
+      await safeQuery(() => sql`
         INSERT INTO notifications (user_id, type, title, message, related_user_id, related_pitch_id, created_at)
         VALUES (
           ${creatorId}, 'deal_proposed', 'New Deal Proposal',
           ${'A production company has proposed a ' + dealType + ' deal for your pitch'},
           ${Number(userId)}, ${pitchId}, NOW()
         )
-      `.catch(() => []);
+      `, { fallback: [], context: 'production-deals.create.notify' });
     }
 
     return jsonResponse({ success: true, data: { deal: result[0] } }, origin, 201);
@@ -156,8 +155,7 @@ export async function getProductionContract(request: Request, env: Env): Promise
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
   try {
-    // TODO(catch-swallow): migrate to safeQuery
-    const result = await sql`
+    const result = await safeQuery<Record<string, unknown>>(() => sql`
       SELECT d.*,
              p.title AS pitch_title, p.genre, p.logline,
              COALESCE(cu.name, cu.first_name || ' ' || cu.last_name) AS creator_name,
@@ -169,13 +167,14 @@ export async function getProductionContract(request: Request, env: Env): Promise
       LEFT JOIN users cu ON d.creator_id = cu.id
       LEFT JOIN users pu ON d.production_company_id = pu.id
       WHERE d.id = ${dealId} AND d.production_company_id = ${Number(userId)}
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-deals.contract' });
 
-    if (result.length === 0) {
+    if (!result.ok) return errorResponse('Failed to generate contract', origin, 500);
+    if (result.rows.length === 0) {
       return errorResponse('Deal not found', origin, 404);
     }
 
-    const deal = result[0];
+    const deal = result.rows[0];
 
     // Build contract JSON representation
     const contract = {
@@ -228,23 +227,24 @@ export async function getDistributionChannels(request: Request, env: Env): Promi
 
   try {
     // Verify ownership
-    // TODO(catch-swallow): migrate to safeQuery
-    const project = await sql`
+    const ownership = await safeQuery<{ id: number }>(() => sql`
       SELECT id FROM production_pipeline WHERE id = ${projectId} AND production_company_id = ${Number(userId)}
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-deals.distribution.ownership' });
 
-    if (project.length === 0) {
+    if (!ownership.ok) {
+      return jsonResponse({ success: true, data: { channels: [] } }, origin);
+    }
+    if (ownership.rows.length === 0) {
       return errorResponse('Project not found', origin, 404);
     }
 
-    // TODO(catch-swallow): migrate to safeQuery
-    const channels = await sql`
+    const channelsResult = await safeQuery(() => sql`
       SELECT * FROM distribution_channels
       WHERE project_id = ${projectId}
       ORDER BY release_date ASC NULLS LAST
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-deals.distribution.list' });
 
-    return jsonResponse({ success: true, data: { channels } }, origin);
+    return jsonResponse({ success: true, data: { channels: channelsResult.rows } }, origin);
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
     console.error('getDistributionChannels error:', e.message);
@@ -270,35 +270,37 @@ export async function exportProjectData(request: Request, env: Env): Promise<Res
 
   try {
     // Fetch project
-    // TODO(catch-swallow): migrate to safeQuery
-    const projectResult = await sql`
+    const projectResult = await safeQuery<Record<string, unknown>>(() => sql`
       SELECT pp.*,
              p.title AS pitch_title, p.genre, p.logline, p.format, p.estimated_budget
       FROM production_pipeline pp
       LEFT JOIN pitches p ON pp.pitch_id = p.id
       WHERE pp.id = ${projectId} AND pp.production_company_id = ${Number(userId)}
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-deals.export.project' });
 
-    if (projectResult.length === 0) {
+    if (!projectResult.ok) return errorResponse('Failed to export project data', origin, 500);
+    if (projectResult.rows.length === 0) {
       return errorResponse('Project not found', origin, 404);
     }
 
+    const project = projectResult.rows[0];
+
     // Fetch related data in parallel
-    const [milestones, channels, deals] = await Promise.all([
-      // TODO(catch-swallow): migrate to safeQuery
-      sql`SELECT * FROM project_milestones WHERE project_id = ${projectId} ORDER BY due_date`.catch(() => []),
-      // TODO(catch-swallow): migrate to safeQuery
-      sql`SELECT * FROM distribution_channels WHERE project_id = ${projectId}`.catch(() => []),
-      // TODO(catch-swallow): migrate to safeQuery
-      sql`SELECT * FROM production_deals WHERE pitch_id = ${projectResult[0].pitch_id}`.catch(() => []),
+    const [milestonesResult, channelsResult, dealsResult] = await Promise.all([
+      safeQuery(() => sql`SELECT * FROM project_milestones WHERE project_id = ${projectId} ORDER BY due_date`,
+        { fallback: [], context: 'production-deals.export.milestones' }),
+      safeQuery(() => sql`SELECT * FROM distribution_channels WHERE project_id = ${projectId}`,
+        { fallback: [], context: 'production-deals.export.channels' }),
+      safeQuery(() => sql`SELECT * FROM production_deals WHERE pitch_id = ${project.pitch_id}`,
+        { fallback: [], context: 'production-deals.export.deals' }),
     ]);
 
     const exportData = {
       exportedAt: new Date().toISOString(),
-      project: projectResult[0],
-      milestones,
-      distributionChannels: channels,
-      deals,
+      project,
+      milestones: milestonesResult.rows,
+      distributionChannels: channelsResult.rows,
+      deals: dealsResult.rows,
     };
 
     return jsonResponse({ success: true, data: exportData }, origin);
@@ -330,12 +332,12 @@ export async function updateProjectMilestone(request: Request, env: Env): Promis
 
   try {
     // Verify project ownership
-    // TODO(catch-swallow): migrate to safeQuery
-    const project = await sql`
+    const ownership = await safeQuery<{ id: number }>(() => sql`
       SELECT id FROM production_pipeline WHERE id = ${projectId} AND production_company_id = ${Number(userId)}
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-deals.milestone-update.ownership' });
 
-    if (project.length === 0) {
+    if (!ownership.ok) return errorResponse('Failed to update milestone', origin, 500);
+    if (ownership.rows.length === 0) {
       return errorResponse('Project not found', origin, 404);
     }
 
@@ -346,8 +348,7 @@ export async function updateProjectMilestone(request: Request, env: Env): Promis
     const dueDate = typeof body.due_date === 'string' ? body.due_date : undefined;
     const notes = typeof body.notes === 'string' ? body.notes : undefined;
 
-    // TODO(catch-swallow): migrate to safeQuery
-    const result = await sql`
+    const result = await safeQuery<Record<string, unknown>>(() => sql`
       UPDATE project_milestones
       SET
         title = COALESCE(${title ?? null}, title),
@@ -362,13 +363,14 @@ export async function updateProjectMilestone(request: Request, env: Env): Promis
         updated_at = NOW()
       WHERE id = ${milestoneId} AND project_id = ${projectId}
       RETURNING *
-    `.catch(() => []);
+    `, { fallback: [], context: 'production-deals.milestone-update' });
 
-    if (result.length === 0) {
+    if (!result.ok) return errorResponse('Failed to update milestone', origin, 500);
+    if (result.rows.length === 0) {
       return errorResponse('Milestone not found', origin, 404);
     }
 
-    return jsonResponse({ success: true, data: { milestone: result[0] } }, origin);
+    return jsonResponse({ success: true, data: { milestone: result.rows[0] } }, origin);
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
     console.error('updateProjectMilestone error:', e.message);
