@@ -50,7 +50,14 @@ Phase 1a finalized counts:
 - **B — breadcrumb pending**: 4 sites (credit deduction + transaction log writes; Phase 2 prerequisite)
 - **C — TODO(catch-swallow): migrate**: 97 sites (read-side dashboard fallbacks + 3 gate-feeding sites flagged in TODO text)
 
-**Worker-integrated baseline** (Phase 1b scope): 59 untagged sites, 0 tagged. Including this scope, gate metric is 59/168. Phase 1b's job is to apply the same A/B/C framework with the higher per-site judgment density the prep doc spot-check anticipated (~50% C, ~25% B, ~25% A) — the file is too mixed for the bulk tagger; expect mostly hand-classification.
+**Worker-integrated baseline** (Phase 1b scope): ~~59 untagged sites, 0 tagged~~ — closed 2026-05-06 by Phase 1b PR. Tree-wide gate metric across `src/` is now **0/168**.
+
+Phase 1b finalized counts (worker-integrated.ts only):
+- **A — fire-and-forget**: 15 sites (post-login password rehash, Stripe cleanup, Axiom logging, search-click tracking, session DELETEs, share-event INSERTs)
+- **B — breadcrumb pending**: 8 sites (Stripe `getSubscription` reads, INSERT-RETURNING patterns where caller checks null, auth-optional fallback)
+- **C — TODO(catch-swallow): migrate**: 36 sites (analytics dashboard reads, browse aggregates, info_requests reads, NDA document lookups)
+
+Distribution: 25% A / 14% B / 61% C — close to the spot-check prediction of 25/25/50. Each site received per-site human classification (no bulk-by-file shortcut available — file is too mixed). Tagger config preserved as the audit artifact: see PR diff for the line→bucket mapping.
 
 **~~Residual risk this PR does not fix.~~ Closed 2026-05-06 by B-site wrap PR.** The 4 bucket-B sites (`ai-pitch-extract.ts:191/197`, `ai-production-autofill.ts:211/217`) were credit-deduction and transaction-log writes that could still fail silently. The B-site wrap landed `observedSwallow` (a `safeQuery`-style helper for best-effort writes) and converted all four sites; revenue/audit-trail leakage is now visible in Sentry under the `catch_swallow.context` tag. Bucket B count is now 0; total `.catch(() => …)` sites in scope dropped from 109 to 105.
 
