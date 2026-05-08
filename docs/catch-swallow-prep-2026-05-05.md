@@ -26,7 +26,7 @@ Phase 1a finalized counts:
 
 **Worker-integrated baseline** (Phase 1b scope): 59 untagged sites, 0 tagged. Including this scope, gate metric is 59/168. Phase 1b's job is to apply the same A/B/C framework with the higher per-site judgment density the prep doc spot-check anticipated (~50% C, ~25% B, ~25% A) — the file is too mixed for the bulk tagger; expect mostly hand-classification.
 
-**Residual risk this PR does not fix.** The 4 bucket-B sites (`ai-pitch-extract.ts:191/197`, `ai-production-autofill.ts:211/217`) are credit-deduction and transaction-log writes that can still fail silently between now and Phase 2 landing. They're tagged but not yet wrapped with breadcrumbs. The breadcrumb wrap is the smallest follow-up that actually changes runtime behavior — schedule it before Phase 2 begins, not after.
+**~~Residual risk this PR does not fix.~~ Closed 2026-05-06 by B-site wrap PR.** The 4 bucket-B sites (`ai-pitch-extract.ts:191/197`, `ai-production-autofill.ts:211/217`) were credit-deduction and transaction-log writes that could still fail silently. The B-site wrap landed `observedSwallow` (a `safeQuery`-style helper for best-effort writes) and converted all four sites; revenue/audit-trail leakage is now visible in Sentry under the `catch_swallow.context` tag. Bucket B count is now 0; total `.catch(() => …)` sites in scope dropped from 109 to 105.
 
 **Gate-feeding sites identified during Phase 1a** — 3 sites on paths the original audit was written to address:
 - `services/file-validation.service.ts:394` — fail-open quota bypass; '0' on error lets user upload past quota

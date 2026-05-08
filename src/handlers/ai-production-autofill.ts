@@ -10,6 +10,7 @@ import { getDb } from '../db/connection';
 import type { Env } from '../db/connection';
 import { getCorsHeaders } from '../utils/response';
 import { getUserId } from '../utils/auth-extract';
+import { observedSwallow } from '../db/safe-query';
 
 const AUTOFILL_CREDIT_COST = 5;
 
@@ -205,19 +206,23 @@ export async function aiProductionAutofill(request: Request, env: Env): Promise<
       return errorResponse('AI returned incomplete data. Please try again.', origin, 422);
     }
 
-    // Deduct credits
-    // TODO(catch-swallow): bucket-B breadcrumb pending — revenue leakage if silent
-    await sql`
-      UPDATE user_credits SET balance = balance - ${AUTOFILL_CREDIT_COST}, total_used = total_used + ${AUTOFILL_CREDIT_COST}, last_updated = NOW()
-      WHERE user_id = ${Number(userId)}
-    `.catch(() => {});
+    // Deduct credits + log transaction. Best-effort writes — AI response already
+    // returned to user; failures surface in Sentry as revenue/audit leakage.
+    await observedSwallow(
+      () => sql`
+        UPDATE user_credits SET balance = balance - ${AUTOFILL_CREDIT_COST}, total_used = total_used + ${AUTOFILL_CREDIT_COST}, last_updated = NOW()
+        WHERE user_id = ${Number(userId)}
+      `,
+      'ai-production-autofill.credit-deduction',
+    );
 
-    // Log credit transaction
-    // TODO(catch-swallow): bucket-B breadcrumb pending — audit trail loss if silent
-    await sql`
-      INSERT INTO credit_transactions (user_id, type, amount, description, balance_before, balance_after, usage_type, created_at)
-      VALUES (${Number(userId)}, 'usage', ${-AUTOFILL_CREDIT_COST}, 'AI production auto-fill', ${balance}, ${balance - AUTOFILL_CREDIT_COST}, 'ai_autofill', NOW())
-    `.catch(() => {});
+    await observedSwallow(
+      () => sql`
+        INSERT INTO credit_transactions (user_id, type, amount, description, balance_before, balance_after, usage_type, created_at)
+        VALUES (${Number(userId)}, 'usage', ${-AUTOFILL_CREDIT_COST}, 'AI production auto-fill', ${balance}, ${balance - AUTOFILL_CREDIT_COST}, 'ai_autofill', NOW())
+      `,
+      'ai-production-autofill.transaction-log',
+    );
 
     return jsonResponse({
       success: true,

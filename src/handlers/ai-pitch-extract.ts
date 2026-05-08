@@ -8,6 +8,7 @@ import { getDb } from '../db/connection';
 import type { Env } from '../db/connection';
 import { getCorsHeaders } from '../utils/response';
 import { getUserId } from '../utils/auth-extract';
+import { observedSwallow } from '../db/safe-query';
 
 const AI_EXTRACT_CREDIT_COST = 5;
 
@@ -185,19 +186,23 @@ export async function aiPitchExtract(request: Request, env: Env): Promise<Respon
       return errorResponse('AI could not extract structured data from this document. Try a different file.', origin, 422);
     }
 
-    // Deduct credits
-    // TODO(catch-swallow): bucket-B breadcrumb pending — revenue leakage if silent
-    await sql`
-      UPDATE user_credits SET balance = balance - ${AI_EXTRACT_CREDIT_COST}, total_used = total_used + ${AI_EXTRACT_CREDIT_COST}, last_updated = NOW()
-      WHERE user_id = ${Number(userId)}
-    `.catch(() => {});
+    // Deduct credits + log transaction. Best-effort writes — AI response already
+    // returned to user; failures surface in Sentry as revenue/audit leakage.
+    await observedSwallow(
+      () => sql`
+        UPDATE user_credits SET balance = balance - ${AI_EXTRACT_CREDIT_COST}, total_used = total_used + ${AI_EXTRACT_CREDIT_COST}, last_updated = NOW()
+        WHERE user_id = ${Number(userId)}
+      `,
+      'ai-pitch-extract.credit-deduction',
+    );
 
-    // Log credit transaction
-    // TODO(catch-swallow): bucket-B breadcrumb pending — audit trail loss if silent
-    await sql`
-      INSERT INTO credit_transactions (user_id, type, amount, description, balance_before, balance_after, usage_type, created_at)
-      VALUES (${Number(userId)}, 'usage', ${-AI_EXTRACT_CREDIT_COST}, 'AI pitch extraction', ${balance}, ${balance - AI_EXTRACT_CREDIT_COST}, 'ai_extract', NOW())
-    `.catch(() => {});
+    await observedSwallow(
+      () => sql`
+        INSERT INTO credit_transactions (user_id, type, amount, description, balance_before, balance_after, usage_type, created_at)
+        VALUES (${Number(userId)}, 'usage', ${-AI_EXTRACT_CREDIT_COST}, 'AI pitch extraction', ${balance}, ${balance - AI_EXTRACT_CREDIT_COST}, 'ai_extract', NOW())
+      `,
+      'ai-pitch-extract.transaction-log',
+    );
 
     return jsonResponse({
       success: true,
