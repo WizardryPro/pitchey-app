@@ -10,7 +10,7 @@ import { getDb } from '../db/connection';
 import type { Env } from '../db/connection';
 import { getCorsHeaders } from '../utils/response';
 import { getUserId } from '../utils/auth-extract';
-import { observedSwallow } from '../db/safe-query';
+import { observedSwallow, safeQuery } from '../db/safe-query';
 
 const AUTOFILL_CREDIT_COST = 5;
 
@@ -86,12 +86,16 @@ export async function aiProductionAutofill(request: Request, env: Env): Promise<
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
   try {
-    // Credit check
-    // TODO(catch-swallow): migrate to safeQuery — gate-feeding, fail-closed but operator-blind on credit table outage
-    const creditRows = await sql`
+    // Credit check — gate-feeding. Fail closed on credit-table outage (don't grant
+    // access on a query exception) AND surface the failure to Sentry so we know.
+    const creditRows = await safeQuery<{ balance: number | string }>(() => sql`
       SELECT balance FROM user_credits WHERE user_id = ${Number(userId)}
-    `.catch(() => []);
-    const balance = Number(creditRows[0]?.balance) || 0;
+    `, { fallback: [], context: 'ai-production-autofill.credit-check' });
+
+    if (!creditRows.ok) {
+      return errorResponse('Credit check temporarily unavailable. Please retry.', origin, 503);
+    }
+    const balance = Number(creditRows.rows[0]?.balance) || 0;
 
     if (balance < AUTOFILL_CREDIT_COST) {
       return errorResponse(`Insufficient credits. Auto-fill costs ${AUTOFILL_CREDIT_COST} credits. You have ${balance}.`, origin, 402);

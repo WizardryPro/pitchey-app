@@ -8,6 +8,7 @@ import type { Env } from '../db/connection';
 import { getCorsHeaders } from '../utils/response';
 import { getAuthenticatedUser, getUserId } from '../utils/auth-extract';
 import { sendCollaboratorInviteEmail, sendCollaboratorAcceptedEmail } from '../services/email/index';
+import { safeQuery } from '../db/safe-query';
 
 const VALID_ROLES = ['director', 'line_producer', 'dp', 'production_designer', 'editor', 'sound_designer', 'custom'] as const;
 const VALID_NOTE_CATEGORIES = ['casting', 'location', 'budget', 'schedule', 'team', 'general'] as const;
@@ -660,13 +661,12 @@ export async function getCollaborationChecklist(request: Request, env: Env): Pro
     `;
     if (pipeline.length === 0) return errorResponse('Project not found', origin, 404);
 
-    // TODO(catch-swallow): migrate to safeQuery — empty result hides schema drift on production_checklists
-    const result = await sql`
+    const result = await safeQuery<{ checklist: Record<string, unknown> }>(() => sql`
       SELECT checklist FROM production_checklists
       WHERE user_id = ${pipeline[0].production_company_id} AND pitch_id = ${projectId}
-    `.catch(() => []);
+    `, { fallback: [], context: 'collaborator.checklist.read' });
 
-    const checklist = result.length > 0 ? result[0].checklist : {};
+    const checklist = result.rows.length > 0 ? result.rows[0].checklist : {};
 
     return jsonResponse({ success: true, data: { checklist, my_role: collab.role } }, origin);
   } catch (err) {
@@ -765,15 +765,14 @@ export async function getCollaborationNotes(request: Request, env: Env): Promise
 
     // Get notes from production_notes (owner's notes) + collaborator-created notes
     const pitchId = pipeline[0].pitch_id || projectId;
-    // TODO(catch-swallow): migrate to safeQuery — empty result hides schema drift on production_notes
-    const notes = await sql`
+    const notesResult = await safeQuery(() => sql`
       SELECT id, content, category, author, created_at, updated_at
       FROM production_notes
       WHERE pitch_id = ${pitchId}
       ORDER BY created_at ASC
-    `.catch(() => []);
+    `, { fallback: [], context: 'collaborator.notes.read' });
 
-    return jsonResponse({ success: true, data: { notes } }, origin);
+    return jsonResponse({ success: true, data: { notes: notesResult.rows } }, origin);
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
     console.error('getCollaborationNotes error:', e.message);
