@@ -16,7 +16,7 @@ import * as Sentry from '@sentry/cloudflare';
 import { createAxiomLogger } from './middleware/axiom-logging';
 // Per-request trace context for SQLCommenter + Axiom query correlation
 import { traceStorage } from './db/trace-context';
-import { safeQuery } from './db/safe-query';
+import { safeQuery, observedSwallowReturning } from './db/safe-query';
 
 import { createDatabase } from './db/raw-sql-connection';
 import { UserProfileRoutes } from './routes/user-profile';
@@ -9980,8 +9980,11 @@ pitchey_analytics_datapoints_per_minute 1250
             const subId = session.subscription;
             let sub = null;
             if (subId) {
-              // TODO(catch-swallow): bucket-B breadcrumb pending — stripe.getSubscription, caller checks null
-              sub = await stripe.getSubscription(subId).catch(() => null);
+              sub = await observedSwallowReturning(
+                () => stripe.getSubscription(subId),
+                'stripe-webhook.checkout-session.get-subscription',
+                null,
+              );
             }
 
             const tierId = session.metadata?.tier || 'unknown';
@@ -10109,8 +10112,11 @@ pitchey_analytics_datapoints_per_minute 1250
             userId = historyRows[0].user_id;
             tierId = historyRows[0].new_tier;
           } else {
-            // TODO(catch-swallow): bucket-B breadcrumb pending — stripe.getSubscription, caller checks null
-            const sub = await stripe.getSubscription(subId).catch(() => null);
+            const sub = await observedSwallowReturning(
+              () => stripe.getSubscription(subId),
+              'stripe-webhook.invoice-paid.get-subscription',
+              null,
+            );
             const metaUserId = parseInt(sub?.metadata?.userId || '');
             const metaTier = sub?.metadata?.tier;
             if (metaUserId && metaTier) {
@@ -12990,12 +12996,15 @@ pitchey_analytics_datapoints_per_minute 1250
     try {
       const body = await request.json() as Record<string, unknown>;
 
-      // TODO(catch-swallow): bucket-B breadcrumb pending — INSERT scheduled_reports returning null; caller checks null
-      const result = await this.db.query(`
-        INSERT INTO scheduled_reports (user_id, report_type, frequency, filters, next_run, created_at)
-        VALUES ($1, $2, $3, $4, NOW() + INTERVAL '1 day', NOW())
-        RETURNING id, next_run
-      `, [authResult.user!.id, (body.type as string) || 'analytics', (body.frequency as string) || 'weekly', JSON.stringify(body.filters || {})]).catch(() => null);
+      const result = await observedSwallowReturning(
+        () => this.db.query(`
+          INSERT INTO scheduled_reports (user_id, report_type, frequency, filters, next_run, created_at)
+          VALUES ($1, $2, $3, $4, NOW() + INTERVAL '1 day', NOW())
+          RETURNING id, next_run
+        `, [authResult.user!.id, (body.type as string) || 'analytics', (body.frequency as string) || 'weekly', JSON.stringify(body.filters || {})]),
+        'scheduled-report.insert',
+        null,
+      );
 
       if (result && result[0]) {
         return builder.success({ success: true, reportId: result[0].id, nextRun: result[0].next_run });
@@ -13227,18 +13236,21 @@ pitchey_analytics_datapoints_per_minute 1250
       const body = await request.json() as Record<string, unknown>;
 
       // Create a calendar event for the meeting
-      // TODO(catch-swallow): bucket-B breadcrumb pending — INSERT calendar_events returning null; caller checks null
-      const result = await this.db.query(`
-        INSERT INTO calendar_events (user_id, title, description, start_date, end_date, event_type, color, created_at)
-        VALUES ($1, $2, $3, $4, $5, 'meeting', '#3b82f6', NOW())
-        RETURNING id, title, start_date
-      `, [
-        authResult.user!.id,
-        `Meeting: ${body.meetingType || 'general'}`,
-        (body.message as string) || '',
-        (body.dateTime as string) || new Date().toISOString(),
-        body.dateTime ? new Date(new Date(body.dateTime as string).getTime() + ((body.duration as number) || 60) * 60000).toISOString() : new Date(Date.now() + 3600000).toISOString()
-      ]).catch(() => null);
+      const result = await observedSwallowReturning(
+        () => this.db.query(`
+          INSERT INTO calendar_events (user_id, title, description, start_date, end_date, event_type, color, created_at)
+          VALUES ($1, $2, $3, $4, $5, 'meeting', '#3b82f6', NOW())
+          RETURNING id, title, start_date
+        `, [
+          authResult.user!.id,
+          `Meeting: ${body.meetingType || 'general'}`,
+          (body.message as string) || '',
+          (body.dateTime as string) || new Date().toISOString(),
+          body.dateTime ? new Date(new Date(body.dateTime as string).getTime() + ((body.duration as number) || 60) * 60000).toISOString() : new Date(Date.now() + 3600000).toISOString()
+        ]),
+        'meeting.calendar-event-insert',
+        null,
+      );
 
       if (result && result[0]) {
         return builder.success({
@@ -13393,11 +13405,14 @@ pitchey_analytics_datapoints_per_minute 1250
     const builder = new ApiResponseBuilder(request);
     try {
       const body = await request.json() as Record<string, unknown>;
-      // TODO(catch-swallow): bucket-B breadcrumb pending — INSERT info_requests returning null; caller checks null
-      const result = await this.db.query(`
-        INSERT INTO info_requests (requester_id, target_user_id, pitch_id, message, status, created_at)
-        VALUES ($1, $2, $3, $4, 'pending', NOW()) RETURNING *
-      `, [authResult.user!.id, body.targetUserId as string | number, (body.pitchId as string | number | null) || null, (body.message as string) || '']).catch(() => null);
+      const result = await observedSwallowReturning(
+        () => this.db.query(`
+          INSERT INTO info_requests (requester_id, target_user_id, pitch_id, message, status, created_at)
+          VALUES ($1, $2, $3, $4, 'pending', NOW()) RETURNING *
+        `, [authResult.user!.id, body.targetUserId as string | number, (body.pitchId as string | number | null) || null, (body.message as string) || '']),
+        'info-request.insert',
+        null,
+      );
 
       if (result && result[0]) {
         return builder.success(result[0]);
@@ -13416,11 +13431,14 @@ pitchey_analytics_datapoints_per_minute 1250
     const params = (request as any).params;
     try {
       const body = await request.json() as Record<string, unknown>;
-      // TODO(catch-swallow): bucket-B breadcrumb pending — UPDATE info_requests returning null; caller checks null
-      const result = await this.db.query(`
-        UPDATE info_requests SET response = $1, status = 'responded', updated_at = NOW()
-        WHERE id = $2 AND target_user_id = $3 RETURNING *
-      `, [body.response, params.id, authResult.user!.id]).catch(() => null);
+      const result = await observedSwallowReturning(
+        () => this.db.query(`
+          UPDATE info_requests SET response = $1, status = 'responded', updated_at = NOW()
+          WHERE id = $2 AND target_user_id = $3 RETURNING *
+        `, [body.response, params.id, authResult.user!.id]),
+        'info-request.respond',
+        null,
+      );
 
       if (result && result[0]) {
         return builder.success(result[0]);
@@ -13439,11 +13457,14 @@ pitchey_analytics_datapoints_per_minute 1250
     const params = (request as any).params;
     try {
       const body = await request.json() as Record<string, unknown>;
-      // TODO(catch-swallow): bucket-B breadcrumb pending — UPDATE info_requests returning null; caller checks null
-      const result = await this.db.query(`
-        UPDATE info_requests SET status = $1, updated_at = NOW()
-        WHERE id = $2 AND (requester_id = $3 OR target_user_id = $3) RETURNING *
-      `, [body.status, params.id, authResult.user!.id]).catch(() => null);
+      const result = await observedSwallowReturning(
+        () => this.db.query(`
+          UPDATE info_requests SET status = $1, updated_at = NOW()
+          WHERE id = $2 AND (requester_id = $3 OR target_user_id = $3) RETURNING *
+        `, [body.status, params.id, authResult.user!.id]),
+        'info-request.update',
+        null,
+      );
 
       if (result && result[0]) {
         return builder.success(result[0]);
@@ -13460,8 +13481,11 @@ pitchey_analytics_datapoints_per_minute 1250
       const body = await request.json() as Record<string, unknown>;
 
       // Log demo request (may or may not have auth)
-      // TODO(catch-swallow): bucket-B breadcrumb pending — auth-optional fallback; auth backend errors should be visible
-      const authResult = await this.requireAuth(request).catch(() => ({ authorized: false, user: null }));
+      const authResult = await observedSwallowReturning(
+        () => this.requireAuth(request),
+        'demo-request.auth-optional',
+        { authorized: false, user: null },
+      );
 
       // fire-and-forget — demo-request insert; non-fatal
       await this.db.query(`

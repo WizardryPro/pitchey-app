@@ -127,3 +127,41 @@ export async function observedSwallow(
     }
   }
 }
+
+/**
+ * observedSwallowReturning — sibling of `observedSwallow` for best-effort
+ * operations where the caller *does* read the result but accepts a fallback
+ * on failure (typically `null` from an INSERT/UPDATE-RETURNING or an external
+ * API read). Catches, reports to Sentry with a context tag, and returns the
+ * fallback. Restores observability without changing the caller's null-check.
+ *
+ * Two generics so the fallback's shape doesn't need to match `T` exactly —
+ * the common case is `T = SomeRow[]`, fallback `null`, return `T | null`.
+ *
+ *   const result = await observedSwallowReturning(
+ *     () => this.db.query(`INSERT INTO ... RETURNING *`, [...]),
+ *     'handle-info-request.insert',
+ *     null,
+ *   );
+ *   if (result && result[0]) { ... }
+ */
+export async function observedSwallowReturning<T, F>(
+  fn: () => Promise<T>,
+  context: string,
+  fallback: F,
+): Promise<T | F> {
+  try {
+    return await fn();
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    try {
+      Sentry.withScope((scope) => {
+        scope.setTag('catch_swallow.context', context);
+        Sentry.captureException(error);
+      });
+    } catch {
+      // Sentry hub not initialized (test env, standalone scripts) — swallow.
+    }
+    return fallback;
+  }
+}
