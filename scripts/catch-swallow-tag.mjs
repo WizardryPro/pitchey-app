@@ -33,7 +33,14 @@ const CATCH_RE = /\.catch\(\(\)\s*=>/;
 // STMT_START matches the line that begins the catch's statement. `sql\`` and
 // `\w+\.\w+\(` are included so each element of a Promise.all([sql\`\`.catch,
 // db.query(...).catch]) gets its own statement-start (and its own tag).
-const STMT_START = /^(await\s|return\s|const\s|let\s|var\s|this\.|\w+\s*=|sql`|\(sql`|\w+\.\w+\()/;
+//
+// `\w+\s*=\s*await\s` (not bare `\w+\s*=`) — bare form matched SQL column
+// assignments (`updated_at = NOW()`, `status = COALESCE(...)`) inside an
+// UPDATE template, anchoring the walker to the wrong line and inserting the
+// tag *inside* the SQL template. The `await` prefix is mandatory in the
+// codebase for these statements (every `.catch(() => …)` site reads from a
+// promise) so this loses no real call sites. See PR #85 fallout.
+const STMT_START = /^(await\s|return\s|const\s|let\s|var\s|this\.|\w+\s*=\s*\(?\s*await\s|\w+\s*=\s*sql`|sql`|\(sql`|\w+\.\w+\()/;
 const TAG_FAF = /\/\/\s*fire-and-forget\b/;
 const TAG_TODO = /\/\/\s*TODO\(catch-swallow\)/;
 

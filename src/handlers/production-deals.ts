@@ -346,6 +346,7 @@ export async function updateProjectMilestone(request: Request, env: Env): Promis
     const dueDate = typeof body.due_date === 'string' ? body.due_date : undefined;
     const notes = typeof body.notes === 'string' ? body.notes : undefined;
 
+    // TODO(catch-swallow): migrate to safeQuery
     const result = await sql`
       UPDATE project_milestones
       SET
@@ -358,7 +359,6 @@ export async function updateProjectMilestone(request: Request, env: Env): Promis
           WHEN ${completed ?? null} = false THEN NULL
           ELSE completed_at
         END,
-        // TODO(catch-swallow): migrate to safeQuery
         updated_at = NOW()
       WHERE id = ${milestoneId} AND project_id = ${projectId}
       RETURNING *
