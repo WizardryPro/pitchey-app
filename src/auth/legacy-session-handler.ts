@@ -32,11 +32,15 @@ export class LegacySessionHandler {
   constructor(
     private env: {
       DATABASE_URL: string;
+      HYPERDRIVE?: { connectionString: string };
       SESSIONS_KV?: KVNamespace;
       BETTER_AUTH_SECRET?: string;
     }
   ) {
-    this.sql = neon(env.DATABASE_URL);
+    // Hyperdrive routes through CF's edge connection pool when bound; falls
+    // back to direct Neon when not. Caching MUST stay disabled on the binding
+    // — see wrangler.toml comment.
+    this.sql = neon(env.HYPERDRIVE?.connectionString || env.DATABASE_URL);
     this.sessionsKV = env.SESSIONS_KV;
     
     // Ensure sessions table exists
