@@ -13,6 +13,7 @@ import { neon } from '@neondatabase/serverless';
 
 export interface SessionStoreEnv {
   DATABASE_URL: string;
+  HYPERDRIVE?: { connectionString: string };
   BETTER_AUTH_SECRET?: string;
   JWT_SECRET?: string;
   SESSIONS_KV?: any;
@@ -34,11 +35,15 @@ export interface SessionStore {
   createSession(userId: string, expiresAt: Date): Promise<string>;
   findSession(sessionId: string): Promise<Record<string, unknown> | undefined>;
   deleteSession(sessionId: string): Promise<void>;
-  deleteExpiredSessions(): Promise<void>;
+  deleteExpiredSessions(): Promise<number>;
 }
 
 export function createSessionStore(env: SessionStoreEnv): SessionStore {
-  const sql = neon(env.DATABASE_URL);
+  // Hyperdrive routes through CF's edge connection pool when bound; falls back
+  // to direct Neon when not. Caching MUST be disabled on the Hyperdrive
+  // binding — query result caching here would let revoked sessions keep
+  // authenticating until the cache TTL expires. See wrangler.toml.
+  const sql = neon(env.HYPERDRIVE?.connectionString || env.DATABASE_URL);
 
   return {
 
@@ -103,7 +108,8 @@ export function createSessionStore(env: SessionStoreEnv): SessionStore {
     },
 
     async deleteExpiredSessions() {
-      await sql`DELETE FROM sessions WHERE expires_at < NOW()`;
+      const result = await sql`DELETE FROM sessions WHERE expires_at < NOW() RETURNING id`;
+      return toArray(result).length;
     },
   };
 }

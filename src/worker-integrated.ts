@@ -20781,8 +20781,42 @@ async function archiveOldJobs(env: any, ctx: ExecutionContext): Promise<void> {
   console.log("Archiving old jobs...");
 }
 
-async function cleanupDatabase(env: any, ctx: ExecutionContext): Promise<void> {
-  console.log("Cleaning up database...");
+async function cleanupDatabase(env: any, _ctx: ExecutionContext): Promise<void> {
+  // Weekly Monday 2 AM sweep. Only sweeps expired session rows for now —
+  // the broader "cleanup" surface (orphaned uploads, archived jobs, audit log
+  // rotation) is still placeholder territory and needs its own audit before
+  // wiring. Prior to this body landing, the cron fired but did nothing —
+  // expired session rows accumulated indefinitely except via opportunistic
+  // logout-path deletion, which most users never trigger.
+  const startedAt = Date.now();
+  try {
+    const store = createSessionStore(env as SessionStoreEnv);
+    const deleted = await store.deleteExpiredSessions();
+    console.log(JSON.stringify({
+      level: 'info',
+      category: 'session_cleanup',
+      action: 'sweep_expired_sessions',
+      outcome: 'success',
+      deleted,
+      duration_ms: Date.now() - startedAt,
+    }));
+  } catch (err) {
+    const e = err instanceof Error ? err : new Error(String(err));
+    console.error(JSON.stringify({
+      level: 'error',
+      category: 'session_cleanup',
+      action: 'sweep_expired_sessions',
+      outcome: 'failed',
+      error: e.message,
+      duration_ms: Date.now() - startedAt,
+    }));
+    try {
+      const SentryMod = await import('@sentry/cloudflare');
+      SentryMod.captureException?.(e, { tags: { cron: 'cleanup_database' } });
+    } catch {
+      /* Sentry not available in scheduled context — swallow */
+    }
+  }
 }
 
 async function updateTrendingAlgorithm(env: any, _ctx: ExecutionContext): Promise<void> {

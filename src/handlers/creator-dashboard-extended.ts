@@ -33,7 +33,7 @@ export async function creatorRevenueTrendsHandler(request: Request, env: Env): P
         COUNT(*)::int AS transaction_count
       FROM creator_revenue
       WHERE creator_id = ${userId}
-        AND transaction_date >= NOW() - (${months} || ' months')::interval
+        AND transaction_date >= NOW() - (INTERVAL '1 month' * ${months})
       GROUP BY TO_CHAR(transaction_date, 'YYYY-MM')
       ORDER BY month ASC
     `, { fallback: [], context: 'creator-dashboard.revenue.trends' });

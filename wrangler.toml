@@ -142,6 +142,27 @@ bucket_name = "pitchey-audit-logs"
 binding = "TRACE_LOGS"
 bucket_name = "pitchey-trace-logs"
 
+# ===== HYPERDRIVE (CONNECTION POOL) =====
+# Caching is explicitly disabled on the resource (see `wrangler hyperdrive get
+# <id>`). Re-enabling caching would let revoked session rows keep
+# authenticating until cache TTL expires — connection pooling only is the
+# safe and intended use for the auth path.
+#
+# CREDENTIAL ROTATION GOTCHA: Hyperdrive stores its own copy of the Neon
+# connection string. Rotating the Neon password requires updating BOTH:
+#   1. wrangler secret put DATABASE_URL              (the Worker secret)
+#   2. wrangler hyperdrive update <id> --connection-string=...   (the binding)
+# Forgetting step 2 makes Hyperdrive try to connect with the dead credential;
+# requests start 500-ing at the edge with no obvious cause.
+#
+# Orphan: `pitchey-db` (id bc2d846d32e64b5c8122654e4f12c959) is an unused
+# duplicate from earlier abandoned integration attempts; safe to delete via
+# `wrangler hyperdrive delete bc2d846d32e64b5c8122654e4f12c959` once verified
+# nothing else references it.
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "dec8d1ab675649c8b69d88cb4c160704"
+
 # ===== CRON TRIGGERS =====
 [triggers]
 crons = [
