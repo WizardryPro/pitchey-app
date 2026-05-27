@@ -3868,7 +3868,8 @@ class RouteRegistry {
       '/api/browse/top-rated',  // Top rated pitches
       '/api/demos/request',     // Demo request (anonymous OK)
       '/api/analytics/track-view', // View tracking (anonymous views)
-      '/api/portfolio/s'  // Public shared portfolio (token-based)
+      '/api/portfolio/s',  // Public shared portfolio (token-based)
+      '/api/webhooks/stripe'  // Stripe webhooks (HMAC-SHA256 signature auth inside the handler, not session-based)
     ];
 
     // Find handler FIRST (before auth check)
