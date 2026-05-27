@@ -2713,6 +2713,7 @@ class RouteRegistry {
     this.register('GET', '/api/payments/subscription-status', this.getSubscriptionStatus.bind(this));
     this.register('POST', '/api/payments/subscribe', this.handleSubscribe.bind(this));
     this.register('POST', '/api/payments/cancel-subscription', this.handleCancelSubscription.bind(this));
+    this.register('POST', '/api/payments/billing-portal', this.handleBillingPortal.bind(this));
     this.register('GET', '/api/payments/history', (req) => this.getPaymentHistory(req));
     this.register('GET', '/api/payments/invoices', this.getInvoices.bind(this));
     this.register('GET', '/api/payments/payment-methods', this.getPaymentMethods.bind(this));
@@ -9866,6 +9867,65 @@ pitchey_analytics_datapoints_per_minute 1250
     }
   }
 
+  private async handleBillingPortal(request: Request): Promise<Response> {
+    const authResult = await this.validateAuth(request);
+    if (!authResult.valid) {
+      return new ApiResponseBuilder(request).error(ErrorCode.UNAUTHORIZED, 'Authentication required');
+    }
+
+    try {
+      const stripeKey = (this.env as any).STRIPE_SECRET_KEY;
+      const sql = this.db.getSql() as any;
+
+      if (!sql || !authResult.user?.id || !authResult.user?.email) {
+        return new ApiResponseBuilder(request).error(ErrorCode.INTERNAL_ERROR, 'User context unavailable');
+      }
+      if (!stripeKey) {
+        return new ApiResponseBuilder(request).error(ErrorCode.INTERNAL_ERROR, 'Billing not configured');
+      }
+
+      const userId = authResult.user.id;
+      const email = authResult.user.email;
+      const stripe = new StripeService(stripeKey);
+
+      // Prefer the persisted customer id (set by checkout.session.completed
+      // webhook, migration 088). Fall back to Stripe's email search for users
+      // who subscribed before 088 or for any sub created out-of-band, then
+      // persist so we skip the round-trip next time.
+      const rows = await sql`
+        SELECT stripe_customer_id FROM users WHERE id = ${userId} LIMIT 1
+      ` as { stripe_customer_id: string | null }[];
+
+      let customerId = rows[0]?.stripe_customer_id || null;
+      if (!customerId) {
+        const customer = await stripe.getOrCreateCustomer(email, userId);
+        customerId = customer.id;
+        await sql`
+          UPDATE users SET stripe_customer_id = ${customerId} WHERE id = ${userId}
+        `;
+      }
+
+      // Return them to the billing page they came from. Each portal mounts
+      // the same Billing.tsx at /<portal>/billing, but the SPA router resolves
+      // /billing → portal-specific URL on its own.
+      const frontendUrl = (this.env as any).FRONTEND_URL || 'https://pitchey-5o8.pages.dev';
+      const returnUrl = `${frontendUrl}/billing`;
+
+      const session = await stripe.createBillingPortalSession({
+        customerId,
+        returnUrl,
+      });
+
+      return new ApiResponseBuilder(request).success({ url: session.url });
+    } catch (e: any) {
+      console.error('Failed to create billing portal session:', e);
+      return new ApiResponseBuilder(request).error(
+        ErrorCode.INTERNAL_ERROR,
+        'Failed to open billing portal'
+      );
+    }
+  }
+
   // ── Stripe Webhook Handler ──
   private async handleStripeWebhook(request: Request): Promise<Response> {
     const stripeKey = (this.env as any).STRIPE_SECRET_KEY;
@@ -9934,6 +9994,17 @@ pitchey_analytics_datapoints_per_minute 1250
           const session = event.data.object;
           const userId = parseInt(session.metadata?.userId);
           if (!userId) break;
+
+          // Persist Stripe customer id from any checkout (sub OR credit-pack).
+          // Used by the billing-portal endpoint to open Stripe's hosted portal
+          // without an extra customer-search round-trip on every click.
+          if (session.customer) {
+            await sql`
+              UPDATE users SET stripe_customer_id = ${session.customer}
+              WHERE id = ${userId}
+                AND (stripe_customer_id IS NULL OR stripe_customer_id != ${session.customer})
+            `;
+          }
 
           if (session.metadata?.type === 'credits') {
             // Credit pack purchase — grant credits immediately. Credit packs
@@ -10041,6 +10112,73 @@ pitchey_analytics_datapoints_per_minute 1250
               }
             }
           }
+          break;
+        }
+
+        case 'customer.subscription.created': {
+          // Defensive fallback for subs created outside the normal Checkout flow
+          // (e.g. operator-created from the Stripe Dashboard). The
+          // checkout.session.completed branch above handles the common case;
+          // here we dedupe and warn on orphans without portal context.
+          const sub = event.data.object;
+          const subId = sub.id;
+
+          const existing = await sql`
+            SELECT 1 FROM subscription_history
+            WHERE stripe_subscription_id = ${subId}
+            LIMIT 1
+          `;
+          if (existing.length > 0) {
+            console.debug(JSON.stringify({
+              level: 'debug',
+              category: 'stripe_webhook',
+              event_id: event.id,
+              event_type: event.type,
+              stripe_subscription_id: subId,
+              action: 'subscription_created_duplicate',
+            }));
+            break;
+          }
+
+          const userId = parseInt(sub.metadata?.userId || '');
+          const tierId = sub.metadata?.tier;
+
+          if (!userId || !tierId) {
+            console.warn(JSON.stringify({
+              level: 'warn',
+              category: 'stripe_webhook',
+              event_id: event.id,
+              event_type: event.type,
+              stripe_subscription_id: subId,
+              action: 'orphan_subscription',
+              has_user_id: !!userId,
+              has_tier: !!tierId,
+            }));
+            break;
+          }
+
+          // Mirrors the insert at line ~9994. amount null (no session total);
+          // credits NOT granted (invoice.paid is the source of truth, see comment
+          // below); user_type NOT flipped (operator subs shouldn't bypass portal).
+          await sql`
+            INSERT INTO subscription_history (user_id, new_tier, action, stripe_subscription_id, stripe_price_id, status, amount, billing_interval, period_start, period_end, created_at)
+            VALUES (${userId}, ${tierId}, 'create', ${subId},
+              ${sub.items?.data?.[0]?.price?.id || null}, 'active',
+              ${null}, ${sub.items?.data?.[0]?.price?.recurring?.interval || 'month'},
+              ${sub.current_period_start ? new Date(sub.current_period_start * 1000).toISOString() : null},
+              ${sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null}, NOW())
+          `;
+
+          console.log(JSON.stringify({
+            level: 'info',
+            category: 'stripe_webhook',
+            event_id: event.id,
+            event_type: event.type,
+            user_id: userId,
+            stripe_subscription_id: subId,
+            action: 'subscription_created_out_of_band',
+            tier: tierId,
+          }));
           break;
         }
 
@@ -10161,6 +10299,103 @@ pitchey_analytics_datapoints_per_minute 1250
               billing_reason: reason,
             }));
           }
+          break;
+        }
+
+        case 'invoice.payment_failed': {
+          // Record failure detail in metadata but keep status='active' so the user
+          // retains access during the dunning window. customer.subscription.deleted
+          // is the revocation path once Stripe gives up retrying. No new status
+          // enum value introduced — surface failure via metadata.last_payment_failed_at.
+          const invoice = event.data.object;
+          const subId = invoice.subscription;
+          if (!subId) break;
+
+          const [row] = await sql`
+            SELECT id, user_id, new_tier FROM subscription_history
+            WHERE stripe_subscription_id = ${subId} AND status = 'active'
+            ORDER BY created_at DESC LIMIT 1
+          ` as { id: number; user_id: number; new_tier: string }[];
+
+          if (row) {
+            await sql`
+              UPDATE subscription_history
+              SET metadata = COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
+                last_payment_failed_at: new Date().toISOString(),
+                last_failed_invoice_id: invoice.id,
+                last_failed_attempt_count: invoice.attempt_count || null,
+                last_failure_amount_due: (invoice.amount_due || 0) / 100,
+                last_failure_next_attempt: invoice.next_payment_attempt
+                  ? new Date(invoice.next_payment_attempt * 1000).toISOString()
+                  : null,
+              })}::jsonb
+              WHERE id = ${row.id}
+            `;
+          }
+
+          console.warn(JSON.stringify({
+            level: 'warn',
+            category: 'stripe_webhook',
+            event_id: event.id,
+            event_type: event.type,
+            stripe_subscription_id: subId,
+            stripe_invoice_id: invoice.id,
+            user_id: row?.user_id ?? null,
+            tier: row?.new_tier ?? null,
+            attempt_count: invoice.attempt_count || null,
+            amount_due: (invoice.amount_due || 0) / 100,
+            next_payment_attempt: invoice.next_payment_attempt
+              ? new Date(invoice.next_payment_attempt * 1000).toISOString()
+              : null,
+            action: row ? 'payment_failed_recorded' : 'payment_failed_unmapped',
+          }));
+          break;
+        }
+
+        case 'charge.refunded': {
+          // Refunds carry charge.payment_intent, not the checkout session id we
+          // persist on credit_transactions.stripe_session_id, so we cannot
+          // cleanly resolve user_id without an extra Stripe API call plus a
+          // partial-refund proration policy. Log loudly so ops reverses credits
+          // manually via the admin grant tool. Full revocation = follow-up work.
+          const charge = event.data.object;
+          console.error(JSON.stringify({
+            level: 'error',
+            category: 'stripe_webhook',
+            event_id: event.id,
+            event_type: event.type,
+            action: 'refund_received_manual_action_required',
+            charge_id: charge.id,
+            payment_intent: charge.payment_intent || null,
+            amount_refunded: (charge.amount_refunded || 0) / 100,
+            amount_total: (charge.amount || 0) / 100,
+            currency: charge.currency,
+            customer: charge.customer || null,
+          }));
+          break;
+        }
+
+        case 'charge.dispute.created': {
+          // Disputes can still be won — do NOT auto-revoke credits or downgrade tier.
+          // Log at error level so Sentry/Axiom alerts ops within the
+          // evidence-submission window (typically 7 days for card disputes).
+          const dispute = event.data.object;
+          console.error(JSON.stringify({
+            level: 'error',
+            category: 'stripe_webhook',
+            event_id: event.id,
+            event_type: event.type,
+            action: 'dispute_opened',
+            dispute_id: dispute.id,
+            charge_id: dispute.charge,
+            amount: (dispute.amount || 0) / 100,
+            currency: dispute.currency,
+            reason: dispute.reason,
+            status: dispute.status,
+            evidence_due_by: dispute.evidence_details?.due_by
+              ? new Date(dispute.evidence_details.due_by * 1000).toISOString()
+              : null,
+          }));
           break;
         }
 

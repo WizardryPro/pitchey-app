@@ -128,6 +128,18 @@ export class StripeService {
     });
   }
 
+  // ── Billing Portal ──
+
+  async createBillingPortalSession(params: {
+    customerId: string;
+    returnUrl: string;
+  }): Promise<{ id: string; url: string }> {
+    return this.request('POST', '/billing_portal/sessions', {
+      customer: params.customerId,
+      return_url: params.returnUrl,
+    });
+  }
+
   // ── Webhook Verification ──
 
   async verifyWebhookSignature(payload: string, sigHeader: string, secret: string): Promise<boolean> {

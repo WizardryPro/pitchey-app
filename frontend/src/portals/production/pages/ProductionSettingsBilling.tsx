@@ -11,6 +11,7 @@ import { getDashboardRoute } from '@/utils/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
 import { Badge } from '@shared/components/ui/badge';
 import { toast } from 'react-hot-toast';
+import StripePortalCard from '@features/billing/components/StripePortalCard';
 
 interface PaymentMethod {
   id: string;
@@ -142,6 +143,13 @@ export default function ProductionSettingsBilling() {
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">Billing & Payments</h1>
           <p className="mt-2 text-gray-600">Manage your subscription, payment methods, and billing information</p>
+        </div>
+
+        {/* Stripe Customer Portal — primary entry for live billing actions.
+            The tabs below still expose the legacy local fields (company tax id,
+            billing address) but card/invoice/cancel/email flow through Stripe. */}
+        <div className="mb-8">
+          <StripePortalCard />
         </div>
 
         {/* Tab Navigation */}
