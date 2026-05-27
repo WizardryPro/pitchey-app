@@ -10062,13 +10062,21 @@ pitchey_analytics_datapoints_per_minute 1250
 
             const tierId = session.metadata?.tier || 'unknown';
 
+            // Stripe API drift (2025-03-31.acacia+): current_period_start/end moved
+            // from top-level subscription to sub.items.data[0]. Read both locations
+            // and null-check the field, not just the parent — older code did
+            // `${sub ? new Date(sub.current_period_start * 1000).toISOString() : null}`
+            // which threw "Invalid time value" when the top-level field was missing
+            // (caught by the outer try/catch, but silently dropped the row).
+            const subPeriodStart = sub?.current_period_start ?? sub?.items?.data?.[0]?.current_period_start ?? null;
+            const subPeriodEnd = sub?.current_period_end ?? sub?.items?.data?.[0]?.current_period_end ?? null;
             await sql`
               INSERT INTO subscription_history (user_id, new_tier, action, stripe_subscription_id, stripe_price_id, status, amount, billing_interval, period_start, period_end, created_at)
               VALUES (${userId}, ${tierId}, 'create', ${subId || null},
                 ${sub?.items?.data?.[0]?.price?.id || null}, 'active',
                 ${(session.amount_total || 0) / 100}, ${sub?.items?.data?.[0]?.price?.recurring?.interval || 'month'},
-                ${sub ? new Date(sub.current_period_start * 1000).toISOString() : null},
-                ${sub ? new Date(sub.current_period_end * 1000).toISOString() : null}, NOW())
+                ${subPeriodStart ? new Date(subPeriodStart * 1000).toISOString() : null},
+                ${subPeriodEnd ? new Date(subPeriodEnd * 1000).toISOString() : null}, NOW())
             `;
 
             const plan = getSubscriptionTier(tierId);
@@ -10161,13 +10169,16 @@ pitchey_analytics_datapoints_per_minute 1250
           // Mirrors the insert at line ~9994. amount null (no session total);
           // credits NOT granted (invoice.paid is the source of truth, see comment
           // below); user_type NOT flipped (operator subs shouldn't bypass portal).
+          // API drift: period_start/end live on items.data[0] in newer API versions.
+          const createPeriodStart = sub?.current_period_start ?? sub?.items?.data?.[0]?.current_period_start ?? null;
+          const createPeriodEnd = sub?.current_period_end ?? sub?.items?.data?.[0]?.current_period_end ?? null;
           await sql`
             INSERT INTO subscription_history (user_id, new_tier, action, stripe_subscription_id, stripe_price_id, status, amount, billing_interval, period_start, period_end, created_at)
             VALUES (${userId}, ${tierId}, 'create', ${subId},
               ${sub.items?.data?.[0]?.price?.id || null}, 'active',
               ${null}, ${sub.items?.data?.[0]?.price?.recurring?.interval || 'month'},
-              ${sub.current_period_start ? new Date(sub.current_period_start * 1000).toISOString() : null},
-              ${sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null}, NOW())
+              ${createPeriodStart ? new Date(createPeriodStart * 1000).toISOString() : null},
+              ${createPeriodEnd ? new Date(createPeriodEnd * 1000).toISOString() : null}, NOW())
           `;
 
           console.log(JSON.stringify({
@@ -10210,11 +10221,14 @@ pitchey_analytics_datapoints_per_minute 1250
               WHERE stripe_subscription_id = ${subId} AND status = 'active'
             `;
           }
-          // Update period end
-          await sql`
-            UPDATE subscription_history SET period_end = ${new Date(sub.current_period_end * 1000).toISOString()}
-            WHERE stripe_subscription_id = ${subId}
-          `;
+          // Update period end (API drift: also check items.data[0]).
+          const updPeriodEnd = sub?.current_period_end ?? sub?.items?.data?.[0]?.current_period_end ?? null;
+          if (updPeriodEnd) {
+            await sql`
+              UPDATE subscription_history SET period_end = ${new Date(updPeriodEnd * 1000).toISOString()}
+              WHERE stripe_subscription_id = ${subId}
+            `;
+          }
           break;
         }
 
@@ -10227,7 +10241,13 @@ pitchey_analytics_datapoints_per_minute 1250
           //   - Credits only flow when the card actually clears
           //   - Bounced cards / failed retries never get free credits
           const invoice = event.data.object;
-          const subId = invoice.subscription;
+          // Stripe API drift: invoice.subscription was deprecated in favor of
+          // invoice.parent.subscription_details.subscription. Read both — newer
+          // accounts return null at the top level so this fell into a silent
+          // early-break and credits were never granted on subscription_create.
+          const subId = invoice.subscription
+            || invoice.parent?.subscription_details?.subscription
+            || null;
           const reason = invoice.billing_reason;
 
           if (!subId || !['subscription_create', 'subscription_cycle'].includes(reason)) {
