@@ -181,6 +181,7 @@ const AdminGDPR = lazyRetry(() => import('@portals/admin/pages/AdminGDPR'));
 const AdminReports = lazyRetry(() => import('@portals/admin/pages/AdminReports'));
 const AdminModerationLog = lazyRetry(() => import('@portals/admin/pages/AdminModerationLog'));
 const AdminVerifications = lazyRetry(() => import('@portals/admin/pages/AdminVerifications'));
+const AdminPromoCodes = lazyRetry(() => import('@portals/admin/pages/AdminPromoCodes'));
 
 // MFA Challenge Page
 const MFAChallengePage = lazyRetry(() => import('./pages/MFAChallengePage'));
@@ -657,6 +658,11 @@ function App() {
             <Route path="verifications" element={
               <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
                 <AdminVerifications />
+              </PermissionRoute>
+            } />
+            <Route path="promo-codes" element={
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+                <AdminPromoCodes />
               </PermissionRoute>
             } />
           </Route>

@@ -48,6 +48,11 @@ export class StripeService {
       'line_items[0][quantity]': '1',
       success_url: params.successUrl,
       cancel_url: params.cancelUrl,
+      // Show the promo-code box on the hosted checkout (FreeThePitch100 / LifesAPitch50).
+      allow_promotion_codes: 'true',
+      // A 100%-off code leaves nothing due now; 'if_required' skips card collection
+      // in that case while still collecting a card on paid/discounted-but-nonzero subs.
+      payment_method_collection: 'if_required',
       'metadata[userId]': String(params.userId),
       'metadata[type]': 'subscription',
       'metadata[tier]': params.tier,
@@ -92,6 +97,24 @@ export class StripeService {
 
   async getSubscription(subscriptionId: string): Promise<any> {
     return this.request('GET', `/subscriptions/${subscriptionId}`);
+  }
+
+  // ── Promo-code reporting (admin) ──
+
+  // Promotion codes carry the live redemption counts (times_redeemed /
+  // max_redemptions) and, with the coupon expanded, the percent_off.
+  async listPromotionCodes(): Promise<{ data: any[] }> {
+    return this.request('GET', '/promotion_codes?limit=100');
+  }
+
+  // Checkout sessions are scanned to find WHO redeemed a code: each session
+  // carries the applied `discounts[].promotion_code` and the `metadata.userId`
+  // we stamp at creation, so we can join straight back to our users table.
+  // `status` and `discounts`/`total_details` are returned by default — no expand.
+  async listCheckoutSessions(startingAfter?: string): Promise<{ data: any[]; has_more: boolean }> {
+    let endpoint = '/checkout/sessions?limit=100';
+    if (startingAfter) endpoint += `&starting_after=${encodeURIComponent(startingAfter)}`;
+    return this.request('GET', endpoint);
   }
 
   // ── Payment Methods ──

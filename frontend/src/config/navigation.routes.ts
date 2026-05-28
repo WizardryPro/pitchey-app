@@ -210,4 +210,5 @@ export const ADMIN_ROUTES = {
   gdpr: '/admin/gdpr',
   settings: '/admin/settings',
   verifications: '/admin/verifications',
+  promoCodes: '/admin/promo-codes',
 };

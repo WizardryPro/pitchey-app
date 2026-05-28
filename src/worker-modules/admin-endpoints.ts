@@ -248,7 +248,10 @@ export class AdminEndpointsHandler {
 
   // Check if user has admin permissions
   private checkAdminPermissions(userAuth: AuthPayload): boolean {
-    // Demo admin users
+    // Primary check: real admin accounts carry user_type='admin' (consistent
+    // with the rest of the app's RBAC). The hardcoded list below is a legacy
+    // demo allowlist kept only for the seeded demo creator used in tests.
+    if (userAuth.userType === 'admin') return true;
     const adminUsers = ['admin@pitchey.com', 'alex.creator@demo.com'];
     return adminUsers.includes(userAuth.email);
   }

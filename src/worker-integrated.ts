@@ -3322,6 +3322,13 @@ class RouteRegistry {
       return subscriptionGrantsStatusHandler(req, this.env);
     });
 
+    // Launch promo-code report (FreeThePitch100 / LifesAPitch50) — admin-only.
+    // Reads live from Stripe: redemption counts + who signed up with each code.
+    this.register('GET', '/api/admin/promo-codes', async (req) => {
+      const { adminPromoCodesHandler } = await import('./handlers/promo-codes');
+      return adminPromoCodesHandler(req, this.env);
+    });
+
     this.register('GET', '/api/creator/ndas', async (req) => {
       const { creatorNdasHandler } = await import('./handlers/creator-sidebar');
       return creatorNdasHandler(req, this.env);
@@ -3796,10 +3803,22 @@ class RouteRegistry {
       });
     }
 
-    // Delegate admin panel routes to AdminEndpointsHandler
-    // (excludes /api/admin/metrics and /api/admin/health which are monitoring routes)
+    // Delegate admin panel routes to AdminEndpointsHandler, EXCEPT for routes that
+    // are registered separately and enforce their own `user_type='admin'` gate.
+    // AdminEndpointsHandler only knows a fixed switch of paths and 404s anything
+    // else (and its admin check is a hardcoded email allowlist), so any registered
+    // /api/admin/* route must be excluded here or it's dead on arrival.
+    //   - metrics / health  : monitoring routes (email-gated)
+    //   - promo-codes       : launch promo report
+    //   - verifications     : company verification review
+    //   - heat-scores       : heat recalculation trigger
+    //   - subscription-grants: founding-grant observability
     if (this.adminHandler && path.startsWith('/api/admin/') &&
-        !path.startsWith('/api/admin/metrics') && !path.startsWith('/api/admin/health')) {
+        !path.startsWith('/api/admin/metrics') && !path.startsWith('/api/admin/health') &&
+        !path.startsWith('/api/admin/promo-codes') &&
+        !path.startsWith('/api/admin/verifications') &&
+        !path.startsWith('/api/admin/heat-scores') &&
+        !path.startsWith('/api/admin/subscription-grants')) {
       const corsHeaders = getCorsHeaders(request.headers.get('Origin'));
       const authResult = await this.validateAuth(request);
       const userAuth = authResult.valid && authResult.user ? {
