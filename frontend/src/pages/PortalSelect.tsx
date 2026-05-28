@@ -136,6 +136,17 @@ export default function PortalSelect() {
           </div>
         </div>
       </div>
+
+      {/* Discreet admin entry — intentionally not a portal card; faint shield, bottom-right */}
+      <button
+        type="button"
+        onClick={() => handlePortalSelect('admin')}
+        aria-label="Admin access"
+        title="Admin"
+        className="fixed bottom-4 right-4 p-2 text-gray-300 hover:text-purple-600 transition-colors duration-300"
+      >
+        <ShieldCheck className="h-5 w-5" />
+      </button>
     </div>
   );
 }
