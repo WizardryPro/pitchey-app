@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useBetterAuthStore, MFARequiredError } from '../store/betterAuthStore';
-import { Shield, LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
+import { Shield, LogIn, Mail, Lock, AlertCircle, ArrowLeft } from 'lucide-react';
 import BackButton from '../components/BackButton';
 
 export default function AdminLogin() {
@@ -41,7 +41,7 @@ export default function AdminLogin() {
     <div className="min-h-screen bg-gradient-to-br from-purple-100 via-white to-indigo-50 flex items-center justify-center p-4">
       {/* Back Button */}
       <div className="absolute top-6 left-6">
-        <BackButton variant="light" />
+        <BackButton variant="light" iconOnly />
       </div>
 
       <div className="max-w-md w-full">
@@ -144,12 +144,14 @@ export default function AdminLogin() {
           </form>
 
           {/* Back to portals */}
-          <div className="mt-6 text-center">
+          <div className="mt-6 flex justify-center">
             <Link
               to="/portals"
-              className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              aria-label="Back to portal selection"
+              title="Back to portal selection"
+              className="inline-flex text-gray-500 hover:text-gray-700 transition-colors"
             >
-              Back to portal selection
+              <ArrowLeft className="h-5 w-5" />
             </Link>
           </div>
         </div>
