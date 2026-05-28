@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Eye, Heart, Users, TrendingUp } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
+import HeatBadge from '@/components/HeatBadge';
 
 interface SocialProofBadgeProps {
   pitchId: number;
   viewCount: number;
   likeCount: number;
+  /** Heat score (popularity). Renders a Hot/Trending pill in the header when it qualifies. */
+  heatScore?: number;
   isOwner?: boolean;
   isAuthenticated?: boolean;
 }
@@ -132,22 +135,11 @@ function roleBadgeColor(role: string): string {
   }
 }
 
-function Skeleton() {
-  return (
-    <div className="bg-white rounded-xl shadow-sm p-5 animate-pulse">
-      <div className="flex items-center gap-6 mb-3">
-        <div className="h-5 w-20 bg-gray-200 rounded" />
-        <div className="h-5 w-20 bg-gray-200 rounded" />
-      </div>
-      <div className="h-4 w-48 bg-gray-200 rounded mt-2" />
-    </div>
-  );
-}
-
 export default function SocialProofBadge({
   pitchId,
   viewCount,
   likeCount,
+  heatScore,
   isOwner = false,
   isAuthenticated = false,
 }: SocialProofBadgeProps) {
@@ -180,8 +172,6 @@ export default function SocialProofBadge({
     };
   }, [pitchId, isAuthenticated]);
 
-  if (loading) return <Skeleton />;
-
   const viewerText =
     engagement?.viewerBreakdown ? buildViewerBreakdownText(engagement.viewerBreakdown) : '';
   const namedLikerText =
@@ -197,7 +187,13 @@ export default function SocialProofBadge({
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-5">
-      {/* Core counts */}
+      {/* Header: section label + heat status */}
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Reception</h3>
+        {heatScore !== undefined && <HeatBadge score={heatScore} variant="pill" />}
+      </div>
+
+      {/* Core counts — from props, available immediately (no fetch needed) */}
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-1.5 text-gray-600">
           <Eye className="h-4 w-4" />
@@ -211,46 +207,54 @@ export default function SocialProofBadge({
         </div>
       </div>
 
-      {/* Viewer breakdown */}
-      {viewerText && (
-        <div className="flex items-center gap-1.5 mt-3 text-sm text-gray-500">
-          <TrendingUp className="h-3.5 w-3.5 flex-shrink-0" />
-          <span>{viewerText}</span>
-        </div>
-      )}
+      {/* Breakdowns depend on the engagement fetch — show a thin skeleton while loading
+          instead of blanking the whole panel. */}
+      {loading ? (
+        <div className="mt-3 h-4 w-40 bg-gray-100 rounded animate-pulse" />
+      ) : (
+        <>
+          {/* Viewer breakdown */}
+          {viewerText && (
+            <div className="flex items-center gap-1.5 mt-3 text-sm text-gray-500">
+              <TrendingUp className="h-3.5 w-3.5 flex-shrink-0" />
+              <span>{viewerText}</span>
+            </div>
+          )}
 
-      {/* Liker summary */}
-      {likerText && (
-        <div className="flex items-center gap-1.5 mt-2 text-sm text-gray-500">
-          <Users className="h-3.5 w-3.5 flex-shrink-0" />
-          <span>{likerText}</span>
-        </div>
-      )}
+          {/* Liker summary */}
+          {likerText && (
+            <div className="flex items-center gap-1.5 mt-2 text-sm text-gray-500">
+              <Users className="h-3.5 w-3.5 flex-shrink-0" />
+              <span>{likerText}</span>
+            </div>
+          )}
 
-      {/* Recent viewers (owner only) */}
-      {recentViewers.length > 0 && (
-        <div className="mt-4 border-t border-gray-100 pt-3">
-          <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-            Recent Viewers
-          </h4>
-          <ul className="space-y-2">
-            {recentViewers.map((viewer, idx) => (
-              <li key={idx} className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-gray-700 font-medium truncate">{viewer.name}</span>
-                  <span
-                    className={`text-xs px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ${roleBadgeColor(viewer.userType)}`}
-                  >
-                    {viewer.companyName || formatUserTypeLabel(viewer.userType)}
-                  </span>
-                </div>
-                <span className="text-xs text-gray-400 whitespace-nowrap ml-2">
-                  {formatRelativeTime(viewer.viewedAt)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
+          {/* Recent viewers (owner only) */}
+          {recentViewers.length > 0 && (
+            <div className="mt-4 border-t border-gray-100 pt-3">
+              <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                Recent Viewers
+              </h4>
+              <ul className="space-y-2">
+                {recentViewers.map((viewer, idx) => (
+                  <li key={idx} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-gray-700 font-medium truncate">{viewer.name}</span>
+                      <span
+                        className={`text-xs px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ${roleBadgeColor(viewer.userType)}`}
+                      >
+                        {viewer.companyName || formatUserTypeLabel(viewer.userType)}
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-400 whitespace-nowrap ml-2">
+                      {formatRelativeTime(viewer.viewedAt)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

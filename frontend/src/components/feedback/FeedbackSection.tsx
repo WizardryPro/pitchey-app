@@ -12,9 +12,11 @@ interface Props {
   isOwner: boolean;
   isAuthenticated: boolean;
   userType: string;
+  /** Forwarded to FeedbackDisplay — off when the host page shows the scores elsewhere. */
+  showScoreSummary?: boolean;
 }
 
-export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, userType }: Props) {
+export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, userType, showScoreSummary = true }: Props) {
   const [myFeedback, setMyFeedback] = useState<FeedbackEntry | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [loadingMine, setLoadingMine] = useState(false);
@@ -194,7 +196,7 @@ export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, use
         )}
 
         {/* Rating display + structured feedback list */}
-        <FeedbackDisplay key={refreshKey} pitchId={pitchId} />
+        <FeedbackDisplay key={refreshKey} pitchId={pitchId} showScoreSummary={showScoreSummary} />
       </div>
 
       {/* Comments Section */}
