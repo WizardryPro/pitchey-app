@@ -7971,6 +7971,7 @@ pitchey_analytics_datapoints_per_minute 1250
       signedAt?: string;
       signature?: string;
       fullName?: string;
+      address?: string;
     };
 
     // Extract NDA ID from params or body
@@ -8025,6 +8026,7 @@ pitchey_analytics_datapoints_per_minute 1250
         fullName: data.fullName || '',
         title: data.title || '',
         company: data.company || '',
+        address: data.address || '',
         acceptTerms: data.acceptTerms || false,
         signedAt: new Date().toISOString()
       })]);

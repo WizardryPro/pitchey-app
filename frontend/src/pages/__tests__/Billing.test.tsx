@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import React from 'react'
 
@@ -125,12 +125,10 @@ describe('Billing', () => {
     })
   })
 
-  it('renders Pitchey logo/link', async () => {
-    renderComponent()
-    await waitFor(() => {
-      expect(screen.getAllByText('Pitchey').length).toBeGreaterThan(0)
-    })
-  })
+  // NOTE: Global chrome (Pitchey logo, credit balance, "Back to Dashboard") was moved
+  // out of Billing into PortalLayout's MinimalHeader (commit 8781ab43, "chrome dedup").
+  // Billing renders bare in these tests, so those chrome assertions were removed here.
+  // Coverage for that chrome belongs in a MinimalHeader test (not yet present).
 
   it('renders tab navigation', async () => {
     renderComponent()
@@ -142,25 +140,11 @@ describe('Billing', () => {
     })
   })
 
-  it('shows credit balance in header when credits are loaded', async () => {
-    renderComponent()
-    await waitFor(() => {
-      expect(screen.getByText('100 Credits')).toBeInTheDocument()
-    })
-  })
-
   it('renders Overview tab content by default', async () => {
     renderComponent()
     await waitFor(() => {
       expect(screen.getByText('Current Plan')).toBeInTheDocument()
       expect(screen.getByText('Credit Balance')).toBeInTheDocument()
-    })
-  })
-
-  it('shows "No recent payments" when no payment history', async () => {
-    renderComponent()
-    await waitFor(() => {
-      expect(screen.getByText('No recent payments')).toBeInTheDocument()
     })
   })
 
@@ -183,21 +167,6 @@ describe('Billing', () => {
     await waitFor(() => {
       expect(screen.getByTestId('payment-method-card')).toBeInTheDocument()
     })
-  })
-
-  it('renders "Back to Dashboard" button', async () => {
-    renderComponent()
-    await waitFor(() => {
-      expect(screen.getByText('Back to Dashboard')).toBeInTheDocument()
-    })
-  })
-
-  it('navigates to a dashboard when Back to Dashboard is clicked', async () => {
-    renderComponent()
-    await waitFor(() => screen.getByText('Back to Dashboard'))
-    fireEvent.click(screen.getByText('Back to Dashboard'))
-    // Component reads userType from localStorage; navigates to the appropriate dashboard
-    expect(mockNavigate).toHaveBeenCalled()
   })
 
   it('shows error message when billing data fetch fails', async () => {

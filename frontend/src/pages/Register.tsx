@@ -17,6 +17,10 @@ export default function Register() {
     : isSafeReturnPath(redirectParam)
       ? redirectParam
       : null;
+  // Preselect account type from ?type= (portal-context signup links). No silent
+  // default — the user must choose, so nobody accidentally registers as a Creator.
+  const typeParam = searchParams.get('type');
+  const initialUserType = ['creator', 'production', 'investor'].includes(typeParam || '') ? (typeParam as string) : '';
   const { register, loading, error } = useBetterAuthStore();
   const [turnstileToken, setTurnstileToken] = useState<string>('');
   const [turnstileKey, setTurnstileKey] = useState(0);
@@ -29,13 +33,17 @@ export default function Register() {
     username: '',
     password: '',
     confirmPassword: '',
-    userType: 'creator',
+    userType: initialUserType,
     companyName: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    if (!formData.userType) {
+      alert('Please choose what brings you to Pitchey (Creator, Production, or Investor)');
+      return;
+    }
     if (formData.password !== formData.confirmPassword) {
       alert('Passwords do not match');
       return;
@@ -77,7 +85,7 @@ export default function Register() {
         <p className="mt-3 text-center text-base text-gray-600">
           Already have an account?{' '}
           <Link
-            to={`/login/${formData.userType}`}
+            to={`/login/${formData.userType || 'creator'}`}
             className="font-semibold text-purple-600 hover:text-purple-700 underline underline-offset-2 decoration-2"
           >
             Sign in
@@ -104,7 +112,7 @@ export default function Register() {
               </p>
               <div className="space-y-3">
                 <Link
-                  to={`/login/${formData.userType}`}
+                  to={`/login/${formData.userType || 'creator'}`}
                   className="block w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700"
                 >
                   Go to login
@@ -197,7 +205,7 @@ export default function Register() {
               </div>
             </div>
 
-            {formData.userType !== 'creator' && (
+            {(formData.userType === 'production' || formData.userType === 'investor') && (
               <div>
                 <label htmlFor="companyName" className="block text-sm font-medium text-gray-700">
                   Company Name (Optional)

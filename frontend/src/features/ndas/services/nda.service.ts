@@ -66,6 +66,7 @@ export interface NDASignature {
   fullName: string;
   title?: string;
   company?: string;
+  address?: string;
   acceptTerms: boolean;
 }
 

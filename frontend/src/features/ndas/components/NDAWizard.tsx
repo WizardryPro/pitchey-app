@@ -92,8 +92,21 @@ export default function NDAWizard({
     fullName: '',
     title: '',
     company: '',
+    address: '',
     acceptTerms: false
   });
+  const [standardNdaText, setStandardNdaText] = useState('');
+
+  // Fetch the auto-filled platform Standard NDA (project + disclosing party + date
+  // pre-filled from the pitch). Recipient name/address are completed in the sign step.
+  useEffect(() => {
+    if (!isOpen || !pitchId) return;
+    const today = new Date().toLocaleDateString('en-GB');
+    fetch(`${import.meta.env.VITE_API_URL}/api/ndas/standard?pitchId=${pitchId}&date=${encodeURIComponent(today)}`, { credentials: 'include' })
+      .then((r) => r.json())
+      .then((d) => { if (d?.success && d.data?.content) setStandardNdaText(d.data.content); })
+      .catch(() => { /* preview is best-effort */ });
+  }, [isOpen, pitchId]);
 
   // Reset template when wizard opens (keeps pitchTitle current across re-opens)
   useEffect(() => {
@@ -221,8 +234,8 @@ export default function NDAWizard({
   };
 
   const signNDA = async () => {
-    if (!ndaData || !signature.fullName || !signature.acceptTerms) {
-      setError('Please fill in all required fields and accept the terms');
+    if (!ndaData || !signature.fullName || !signature.address || !signature.acceptTerms) {
+      setError('Please fill in all required fields (name, address) and accept the terms');
       return;
     }
     
@@ -236,6 +249,7 @@ export default function NDAWizard({
         fullName: signature.fullName,
         title: signature.title,
         company: signature.company,
+        address: signature.address,
         acceptTerms: signature.acceptTerms
       });
       
@@ -642,15 +656,19 @@ export default function NDAWizard({
                         </div>
                       </div>
 
-                      <div className="text-sm text-gray-600 space-y-2">
-                        <h5 className="font-medium text-gray-900">Key Terms:</h5>
-                        <ul className="space-y-1 ml-4">
-                          <li>• Confidentiality period: 2 years from signing</li>
-                          <li>• Non-disclosure of project details, financials, and strategies</li>
-                          <li>• No unauthorized sharing or reproduction of materials</li>
-                          <li>• Mutual protection of both parties' information</li>
-                          <li>• Governed by applicable jurisdiction laws</li>
-                        </ul>
+                      <div className="text-sm text-gray-600">
+                        <h5 className="font-medium text-gray-900 mb-2">Agreement</h5>
+                        {standardNdaText ? (
+                          <pre className="whitespace-pre-wrap font-sans text-xs leading-relaxed text-gray-700 bg-gray-50 border border-gray-200 rounded-lg p-4 max-h-72 overflow-y-auto">
+                            {standardNdaText}
+                          </pre>
+                        ) : (
+                          <p className="text-gray-500">Loading the agreement…</p>
+                        )}
+                        <p className="text-xs text-gray-500 mt-2">
+                          The project and disclosing party are filled from this pitch. Your name and
+                          address are completed in the next step and recorded with your signature.
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -709,6 +727,20 @@ export default function NDAWizard({
                           onChange={(e) => setSignature({...signature, company: e.target.value})}
                           placeholder="Your company or organization"
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Address *
+                        </label>
+                        <textarea
+                          value={signature.address}
+                          onChange={(e) => setSignature({...signature, address: e.target.value})}
+                          placeholder="Your address (recorded as the Recipient address on the NDA)"
+                          rows={2}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          required
                         />
                       </div>
 
@@ -823,7 +855,7 @@ export default function NDAWizard({
               {currentStep === 'sign' && (
                 <button
                   onClick={() => { void signNDA(); }}
-                  disabled={loading || !signature.fullName || !signature.acceptTerms}
+                  disabled={loading || !signature.fullName || !signature.address || !signature.acceptTerms}
                   className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Signing...' : 'Sign NDA'}
