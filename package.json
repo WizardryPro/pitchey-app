@@ -63,7 +63,7 @@
     "@types/node": "^20.0.0",
     "esbuild": "^0.27.2",
     "form-data": "^4.0.5",
-    "wrangler": "^4.77.0"
+    "wrangler": "^4.95.0"
   },
   "overrides": {
     "undici": "^7.24.0",

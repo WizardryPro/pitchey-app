@@ -19,6 +19,11 @@ interface ContentData {
     description: string;
     icon?: string;
   }>;
+  productionSteps?: Array<{
+    title: string;
+    description: string;
+    icon?: string;
+  }>;
   features?: Array<{
     title: string;
     description: string;
@@ -91,6 +96,28 @@ const HowItWorks: React.FC = () => {
         title: "Close Deals",
         description: "Connect directly with creators, negotiate terms, and finalize investments.",
         icon: "award"
+      }
+    ],
+    productionSteps: [
+      {
+        title: "Create",
+        description: "Build your verified production company profile and slate so creators know they're pitching to a credible partner.",
+        icon: "film"
+      },
+      {
+        title: "Protect",
+        description: "Request and sign NDAs to review sensitive materials while keeping your own development pipeline confidential.",
+        icon: "shield"
+      },
+      {
+        title: "Explore",
+        description: "Search the marketplace by genre, budget, and heat score to surface projects that fit your slate.",
+        icon: "target"
+      },
+      {
+        title: "Connect",
+        description: "Message creators directly, bring on collaborators, and move promising projects into production.",
+        icon: "users"
       }
     ],
     features: [
@@ -199,6 +226,7 @@ const HowItWorks: React.FC = () => {
   const currentContent = content || fallbackContent;
   const creatorSteps = currentContent.creatorSteps || [];
   const investorSteps = currentContent.investorSteps || [];
+  const productionSteps = currentContent.productionSteps || [];
   const features = currentContent.features || [];
   const stats = currentContent.stats || [];
 
@@ -214,7 +242,7 @@ const HowItWorks: React.FC = () => {
             >
               <ArrowLeft className="w-5 h-5 text-gray-700" />
             </button>
-            <span className="text-xl font-bold text-purple-600">Pitchey</span>
+            <img src="/pitchey-logotype.png" alt="Pitchey" className="h-7 w-auto" />
             <h1 className="text-2xl font-bold text-gray-900">How It Works</h1>
           </div>
           <button
@@ -311,8 +339,35 @@ const HowItWorks: React.FC = () => {
         </div>
       </section>
 
-      {/* Key Features */}
+      {/* For Production Companies Section */}
       <section className="py-16 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h3 className="text-3xl font-bold text-gray-900 mb-4">For Production Companies</h3>
+            <p className="text-gray-600">Find, secure, and produce your next slate</p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {productionSteps.map((step, index) => (
+              <div key={index} className="relative">
+                {index < productionSteps.length - 1 && (
+                  <div className="hidden lg:block absolute top-12 left-full w-full h-0.5 bg-gradient-to-r from-blue-300 to-transparent z-0" />
+                )}
+                <div className="bg-white rounded-xl p-6 border border-blue-200 shadow-sm hover:shadow-md hover:border-blue-300 transition relative z-10">
+                  <div className="text-blue-600 mb-4">{renderIcon(step.icon, 'w-8 h-8')}</div>
+                  <h4 className="text-xl font-semibold text-gray-900 mb-2">{step.title}</h4>
+                  <p className="text-gray-500 text-sm">{step.description}</p>
+                  <div className="absolute -top-3 -right-3 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">
+                    {index + 1}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Key Features */}
+      <section className="py-16 px-4 bg-gray-50">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h3 className="text-3xl font-bold text-gray-900 mb-4">Why Choose Pitchey?</h3>

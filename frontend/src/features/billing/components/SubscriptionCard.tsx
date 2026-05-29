@@ -1,106 +1,62 @@
 import { useState } from 'react';
-import { 
-  Crown, 
-  Check, 
-  X, 
-  Star, 
-  Zap, 
-  Shield, 
-  Upload, 
-  BarChart3,
-  MessageSquare,
-  Eye,
+import {
+  Crown,
+  Check,
+  X,
+  Star,
   AlertTriangle,
-  ExternalLink
 } from 'lucide-react';
 import { paymentsAPI } from '@/lib/apiServices';
+import { useBetterAuthStore } from '@/store/betterAuthStore';
+import {
+  getSubscriptionTiersByUserType,
+  getSubscriptionTier,
+  type SubscriptionTier,
+} from '@/config/subscription-plans';
 
 interface SubscriptionCardProps {
   subscription: any;
   onRefresh: () => void;
 }
 
-const PLANS = {
-  free: {
-    name: 'Free',
-    price: 0,
-    features: [
-      'Up to 2 pitch uploads',
-      'Basic analytics',
-      '10 messages per month',
-      'Community support'
-    ],
-    limits: [
-      'Limited to public viewing only',
-      'Basic features only',
-      'Basic support only'
-    ]
-  },
-  basic: {
-    name: 'Basic',
-    price: 29,
-    features: [
-      'Up to 10 pitch uploads',
-      'Advanced analytics',
-      '100 messages per month',
-      'NDA management',
-      'Email support',
-      'Custom branding'
-    ],
-    limits: [
-      'Limited storage space',
-      'Standard processing priority'
-    ]
-  },
-  pro: {
-    name: 'Pro',
-    price: 99,
-    features: [
-      'Unlimited pitch uploads',
-      'Advanced analytics with AI insights',
-      'Unlimited messaging',
-      'Advanced NDA management',
-      'Email support',
-      'Custom branding',
-      'API access',
-      'Export capabilities'
-    ],
-    limits: []
-  },
-  enterprise: {
-    name: 'Enterprise',
-    price: 299,
-    features: [
-      'Everything in Pro',
-      'White-label solution',
-      'Custom integrations',
-      'Dedicated account manager',
-      'SLA guarantees',
-      'Custom analytics',
-      'Team management',
-      'Advanced security features'
-    ],
-    limits: []
-  }
+// Per-portal "Most Popular" callout — middle tier of each ladder.
+const POPULAR_TIER_BY_PORTAL: Record<string, string> = {
+  creator: 'creator_plus',
+  production: 'production_plus',
+  investor: 'exec',
 };
 
 export default function SubscriptionCard({ subscription, onRefresh }: SubscriptionCardProps) {
+  const { user } = useBetterAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Backend expects 'monthly' | 'annual' — UI still says "Yearly" for clarity.
   const [selectedBilling, setSelectedBilling] = useState<'monthly' | 'annual'>('monthly');
 
-  const currentTier = subscription?.tier || 'free';
+  // Treat 'free' (legacy) the same as 'watcher' (current free tier id).
+  const rawTier = subscription?.tier;
+  const currentTierId = rawTier === 'free' ? 'watcher' : rawTier;
   const subscriptionStatus = subscription?.status || 'inactive';
   const isActive = subscriptionStatus === 'active';
   const cancelAtPeriodEnd = subscription?.subscription?.cancelAtPeriodEnd;
-  const currentPeriodEnd = subscription?.subscription?.currentPeriodEnd 
-    ? new Date(subscription.subscription.currentPeriodEnd) 
+  const currentPeriodEnd = subscription?.subscription?.currentPeriodEnd
+    ? new Date(subscription.subscription.currentPeriodEnd)
     : null;
 
+  const userType = (user?.userType || 'creator') as 'creator' | 'investor' | 'production' | 'watcher' | 'viewer';
+  // Watchers are audience-only — no subscription paths shown.
+  // Fall back to creator tiers for viewer (legacy alias).
+  const portalForTiers = userType === 'viewer' ? 'watcher' : userType;
+  const availableTiers: SubscriptionTier[] = getSubscriptionTiersByUserType(portalForTiers);
+  const popularTierId = POPULAR_TIER_BY_PORTAL[portalForTiers] || '';
+
+  const currentTierDef = currentTierId ? getSubscriptionTier(currentTierId) : null;
+  const currentTierName = currentTierDef?.name || 'Free';
+
   const handleUpgrade = async (planKey: string) => {
-    if (planKey === 'free') return;
-    
+    const plan = getSubscriptionTier(planKey);
+    if (!plan || plan.price.monthly === 0) return; // free tier — nothing to subscribe to
+
     try {
       setLoading(true);
       setError(null);
@@ -108,10 +64,9 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
       const result = await paymentsAPI.subscribe(planKey, selectedBilling) as any;
 
       if (result && result.url) {
-        // Redirect to Stripe checkout
         window.location.href = result.url;
       } else {
-        throw new Error('No checkout URL received');
+        throw new Error(result?.error || 'No checkout URL received');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to start upgrade process');
@@ -121,11 +76,11 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
 
   const handleCancelSubscription = async () => {
     if (!isActive) return;
-    
+
     const confirmed = confirm(
       'Are you sure you want to cancel your subscription? You will retain access until the end of your current billing period.'
     );
-    
+
     if (!confirmed) return;
 
     try {
@@ -141,8 +96,10 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
     }
   };
 
-  const getYearlyPrice = (monthlyPrice: number) => {
-    return Math.floor(monthlyPrice * 12 * 0.8); // 20% discount for yearly
+  const formatPrice = (n: number) => {
+    if (n === 0) return null;
+    // Keep two decimals only when fractional (e.g. 19.99) so 199 stays "199".
+    return Number.isInteger(n) ? String(n) : n.toFixed(2);
   };
 
   return (
@@ -154,7 +111,7 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
           <div className="flex items-center gap-2">
             <Crown className="w-5 h-5 text-purple-600" />
             <span className="font-medium text-purple-600">
-              {PLANS[currentTier as keyof typeof PLANS]?.name || 'Free'}
+              {currentTierName}
             </span>
           </div>
         </div>
@@ -168,7 +125,7 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
                 Active
               </span>
             </div>
-            
+
             {currentPeriodEnd && (
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">
@@ -191,8 +148,8 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
               </div>
             )}
 
-            <div className="flex gap-3 pt-3">
-              {!cancelAtPeriodEnd && (
+            {!cancelAtPeriodEnd && (
+              <div className="pt-3">
                 <button
                   onClick={handleCancelSubscription}
                   disabled={loading}
@@ -200,16 +157,8 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
                 >
                   Cancel Subscription
                 </button>
-              )}
-              
-              <button
-                onClick={() => window.open('https://billing.stripe.com', '_blank')}
-                className="px-4 py-2 text-purple-600 border border-purple-300 rounded-lg hover:bg-purple-50 text-sm flex items-center gap-2"
-              >
-                <ExternalLink className="w-4 h-4" />
-                Manage in Stripe
-              </button>
-            </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-3">
@@ -255,19 +204,24 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            Yearly (20% off)
+            Yearly (≈2 months free)
           </button>
         </div>
       </div>
 
       {/* Plan Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {Object.entries(PLANS).map(([planKey, plan]) => {
-          const isCurrentPlan = currentTier === planKey;
-          const price = selectedBilling === 'annual' 
-            ? getYearlyPrice(plan.price) 
-            : plan.price;
-          const originalYearlyPrice = plan.price * 12;
+        {availableTiers.map((plan) => {
+          const planKey = plan.id;
+          const isCurrentPlan = currentTierId === planKey;
+          const isFree = plan.price.monthly === 0;
+          const isPopular = planKey === popularTierId;
+          const monthly = plan.price.monthly;
+          const annual = plan.price.annual;
+          const displayedPrice = selectedBilling === 'annual' ? annual : monthly;
+          const annualSavings = !isFree && monthly > 0
+            ? Math.max(0, monthly * 12 - annual)
+            : 0;
 
           return (
             <div
@@ -286,7 +240,7 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
                 </div>
               )}
 
-              {planKey === 'pro' && (
+              {!isCurrentPlan && isPopular && (
                 <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                   <span className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1">
                     <Star className="w-3 h-3" />
@@ -298,12 +252,12 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
               <div className="text-center mb-6">
                 <h3 className="text-xl font-bold text-gray-900 mb-2">{plan.name}</h3>
                 <div className="mb-2">
-                  {plan.price === 0 ? (
+                  {isFree ? (
                     <span className="text-3xl font-bold text-gray-900">Free</span>
                   ) : (
                     <>
                       <span className="text-3xl font-bold text-gray-900">
-                        ${price}
+                        €{formatPrice(displayedPrice)}
                       </span>
                       <span className="text-gray-500">
                         /{selectedBilling === 'annual' ? 'year' : 'month'}
@@ -311,10 +265,10 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
                     </>
                   )}
                 </div>
-                
-                {selectedBilling === 'annual' && plan.price > 0 && (
+
+                {selectedBilling === 'annual' && annualSavings > 0 && (
                   <div className="text-sm text-green-600">
-                    Save ${originalYearlyPrice - price}/year
+                    Save €{formatPrice(annualSavings)}/year
                   </div>
                 )}
               </div>
@@ -326,104 +280,42 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
                     <span className="text-sm text-gray-600">{feature}</span>
                   </div>
                 ))}
-                
-                {plan.limits.map((limit, index) => (
-                  <div key={index} className="flex items-start gap-2">
-                    <X className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-gray-500">{limit}</span>
+                {plan.credits > 0 && (
+                  <div className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                    <span className="text-sm text-gray-600">{plan.credits} credits / month</span>
                   </div>
-                ))}
+                )}
+                {plan.credits === -1 && (
+                  <div className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                    <span className="text-sm text-gray-600">Unlimited credits</span>
+                  </div>
+                )}
               </div>
 
               <button
                 onClick={() => handleUpgrade(planKey)}
-                disabled={loading || isCurrentPlan || planKey === 'free'}
+                disabled={loading || isCurrentPlan || isFree}
                 className={`w-full py-3 px-4 rounded-lg font-medium text-sm transition-colors ${
-                  isCurrentPlan
+                  isCurrentPlan || isFree
                     ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                    : planKey === 'free'
-                    ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                    : planKey === 'pro'
+                    : isPopular
                     ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:shadow-lg'
                     : 'bg-purple-600 text-white hover:bg-purple-700'
                 } disabled:opacity-50`}
               >
-                {loading ? 'Processing...' : 
-                 isCurrentPlan ? 'Current Plan' :
-                 planKey === 'free' ? 'Free Forever' : 
-                 `Upgrade to ${plan.name}`}
+                {loading
+                  ? 'Processing...'
+                  : isCurrentPlan
+                  ? 'Current Plan'
+                  : isFree
+                  ? 'Free Forever'
+                  : `Upgrade to ${plan.name}`}
               </button>
             </div>
           );
         })}
-      </div>
-
-      {/* Feature Comparison */}
-      <div className="bg-white border rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Feature Comparison</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Feature</th>
-                <th className="text-center py-3 px-4 text-sm font-medium text-gray-700">Free</th>
-                <th className="text-center py-3 px-4 text-sm font-medium text-gray-700">Basic</th>
-                <th className="text-center py-3 px-4 text-sm font-medium text-gray-700">Pro</th>
-                <th className="text-center py-3 px-4 text-sm font-medium text-gray-700">Enterprise</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              <tr>
-                <td className="py-3 px-4 text-sm text-gray-900 flex items-center gap-2">
-                  <Upload className="w-4 h-4" />
-                  Pitch Uploads
-                </td>
-                <td className="py-3 px-4 text-center text-sm text-gray-600">2</td>
-                <td className="py-3 px-4 text-center text-sm text-gray-600">10</td>
-                <td className="py-3 px-4 text-center text-sm text-gray-600">Unlimited</td>
-                <td className="py-3 px-4 text-center text-sm text-gray-600">Unlimited</td>
-              </tr>
-              <tr>
-                <td className="py-3 px-4 text-sm text-gray-900 flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4" />
-                  Analytics
-                </td>
-                <td className="py-3 px-4 text-center text-sm text-gray-600">Basic</td>
-                <td className="py-3 px-4 text-center text-sm text-gray-600">Advanced</td>
-                <td className="py-3 px-4 text-center text-sm text-gray-600">AI Insights</td>
-                <td className="py-3 px-4 text-center text-sm text-gray-600">Custom</td>
-              </tr>
-              <tr>
-                <td className="py-3 px-4 text-sm text-gray-900 flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4" />
-                  Messages/Month
-                </td>
-                <td className="py-3 px-4 text-center text-sm text-gray-600">10</td>
-                <td className="py-3 px-4 text-center text-sm text-gray-600">100</td>
-                <td className="py-3 px-4 text-center text-sm text-gray-600">Unlimited</td>
-                <td className="py-3 px-4 text-center text-sm text-gray-600">Unlimited</td>
-              </tr>
-              <tr>
-                <td className="py-3 px-4 text-sm text-gray-900 flex items-center gap-2">
-                  <Shield className="w-4 h-4" />
-                  NDA Management
-                </td>
-                <td className="py-3 px-4 text-center text-sm text-gray-600">
-                  <X className="w-4 h-4 text-red-400 mx-auto" />
-                </td>
-                <td className="py-3 px-4 text-center text-sm text-gray-600">
-                  <Check className="w-4 h-4 text-green-500 mx-auto" />
-                </td>
-                <td className="py-3 px-4 text-center text-sm text-gray-600">
-                  <Check className="w-4 h-4 text-green-500 mx-auto" />
-                </td>
-                <td className="py-3 px-4 text-center text-sm text-gray-600">
-                  <Check className="w-4 h-4 text-green-500 mx-auto" />
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
       </div>
     </div>
   );

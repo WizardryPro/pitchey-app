@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
-import { ArrowLeft, Share2, Eye, Calendar, User, Clock, Tag, Film, LogIn, FileText, Lock, Shield, Briefcase, DollarSign, WifiOff, RefreshCw, Bookmark, Heart } from 'lucide-react';
+import { ArrowLeft, Share2, Eye, Calendar, User, UserCircle, Clock, Tag, Film, LogIn, FileText, Lock, Shield, Briefcase, DollarSign, WifiOff, RefreshCw, Bookmark, Heart } from 'lucide-react';
 import PitcheyRating from '../components/PitcheyRating';
 import { pitchService } from '@features/pitches/services/pitch.service';
 import { createDownloadClickHandler } from '../utils/fileDownloads';
@@ -14,7 +14,7 @@ import FollowButton from '@features/browse/components/FollowButton';
 import SocialProofBadge from '@shared/components/SocialProofBadge';
 import { formatCurrency } from '@shared/utils/formatters';
 import FeedbackSection from '../components/feedback/FeedbackSection';
-import HeatBadge, { getHeatScore } from '../components/HeatBadge';
+import { getHeatScore } from '../components/HeatBadge';
 import VerificationBadge from '../components/VerificationBadge';
 import HumanMadeBadge from '../components/HumanMadeBadge';
 import { viewService } from '@features/analytics/services/view.service';
@@ -387,6 +387,12 @@ export default function PitchDetail() {
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-tight">
                   {pitch.title}
                 </h1>
+                {isOwner && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700 whitespace-nowrap">
+                    <UserCircle className="w-3.5 h-3.5" />
+                    Your pitch
+                  </span>
+                )}
                 {pitch.seekingInvestment && (
                   <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 whitespace-nowrap">
                     💰 Seeking Investment
@@ -496,10 +502,7 @@ export default function PitchDetail() {
             <div className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex items-start justify-between mb-6">
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <h2 className="text-xl font-bold text-gray-900">{pitch.title}</h2>
-                    <HeatBadge score={getHeatScore(pitch as unknown as Record<string, unknown>)} variant="inline" />
-                  </div>
+                  <h2 className="text-xl font-bold text-gray-900 mb-2">{pitch.title}</h2>
                   <div className="flex items-center gap-4 text-sm text-gray-600">
                     <div className="flex items-center gap-1">
                       <Tag className="w-4 h-4" />
@@ -848,48 +851,49 @@ export default function PitchDetail() {
               isOwner={isOwner}
               isAuthenticated={isAuthenticated}
               userType={(user as any)?.userType || (user as any)?.user_type || ''}
+              showScoreSummary={false}
             />
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Engagement & Social Proof — aggregate visible to all authenticated
-                viewers; named likers/viewers only exposed to owner + NDA-signed */}
+            {/* Ratings — quality scores (Pitchey + Viewer). The detailed
+                distribution + per-reviewer cards live in FeedbackSection below;
+                this is the at-a-glance summary. */}
+            {((pitch as any).pitchey_score_avg > 0 || (pitch as any).viewer_score_avg > 0) && (
+              <div className="bg-white rounded-xl shadow-sm p-5 space-y-3">
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Ratings</h3>
+                {(pitch as any).pitchey_score_avg > 0 && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-gray-600">
+                      Pitchey Score <span className="text-gray-400">· Industry</span>
+                    </span>
+                    <PitcheyRating mode="display" value={(pitch as any).pitchey_score_avg} />
+                  </div>
+                )}
+                {(pitch as any).viewer_score_avg > 0 && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-gray-600">
+                      Viewer Score <span className="text-gray-400">· Audience</span>
+                    </span>
+                    <PitcheyRating mode="display" value={(pitch as any).viewer_score_avg} />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Reception — popularity/engagement (Heat + Views + Likes + breakdowns).
+                Aggregate visible to all authenticated viewers; named likers/viewers
+                only exposed to owner + NDA-signed inside the component. */}
             {isAuthenticated && (
               <SocialProofBadge
                 pitchId={pitch.id}
                 viewCount={pitch.viewCount || 0}
                 likeCount={pitch.likeCount || 0}
+                heatScore={getHeatScore(pitch as unknown as Record<string, unknown>)}
                 isOwner={isOwner}
                 isAuthenticated={isAuthenticated}
               />
-            )}
-
-            {/* Pitchey Score + Likes — visible to all viewers (auth gating only applies to named-liker breakdown above) */}
-            {((pitch as any).pitchey_score_avg > 0 || (pitch as any).viewer_score_avg > 0 || (pitch.likeCount || 0) > 0) && (
-              <div className="bg-white rounded-xl shadow-sm p-4 space-y-3">
-                {(pitch as any).pitchey_score_avg > 0 && (
-                  <div className="flex items-center justify-between gap-2 text-sm">
-                    <span className="text-gray-600 font-medium shrink-0">Pitchey Score</span>
-                    <PitcheyRating mode="display" value={(pitch as any).pitchey_score_avg} />
-                  </div>
-                )}
-                {(pitch as any).viewer_score_avg > 0 && (
-                  <div className="flex items-center justify-between gap-2 text-sm">
-                    <span className="text-gray-600 font-medium shrink-0">Viewer Score</span>
-                    <PitcheyRating mode="display" value={(pitch as any).viewer_score_avg} />
-                  </div>
-                )}
-                {(pitch.likeCount || 0) > 0 && (
-                  <div className="flex items-center justify-between gap-2 text-sm">
-                    <span className="text-gray-600 font-medium shrink-0">Likes</span>
-                    <span className="inline-flex items-center gap-1.5 text-gray-900 font-semibold">
-                      <Heart className="w-4 h-4 text-red-500 fill-red-500" />
-                      {pitch.likeCount}
-                    </span>
-                  </div>
-                )}
-              </div>
             )}
 
             {/* Engagement Actions */}

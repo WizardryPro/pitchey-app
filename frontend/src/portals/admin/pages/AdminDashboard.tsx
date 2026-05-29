@@ -247,6 +247,19 @@ const AdminDashboard: React.FC = () => {
             </div>
           </Link>
 
+          <Link
+            to="/admin/promo-codes"
+            className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow border-l-4 border-pink-500"
+          >
+            <div className="flex items-center">
+              <div className="text-pink-500 text-2xl mr-4">🎟️</div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Promo Codes</h3>
+                <p className="text-gray-600">Launch codes and who redeemed them</p>
+              </div>
+            </div>
+          </Link>
+
           <div className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow border-l-4 border-red-500">
             <div className="flex items-center">
               <div className="text-red-500 text-2xl mr-4">📊</div>

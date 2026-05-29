@@ -115,7 +115,6 @@ const PublicPitchView = lazyRetry(() => import('./pages/PublicPitchView'));
 const CreatePitch = lazyRetry(() => import('./pages/CreatePitch'));
 const ManagePitches = lazyRetry(() => import('./pages/ManagePitches'));
 const Messages = lazyRetry(() => import('./pages/Messages'));
-const Calendar = lazyRetry(() => import('./pages/Calendar'));
 const PitchDetail = lazyRetry(() => import('./pages/PitchDetail'));
 const PitchEdit = lazyRetry(() => import('./pages/PitchEdit'));
 const PitchAnalytics = lazyRetry(() => import('./pages/PitchAnalytics'));
@@ -163,6 +162,9 @@ const About = lazyRetry(() => import('./pages/About'));
 const Contact = lazyRetry(() => import('./pages/Contact'));
 const Terms = lazyRetry(() => import('./pages/Terms'));
 const Privacy = lazyRetry(() => import('./pages/Privacy'));
+const StandardNDA = lazyRetry(() => import('./pages/StandardNDA'));
+const ForgotPassword = lazyRetry(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazyRetry(() => import('./pages/ResetPassword'));
 
 // Watcher Pages
 const WatcherLogin = lazyRetry(() => import('./pages/WatcherLogin'));
@@ -181,6 +183,7 @@ const AdminGDPR = lazyRetry(() => import('@portals/admin/pages/AdminGDPR'));
 const AdminReports = lazyRetry(() => import('@portals/admin/pages/AdminReports'));
 const AdminModerationLog = lazyRetry(() => import('@portals/admin/pages/AdminModerationLog'));
 const AdminVerifications = lazyRetry(() => import('@portals/admin/pages/AdminVerifications'));
+const AdminPromoCodes = lazyRetry(() => import('@portals/admin/pages/AdminPromoCodes'));
 
 // MFA Challenge Page
 const MFAChallengePage = lazyRetry(() => import('./pages/MFAChallengePage'));
@@ -417,6 +420,9 @@ function App() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
+          <Route path="/legal/standard-nda" element={<StandardNDA />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           
           {/* Test Pages — dev only */}
           {import.meta.env.DEV && <Route path="/test/navigation" element={<TestNavigation />} />}
@@ -501,7 +507,6 @@ function App() {
             <Route path="pitches" element={<ManagePitches />} />
             <Route path="analytics" element={<CreatorAnalyticsPage />} />
             <Route path="messages/*" element={<Messages />} />
-            <Route path="calendar" element={<Calendar />} />
             <Route path="pitch/:id" element={<CreatorPitchView />} />
             <Route path="pitches/:id" element={<PitchDetail />} />
             <Route path="pitch/:id/edit" element={<PitchEdit />} />
@@ -532,7 +537,6 @@ function App() {
             <Route path="pitch/:id" element={<InvestorPitchView />} />
             <Route path="profile" element={<Profile />} />
             <Route path="messages/*" element={<Messages />} />
-            <Route path="calendar" element={<Calendar />} />
             <Route path="billing" element={<Billing />} />
 
             {/* Enhanced Investor Routes */}
@@ -560,7 +564,6 @@ function App() {
             <Route path="following" element={<Following />} />
             <Route path="profile" element={<Profile />} />
             <Route path="messages/*" element={<Messages />} />
-            <Route path="calendar" element={<Calendar />} />
             <Route path="ndas" element={<ProductionNDAManagement />} />
             <Route path="pitches" element={<ManagePitches />} />
             <Route path="pitches/:id/edit" element={<PitchEdit />} />
@@ -657,6 +660,11 @@ function App() {
             <Route path="verifications" element={
               <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
                 <AdminVerifications />
+              </PermissionRoute>
+            } />
+            <Route path="promo-codes" element={
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+                <AdminPromoCodes />
               </PermissionRoute>
             } />
           </Route>

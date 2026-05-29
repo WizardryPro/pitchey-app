@@ -218,7 +218,7 @@ export function EnhancedNavigationShadcn({
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2">
-              <span className={`text-2xl font-bold text-${themeColor}-600`}>Pitchey</span>
+              <img src="/pitchey-logotype.png" alt="Pitchey" className="h-8 w-auto" />
             </Link>
 
             {/* Center Navigation with Dropdowns */}
@@ -684,7 +684,7 @@ export function EnhancedNavigationShadcn({
 
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2">
-              <span className={`text-xl sm:text-2xl font-bold text-${themeColor}-600`}>Pitchey</span>
+              <img src="/pitchey-logotype.png" alt="Pitchey" className="h-7 sm:h-8 w-auto" />
             </Link>
           </div>
 

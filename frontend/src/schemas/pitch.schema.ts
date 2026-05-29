@@ -252,7 +252,8 @@ export const PitchFormSchema = v.object({
   budgetRange: BudgetRangeSchema,
 
   // AI declaration
-  aiUsed: v.optional(v.boolean())
+  aiUsed: v.optional(v.boolean()),
+  aiDisclosure: v.optional(v.picklist(['none', 'promo', 'production']))
 });
 
 // ============================================

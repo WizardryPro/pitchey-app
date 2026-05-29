@@ -90,53 +90,64 @@ function FeedbackCard({ entry }: { entry: FeedbackEntry }) {
   );
 }
 
-function DualScoreSummary({ ratings }: { ratings: RatingStats }) {
+/** The two big headline cards (Pitchey + Viewer). Suppressed where the score is
+ *  already surfaced elsewhere on the page (e.g. PitchDetail's sidebar Ratings panel)
+ *  to avoid showing the same number twice. */
+function ScoreCards({ ratings }: { ratings: RatingStats }) {
   const pitcheyScore = Number(ratings.pitchey_score);
   const viewerScore = Number(ratings.viewer_score);
-  const dist = ratings.distribution || [];
 
   return (
-    <div className="space-y-4">
-      {/* Dual score cards */}
-      <div className="grid grid-cols-2 gap-4">
-        {/* Pitchey Score — gold/prominent */}
-        <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-4 text-center">
-          <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">Pitchey Score</p>
-          <p className="text-3xl font-bold text-amber-900">
-            {pitcheyScore > 0 ? pitcheyScore.toFixed(1) : '—'}
-          </p>
-          {pitcheyScore > 0 && (
-            <p className="text-xs text-amber-600 mt-1">{getRatingLabel(pitcheyScore)}</p>
-          )}
-          <p className="text-xs text-amber-500 mt-1">Industry</p>
-        </div>
-        {/* Viewer Score — grey/secondary */}
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Viewer Score</p>
-          <p className="text-3xl font-bold text-gray-700">
-            {viewerScore > 0 ? viewerScore.toFixed(1) : '—'}
-          </p>
-          {viewerScore > 0 && (
-            <p className="text-xs text-gray-500 mt-1">{getRatingLabel(viewerScore)}</p>
-          )}
-          <p className="text-xs text-gray-400 mt-1">Audience</p>
-        </div>
-      </div>
-
-      {/* Distribution bars */}
-      <div className="space-y-1">
-        <p className="text-xs font-medium text-gray-500 mb-2">
-          {ratings.total_reviews} rating{ratings.total_reviews !== 1 ? 's' : ''} total
+    <div className="grid grid-cols-2 gap-4">
+      {/* Pitchey Score — gold/prominent */}
+      <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-4 text-center">
+        <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">Pitchey Score</p>
+        <p className="text-3xl font-bold text-amber-900">
+          {pitcheyScore > 0 ? pitcheyScore.toFixed(1) : '—'}
         </p>
-        {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((n) => (
-          <RatingBar key={n} label={String(n)} count={dist[n - 1] || 0} total={ratings.total_reviews} />
-        ))}
+        {pitcheyScore > 0 && (
+          <p className="text-xs text-amber-600 mt-1">{getRatingLabel(pitcheyScore)}</p>
+        )}
+        <p className="text-xs text-amber-500 mt-1">Industry</p>
+      </div>
+      {/* Viewer Score — grey/secondary */}
+      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Viewer Score</p>
+        <p className="text-3xl font-bold text-gray-700">
+          {viewerScore > 0 ? viewerScore.toFixed(1) : '—'}
+        </p>
+        {viewerScore > 0 && (
+          <p className="text-xs text-gray-500 mt-1">{getRatingLabel(viewerScore)}</p>
+        )}
+        <p className="text-xs text-gray-400 mt-1">Audience</p>
       </div>
     </div>
   );
 }
 
-export default function FeedbackDisplay({ pitchId }: { pitchId: number }) {
+function DistributionBars({ ratings }: { ratings: RatingStats }) {
+  const dist = ratings.distribution || [];
+  return (
+    <div className="space-y-1">
+      <p className="text-xs font-medium text-gray-500 mb-2">
+        {ratings.total_reviews} rating{ratings.total_reviews !== 1 ? 's' : ''} total
+      </p>
+      {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((n) => (
+        <RatingBar key={n} label={String(n)} count={dist[n - 1] || 0} total={ratings.total_reviews} />
+      ))}
+    </div>
+  );
+}
+
+export default function FeedbackDisplay({
+  pitchId,
+  showScoreSummary = true,
+}: {
+  pitchId: number;
+  /** Render the big Pitchey/Viewer headline cards. Off when the host page already
+   *  shows the scores (PitchDetail sidebar). Distribution + reviews always render. */
+  showScoreSummary?: boolean;
+}) {
   const [ratings, setRatings] = useState<RatingStats | null>(null);
   const [breakdown, setBreakdown] = useState<RoleBreakdownData | undefined>(undefined);
   const [feedback, setFeedback] = useState<FeedbackEntry[]>([]);
@@ -170,7 +181,12 @@ export default function FeedbackDisplay({ pitchId }: { pitchId: number }) {
 
   return (
     <div className="space-y-4">
-      {ratings && ratings.total_reviews > 0 && <DualScoreSummary ratings={ratings} />}
+      {ratings && ratings.total_reviews > 0 && (
+        <div className="space-y-4">
+          {showScoreSummary && <ScoreCards ratings={ratings} />}
+          <DistributionBars ratings={ratings} />
+        </div>
+      )}
       <RoleBreakdown breakdown={breakdown} />
       <div className="space-y-3">
         {feedback.map((entry) => (

@@ -2336,6 +2336,7 @@ class RouteRegistry {
     this.register('POST', '/api/ndas/sign', this.signNDA.bind(this));
 
     // NDA Templates
+    this.register('GET', '/api/ndas/standard', this.getStandardNda.bind(this));
     this.register('GET', '/api/ndas/templates', this.getNDATemplates.bind(this));
     this.register('GET', '/api/ndas/templates/:id', this.getNDATemplate.bind(this));
     this.register('POST', '/api/ndas/templates', this.createNDATemplate.bind(this));
@@ -2713,6 +2714,7 @@ class RouteRegistry {
     this.register('GET', '/api/payments/subscription-status', this.getSubscriptionStatus.bind(this));
     this.register('POST', '/api/payments/subscribe', this.handleSubscribe.bind(this));
     this.register('POST', '/api/payments/cancel-subscription', this.handleCancelSubscription.bind(this));
+    this.register('POST', '/api/payments/billing-portal', this.handleBillingPortal.bind(this));
     this.register('GET', '/api/payments/history', (req) => this.getPaymentHistory(req));
     this.register('GET', '/api/payments/invoices', this.getInvoices.bind(this));
     this.register('GET', '/api/payments/payment-methods', this.getPaymentMethods.bind(this));
@@ -3321,6 +3323,13 @@ class RouteRegistry {
       return subscriptionGrantsStatusHandler(req, this.env);
     });
 
+    // Launch promo-code report (FreeThePitch100 / LifesAPitch50) — admin-only.
+    // Reads live from Stripe: redemption counts + who signed up with each code.
+    this.register('GET', '/api/admin/promo-codes', async (req) => {
+      const { adminPromoCodesHandler } = await import('./handlers/promo-codes');
+      return adminPromoCodesHandler(req, this.env);
+    });
+
     this.register('GET', '/api/creator/ndas', async (req) => {
       const { creatorNdasHandler } = await import('./handlers/creator-sidebar');
       return creatorNdasHandler(req, this.env);
@@ -3795,10 +3804,22 @@ class RouteRegistry {
       });
     }
 
-    // Delegate admin panel routes to AdminEndpointsHandler
-    // (excludes /api/admin/metrics and /api/admin/health which are monitoring routes)
+    // Delegate admin panel routes to AdminEndpointsHandler, EXCEPT for routes that
+    // are registered separately and enforce their own `user_type='admin'` gate.
+    // AdminEndpointsHandler only knows a fixed switch of paths and 404s anything
+    // else (and its admin check is a hardcoded email allowlist), so any registered
+    // /api/admin/* route must be excluded here or it's dead on arrival.
+    //   - metrics / health  : monitoring routes (email-gated)
+    //   - promo-codes       : launch promo report
+    //   - verifications     : company verification review
+    //   - heat-scores       : heat recalculation trigger
+    //   - subscription-grants: founding-grant observability
     if (this.adminHandler && path.startsWith('/api/admin/') &&
-        !path.startsWith('/api/admin/metrics') && !path.startsWith('/api/admin/health')) {
+        !path.startsWith('/api/admin/metrics') && !path.startsWith('/api/admin/health') &&
+        !path.startsWith('/api/admin/promo-codes') &&
+        !path.startsWith('/api/admin/verifications') &&
+        !path.startsWith('/api/admin/heat-scores') &&
+        !path.startsWith('/api/admin/subscription-grants')) {
       const corsHeaders = getCorsHeaders(request.headers.get('Origin'));
       const authResult = await this.validateAuth(request);
       const userAuth = authResult.valid && authResult.user ? {
@@ -3833,6 +3854,7 @@ class RouteRegistry {
       '/api/auth/forgot-password',
       '/api/auth/request-reset',
       '/api/auth/reset-password',
+      '/api/ndas/standard',
       '/api/search',
       '/api/search/autocomplete',
       '/api/search/trending',
@@ -3867,7 +3889,8 @@ class RouteRegistry {
       '/api/browse/top-rated',  // Top rated pitches
       '/api/demos/request',     // Demo request (anonymous OK)
       '/api/analytics/track-view', // View tracking (anonymous views)
-      '/api/portfolio/s'  // Public shared portfolio (token-based)
+      '/api/portfolio/s',  // Public shared portfolio (token-based)
+      '/api/webhooks/stripe'  // Stripe webhooks (HMAC-SHA256 signature auth inside the handler, not session-based)
     ];
 
     // Find handler FIRST (before auth check)
@@ -5349,8 +5372,15 @@ pitchey_analytics_datapoints_per_minute 1250
       themes?: string;
       worldDescription?: string;
       characters?: any[];
+
+      // AI usage disclosure: 'none' | 'promo' | 'production' (ai_used derived)
+      aiDisclosure?: string;
+      aiUsed?: boolean;
     }
     const data = await request.json() as PitchCreateData;
+    const aiDisclosure = ['none', 'promo', 'production'].includes(data.aiDisclosure as string)
+      ? (data.aiDisclosure as string)
+      : (data.aiUsed ? 'production' : 'none');
 
     // Validate required fields
     const validationErrors: string[] = [];
@@ -5382,10 +5412,12 @@ pitchey_analytics_datapoints_per_minute 1250
           tone_and_style, comps, story_breakdown,
           why_now, production_location, development_stage,
           video_url, video_password, video_platform,
-          themes, world_description, characters
+          themes, world_description, characters,
+          ai_disclosure, ai_used
         ) VALUES (
           $1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'draft', 'private', NOW(), NOW(), $13,
-          $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25
+          $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25,
+          $26, $27
         ) RETURNING *
       `, [
         authResult.user.id,
@@ -5412,7 +5444,9 @@ pitchey_analytics_datapoints_per_minute 1250
         data.videoPlatform ?? null,
         data.themes ?? null,
         data.worldDescription ?? null,
-        JSON.stringify(data.characters || [])
+        JSON.stringify(data.characters || []),
+        aiDisclosure,
+        aiDisclosure !== 'none'
       ]) as unknown as DatabaseRow[];
 
       // Handle creative attachments if provided
@@ -5924,6 +5958,8 @@ pitchey_analytics_datapoints_per_minute 1250
       themes?: string;
       worldDescription?: string;
       characters?: any[];
+      aiDisclosure?: string;
+      aiUsed?: boolean;
       creativeAttachments?: Array<{
         id?: string;
         name: string;
@@ -5933,6 +5969,11 @@ pitchey_analytics_datapoints_per_minute 1250
         websiteLink?: string;
       }>;
     };
+
+    // Normalize AI disclosure (null = leave unchanged via COALESCE)
+    const updAiDisclosure = ['none', 'promo', 'production'].includes(data.aiDisclosure as string)
+      ? (data.aiDisclosure as string)
+      : null;
 
     try {
       // Verify ownership
@@ -5971,6 +6012,8 @@ pitchey_analytics_datapoints_per_minute 1250
           world_description = COALESCE($23, world_description),
           characters = COALESCE($24, characters),
           title_image = COALESCE($25, title_image),
+          ai_disclosure = COALESCE($26, ai_disclosure),
+          ai_used = COALESCE($27, ai_used),
           updated_at = NOW()
         WHERE id = $1
         RETURNING *
@@ -5999,7 +6042,9 @@ pitchey_analytics_datapoints_per_minute 1250
         data.themes,
         data.worldDescription,
         data.characters ? JSON.stringify(data.characters) : null,
-        data.titleImage
+        data.titleImage,
+        updAiDisclosure,
+        updAiDisclosure === null ? null : updAiDisclosure !== 'none'
       ]);
 
       // Handle creative attachments if provided
@@ -7926,6 +7971,7 @@ pitchey_analytics_datapoints_per_minute 1250
       signedAt?: string;
       signature?: string;
       fullName?: string;
+      address?: string;
     };
 
     // Extract NDA ID from params or body
@@ -7980,6 +8026,7 @@ pitchey_analytics_datapoints_per_minute 1250
         fullName: data.fullName || '',
         title: data.title || '',
         company: data.company || '',
+        address: data.address || '',
         acceptTerms: data.acceptTerms || false,
         signedAt: new Date().toISOString()
       })]);
@@ -9866,6 +9913,65 @@ pitchey_analytics_datapoints_per_minute 1250
     }
   }
 
+  private async handleBillingPortal(request: Request): Promise<Response> {
+    const authResult = await this.validateAuth(request);
+    if (!authResult.valid) {
+      return new ApiResponseBuilder(request).error(ErrorCode.UNAUTHORIZED, 'Authentication required');
+    }
+
+    try {
+      const stripeKey = (this.env as any).STRIPE_SECRET_KEY;
+      const sql = this.db.getSql() as any;
+
+      if (!sql || !authResult.user?.id || !authResult.user?.email) {
+        return new ApiResponseBuilder(request).error(ErrorCode.INTERNAL_ERROR, 'User context unavailable');
+      }
+      if (!stripeKey) {
+        return new ApiResponseBuilder(request).error(ErrorCode.INTERNAL_ERROR, 'Billing not configured');
+      }
+
+      const userId = authResult.user.id;
+      const email = authResult.user.email;
+      const stripe = new StripeService(stripeKey);
+
+      // Prefer the persisted customer id (set by checkout.session.completed
+      // webhook, migration 088). Fall back to Stripe's email search for users
+      // who subscribed before 088 or for any sub created out-of-band, then
+      // persist so we skip the round-trip next time.
+      const rows = await sql`
+        SELECT stripe_customer_id FROM users WHERE id = ${userId} LIMIT 1
+      ` as { stripe_customer_id: string | null }[];
+
+      let customerId = rows[0]?.stripe_customer_id || null;
+      if (!customerId) {
+        const customer = await stripe.getOrCreateCustomer(email, userId);
+        customerId = customer.id;
+        await sql`
+          UPDATE users SET stripe_customer_id = ${customerId} WHERE id = ${userId}
+        `;
+      }
+
+      // Return them to the billing page they came from. Each portal mounts
+      // the same Billing.tsx at /<portal>/billing, but the SPA router resolves
+      // /billing → portal-specific URL on its own.
+      const frontendUrl = (this.env as any).FRONTEND_URL || 'https://pitchey-5o8.pages.dev';
+      const returnUrl = `${frontendUrl}/billing`;
+
+      const session = await stripe.createBillingPortalSession({
+        customerId,
+        returnUrl,
+      });
+
+      return new ApiResponseBuilder(request).success({ url: session.url });
+    } catch (e: any) {
+      console.error('Failed to create billing portal session:', e);
+      return new ApiResponseBuilder(request).error(
+        ErrorCode.INTERNAL_ERROR,
+        'Failed to open billing portal'
+      );
+    }
+  }
+
   // ── Stripe Webhook Handler ──
   private async handleStripeWebhook(request: Request): Promise<Response> {
     const stripeKey = (this.env as any).STRIPE_SECRET_KEY;
@@ -9935,6 +10041,17 @@ pitchey_analytics_datapoints_per_minute 1250
           const userId = parseInt(session.metadata?.userId);
           if (!userId) break;
 
+          // Persist Stripe customer id from any checkout (sub OR credit-pack).
+          // Used by the billing-portal endpoint to open Stripe's hosted portal
+          // without an extra customer-search round-trip on every click.
+          if (session.customer) {
+            await sql`
+              UPDATE users SET stripe_customer_id = ${session.customer}
+              WHERE id = ${userId}
+                AND (stripe_customer_id IS NULL OR stripe_customer_id != ${session.customer})
+            `;
+          }
+
           if (session.metadata?.type === 'credits') {
             // Credit pack purchase — grant credits immediately. Credit packs
             // are one-shot `mode=payment` sessions, so there's no invoice.paid
@@ -9990,13 +10107,21 @@ pitchey_analytics_datapoints_per_minute 1250
 
             const tierId = session.metadata?.tier || 'unknown';
 
+            // Stripe API drift (2025-03-31.acacia+): current_period_start/end moved
+            // from top-level subscription to sub.items.data[0]. Read both locations
+            // and null-check the field, not just the parent — older code did
+            // `${sub ? new Date(sub.current_period_start * 1000).toISOString() : null}`
+            // which threw "Invalid time value" when the top-level field was missing
+            // (caught by the outer try/catch, but silently dropped the row).
+            const subPeriodStart = sub?.current_period_start ?? sub?.items?.data?.[0]?.current_period_start ?? null;
+            const subPeriodEnd = sub?.current_period_end ?? sub?.items?.data?.[0]?.current_period_end ?? null;
             await sql`
               INSERT INTO subscription_history (user_id, new_tier, action, stripe_subscription_id, stripe_price_id, status, amount, billing_interval, period_start, period_end, created_at)
               VALUES (${userId}, ${tierId}, 'create', ${subId || null},
                 ${sub?.items?.data?.[0]?.price?.id || null}, 'active',
                 ${(session.amount_total || 0) / 100}, ${sub?.items?.data?.[0]?.price?.recurring?.interval || 'month'},
-                ${sub ? new Date(sub.current_period_start * 1000).toISOString() : null},
-                ${sub ? new Date(sub.current_period_end * 1000).toISOString() : null}, NOW())
+                ${subPeriodStart ? new Date(subPeriodStart * 1000).toISOString() : null},
+                ${subPeriodEnd ? new Date(subPeriodEnd * 1000).toISOString() : null}, NOW())
             `;
 
             const plan = getSubscriptionTier(tierId);
@@ -10044,6 +10169,76 @@ pitchey_analytics_datapoints_per_minute 1250
           break;
         }
 
+        case 'customer.subscription.created': {
+          // Defensive fallback for subs created outside the normal Checkout flow
+          // (e.g. operator-created from the Stripe Dashboard). The
+          // checkout.session.completed branch above handles the common case;
+          // here we dedupe and warn on orphans without portal context.
+          const sub = event.data.object;
+          const subId = sub.id;
+
+          const existing = await sql`
+            SELECT 1 FROM subscription_history
+            WHERE stripe_subscription_id = ${subId}
+            LIMIT 1
+          `;
+          if (existing.length > 0) {
+            console.debug(JSON.stringify({
+              level: 'debug',
+              category: 'stripe_webhook',
+              event_id: event.id,
+              event_type: event.type,
+              stripe_subscription_id: subId,
+              action: 'subscription_created_duplicate',
+            }));
+            break;
+          }
+
+          const userId = parseInt(sub.metadata?.userId || '');
+          const tierId = sub.metadata?.tier;
+
+          if (!userId || !tierId) {
+            console.warn(JSON.stringify({
+              level: 'warn',
+              category: 'stripe_webhook',
+              event_id: event.id,
+              event_type: event.type,
+              stripe_subscription_id: subId,
+              action: 'orphan_subscription',
+              has_user_id: !!userId,
+              has_tier: !!tierId,
+            }));
+            break;
+          }
+
+          // Mirrors the insert at line ~9994. amount null (no session total);
+          // credits NOT granted (invoice.paid is the source of truth, see comment
+          // below); user_type NOT flipped (operator subs shouldn't bypass portal).
+          // API drift: period_start/end live on items.data[0] in newer API versions.
+          const createPeriodStart = sub?.current_period_start ?? sub?.items?.data?.[0]?.current_period_start ?? null;
+          const createPeriodEnd = sub?.current_period_end ?? sub?.items?.data?.[0]?.current_period_end ?? null;
+          await sql`
+            INSERT INTO subscription_history (user_id, new_tier, action, stripe_subscription_id, stripe_price_id, status, amount, billing_interval, period_start, period_end, created_at)
+            VALUES (${userId}, ${tierId}, 'create', ${subId},
+              ${sub.items?.data?.[0]?.price?.id || null}, 'active',
+              ${null}, ${sub.items?.data?.[0]?.price?.recurring?.interval || 'month'},
+              ${createPeriodStart ? new Date(createPeriodStart * 1000).toISOString() : null},
+              ${createPeriodEnd ? new Date(createPeriodEnd * 1000).toISOString() : null}, NOW())
+          `;
+
+          console.log(JSON.stringify({
+            level: 'info',
+            category: 'stripe_webhook',
+            event_id: event.id,
+            event_type: event.type,
+            user_id: userId,
+            stripe_subscription_id: subId,
+            action: 'subscription_created_out_of_band',
+            tier: tierId,
+          }));
+          break;
+        }
+
         case 'customer.subscription.deleted': {
           const sub = event.data.object;
           const subId = sub.id;
@@ -10071,11 +10266,14 @@ pitchey_analytics_datapoints_per_minute 1250
               WHERE stripe_subscription_id = ${subId} AND status = 'active'
             `;
           }
-          // Update period end
-          await sql`
-            UPDATE subscription_history SET period_end = ${new Date(sub.current_period_end * 1000).toISOString()}
-            WHERE stripe_subscription_id = ${subId}
-          `;
+          // Update period end (API drift: also check items.data[0]).
+          const updPeriodEnd = sub?.current_period_end ?? sub?.items?.data?.[0]?.current_period_end ?? null;
+          if (updPeriodEnd) {
+            await sql`
+              UPDATE subscription_history SET period_end = ${new Date(updPeriodEnd * 1000).toISOString()}
+              WHERE stripe_subscription_id = ${subId}
+            `;
+          }
           break;
         }
 
@@ -10088,7 +10286,13 @@ pitchey_analytics_datapoints_per_minute 1250
           //   - Credits only flow when the card actually clears
           //   - Bounced cards / failed retries never get free credits
           const invoice = event.data.object;
-          const subId = invoice.subscription;
+          // Stripe API drift: invoice.subscription was deprecated in favor of
+          // invoice.parent.subscription_details.subscription. Read both — newer
+          // accounts return null at the top level so this fell into a silent
+          // early-break and credits were never granted on subscription_create.
+          const subId = invoice.subscription
+            || invoice.parent?.subscription_details?.subscription
+            || null;
           const reason = invoice.billing_reason;
 
           if (!subId || !['subscription_create', 'subscription_cycle'].includes(reason)) {
@@ -10161,6 +10365,103 @@ pitchey_analytics_datapoints_per_minute 1250
               billing_reason: reason,
             }));
           }
+          break;
+        }
+
+        case 'invoice.payment_failed': {
+          // Record failure detail in metadata but keep status='active' so the user
+          // retains access during the dunning window. customer.subscription.deleted
+          // is the revocation path once Stripe gives up retrying. No new status
+          // enum value introduced — surface failure via metadata.last_payment_failed_at.
+          const invoice = event.data.object;
+          const subId = invoice.subscription;
+          if (!subId) break;
+
+          const [row] = await sql`
+            SELECT id, user_id, new_tier FROM subscription_history
+            WHERE stripe_subscription_id = ${subId} AND status = 'active'
+            ORDER BY created_at DESC LIMIT 1
+          ` as { id: number; user_id: number; new_tier: string }[];
+
+          if (row) {
+            await sql`
+              UPDATE subscription_history
+              SET metadata = COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
+                last_payment_failed_at: new Date().toISOString(),
+                last_failed_invoice_id: invoice.id,
+                last_failed_attempt_count: invoice.attempt_count || null,
+                last_failure_amount_due: (invoice.amount_due || 0) / 100,
+                last_failure_next_attempt: invoice.next_payment_attempt
+                  ? new Date(invoice.next_payment_attempt * 1000).toISOString()
+                  : null,
+              })}::jsonb
+              WHERE id = ${row.id}
+            `;
+          }
+
+          console.warn(JSON.stringify({
+            level: 'warn',
+            category: 'stripe_webhook',
+            event_id: event.id,
+            event_type: event.type,
+            stripe_subscription_id: subId,
+            stripe_invoice_id: invoice.id,
+            user_id: row?.user_id ?? null,
+            tier: row?.new_tier ?? null,
+            attempt_count: invoice.attempt_count || null,
+            amount_due: (invoice.amount_due || 0) / 100,
+            next_payment_attempt: invoice.next_payment_attempt
+              ? new Date(invoice.next_payment_attempt * 1000).toISOString()
+              : null,
+            action: row ? 'payment_failed_recorded' : 'payment_failed_unmapped',
+          }));
+          break;
+        }
+
+        case 'charge.refunded': {
+          // Refunds carry charge.payment_intent, not the checkout session id we
+          // persist on credit_transactions.stripe_session_id, so we cannot
+          // cleanly resolve user_id without an extra Stripe API call plus a
+          // partial-refund proration policy. Log loudly so ops reverses credits
+          // manually via the admin grant tool. Full revocation = follow-up work.
+          const charge = event.data.object;
+          console.error(JSON.stringify({
+            level: 'error',
+            category: 'stripe_webhook',
+            event_id: event.id,
+            event_type: event.type,
+            action: 'refund_received_manual_action_required',
+            charge_id: charge.id,
+            payment_intent: charge.payment_intent || null,
+            amount_refunded: (charge.amount_refunded || 0) / 100,
+            amount_total: (charge.amount || 0) / 100,
+            currency: charge.currency,
+            customer: charge.customer || null,
+          }));
+          break;
+        }
+
+        case 'charge.dispute.created': {
+          // Disputes can still be won — do NOT auto-revoke credits or downgrade tier.
+          // Log at error level so Sentry/Axiom alerts ops within the
+          // evidence-submission window (typically 7 days for card disputes).
+          const dispute = event.data.object;
+          console.error(JSON.stringify({
+            level: 'error',
+            category: 'stripe_webhook',
+            event_id: event.id,
+            event_type: event.type,
+            action: 'dispute_opened',
+            dispute_id: dispute.id,
+            charge_id: dispute.charge,
+            amount: (dispute.amount || 0) / 100,
+            currency: dispute.currency,
+            reason: dispute.reason,
+            status: dispute.status,
+            evidence_due_by: dispute.evidence_details?.due_by
+              ? new Date(dispute.evidence_details.due_by * 1000).toISOString()
+              : null,
+          }));
           break;
         }
 
@@ -14976,6 +15277,70 @@ pitchey_analytics_datapoints_per_minute 1250
         });
       }
 
+    } catch (error) {
+      return errorHandler(error, request);
+    }
+  }
+
+  /**
+   * Substitute {{token}} placeholders in an NDA template. Unknown/empty fields
+   * render as a fillable blank line so the document still reads correctly.
+   */
+  private renderNdaTemplate(content: string, ctx: Record<string, string | undefined>): string {
+    const blank = '________________';
+    return (content || '').replace(/\{\{(\w+)\}\}/g, (_m, key) => {
+      const v = ctx[key];
+      return v && String(v).trim() ? String(v) : blank;
+    });
+  }
+
+  /**
+   * Return the platform Standard NDA, auto-filled with whatever context is
+   * available (pitch title + creator from pitchId; date/parties/addresses from
+   * query params). Public — used by the /legal/standard-nda page and sign flow.
+   */
+  private async getStandardNda(request: Request): Promise<Response> {
+    try {
+      const url = new URL(request.url);
+      const pitchId = url.searchParams.get('pitchId');
+      const ctx: Record<string, string | undefined> = {
+        date: url.searchParams.get('date') || undefined,
+        recipient_name: url.searchParams.get('recipientName') || undefined,
+        recipient_address: url.searchParams.get('recipientAddress') || undefined,
+        disclosing_party_name: url.searchParams.get('disclosingName') || undefined,
+        disclosing_party_address: url.searchParams.get('disclosingAddress') || undefined,
+        project_name: url.searchParams.get('projectName') || undefined,
+      };
+
+      if (pitchId) {
+        try {
+          const [p] = await this.db.query(
+            `SELECT p.title AS title,
+                    COALESCE(NULLIF(u.company_name, ''), u.username, u.name) AS creator_name,
+                    COALESCE(NULLIF(u.company_address, ''), NULLIF(u.location, '')) AS creator_address
+             FROM pitches p JOIN users u ON u.id = p.user_id WHERE p.id = $1 LIMIT 1`,
+            [pitchId]
+          ) as any[];
+          if (p) {
+            ctx.project_name = ctx.project_name || p.title;
+            ctx.disclosing_party_name = ctx.disclosing_party_name || p.creator_name;
+            ctx.disclosing_party_address = ctx.disclosing_party_address || p.creator_address;
+          }
+        } catch { /* pitch lookup best-effort; fall back to blanks */ }
+      }
+
+      const [tpl] = await this.db.query(
+        `SELECT name, template_content FROM nda_templates WHERE is_default = true ORDER BY id ASC LIMIT 1`
+      ) as any[];
+      const raw = tpl?.template_content || '';
+
+      return this.jsonResponse({
+        success: true,
+        data: {
+          name: tpl?.name || 'Pitchey Standard NDA',
+          content: this.renderNdaTemplate(raw, ctx),
+        },
+      });
     } catch (error) {
       return errorHandler(error, request);
     }

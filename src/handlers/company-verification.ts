@@ -227,6 +227,13 @@ export async function adminListVerificationsHandler(
   const db = getDb(env);
   if (!db) return errorResponse('Database unavailable', 503, origin);
 
+  // Admin gate. This handler is reached directly (the route is excluded from
+  // the AdminEndpointsHandler intercept), so it must enforce admin itself.
+  const userId = await getUserId(request, env);
+  if (!userId) return errorResponse('Unauthorized', 401, origin);
+  const [admin] = await db`SELECT user_type FROM users WHERE id = ${userId}`;
+  if (admin?.user_type !== 'admin') return errorResponse('Admin access required', 403, origin);
+
   const url = new URL(request.url);
   const status = url.searchParams.get('status') || undefined;
   const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 100);
@@ -252,6 +259,10 @@ export async function adminReviewVerificationHandler(
 
   const db = getDb(env);
   if (!db) return errorResponse('Database unavailable', 503, origin);
+
+  // Admin gate — route is excluded from the AdminEndpointsHandler intercept.
+  const [reviewer] = await db`SELECT user_type FROM users WHERE id = ${reviewerId}`;
+  if (reviewer?.user_type !== 'admin') return errorResponse('Admin access required', 403, origin);
 
   let body: { approved?: boolean; rejectionReason?: string };
   try {

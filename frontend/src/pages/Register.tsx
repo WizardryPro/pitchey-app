@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useBetterAuthStore } from '../store/betterAuthStore';
-import { UserPlus, Mail, Lock, User, Briefcase, AlertCircle, CheckCircle } from 'lucide-react';
-import Turnstile from '../components/Turnstile';
+import { UserPlus, Mail, User, Briefcase, AlertCircle, CheckCircle } from 'lucide-react';
+import PasswordInput from '../components/PasswordInput';
+import Turnstile, { TURNSTILE_ENABLED } from '../components/Turnstile';
 import { setPendingReturnTo, isSafeReturnPath } from '@/utils/postLoginRedirect';
 
 
@@ -16,21 +17,33 @@ export default function Register() {
     : isSafeReturnPath(redirectParam)
       ? redirectParam
       : null;
+  // Preselect account type from ?type= (portal-context signup links). No silent
+  // default — the user must choose, so nobody accidentally registers as a Creator.
+  const typeParam = searchParams.get('type');
+  const initialUserType = ['creator', 'production', 'investor'].includes(typeParam || '') ? (typeParam as string) : '';
   const { register, loading, error } = useBetterAuthStore();
   const [turnstileToken, setTurnstileToken] = useState<string>('');
+  const [turnstileKey, setTurnstileKey] = useState(0);
+  // Turnstile tokens are single-use; force a fresh token after every attempt so a
+  // retry never resends a consumed token (which Cloudflare rejects as timeout-or-duplicate).
+  const resetTurnstile = () => { setTurnstileToken(''); setTurnstileKey((k) => k + 1); };
   const [registrationComplete, setRegistrationComplete] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     username: '',
     password: '',
     confirmPassword: '',
-    userType: 'creator',
+    userType: initialUserType,
     companyName: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    if (!formData.userType) {
+      alert('Please choose what brings you to Pitchey (Creator, Production, or Investor)');
+      return;
+    }
     if (formData.password !== formData.confirmPassword) {
       alert('Passwords do not match');
       return;
@@ -55,7 +68,8 @@ export default function Register() {
       // Show verification message instead of redirecting
       setRegistrationComplete(true);
     } catch (_error) {
-      // Error is handled in the store
+      // Error is surfaced via the store's `error` state; refresh Turnstile for the retry.
+      resetTurnstile();
     }
   };
 
@@ -63,7 +77,7 @@ export default function Register() {
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <Link to="/" className="flex flex-col items-center">
-          <span className="text-4xl font-bold text-purple-600">Pitchey</span>
+          <img src="/pitchey-logotype.png" alt="Pitchey" className="h-12 w-auto" />
         </Link>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
           Create your account
@@ -71,7 +85,7 @@ export default function Register() {
         <p className="mt-3 text-center text-base text-gray-600">
           Already have an account?{' '}
           <Link
-            to={`/login/${formData.userType}`}
+            to={`/login/${formData.userType || 'creator'}`}
             className="font-semibold text-purple-600 hover:text-purple-700 underline underline-offset-2 decoration-2"
           >
             Sign in
@@ -98,7 +112,7 @@ export default function Register() {
               </p>
               <div className="space-y-3">
                 <Link
-                  to={`/login/${formData.userType}`}
+                  to={`/login/${formData.userType || 'creator'}`}
                   className="block w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700"
                 >
                   Go to login
@@ -191,7 +205,7 @@ export default function Register() {
               </div>
             </div>
 
-            {formData.userType !== 'creator' && (
+            {(formData.userType === 'production' || formData.userType === 'investor') && (
               <div>
                 <label htmlFor="companyName" className="block text-sm font-medium text-gray-700">
                   Company Name (Optional)
@@ -217,23 +231,17 @@ export default function Register() {
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Password
               </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="new-password"
-                  required
-                  minLength={8}
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="input-field pl-10"
-                  placeholder="••••••••"
-                />
-              </div>
+              <PasswordInput
+                id="password"
+                name="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                inputClassName="input-field pl-10 pr-10"
+                placeholder="••••••••"
+              />
               <p className="mt-1 text-sm text-gray-500">
                 Must be at least 8 characters
               </p>
@@ -243,22 +251,16 @@ export default function Register() {
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
                 Confirm Password
               </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  autoComplete="new-password"
-                  required
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  className="input-field pl-10"
-                  placeholder="••••••••"
-                />
-              </div>
+              <PasswordInput
+                id="confirmPassword"
+                name="confirmPassword"
+                autoComplete="new-password"
+                required
+                value={formData.confirmPassword}
+                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                inputClassName="input-field pl-10 pr-10"
+                placeholder="••••••••"
+              />
             </div>
 
             <div className="flex items-start">
@@ -281,12 +283,12 @@ export default function Register() {
               </label>
             </div>
 
-            <Turnstile onVerify={setTurnstileToken} onExpire={() => setTurnstileToken('')} />
+            <Turnstile key={turnstileKey} onVerify={setTurnstileToken} onExpire={resetTurnstile} />
 
             <div>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || (TURNSTILE_ENABLED && !turnstileToken)}
                 className="w-full flex justify-center items-center btn-primary"
               >
                 {loading ? (

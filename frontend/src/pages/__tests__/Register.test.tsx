@@ -57,7 +57,8 @@ describe('Register', () => {
 
   it('renders Pitchey brand link', () => {
     renderRegister()
-    expect(screen.getByText('Pitchey')).toBeInTheDocument()
+    // Brand mark is the logotype image (alt="Pitchey") after the 2026-05 logo rollout
+    expect(screen.getByAltText('Pitchey')).toBeInTheDocument()
   })
 
   it('renders sign-in link', () => {
@@ -137,6 +138,7 @@ describe('Register', () => {
   it('submits the form with correct data', async () => {
     renderRegister()
 
+    fireEvent.click(screen.getByText('Creator'))
     fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'new@test.com' } })
     fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'newuser' } })
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'securepass123' } })
@@ -160,6 +162,7 @@ describe('Register', () => {
   it('shows registration success view after registration completes', async () => {
     renderRegister()
 
+    fireEvent.click(screen.getByText('Creator'))
     fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'new@test.com' } })
     fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'newuser' } })
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'securepass123' } })
@@ -179,6 +182,7 @@ describe('Register', () => {
   it('stores pending verification email in localStorage on success', async () => {
     renderRegister()
 
+    fireEvent.click(screen.getByText('Creator'))
     fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'verify@test.com' } })
     fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'verifyuser' } })
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'securepass123' } })

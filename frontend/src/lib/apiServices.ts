@@ -521,6 +521,17 @@ export const paymentsAPI = {
     return { success: false, error: response.error?.message };
   },
 
+  // Open Stripe Customer Portal — backend creates a billing_portal session and
+  // returns its url. Callers should window.location.assign(url) on success
+  // (the SPA hands the user off to Stripe's hosted page).
+  async openBillingPortal(): Promise<{ success: true; url: string } | { success: false; error?: string }> {
+    const response = await apiClient.post<{ url: string }>('/api/payments/billing-portal');
+    if (response.success && response.data?.url) {
+      return { success: true, url: response.data.url };
+    }
+    return { success: false, error: response.error?.message };
+  },
+
   // Get credit balance and recent transactions
   async getCreditBalance() {
     const response = await apiClient.get('/api/payments/credits/balance');

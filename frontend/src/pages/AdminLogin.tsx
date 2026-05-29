@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useBetterAuthStore, MFARequiredError } from '../store/betterAuthStore';
-import { Shield, LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
+import { Shield, LogIn, Mail, AlertCircle, ArrowLeft } from 'lucide-react';
 import BackButton from '../components/BackButton';
+import PasswordInput from '../components/PasswordInput';
+import Turnstile, { TURNSTILE_ENABLED } from '../components/Turnstile';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
@@ -11,18 +13,30 @@ export default function AdminLogin() {
     email: '',
     password: '',
   });
+  const [turnstileToken, setTurnstileToken] = useState<string>('');
+  const [turnstileKey, setTurnstileKey] = useState(0);
+  // Turnstile tokens are single-use; force a fresh token after every attempt so a
+  // retry never resends a consumed token (which Cloudflare rejects as timeout-or-duplicate).
+  const resetTurnstile = () => { setTurnstileToken(''); setTurnstileKey((k) => k + 1); };
   const [authError, setAuthError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
+    // Don't submit before Cloudflare's challenge has issued a token — sending an
+    // empty token returns 403 (TURNSTILE_FAILED). This guards both click and Enter.
+    if (TURNSTILE_ENABLED && !turnstileToken) {
+      setAuthError('Just finishing the security check — please try again in a moment.');
+      return;
+    }
     try {
-      await login(formData.email, formData.password);
+      await login(formData.email, formData.password, turnstileToken);
       // Verify the user is actually an admin
       const user = useBetterAuthStore.getState().user;
       if (user?.userType !== 'admin') {
         useBetterAuthStore.getState().logout();
         setAuthError('Access denied. This portal is restricted to administrators.');
+        resetTurnstile();
         return;
       }
       void navigate('/admin/dashboard');
@@ -32,6 +46,7 @@ export default function AdminLogin() {
         return;
       }
       console.error('Admin login failed:', err);
+      resetTurnstile();
     }
   };
 
@@ -41,7 +56,7 @@ export default function AdminLogin() {
     <div className="min-h-screen bg-gradient-to-br from-purple-100 via-white to-indigo-50 flex items-center justify-center p-4">
       {/* Back Button */}
       <div className="absolute top-6 left-6">
-        <BackButton variant="light" />
+        <BackButton variant="light" iconOnly />
       </div>
 
       <div className="max-w-md w-full">
@@ -93,28 +108,24 @@ export default function AdminLogin() {
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Password
               </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-800 focus:border-transparent"
-                  placeholder="••••••••"
-                />
-              </div>
+              <PasswordInput
+                id="password"
+                name="password"
+                autoComplete="current-password"
+                required
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                inputClassName="appearance-none block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-800 focus:border-transparent"
+                placeholder="••••••••"
+              />
             </div>
+
+            <Turnstile key={turnstileKey} onVerify={setTurnstileToken} onExpire={resetTurnstile} />
 
             <div>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || (TURNSTILE_ENABLED && !turnstileToken)}
                 className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-purple-900 hover:bg-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-800 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
@@ -122,7 +133,7 @@ export default function AdminLogin() {
                 ) : (
                   <>
                     <LogIn className="h-5 w-5 mr-2" />
-                    Sign in
+                    {!TURNSTILE_ENABLED || turnstileToken ? 'Sign in' : 'Verifying…'}
                   </>
                 )}
               </button>
@@ -144,12 +155,14 @@ export default function AdminLogin() {
           </form>
 
           {/* Back to portals */}
-          <div className="mt-6 text-center">
+          <div className="mt-6 flex justify-center">
             <Link
               to="/portals"
-              className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              aria-label="Back to portal selection"
+              title="Back to portal selection"
+              className="inline-flex text-gray-500 hover:text-gray-700 transition-colors"
             >
-              Back to portal selection
+              <ArrowLeft className="h-5 w-5" />
             </Link>
           </div>
         </div>

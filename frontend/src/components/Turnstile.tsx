@@ -31,6 +31,11 @@ interface TurnstileProps {
 const SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || '';
 const SCRIPT_ID = 'cf-turnstile-script';
 
+// True only when a Turnstile site key is configured (i.e. the widget actually renders
+// and must issue a token). False in tests/local dev with no key, so auth forms aren't
+// blocked when there is no challenge to complete.
+export const TURNSTILE_ENABLED = !!SITE_KEY;
+
 function loadScript(): Promise<void> {
   if (document.getElementById(SCRIPT_ID)) {
     return window.turnstile

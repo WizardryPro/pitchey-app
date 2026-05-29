@@ -89,7 +89,7 @@ export default function Homepage() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-8">
               <a href="/" className="flex items-center">
-                <span className="text-2xl font-bold text-purple-600">Pitchey</span>
+                <img src="/pitchey-logotype.png" alt="Pitchey" className="h-8 w-auto" />
               </a>
               <nav className="hidden md:flex items-center gap-6">
                 <button 
@@ -286,7 +286,7 @@ export default function Homepage() {
       {/* Hottest Pitches — top 3 by Bayesian + role-weighted heat score.
           Replaces the old "How Pitchey Works" tri-card; we'd rather surface real
           traction than explain the product in the abstract. */}
-      <section className="py-16 bg-gradient-to-br from-indigo-50 via-white to-violet-50 border-b border-gray-100">
+      <section className="py-16 bg-gradient-to-br from-orange-50 via-white to-red-50 border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-semibold mb-4 shadow-sm">
@@ -301,7 +301,7 @@ export default function Homepage() {
 
           {loading ? (
             <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
             </div>
           ) : hotPitches.length === 0 ? (
             <p className="text-center text-gray-500">No hot pitches yet — check back soon.</p>
@@ -315,10 +315,10 @@ export default function Homepage() {
                   <div
                     key={pitch.id}
                     onClick={() => navigate(`/pitch/${pitch.id}`)}
-                    className="relative bg-white rounded-2xl overflow-hidden border border-indigo-200 shadow-md hover:shadow-xl hover:border-indigo-400 transition cursor-pointer group"
+                    className="relative bg-white rounded-2xl overflow-hidden border border-orange-200 shadow-md hover:shadow-xl hover:border-orange-400 transition cursor-pointer group"
                   >
                     {/* Rank medallion */}
-                    <div className="absolute top-3 left-3 z-10 w-10 h-10 rounded-full bg-white/95 backdrop-blur-sm shadow-md flex items-center justify-center font-bold text-indigo-600 text-lg">
+                    <div className="absolute top-3 left-3 z-10 w-10 h-10 rounded-full bg-white/95 backdrop-blur-sm shadow-md flex items-center justify-center font-bold text-orange-600 text-lg">
                       #{idx + 1}
                     </div>
                     {/* Heat badge top-right */}
@@ -326,7 +326,7 @@ export default function Homepage() {
                       <HeatBadge score={heat} />
                     </div>
 
-                    <div className="h-48 bg-gradient-to-br from-indigo-100 to-violet-100 relative">
+                    <div className="h-48 bg-gradient-to-br from-orange-100 to-red-100 relative">
                       {((pitch as any).cover_image || (pitch as any).title_image || pitch.titleImage || pitch.thumbnailUrl) ? (
                         <img
                           src={(pitch as any).cover_image || (pitch as any).title_image || pitch.titleImage || pitch.thumbnailUrl}
@@ -339,7 +339,7 @@ export default function Homepage() {
                     </div>
 
                     <div className="p-5">
-                      <h3 className="font-bold text-lg text-gray-900 mb-1 line-clamp-1 group-hover:text-indigo-600 transition">
+                      <h3 className="font-bold text-lg text-gray-900 mb-1 line-clamp-1 group-hover:text-orange-600 transition">
                         {pitch.title}
                       </h3>
                       <p className="text-xs text-gray-500 mb-2">
@@ -359,7 +359,7 @@ export default function Homepage() {
                           <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5" /> {(pitch as any).like_count ?? (pitch as any).likeCount ?? 0}</span>
                         </div>
                         {heat > 0 && (
-                          <span className="font-semibold text-indigo-600">{heat.toFixed(1)} heat</span>
+                          <span className="font-semibold text-orange-600">{heat.toFixed(1)} heat</span>
                         )}
                       </div>
                     </div>
@@ -619,7 +619,7 @@ export default function Homepage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center mb-4">
-                <span className="text-xl font-bold text-purple-600">Pitchey</span>
+                <img src="/pitchey-logotype.png" alt="Pitchey" className="h-7 w-auto" />
               </div>
               <p className="text-metadata">
                 Connecting stories with opportunities since 2025.

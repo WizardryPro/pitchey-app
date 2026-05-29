@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useBetterAuthStore, MFARequiredError } from '../store/betterAuthStore';
-import { Eye, LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
+import { Eye, LogIn, Mail, AlertCircle } from 'lucide-react';
 import BackButton from '../components/BackButton';
-import Turnstile from '../components/Turnstile';
+import PasswordInput from '../components/PasswordInput';
+import Turnstile, { TURNSTILE_ENABLED } from '../components/Turnstile';
 import { isSafeReturnPath, resolvePostLoginRedirect } from '@/utils/postLoginRedirect';
 
 export default function WatcherLogin() {
@@ -14,6 +15,10 @@ export default function WatcherLogin() {
   const resolveDest = () => resolvePostLoginRedirect(rawFrom, '/watcher/dashboard');
   const { loginWatcher, loading, error } = useBetterAuthStore();
   const [turnstileToken, setTurnstileToken] = useState<string>('');
+  const [turnstileKey, setTurnstileKey] = useState(0);
+  // Turnstile tokens are single-use; force a fresh token after every attempt so a
+  // retry never resends a consumed token (which Cloudflare rejects as timeout-or-duplicate).
+  const resetTurnstile = () => { setTurnstileToken(''); setTurnstileKey((k) => k + 1); };
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -30,6 +35,7 @@ export default function WatcherLogin() {
         return;
       }
       console.error('Watcher login failed:', err);
+      resetTurnstile();
     }
   };
 
@@ -45,6 +51,7 @@ export default function WatcherLogin() {
         return;
       }
       console.error('Demo watcher login failed:', err);
+      resetTurnstile();
     }
   };
 
@@ -100,22 +107,16 @@ export default function WatcherLogin() {
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Password
               </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-portal-watcher focus:border-transparent"
-                  placeholder="••••••••"
-                />
-              </div>
+              <PasswordInput
+                id="password"
+                name="password"
+                autoComplete="current-password"
+                required
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                inputClassName="appearance-none block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-portal-watcher focus:border-transparent"
+                placeholder="••••••••"
+              />
             </div>
 
             <div className="flex items-center justify-between">
@@ -126,12 +127,12 @@ export default function WatcherLogin() {
               </div>
             </div>
 
-            <Turnstile onVerify={setTurnstileToken} onExpire={() => setTurnstileToken('')} />
+            <Turnstile key={turnstileKey} onVerify={setTurnstileToken} onExpire={resetTurnstile} />
 
             <div>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || (TURNSTILE_ENABLED && !turnstileToken)}
                 className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-brand-portal-watcher hover:bg-brand-portal-watcher/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-portal-watcher disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (

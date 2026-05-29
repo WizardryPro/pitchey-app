@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   Home, BarChart3, Film, Plus,
   FileText, Users, GitBranch, User, Settings,
-  Calendar, MessageSquare, Target, Star, Store, ExternalLink,
+  MessageSquare, Target, Star, Store, ExternalLink,
   Library, Layers
 } from 'lucide-react';
 import { CREATOR_ROUTES } from '@/config/navigation.routes';
@@ -42,7 +42,6 @@ export const creatorNavigationSections: NavigationSection[] = [
     items: [
       { label: 'Messages', path: CREATOR_ROUTES.messages, icon: MessageSquare },
       { label: 'NDAs', path: CREATOR_ROUTES.ndas, icon: FileText },
-      { label: 'Calendar', path: CREATOR_ROUTES.calendar, icon: Calendar },
     ],
   },
   {

@@ -18,6 +18,7 @@ import SubscriptionCard from '@features/billing/components/SubscriptionCard';
 import CreditPurchase from '@features/billing/components/CreditPurchase';
 import PaymentHistory from '@features/billing/components/PaymentHistory';
 import PaymentMethodCard from '@features/billing/components/PaymentMethodCard';
+import StripePortalCard from '@features/billing/components/StripePortalCard';
 import { getSubscriptionTier } from '../config/subscription-plans';
 
 export default function Billing() {
@@ -123,6 +124,10 @@ export default function Billing() {
         <h1 className="text-2xl font-bold text-gray-900">Billing & Payments</h1>
         <p className="text-sm text-gray-500 mt-1">Manage your subscription and billing</p>
       </div>
+
+      {/* Stripe Customer Portal — single entry for card updates, invoices, cancel, billing email.
+          Watchers don't subscribe; hide for them so we don't surface an endpoint that will 404 on their account. */}
+      {userType !== 'watcher' && userType !== 'viewer' && <StripePortalCard />}
 
       {/* Error Message */}
       {error && (

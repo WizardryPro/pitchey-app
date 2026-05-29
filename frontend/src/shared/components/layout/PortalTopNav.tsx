@@ -6,6 +6,7 @@ import {
   User, Building2, Wallet, Eye,
 } from 'lucide-react';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
+import Logo from '@/components/Logo';
 import { NotificationBell } from '@features/notifications/components/NotificationBell';
 import { getPortalPath } from '@/utils/navigation';
 import {
@@ -108,8 +109,8 @@ export default function PortalTopNav() {
         <div className="flex items-center justify-between h-14 sm:h-16">
           {/* Logo + desktop nav */}
           <div className="flex items-center gap-3 sm:gap-8 min-w-0">
-            <Link to="/" className="flex items-center flex-shrink-0">
-              <span className="text-xl sm:text-2xl font-bold text-purple-600">Pitchey</span>
+            <Link to="/" className="flex items-center flex-shrink-0" aria-label="Pitchey home">
+              <Logo size="md" />
             </Link>
             <nav className="hidden md:flex items-center gap-5 lg:gap-6">
               {items.map((item) => (

@@ -117,7 +117,8 @@ describe('AdminLogin', () => {
 
     it('renders the back to portal selection link', () => {
       renderComponent()
-      const backLink = screen.getByText('Back to portal selection')
+      // Icon-only link (commit 922813f3) — identified by aria-label, not text
+      const backLink = screen.getByLabelText('Back to portal selection')
       expect(backLink).toBeInTheDocument()
       expect(backLink.closest('a')).toHaveAttribute('href', '/portals')
     })
@@ -147,7 +148,8 @@ describe('AdminLogin', () => {
       await user.click(screen.getByRole('button', { name: /sign in/i }))
 
       await waitFor(() => {
-        expect(mockLogin).toHaveBeenCalledWith('admin@pitchey.com', 'secret123')
+        // login() now also receives the Turnstile token (empty string in tests)
+        expect(mockLogin).toHaveBeenCalledWith('admin@pitchey.com', 'secret123', '')
       })
     })
 

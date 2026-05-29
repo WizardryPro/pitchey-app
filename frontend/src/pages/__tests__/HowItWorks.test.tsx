@@ -197,8 +197,9 @@ describe('HowItWorks', () => {
 
   it('renders Pitchey brand in header', async () => {
     renderComponent()
+    // Brand mark is the logotype image (alt="Pitchey") after the 2026-05 logo rollout
     await waitFor(() => {
-      expect(screen.getByText('Pitchey')).toBeInTheDocument()
+      expect(screen.getByAltText('Pitchey')).toBeInTheDocument()
     })
   })
 })

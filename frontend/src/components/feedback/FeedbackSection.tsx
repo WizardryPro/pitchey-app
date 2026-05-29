@@ -5,16 +5,17 @@ import type { FeedbackEntry, ConsumptionStatus, CommentEntry } from '../../servi
 import StructuredFeedbackForm from './StructuredFeedbackForm';
 import FeedbackDisplay from './FeedbackDisplay';
 import PitcheyRating from '../PitcheyRating';
-import RatingScaleKey from './RatingScaleKey';
 
 interface Props {
   pitchId: number;
   isOwner: boolean;
   isAuthenticated: boolean;
   userType: string;
+  /** Forwarded to FeedbackDisplay — off when the host page shows the scores elsewhere. */
+  showScoreSummary?: boolean;
 }
 
-export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, userType }: Props) {
+export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, userType, showScoreSummary = true }: Props) {
   const [myFeedback, setMyFeedback] = useState<FeedbackEntry | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [loadingMine, setLoadingMine] = useState(false);
@@ -109,6 +110,16 @@ export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, use
     ? Math.min(100, Math.round((consumption.viewDuration / consumption.threshold) * 100))
     : 0;
 
+  // A quick-rate writes a pitch_feedback row with only a rating. Treat that as
+  // "not yet written feedback" so the UI still invites the deeper form rather
+  // than claiming they've "already left feedback".
+  const hasStructuredFeedback = !!myFeedback && (
+    (myFeedback.strengths?.length ?? 0) > 0 ||
+    (myFeedback.weaknesses?.length ?? 0) > 0 ||
+    (myFeedback.suggestions?.length ?? 0) > 0 ||
+    !!myFeedback.overall_feedback?.trim()
+  );
+
   return (
     <div className="space-y-6">
       {/* Feedback & Ratings Section */}
@@ -118,12 +129,10 @@ export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, use
           Feedback & Ratings
         </h3>
 
-        {/* Rating scale reference — lets readers decode what
-            "Studio Contender" / "Pitch Perfect" / etc actually mean. */}
-        <RatingScaleKey />
-
-        {/* Quick Rate — available to everyone except owner */}
-        {canRate && !canLeaveFeedback && (
+        {/* Quick Rate — available to everyone except owner. Logged-in users
+            also get the structured form below as the optional deeper path;
+            both write to the same pitch_feedback row keyed by reviewer_id. */}
+        {canRate && (
           <div className="bg-gray-50 rounded-lg p-4 space-y-2">
             <p className="text-sm font-medium text-gray-700">
               {ratingDone ? 'Your rating' : 'Rate this Pitch'}
@@ -144,7 +153,7 @@ export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, use
         {canLeaveFeedback && !loadingMine && (
           <div>
             {/* Consumption gating */}
-            {consumption && !consumption.eligible && !myFeedback && (
+            {consumption && !consumption.eligible && !hasStructuredFeedback && (
               <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Clock className="w-4 h-4 text-gray-400" />
@@ -160,7 +169,7 @@ export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, use
               </div>
             )}
 
-            {myFeedback ? (
+            {hasStructuredFeedback ? (
               <div className="space-y-3">
                 <p className="text-sm text-gray-500">You've already left feedback on this pitch.</p>
                 <button
@@ -177,7 +186,7 @@ export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, use
                 className="flex items-center gap-1 text-sm text-purple-600 hover:text-purple-700 font-medium transition"
               >
                 {showForm ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                {showForm ? 'Cancel' : 'Leave feedback'}
+                {showForm ? 'Cancel' : myFeedback ? 'Add written feedback' : 'Leave feedback'}
               </button>
             ) : null}
 
@@ -194,7 +203,7 @@ export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, use
         )}
 
         {/* Rating display + structured feedback list */}
-        <FeedbackDisplay key={refreshKey} pitchId={pitchId} />
+        <FeedbackDisplay key={refreshKey} pitchId={pitchId} showScoreSummary={showScoreSummary} />
       </div>
 
       {/* Comments Section */}

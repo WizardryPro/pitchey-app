@@ -31,6 +31,18 @@ Live handlers MUST type their parameters strictly. The deprecated signature `(re
 
 Pre-flight check before writing a new handler: grep `src/worker-integrated.ts` for an existing `register('METHOD', '/api/<path>', ...)` line. If the route exists, find and modify the existing handler. Don't add a parallel one.
 
+### `/api/admin/*` is shadowed by AdminEndpointsHandler — registered admin routes are DEAD unless excluded
+
+`RouteRegistry.handle()` delegates **every** `/api/admin/*` request to `this.adminHandler.handleRequest()` (`worker-modules/admin-endpoints.ts`) **before** the registered-route dispatch runs. `AdminEndpointsHandler` only knows a fixed `if`-chain of paths (dashboard, users, content, flags, bulk-action, moderation-log, analytics, reports, system/health, settings, audit-log, broadcast) and **returns 404 (`ENDPOINT_NOT_FOUND`) for anything else**. So `this.register('GET', '/api/admin/foo', …)` is **dead on arrival** — the intercept 404s it before your handler is ever reached.
+
+This bit hard on 2026-05-28: `verifications`, `heat-scores/recalculate`, and `subscription-grants/status` had all been registered like normal admin routes and were silently 404ing for everyone (confirmed live — all returned the adminHandler `AUTH_REQUIRED`/`ENDPOINT_NOT_FOUND` shape, not their own). `verifications` was worse: its handlers had **no admin gate at all** (the list endpoint had no auth; the review endpoint accepted any logged-in user) because they assumed the intercept gated them.
+
+**To add a registered `/api/admin/*` route, you MUST do both:**
+1. Add its path prefix to the exclusion list in the `if (this.adminHandler && path.startsWith('/api/admin/') && !path.startsWith(…))` block in `worker-integrated.ts` (same place `/metrics` and `/health` live). Current exclusions: `metrics`, `health`, `promo-codes`, `verifications`, `heat-scores`, `subscription-grants`.
+2. Enforce admin **inside your handler** — once excluded, `adminHandler`'s admin check no longer applies. Pattern: `const [me] = await sql\`SELECT user_type FROM users WHERE id = ${userId}\`; if (me?.user_type !== 'admin') return 403;`.
+
+`AdminEndpointsHandler.checkAdminPermissions` now passes anyone with `user_type='admin'` (plus a legacy `admin@pitchey.com` / `alex.creator@demo.com` allowlist) — fixed 2026-05-28 so real admin accounts like `info@pitchey.com` work across the whole panel, not just a 2-email hardcode.
+
 ## Cookie Configuration
 
 Live login writes the `pitchey-session` cookie from `handlePortalLogin()` in

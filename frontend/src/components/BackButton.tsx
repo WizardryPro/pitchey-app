@@ -6,13 +6,15 @@ interface BackButtonProps {
   className?: string;
   label?: string;
   variant?: 'light' | 'dark';
+  iconOnly?: boolean;
 }
 
-export default function BackButton({ 
-  to, 
-  className = '', 
+export default function BackButton({
+  to,
+  className = '',
   label,
-  variant = 'light' 
+  variant = 'light',
+  iconOnly = false
 }: BackButtonProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -87,13 +89,17 @@ export default function BackButton({
     ? 'text-gray-600 hover:text-gray-900' 
     : 'text-gray-400 hover:text-white';
 
+  const accessibleLabel = label || getDefaultLabel();
+
   return (
     <button
       onClick={handleBack}
-      className={`flex items-center space-x-2 transition-colors ${baseClasses} ${className}`}
+      aria-label={iconOnly ? accessibleLabel : undefined}
+      title={iconOnly ? accessibleLabel : undefined}
+      className={`flex items-center ${iconOnly ? '' : 'space-x-2'} transition-colors ${baseClasses} ${className}`}
     >
       <ArrowLeft className="w-4 h-4" />
-      <span>{label || getDefaultLabel()}</span>
+      {!iconOnly && <span>{accessibleLabel}</span>}
     </button>
   );
 }

@@ -21,23 +21,23 @@ export default function PaymentMethodCard({ paymentMethods, onRefresh }: Payment
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const handleAddPaymentMethod = async () => {
+  // Adding/managing cards is handled by Stripe's hosted Customer Portal. The portal
+  // endpoint resolves (or creates) the Stripe customer, so this works even for users
+  // who have never subscribed.
+  const handleManageBilling = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const result = await paymentsAPI.addPaymentMethod() as any;
+      const result = await paymentsAPI.openBillingPortal();
 
-      if (result?.url) {
+      if (result.success && result.url) {
         window.location.href = result.url;
-      } else if (result?.clientSecret) {
-        // Stripe Elements setup - requires Stripe.js integration
-        setError('Stripe payment setup is being configured. Please try again later.');
       } else {
-        setError('Payment processing is not yet available. Please check back soon.');
+        setError(('error' in result && result.error) || 'Unable to open the billing portal. Please try again.');
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to add payment method');
+      setError(err.message || 'Failed to open the billing portal');
     } finally {
       setLoading(false);
     }
@@ -108,7 +108,7 @@ export default function PaymentMethodCard({ paymentMethods, onRefresh }: Payment
           <p className="text-sm text-gray-600">Manage your saved payment methods for subscriptions and purchases</p>
         </div>
         <button
-          onClick={handleAddPaymentMethod}
+          onClick={handleManageBilling}
           disabled={loading}
           className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 text-sm font-medium"
         >
@@ -266,8 +266,9 @@ export default function PaymentMethodCard({ paymentMethods, onRefresh }: Payment
                 )}
                 
                 <button
-                  onClick={() => window.open('https://billing.stripe.com', '_blank')}
-                  className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium flex items-center gap-1"
+                  onClick={handleManageBilling}
+                  disabled={loading}
+                  className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 text-sm font-medium flex items-center gap-1"
                 >
                   <ExternalLink className="w-3 h-3" />
                   Manage
@@ -284,7 +285,7 @@ export default function PaymentMethodCard({ paymentMethods, onRefresh }: Payment
             Add a payment method to make purchases and manage subscriptions
           </p>
           <button
-            onClick={handleAddPaymentMethod}
+            onClick={handleManageBilling}
             disabled={loading}
             className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 font-medium"
           >

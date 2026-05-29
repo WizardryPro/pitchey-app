@@ -162,6 +162,26 @@ export interface TransactionFilters {
   sortOrder?: 'asc' | 'desc';
 }
 
+export interface PromoRedeemer {
+  userId: number | null;
+  email: string | null;
+  name: string | null;
+  signedUpAt: string | null;
+  redeemedAt: string | null;
+  amountOff: number; // cents discounted at checkout
+}
+
+export interface PromoCodeReport {
+  id: string;
+  code: string;
+  percentOff: number | null;
+  used: number;
+  max: number | null;
+  remaining: number | null;
+  active: boolean;
+  redeemers: PromoRedeemer[];
+}
+
 class AdminService {
   // Dashboard
   async getDashboardStats(): Promise<DashboardStats> {
@@ -477,6 +497,17 @@ class AdminService {
     }
 
     return response.blob();
+  }
+
+  // Promo Codes — live report from Stripe (codes + who redeemed each one)
+  async getPromoCodes(): Promise<PromoCodeReport[]> {
+    const response = await fetch(`${API_BASE_URL}/api/admin/promo-codes`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include'
+    });
+    const result = await handleResponse<{ success: boolean; data: { codes: PromoCodeReport[] } }>(response);
+    return result.data?.codes ?? [];
   }
 }
 

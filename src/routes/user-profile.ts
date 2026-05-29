@@ -16,6 +16,7 @@ export interface UserProfileUpdate {
   phone?: string;
   website?: string;
   companyName?: string;
+  companyAddress?: string;
   profileImage?: string;
   location?: string;
   firstName?: string;
@@ -63,7 +64,7 @@ export class UserProfileRoutes {
         SELECT
           id, email, name, first_name as "firstName",
           last_name as "lastName", user_type as "userType",
-          company_name as "companyName", bio, phone,
+          company_name as "companyName", company_address as "companyAddress", bio, phone,
           website, profile_image as "profileImage", location,
           email_verified as "emailVerified",
           two_factor_enabled as "twoFactorEnabled",
@@ -194,6 +195,10 @@ export class UserProfileRoutes {
         updateFields.push(`company_name = $${paramIndex++}`);
         values.push(updates.companyName);
       }
+      if (updates.companyAddress !== undefined) {
+        updateFields.push(`company_address = $${paramIndex++}`);
+        values.push(updates.companyAddress);
+      }
       if (updates.profileImage !== undefined) {
         updateFields.push(`profile_image = $${paramIndex++}`);
         values.push(updates.profileImage);
@@ -227,7 +232,7 @@ export class UserProfileRoutes {
         RETURNING
           id, email, username, name, first_name as "firstName",
           last_name as "lastName", user_type as "userType",
-          company_name as "companyName", bio, phone,
+          company_name as "companyName", company_address as "companyAddress", bio, phone,
           website, profile_image as "profileImage", location,
           created_at as "createdAt",
           updated_at as "updatedAt"
@@ -456,7 +461,7 @@ export class UserProfileRoutes {
         SELECT
           id, name, first_name as "firstName",
           last_name as "lastName", user_type as "userType",
-          company_name as "companyName", bio,
+          company_name as "companyName", company_address as "companyAddress", bio,
           website, profile_image as "profileImage", location,
           created_at as "createdAt"
         FROM users
