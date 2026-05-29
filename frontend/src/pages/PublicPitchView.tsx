@@ -9,6 +9,7 @@ import PortalTopNav from '@shared/components/layout/PortalTopNav';
 import { ndaService } from '@features/ndas/services/nda.service';
 import NDAWizard from '@features/ndas/components/NDAWizard';
 import FormatDisplay from '../components/FormatDisplay';
+import FeedbackSection from '../components/feedback/FeedbackSection';
 import { getPortalPath } from '@/utils/navigation';
 
 export default function PublicPitchView() {
@@ -554,6 +555,25 @@ export default function PublicPitchView() {
                     )}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Feedback & Ratings — shown to everyone (incl. anonymous). The
+                section self-gates internally: the written-feedback form only
+                renders for authenticated non-owner non-watcher users and is the
+                only branch that makes authenticated API calls, while the star
+                "Rate this Pitch" widget is available to all viewers. This is
+                what makes the feedback feature visible on the guest/public view
+                instead of disappearing for users served PublicPitchView. */}
+            {pitch && (
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <FeedbackSection
+                  pitchId={pitch.id}
+                  isOwner={false}
+                  isAuthenticated={isAuthenticated}
+                  userType={(user as any)?.userType || (user as any)?.user_type || ''}
+                  showScoreSummary={true}
+                />
               </div>
             )}
           </div>
