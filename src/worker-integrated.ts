@@ -2336,6 +2336,7 @@ class RouteRegistry {
     this.register('POST', '/api/ndas/sign', this.signNDA.bind(this));
 
     // NDA Templates
+    this.register('GET', '/api/ndas/standard', this.getStandardNda.bind(this));
     this.register('GET', '/api/ndas/templates', this.getNDATemplates.bind(this));
     this.register('GET', '/api/ndas/templates/:id', this.getNDATemplate.bind(this));
     this.register('POST', '/api/ndas/templates', this.createNDATemplate.bind(this));
@@ -3853,6 +3854,7 @@ class RouteRegistry {
       '/api/auth/forgot-password',
       '/api/auth/request-reset',
       '/api/auth/reset-password',
+      '/api/ndas/standard',
       '/api/search',
       '/api/search/autocomplete',
       '/api/search/trending',
@@ -5370,8 +5372,15 @@ pitchey_analytics_datapoints_per_minute 1250
       themes?: string;
       worldDescription?: string;
       characters?: any[];
+
+      // AI usage disclosure: 'none' | 'promo' | 'production' (ai_used derived)
+      aiDisclosure?: string;
+      aiUsed?: boolean;
     }
     const data = await request.json() as PitchCreateData;
+    const aiDisclosure = ['none', 'promo', 'production'].includes(data.aiDisclosure as string)
+      ? (data.aiDisclosure as string)
+      : (data.aiUsed ? 'production' : 'none');
 
     // Validate required fields
     const validationErrors: string[] = [];
@@ -5403,10 +5412,12 @@ pitchey_analytics_datapoints_per_minute 1250
           tone_and_style, comps, story_breakdown,
           why_now, production_location, development_stage,
           video_url, video_password, video_platform,
-          themes, world_description, characters
+          themes, world_description, characters,
+          ai_disclosure, ai_used
         ) VALUES (
           $1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'draft', 'private', NOW(), NOW(), $13,
-          $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25
+          $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25,
+          $26, $27
         ) RETURNING *
       `, [
         authResult.user.id,
@@ -5433,7 +5444,9 @@ pitchey_analytics_datapoints_per_minute 1250
         data.videoPlatform ?? null,
         data.themes ?? null,
         data.worldDescription ?? null,
-        JSON.stringify(data.characters || [])
+        JSON.stringify(data.characters || []),
+        aiDisclosure,
+        aiDisclosure !== 'none'
       ]) as unknown as DatabaseRow[];
 
       // Handle creative attachments if provided
@@ -5945,6 +5958,8 @@ pitchey_analytics_datapoints_per_minute 1250
       themes?: string;
       worldDescription?: string;
       characters?: any[];
+      aiDisclosure?: string;
+      aiUsed?: boolean;
       creativeAttachments?: Array<{
         id?: string;
         name: string;
@@ -5954,6 +5969,11 @@ pitchey_analytics_datapoints_per_minute 1250
         websiteLink?: string;
       }>;
     };
+
+    // Normalize AI disclosure (null = leave unchanged via COALESCE)
+    const updAiDisclosure = ['none', 'promo', 'production'].includes(data.aiDisclosure as string)
+      ? (data.aiDisclosure as string)
+      : null;
 
     try {
       // Verify ownership
@@ -5992,6 +6012,8 @@ pitchey_analytics_datapoints_per_minute 1250
           world_description = COALESCE($23, world_description),
           characters = COALESCE($24, characters),
           title_image = COALESCE($25, title_image),
+          ai_disclosure = COALESCE($26, ai_disclosure),
+          ai_used = COALESCE($27, ai_used),
           updated_at = NOW()
         WHERE id = $1
         RETURNING *
@@ -6020,7 +6042,9 @@ pitchey_analytics_datapoints_per_minute 1250
         data.themes,
         data.worldDescription,
         data.characters ? JSON.stringify(data.characters) : null,
-        data.titleImage
+        data.titleImage,
+        updAiDisclosure,
+        updAiDisclosure === null ? null : updAiDisclosure !== 'none'
       ]);
 
       // Handle creative attachments if provided
@@ -15251,6 +15275,67 @@ pitchey_analytics_datapoints_per_minute 1250
         });
       }
 
+    } catch (error) {
+      return errorHandler(error, request);
+    }
+  }
+
+  /**
+   * Substitute {{token}} placeholders in an NDA template. Unknown/empty fields
+   * render as a fillable blank line so the document still reads correctly.
+   */
+  private renderNdaTemplate(content: string, ctx: Record<string, string | undefined>): string {
+    const blank = '________________';
+    return (content || '').replace(/\{\{(\w+)\}\}/g, (_m, key) => {
+      const v = ctx[key];
+      return v && String(v).trim() ? String(v) : blank;
+    });
+  }
+
+  /**
+   * Return the platform Standard NDA, auto-filled with whatever context is
+   * available (pitch title + creator from pitchId; date/parties/addresses from
+   * query params). Public — used by the /legal/standard-nda page and sign flow.
+   */
+  private async getStandardNda(request: Request): Promise<Response> {
+    try {
+      const url = new URL(request.url);
+      const pitchId = url.searchParams.get('pitchId');
+      const ctx: Record<string, string | undefined> = {
+        date: url.searchParams.get('date') || undefined,
+        recipient_name: url.searchParams.get('recipientName') || undefined,
+        recipient_address: url.searchParams.get('recipientAddress') || undefined,
+        disclosing_party_name: url.searchParams.get('disclosingName') || undefined,
+        disclosing_party_address: url.searchParams.get('disclosingAddress') || undefined,
+        project_name: url.searchParams.get('projectName') || undefined,
+      };
+
+      if (pitchId) {
+        try {
+          const [p] = await this.db.query(
+            `SELECT p.title AS title, COALESCE(NULLIF(u.company_name, ''), u.username, u.name) AS creator_name
+             FROM pitches p JOIN users u ON u.id = p.user_id WHERE p.id = $1 LIMIT 1`,
+            [pitchId]
+          ) as any[];
+          if (p) {
+            ctx.project_name = ctx.project_name || p.title;
+            ctx.disclosing_party_name = ctx.disclosing_party_name || p.creator_name;
+          }
+        } catch { /* pitch lookup best-effort; fall back to blanks */ }
+      }
+
+      const [tpl] = await this.db.query(
+        `SELECT name, template_content FROM nda_templates WHERE is_default = true ORDER BY id ASC LIMIT 1`
+      ) as any[];
+      const raw = tpl?.template_content || '';
+
+      return this.jsonResponse({
+        success: true,
+        data: {
+          name: tpl?.name || 'Pitchey Standard NDA',
+          content: this.renderNdaTemplate(raw, ctx),
+        },
+      });
     } catch (error) {
       return errorHandler(error, request);
     }

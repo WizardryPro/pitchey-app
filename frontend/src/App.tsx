@@ -162,6 +162,7 @@ const About = lazyRetry(() => import('./pages/About'));
 const Contact = lazyRetry(() => import('./pages/Contact'));
 const Terms = lazyRetry(() => import('./pages/Terms'));
 const Privacy = lazyRetry(() => import('./pages/Privacy'));
+const StandardNDA = lazyRetry(() => import('./pages/StandardNDA'));
 
 // Watcher Pages
 const WatcherLogin = lazyRetry(() => import('./pages/WatcherLogin'));
@@ -417,6 +418,7 @@ function App() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
+          <Route path="/legal/standard-nda" element={<StandardNDA />} />
           
           {/* Test Pages — dev only */}
           {import.meta.env.DEV && <Route path="/test/navigation" element={<TestNavigation />} />}

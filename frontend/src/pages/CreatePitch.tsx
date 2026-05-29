@@ -89,7 +89,8 @@ export default function CreatePitch() {
     characters: [],
     seekingInvestment: false,
     budgetRange: undefined,
-    aiUsed: false
+    aiUsed: false,
+    aiDisclosure: 'none' as const
   };
   
   // NDA document state
@@ -354,7 +355,8 @@ export default function CreatePitch() {
           themes: validatedData.themes,
           worldDescription: validatedData.worldDescription,
           characters: serializeCharacters(validatedData.characters || []),
-          aiUsed: false,
+          aiDisclosure: (validatedData as any).aiDisclosure || 'none',
+          aiUsed: ((validatedData as any).aiDisclosure || 'none') !== 'none',
           // Enhanced fields
           toneAndStyle: validatedData.toneAndStyle,
           comps: validatedData.comps,
@@ -1321,28 +1323,51 @@ export default function CreatePitch() {
               className="border-t pt-6"
             />
 
-            {/* Human Made Declaration */}
+            {/* AI Usage Disclosure */}
             <div className="border-t pt-6 mt-6">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.aiUsed === false}
-                  onChange={(e) => setValue('aiUsed' as any, !e.target.checked)}
-                  className="mt-1 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                />
-                <div>
-                  <span className="font-medium text-gray-900 flex items-center gap-2">
-                    100% Human Made
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      Pitchey Verified
-                    </span>
-                  </span>
-                  <p className="text-xs text-gray-500 mt-1">
-                    I declare this pitch is entirely human-created with no AI-generated content.
-                    If AI-generated content is discovered, Pitchey reserves the right to remove this badge.
-                  </p>
-                </div>
-              </label>
+              <span className="font-medium text-gray-900">AI Usage Disclosure</span>
+              <p className="text-xs text-gray-500 mt-1 mb-3">
+                Tell viewers how (if at all) AI was used in this pitch. Choosing "Nothing made with AI"
+                earns the Pitchey-verified Human Made badge; if AI content is later discovered, Pitchey
+                reserves the right to remove it.
+              </p>
+              <div className="space-y-2">
+                {[
+                  { value: 'none', label: 'Nothing made with AI', desc: 'This pitch is entirely human-created.' },
+                  { value: 'promo', label: 'AI used in promotional material only', desc: 'e.g. AI-assisted key art or trailer graphics; the script and core creative are human-made.' },
+                  { value: 'production', label: 'AI used for script and/or production', desc: 'AI contributed to the screenplay, story, or production assets.' },
+                ].map((opt) => {
+                  const selected = (((formData as any).aiDisclosure as string) ?? 'none') === opt.value;
+                  return (
+                    <label
+                      key={opt.value}
+                      className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition ${
+                        selected ? 'border-emerald-400 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="aiDisclosure"
+                        value={opt.value}
+                        checked={selected}
+                        onChange={() => setValue('aiDisclosure' as any, opt.value)}
+                        className="mt-1 text-emerald-600 focus:ring-emerald-500"
+                      />
+                      <div>
+                        <span className="font-medium text-gray-900 flex items-center gap-2">
+                          {opt.label}
+                          {opt.value === 'none' && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              Pitchey Verified
+                            </span>
+                          )}
+                        </span>
+                        <p className="text-xs text-gray-500 mt-1">{opt.desc}</p>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
