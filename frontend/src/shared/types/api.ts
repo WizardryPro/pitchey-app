@@ -456,6 +456,7 @@ export interface CreatePitchInput {
   themes?: string;
   worldDescription?: string;
   budgetBracket?: string;
+  budgetRange?: string;
   estimatedBudget?: number;
   productionTimeline?: string;
   titleImage?: string;

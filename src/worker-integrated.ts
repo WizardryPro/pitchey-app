@@ -3560,6 +3560,20 @@ class RouteRegistry {
       return gdprConsentRealHandler(req, this.env);
     });
 
+    // Audit Log (real DB, admin only — enforced inside the handlers)
+    this.register('GET', '/api/audit-log', async (req: Request) => {
+      const { auditLogRealHandler } = await import('./handlers/admin-real');
+      return auditLogRealHandler(req, this.env);
+    });
+    this.register('GET', '/api/audit-log/stats', async (req: Request) => {
+      const { auditLogStatsRealHandler } = await import('./handlers/admin-real');
+      return auditLogStatsRealHandler(req, this.env);
+    });
+    this.register('GET', '/api/audit-log/export', async (req: Request) => {
+      const { auditLogExportRealHandler } = await import('./handlers/admin-real');
+      return auditLogExportRealHandler(req, this.env);
+    });
+
     // Categories endpoint (real DB)
     this.register('GET', '/api/categories', async (req: Request) => {
       const { categoriesHandler } = await import('./handlers/content-config');
@@ -5787,10 +5801,39 @@ pitchey_analytics_datapoints_per_minute 1250
         (typeof pitch.long_synopsis === 'string' && pitch.long_synopsis.length > SYNOPSIS_TEASER_CHARS)
       );
 
+      // Fetch uploaded documents (scripts, decks, etc.) linked to this pitch.
+      // The owner sees everything; other viewers see public docs or — once
+      // they've signed an NDA — the NDA-gated ones too. Mapped onto known
+      // attachment slots (pitchDeck/script/trailer) for back-compat, plus a
+      // generic `documents` array the UI can render in full.
+      let documents: Array<Record<string, unknown>> = [];
+      try {
+        const docRows = await sql`
+          SELECT id, file_name, original_file_name, file_url, file_type,
+                 mime_type, file_size, document_type, is_public, requires_nda,
+                 uploaded_at
+          FROM pitch_documents
+          WHERE pitch_id = ${pitchId}
+          ORDER BY uploaded_at ASC
+        `;
+        documents = (docRows || []).filter((d: any) =>
+          isOwner || d.is_public === true || (hasNDAAccess && d.requires_nda)
+        );
+      } catch { /* pitch_documents may not exist in all envs */ }
+      const findDoc = (...types: string[]): string | undefined => {
+        const hit = documents.find((d: any) =>
+          types.includes(String(d.document_type || '').toLowerCase()));
+        return hit ? (hit.file_url as string) : undefined;
+      };
+
       // Combine the data with proper creator object
       // Use pitches.view_count directly (accurate, maintained by view tracking)
       const fullPitch = {
         ...pitch,
+        documents,
+        pitchDeck: pitch.pitch_deck_url ?? findDoc('pitch_deck', 'pitchdeck', 'deck'),
+        script: pitch.script_url ?? findDoc('script', 'screenplay'),
+        trailer: pitch.trailer_url ?? findDoc('trailer', 'video'),
         short_synopsis: shortSynopsisOut,
         long_synopsis: longSynopsisOut,
         shortSynopsis: shortSynopsisOut,
@@ -6120,6 +6163,15 @@ pitchey_analytics_datapoints_per_minute 1250
       const formData = await request.formData();
       const file = formData.get('file') as File;
       const folder = (formData.get('folder') as string) || 'uploads';
+      // Optional pitch linkage — when present, the uploaded file is recorded
+      // in pitch_documents so it surfaces as a downloadable attachment on the
+      // pitch. Without this the file lands in R2 but is orphaned (the bug that
+      // hid creators' uploaded scripts/decks).
+      const pitchIdRaw = formData.get('pitchId') as string | null;
+      const pitchId = pitchIdRaw ? parseInt(pitchIdRaw) : null;
+      const documentType = (formData.get('documentType') as string) || 'document';
+      const isPublic = formData.get('isPublic') === 'true';
+      const requiresNda = formData.get('requiresNda') !== 'false';
 
       if (!file) {
         return new Response(JSON.stringify({ message: 'No file provided' }), { status: 400, headers });
@@ -6139,6 +6191,49 @@ pitchey_analytics_datapoints_per_minute 1250
 
       if (!uploadResult.success) {
         return new Response(JSON.stringify({ message: uploadResult.error || 'Upload failed' }), { status: 500, headers });
+      }
+
+      // Link the file to its pitch when a pitchId was supplied AND the caller
+      // owns the pitch. Owner check prevents attaching files to someone else's
+      // pitch. Best-effort: a linkage failure must not fail an upload the user
+      // already paid credits for, so we log and continue.
+      if (pitchId && !isNaN(pitchId)) {
+        try {
+          const ownerRows = await this.db.query(
+            `SELECT 1 FROM pitches WHERE id = $1 AND user_id = $2`,
+            [pitchId, authResult.user.id]
+          );
+          if (ownerRows.length > 0) {
+            await this.db.query(`
+              INSERT INTO pitch_documents (
+                pitch_id, file_name, original_file_name, file_url, file_key,
+                file_type, mime_type, file_size, document_type, is_public,
+                requires_nda, uploaded_by, uploaded_at, last_modified, download_count, metadata
+              ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+              )
+            `, [
+              pitchId,
+              file.name,
+              file.name,
+              uploadResult.url ?? null,
+              storagePath,
+              documentType,
+              file.type,
+              file.size,
+              documentType,
+              isPublic,
+              requiresNda,
+              authResult.user.id,
+              new Date(),
+              new Date(),
+              0,
+              JSON.stringify({ uploadedAt: new Date().toISOString(), originalName: file.name }),
+            ]);
+          }
+        } catch (linkErr) {
+          console.error('pitch_documents linkage failed (upload succeeded):', linkErr);
+        }
       }
 
       return new Response(JSON.stringify({

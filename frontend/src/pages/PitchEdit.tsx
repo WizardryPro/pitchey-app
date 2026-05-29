@@ -24,6 +24,7 @@ interface PitchFormData {
   shortSynopsis: string;
   themes: string;
   worldDescription: string;
+  budgetRange: string;
   image: File | null;
   pdf: File | null;
   video: File | null;
@@ -60,6 +61,7 @@ export default function PitchEdit() {
     shortSynopsis: '',
     themes: '',
     worldDescription: '',
+    budgetRange: '',
     image: null,
     pdf: null,
     video: null,
@@ -146,6 +148,7 @@ export default function PitchEdit() {
         shortSynopsis: pitch.shortSynopsis || '',
         themes: pitch.themes || '',
         worldDescription: pitch.worldDescription || '',
+        budgetRange: (pitch as any).budgetRange ?? (pitch as any).budget_range ?? pitch.budget ?? '',
         image: null,
         pdf: null,
         video: null,
@@ -284,6 +287,7 @@ export default function PitchEdit() {
         shortSynopsis: formData.shortSynopsis,
         themes: formData.themes,
         worldDescription: formData.worldDescription,
+        budgetRange: formData.budgetRange || undefined,
         requireNDA: formData.ndaConfig.requireNDA,
         characters: serializeCharacters(formData.characters)
       };
@@ -299,7 +303,28 @@ export default function PitchEdit() {
         }
       }
 
+      // Upload any newly added project documents (scripts, decks, budget, etc.)
+      // and link them to this pitch. Each carries its own document_type so it
+      // surfaces in the right slot on the pitch view. Per-document failures are
+      // collected rather than aborting the whole save.
+      const pendingDocs = formData.documents.filter((d) => d.file && !d.url);
+      const failedDocs: string[] = [];
+      for (const doc of pendingDocs) {
+        try {
+          await uploadService.uploadDocument(doc.file, doc.type, {
+            pitchId: parseInt(id!),
+            requiresNda: doc.type !== 'lookbook',
+          });
+        } catch (docErr) {
+          console.error('Document upload failed:', doc.title, docErr);
+          failedDocs.push(doc.title || doc.file.name);
+        }
+      }
+
       await pitchService.update(parseInt(id!), updateData);
+      if (failedDocs.length > 0) {
+        alert(`Pitch saved, but these documents failed to upload: ${failedDocs.join(', ')}. Please try uploading them again.`);
+      }
       navigate(pitchesListPath);
     } catch (error) {
       console.error('Error updating pitch:', error);
@@ -539,6 +564,33 @@ export default function PitchEdit() {
                 </p>
               </div>
             </div>
+          </div>
+
+          {/* Budget Section */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <label htmlFor="budgetRange" className="block text-sm font-medium text-gray-700 mb-2">
+              Estimated Budget Range
+            </label>
+            <select
+              id="budgetRange"
+              name="budgetRange"
+              value={formData.budgetRange}
+              onChange={handleInputChange}
+              disabled={isSubmitting}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none"
+            >
+              <option value="">Select a budget range</option>
+              <option value="0-100k">Under $100K (Micro-budget)</option>
+              <option value="100k-500k">$100K - $500K (Low budget)</option>
+              <option value="500k-1m">$500K - $1M (Medium budget)</option>
+              <option value="1m-5m">$1M - $5M (Moderate budget)</option>
+              <option value="5m-20m">$5M - $20M (Mid-level budget)</option>
+              <option value="20m-50m">$20M - $50M (High budget)</option>
+              <option value="50m+">$50M+ (Blockbuster)</option>
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              This helps investors understand the scale of investment needed.
+            </p>
           </div>
 
           {/* Characters Section */}
