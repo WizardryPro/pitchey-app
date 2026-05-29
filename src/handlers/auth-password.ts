@@ -7,7 +7,10 @@ import { ApiResponseBuilder, ErrorCode } from '../utils/api-response';
 import { createDatabase } from '../db/raw-sql-connection';
 import { getAuthenticatedUser } from '../utils/auth-extract';
 import { verifyTurnstileToken } from '../utils/turnstile';
-import * as bcrypt from 'bcryptjs';
+// Use the PBKDF2 helpers that login/registration use — NOT bcrypt. The live login
+// path verifies with verifyPassword() (pbkdf2: prefix), so a bcrypt hash written here
+// would never validate, locking the user out after a reset/change.
+import { hashPassword, verifyPassword } from '../utils/worker-password';
 
 /**
  * Change Password Handler
@@ -79,7 +82,7 @@ export async function changePasswordHandler(
     const user = userResult[0];
     
     // Verify current password
-    const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+    const isValidPassword = await verifyPassword(currentPassword, user.password);
     if (!isValidPassword) {
       // Log failed attempt for security monitoring
       console.warn('Failed password change attempt', {
@@ -95,7 +98,7 @@ export async function changePasswordHandler(
     }
     
     // Hash the new password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await hashPassword(newPassword);
     
     // Update password in database
     await db.query(
@@ -293,7 +296,7 @@ export async function resetPasswordHandler(
     const { user_id } = tokenResult[0];
     
     // Hash new password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await hashPassword(newPassword);
     
     // Update password
     await db.query(
