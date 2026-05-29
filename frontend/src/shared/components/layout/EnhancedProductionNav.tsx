@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, Activity, Film, FolderOpen, Upload,
   Bookmark, Users, GitBranch,
-  MessageSquare, Calendar, Settings, UserPlus, Shield, FileText
+  MessageSquare, Settings, UserPlus, Shield, FileText
 } from 'lucide-react';
 import { PRODUCTION_ROUTES } from '@/config/navigation.routes';
 
@@ -68,7 +68,6 @@ export const productionNavigationSections: NavigationSection[] = [
     title: '',
     items: [
       { label: 'Messages', path: PRODUCTION_ROUTES.messages, icon: MessageSquare },
-      { label: 'Calendar', path: PRODUCTION_ROUTES.calendar, icon: Calendar },
       { label: 'Settings', path: PRODUCTION_ROUTES.settings, icon: Settings },
     ],
   },

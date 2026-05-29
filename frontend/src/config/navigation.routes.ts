@@ -35,7 +35,6 @@ export const CREATOR_ROUTES = {
   portfolio: '/creator/portfolio',
   ndas: '/creator/ndas',
   messages: '/creator/messages',
-  calendar: '/creator/calendar',
   following: '/creator/following',
   profile: '/creator/profile',
   settings: '/creator/settings',
@@ -146,7 +145,6 @@ export const PRODUCTION_ROUTES = {
   
   // Communication
   messages: '/production/messages',
-  calendar: '/production/calendar',
 
   // Other
   profile: '/production/profile',

@@ -84,7 +84,15 @@ export default function CreatorSlates() {
             <Layers className="h-7 w-7 text-purple-600" />
             Slates
           </h1>
-          <p className="text-gray-600 mt-1">Curate collections of related pitches</p>
+          <p className="text-gray-600 mt-1">
+            Shareable, curated collections of pitches — not the same as{' '}
+            <span className="font-medium text-gray-800">My Pitches</span>.
+          </p>
+          <p className="text-sm text-gray-500 mt-1 max-w-2xl">
+            <span className="font-medium text-gray-700">My Pitches</span> is where you create and manage your own
+            projects. A <span className="font-medium text-gray-700">Slate</span> groups several pitches into a
+            themed collection (e.g. "Sci-Fi Collection") you can publish and share with one link.
+          </p>
         </div>
         <button
           onClick={() => setShowCreate(true)}

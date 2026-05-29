@@ -115,7 +115,6 @@ const PublicPitchView = lazyRetry(() => import('./pages/PublicPitchView'));
 const CreatePitch = lazyRetry(() => import('./pages/CreatePitch'));
 const ManagePitches = lazyRetry(() => import('./pages/ManagePitches'));
 const Messages = lazyRetry(() => import('./pages/Messages'));
-const Calendar = lazyRetry(() => import('./pages/Calendar'));
 const PitchDetail = lazyRetry(() => import('./pages/PitchDetail'));
 const PitchEdit = lazyRetry(() => import('./pages/PitchEdit'));
 const PitchAnalytics = lazyRetry(() => import('./pages/PitchAnalytics'));
@@ -502,7 +501,6 @@ function App() {
             <Route path="pitches" element={<ManagePitches />} />
             <Route path="analytics" element={<CreatorAnalyticsPage />} />
             <Route path="messages/*" element={<Messages />} />
-            <Route path="calendar" element={<Calendar />} />
             <Route path="pitch/:id" element={<CreatorPitchView />} />
             <Route path="pitches/:id" element={<PitchDetail />} />
             <Route path="pitch/:id/edit" element={<PitchEdit />} />
@@ -533,7 +531,6 @@ function App() {
             <Route path="pitch/:id" element={<InvestorPitchView />} />
             <Route path="profile" element={<Profile />} />
             <Route path="messages/*" element={<Messages />} />
-            <Route path="calendar" element={<Calendar />} />
             <Route path="billing" element={<Billing />} />
 
             {/* Enhanced Investor Routes */}
@@ -561,7 +558,6 @@ function App() {
             <Route path="following" element={<Following />} />
             <Route path="profile" element={<Profile />} />
             <Route path="messages/*" element={<Messages />} />
-            <Route path="calendar" element={<Calendar />} />
             <Route path="ndas" element={<ProductionNDAManagement />} />
             <Route path="pitches" element={<ManagePitches />} />
             <Route path="pitches/:id/edit" element={<PitchEdit />} />
