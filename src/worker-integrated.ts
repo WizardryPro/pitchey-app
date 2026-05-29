@@ -1835,22 +1835,11 @@ class RouteRegistry {
       // Route Better Auth sign-in to our portal login handler
       const body = await request.json() as { email?: string; password?: string; userType?: string; turnstileToken?: string };
 
-      // Verify Turnstile token (skip for known demo accounts — password is fixed, no sensitive data)
-      const DEMO_EMAILS = new Set([
-        'alex.creator@demo.com',
-        'sarah.investor@demo.com',
-        'stellar.production@demo.com',
-        'jamie.watcher@demo.com',
-      ]);
-      if (!DEMO_EMAILS.has(String(body.email || '').toLowerCase())) {
-        const turnstileResult = await verifyTurnstileToken(body.turnstileToken, this.env.TURNSTILE_SECRET_KEY, clientIP !== 'unknown' ? clientIP : undefined);
-        if (!turnstileResult.success) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: { code: 'TURNSTILE_FAILED', message: turnstileResult.error || 'Bot verification failed' }
-          }), { status: 403, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request.headers.get('Origin')) } });
-        }
-      }
+      // NOTE: Turnstile is verified once, inside handlePortalLogin (same as the direct
+      // /api/auth/{portal}/login endpoints). Do NOT verify here too — the token is
+      // single-use, so a second siteverify would fail as timeout-or-duplicate. The
+      // transformedRequest below MUST forward turnstileToken or handlePortalLogin 403s
+      // with "missing token".
 
       // Validate input
       try {
@@ -1892,7 +1881,8 @@ class RouteRegistry {
         body: JSON.stringify({
           email: body.email,
           password: body.password,
-          userType: portal
+          userType: portal,
+          turnstileToken: body.turnstileToken
         })
       });
 
