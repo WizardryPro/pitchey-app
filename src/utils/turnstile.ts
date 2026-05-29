@@ -27,6 +27,7 @@ export async function verifyTurnstileToken(
 
   // Reject if token is missing when Turnstile is configured
   if (!token) {
+    console.error('[turnstile] missing token (secret configured, no response token sent)');
     return { success: false, error: 'Turnstile verification required' };
   }
 
@@ -48,6 +49,10 @@ export async function verifyTurnstileToken(
     const result = await response.json() as TurnstileVerifyResponse;
 
     if (!result.success) {
+      console.error('[turnstile] verify failed', JSON.stringify({
+        codes: result['error-codes'],
+        hostname: result.hostname,
+      }));
       return {
         success: false,
         error: `Turnstile verification failed: ${result['error-codes']?.join(', ') || 'unknown error'}`,
