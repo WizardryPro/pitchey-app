@@ -620,10 +620,31 @@ export async function submitAnonymousRating(request: Request, env: Env): Promise
     }
 
     // Verify pitch exists and is published
-    const [pitch] = await sql`SELECT id FROM pitches WHERE id = ${pitchId} AND status = 'published'`;
+    const [pitch] = await sql`SELECT id, user_id FROM pitches WHERE id = ${pitchId} AND status = 'published'`;
     if (!pitch) return errorResponse('Pitch not found or not published', origin, 404);
 
-    // IP-based dedup
+    // Logged-in users: store the rating in pitch_feedback keyed by reviewer_id
+    // so it carries their role weight (not the anonymous 0.25) and merges with
+    // any structured feedback they leave. Only the rating column is touched on
+    // conflict — strengths/weaknesses/suggestions from the full form are kept.
+    const authResult = await getAuthenticatedUser(request, env);
+    if (authResult.authenticated && authResult.user) {
+      const { id: userId, userType } = authResult.user;
+      if (String(pitch.user_id) === String(userId)) {
+        return errorResponse('Cannot rate your own pitch', origin, 403);
+      }
+      const reviewerType = mapUserType(userType);
+      const reviewerWeight = getRoleWeight(reviewerType);
+      await sql`
+        INSERT INTO pitch_feedback (pitch_id, reviewer_id, reviewer_type, rating, strengths, weaknesses, suggestions, overall_feedback, is_interested, is_anonymous, reviewer_weight)
+        VALUES (${pitchId}, ${Number(userId)}, ${reviewerType}, ${rating}, ${[]}, ${[]}, ${[]}, ${null}, ${false}, ${false}, ${reviewerWeight})
+        ON CONFLICT (pitch_id, reviewer_id) DO UPDATE SET rating = EXCLUDED.rating
+      `;
+      await updateRatingStats(sql, pitchId);
+      return jsonResponse({ success: true, data: { rating } }, origin, 201);
+    }
+
+    // Anonymous — IP-based dedup into pitch_ratings_anonymous (weight 0.25)
     const ip = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || '0.0.0.0';
     const encoder = new TextEncoder();
     const data = encoder.encode(`${ip}:${pitchId}`);
