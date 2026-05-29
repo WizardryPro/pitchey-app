@@ -184,7 +184,7 @@ export default function DashboardHeader({
               className="flex items-center hover:opacity-80 transition-opacity"
               title="Go to Homepage"
             >
-              <span className="text-lg sm:text-xl lg:text-2xl font-bold text-purple-600">Pitchey</span>
+              <img src="/pitchey-logotype.png" alt="Pitchey" className="h-7 sm:h-8 w-auto" />
             </Link>
             
             {/* Divider - Hidden on small screens */}

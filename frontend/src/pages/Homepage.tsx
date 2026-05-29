@@ -89,7 +89,7 @@ export default function Homepage() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-8">
               <a href="/" className="flex items-center">
-                <span className="text-2xl font-bold text-purple-600">Pitchey</span>
+                <img src="/pitchey-logotype.png" alt="Pitchey" className="h-8 w-auto" />
               </a>
               <nav className="hidden md:flex items-center gap-6">
                 <button 
@@ -619,7 +619,7 @@ export default function Homepage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center mb-4">
-                <span className="text-xl font-bold text-purple-600">Pitchey</span>
+                <img src="/pitchey-logotype.png" alt="Pitchey" className="h-7 w-auto" />
               </div>
               <p className="text-metadata">
                 Connecting stories with opportunities since 2025.

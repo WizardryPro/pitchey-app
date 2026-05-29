@@ -36,7 +36,7 @@ export default function Layout({ children }: LayoutProps) {
               <div className="flex">
                 {/* Logo */}
                 <Link to="/" className="flex-shrink-0 flex items-center" data-testid="logo-link">
-                  <span className="text-2xl font-bold text-purple-600">Pitchey</span>
+                  <img src="/pitchey-logotype.png" alt="Pitchey" className="h-8 w-auto" />
                 </Link>
 
                 {/* Simple Navigation */}

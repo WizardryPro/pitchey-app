@@ -395,7 +395,7 @@ export function InvestorNavigation({ user, onLogout }: InvestorNavigationProps) 
 
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2" data-discover="true">
-          <span className="text-xl sm:text-2xl font-bold text-indigo-600">Pitchey</span>
+          <img src="/pitchey-logotype.png" alt="Pitchey" className="h-7 sm:h-8 w-auto" />
         </Link>
       </div>
 

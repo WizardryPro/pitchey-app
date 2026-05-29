@@ -118,7 +118,7 @@ export default function OnboardingPage() {
       <div className="w-full max-w-lg">
         {/* Branding */}
         <div className="text-center mb-8">
-          <h1 className={`text-3xl font-bold ${colors.title}`}>Pitchey</h1>
+          <img src="/pitchey-logotype.png" alt="Pitchey" className="h-10 w-auto mx-auto" />
           <p className="mt-2 text-gray-600">{cfg.subtitle}</p>
         </div>
 

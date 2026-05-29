@@ -214,7 +214,7 @@ const HowItWorks: React.FC = () => {
             >
               <ArrowLeft className="w-5 h-5 text-gray-700" />
             </button>
-            <span className="text-xl font-bold text-purple-600">Pitchey</span>
+            <img src="/pitchey-logotype.png" alt="Pitchey" className="h-7 w-auto" />
             <h1 className="text-2xl font-bold text-gray-900">How It Works</h1>
           </div>
           <button

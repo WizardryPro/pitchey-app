@@ -189,7 +189,7 @@ function EnhancedNavigation({
               className="flex items-center ml-2 lg:ml-0"
               title="Go to Homepage"
             >
-              <span className="text-2xl font-bold text-purple-600">Pitchey</span>
+              <img src="/pitchey-logotype.png" alt="Pitchey" className="h-8 w-auto" />
             </Link>
             
             {/* Desktop Navigation */}
