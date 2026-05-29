@@ -55,6 +55,7 @@ export async function profileHandler(request: Request, env: Env): Promise<Respon
         first_name as "firstName",
         last_name as "lastName",
         company_name as "companyName",
+        company_address as "companyAddress",
         profile_image as "profileImage",
         subscription_tier as "subscriptionTier",
         created_at as "createdAt",

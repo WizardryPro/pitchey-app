@@ -15315,13 +15315,16 @@ pitchey_analytics_datapoints_per_minute 1250
       if (pitchId) {
         try {
           const [p] = await this.db.query(
-            `SELECT p.title AS title, COALESCE(NULLIF(u.company_name, ''), u.username, u.name) AS creator_name
+            `SELECT p.title AS title,
+                    COALESCE(NULLIF(u.company_name, ''), u.username, u.name) AS creator_name,
+                    COALESCE(NULLIF(u.company_address, ''), NULLIF(u.location, '')) AS creator_address
              FROM pitches p JOIN users u ON u.id = p.user_id WHERE p.id = $1 LIMIT 1`,
             [pitchId]
           ) as any[];
           if (p) {
             ctx.project_name = ctx.project_name || p.title;
             ctx.disclosing_party_name = ctx.disclosing_party_name || p.creator_name;
+            ctx.disclosing_party_address = ctx.disclosing_party_address || p.creator_address;
           }
         } catch { /* pitch lookup best-effort; fall back to blanks */ }
       }

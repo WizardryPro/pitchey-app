@@ -17,6 +17,7 @@ interface UserProfile {
   bio?: string;
   website?: string;
   companyName?: string;
+  companyAddress?: string;
   companyType?: string;
   userType: 'creator' | 'investor' | 'production';
   profileImage?: string;
@@ -441,6 +442,27 @@ export default function Profile() {
                       <div className="flex items-center gap-2">
                         <MapPin className="w-4 h-4 text-gray-400" />
                         <p className="text-gray-900">{profile.location ?? 'Not provided'}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Business address
+                      <span className="text-gray-400 font-normal"> — used as your address on NDAs</span>
+                    </label>
+                    {isEditing ? (
+                      <textarea
+                        value={editedProfile.companyAddress ?? ''}
+                        onChange={(e) => handleInputChange('companyAddress', e.target.value)}
+                        rows={2}
+                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
+                        placeholder="e.g. 12 Example St, Dublin, D02 XY00, Ireland"
+                      />
+                    ) : (
+                      <div className="flex items-start gap-2">
+                        <MapPin className="w-4 h-4 text-gray-400 mt-1" />
+                        <p className="text-gray-900 whitespace-pre-line">{profile.companyAddress ?? 'Not provided'}</p>
                       </div>
                     )}
                   </div>
