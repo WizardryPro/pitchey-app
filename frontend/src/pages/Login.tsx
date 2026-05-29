@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useBetterAuthStore, MFARequiredError } from '../store/betterAuthStore';
-import { Film, Briefcase, DollarSign, LogIn, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
+import { Film, Briefcase, DollarSign, LogIn, Mail, AlertCircle, CheckCircle } from 'lucide-react';
+import PasswordInput from '../components/PasswordInput';
 import Turnstile from '../components/Turnstile';
 import { isSafeReturnPath, resolvePostLoginRedirect } from '@/utils/postLoginRedirect';
 
@@ -16,6 +17,10 @@ export default function Login() {
   const { loginCreator, loginInvestor, loginProduction, loading, error } = useBetterAuthStore();
   const [selectedPortal, setSelectedPortal] = useState<'creator' | 'investor' | 'production' | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string>('');
+  const [turnstileKey, setTurnstileKey] = useState(0);
+  // Turnstile tokens are single-use; force a fresh token after every attempt so a
+  // retry never resends a consumed token (which Cloudflare rejects as timeout-or-duplicate).
+  const resetTurnstile = () => { setTurnstileToken(''); setTurnstileKey((k) => k + 1); };
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -45,6 +50,7 @@ export default function Login() {
         return;
       }
       console.error('Login failed:', err);
+      resetTurnstile();
     }
   };
 
@@ -198,22 +204,16 @@ export default function Login() {
                 <label htmlFor="password" className="block text-sm font-medium text-gray-300">
                   Password
                 </label>
-                <div className="mt-1 relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-500" />
-                  </div>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete="current-password"
-                    required
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-600 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="••••••••"
-                  />
-                </div>
+                <PasswordInput
+                  id="password"
+                  name="password"
+                  autoComplete="current-password"
+                  required
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  inputClassName="appearance-none block w-full pl-10 pr-10 py-2 border border-gray-600 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="••••••••"
+                />
               </div>
 
               <div className="flex items-center justify-between">
@@ -236,7 +236,7 @@ export default function Login() {
                 </div>
               </div>
 
-              <Turnstile onVerify={setTurnstileToken} onExpire={() => setTurnstileToken('')} theme="dark" />
+              <Turnstile key={turnstileKey} onVerify={setTurnstileToken} onExpire={resetTurnstile} theme="dark" />
 
               <div>
                 <button

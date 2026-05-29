@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useBetterAuthStore } from '../store/betterAuthStore';
-import { UserPlus, Mail, Lock, User, Briefcase, AlertCircle, CheckCircle } from 'lucide-react';
+import { UserPlus, Mail, User, Briefcase, AlertCircle, CheckCircle } from 'lucide-react';
+import PasswordInput from '../components/PasswordInput';
 import Turnstile from '../components/Turnstile';
 import { setPendingReturnTo, isSafeReturnPath } from '@/utils/postLoginRedirect';
 
@@ -18,6 +19,10 @@ export default function Register() {
       : null;
   const { register, loading, error } = useBetterAuthStore();
   const [turnstileToken, setTurnstileToken] = useState<string>('');
+  const [turnstileKey, setTurnstileKey] = useState(0);
+  // Turnstile tokens are single-use; force a fresh token after every attempt so a
+  // retry never resends a consumed token (which Cloudflare rejects as timeout-or-duplicate).
+  const resetTurnstile = () => { setTurnstileToken(''); setTurnstileKey((k) => k + 1); };
   const [registrationComplete, setRegistrationComplete] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -55,7 +60,8 @@ export default function Register() {
       // Show verification message instead of redirecting
       setRegistrationComplete(true);
     } catch (_error) {
-      // Error is handled in the store
+      // Error is surfaced via the store's `error` state; refresh Turnstile for the retry.
+      resetTurnstile();
     }
   };
 
@@ -217,23 +223,17 @@ export default function Register() {
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Password
               </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="new-password"
-                  required
-                  minLength={8}
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="input-field pl-10"
-                  placeholder="••••••••"
-                />
-              </div>
+              <PasswordInput
+                id="password"
+                name="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                inputClassName="input-field pl-10 pr-10"
+                placeholder="••••••••"
+              />
               <p className="mt-1 text-sm text-gray-500">
                 Must be at least 8 characters
               </p>
@@ -243,22 +243,16 @@ export default function Register() {
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
                 Confirm Password
               </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  autoComplete="new-password"
-                  required
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  className="input-field pl-10"
-                  placeholder="••••••••"
-                />
-              </div>
+              <PasswordInput
+                id="confirmPassword"
+                name="confirmPassword"
+                autoComplete="new-password"
+                required
+                value={formData.confirmPassword}
+                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                inputClassName="input-field pl-10 pr-10"
+                placeholder="••••••••"
+              />
             </div>
 
             <div className="flex items-start">
@@ -281,7 +275,7 @@ export default function Register() {
               </label>
             </div>
 
-            <Turnstile onVerify={setTurnstileToken} onExpire={() => setTurnstileToken('')} />
+            <Turnstile key={turnstileKey} onVerify={setTurnstileToken} onExpire={resetTurnstile} />
 
             <div>
               <button

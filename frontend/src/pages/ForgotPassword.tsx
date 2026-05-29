@@ -7,6 +7,10 @@ import Turnstile from '../components/Turnstile';
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [turnstileToken, setTurnstileToken] = useState<string>('');
+  const [turnstileKey, setTurnstileKey] = useState(0);
+  // Turnstile tokens are single-use; force a fresh token so a second request never
+  // resends a consumed token (which Cloudflare rejects as timeout-or-duplicate).
+  const resetTurnstile = () => { setTurnstileToken(''); setTurnstileKey((k) => k + 1); };
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,6 +27,7 @@ export default function ForgotPassword() {
       // Generic error message to prevent user enumeration
       setError('If an account exists with this email, you will receive a password reset link.');
       setSubmitted(true);
+      resetTurnstile();
     } finally {
       setLoading(false);
     }
@@ -77,7 +82,7 @@ export default function ForgotPassword() {
                 </div>
               </div>
 
-              <Turnstile onVerify={setTurnstileToken} onExpire={() => setTurnstileToken('')} theme="dark" />
+              <Turnstile key={turnstileKey} onVerify={setTurnstileToken} onExpire={resetTurnstile} theme="dark" />
 
               <div>
                 <button
@@ -122,6 +127,7 @@ export default function ForgotPassword() {
                   onClick={() => {
                     setSubmitted(false);
                     setEmail('');
+                    resetTurnstile();
                   }}
                   className="w-full py-2 px-4 border border-gray-600 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-700"
                 >

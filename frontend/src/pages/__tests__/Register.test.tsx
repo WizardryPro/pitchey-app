@@ -57,7 +57,8 @@ describe('Register', () => {
 
   it('renders Pitchey brand link', () => {
     renderRegister()
-    expect(screen.getByText('Pitchey')).toBeInTheDocument()
+    // Brand mark is the logotype image (alt="Pitchey") after the 2026-05 logo rollout
+    expect(screen.getByAltText('Pitchey')).toBeInTheDocument()
   })
 
   it('renders sign-in link', () => {
