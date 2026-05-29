@@ -5,6 +5,7 @@ import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { paymentsAPI } from '@/lib/apiServices';
 import { WebSocketStatusCompact } from '@/components/WebSocketStatus';
 import { NotificationBell } from '@features/notifications/components/NotificationBell';
+import Logo from '@/components/Logo';
 import { getPortalPath } from '@/utils/navigation';
 import { getPortalTheme } from '@shared/hooks/usePortalTheme';
 
@@ -65,10 +66,10 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
           {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
 
-        {/* Logo — brand purple intentionally kept; portal identity is carried by
-            the role badge + main-content strip, not the logo color */}
-        <Link to="/" className="flex items-center">
-          <span className="text-xl sm:text-2xl font-bold text-purple-600">Pitchey</span>
+        {/* Logo — portal identity is carried by the role badge + main-content
+            strip, not the logo color */}
+        <Link to="/" className="flex items-center" aria-label="Pitchey home">
+          <Logo size="md" />
         </Link>
 
         {/* Role badge — persistent "you are in <Portal>" signal, visible across
