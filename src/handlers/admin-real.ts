@@ -356,25 +356,188 @@ export async function gdprMetricsRealHandler(request: Request, env: Env): Promis
       SELECT
         (SELECT COUNT(*)::int FROM users WHERE is_active = true) as total_data_subjects,
         (SELECT COUNT(*)::int FROM user_consents WHERE granted = true) as active_consents,
+        (SELECT COUNT(DISTINCT user_id)::int FROM user_consents WHERE granted = true) as users_with_consent,
+        (SELECT COUNT(*)::int FROM gdpr_requests) as total_requests,
         (SELECT COUNT(*)::int FROM gdpr_requests WHERE status = 'pending') as pending_requests,
         (SELECT COUNT(*)::int FROM gdpr_requests WHERE status = 'completed') as completed_requests
     `;
 
     const stats = result[0] || {};
+    const totalRequests = stats.total_requests ?? 0;
+    const completed = stats.completed_requests ?? 0;
+    // Compliance rate: share of requests resolved; 100% when there are none outstanding.
+    const complianceRate = totalRequests > 0 ? (completed / totalRequests) * 100 : 100;
 
     return jsonResponse({
       success: true,
       data: {
         totalDataSubjects: stats.total_data_subjects ?? 0,
         activeConsents: stats.active_consents ?? 0,
+        usersWithConsent: stats.users_with_consent ?? 0,
+        totalRequests,
         pendingRequests: stats.pending_requests ?? 0,
-        completedRequests: stats.completed_requests ?? 0,
+        completedRequests: completed,
+        complianceRate,
         complianceScore: 95
       }
     }, 200, origin);
   } catch (error) {
     console.error('gdprMetricsRealHandler query error:', error);
     return jsonResponse({ success: true, data: emptyMetrics }, 200, origin);
+  }
+}
+
+// =============================================================================
+// Audit Log (admin) — real DB over audit_logs
+// =============================================================================
+
+// Returns the user's user_type, or null if unauthenticated / not found.
+async function getRequesterType(request: Request, env: Env): Promise<string | null> {
+  const userId = await getUserId(request, env);
+  if (!userId) return null;
+  const sql = getDb(env);
+  if (!sql) return null;
+  try {
+    const rows = await sql`SELECT user_type FROM users WHERE id = ${userId}`;
+    return rows[0]?.user_type ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// GET /api/audit-log — paginated audit log entries (admin only)
+export async function auditLogRealHandler(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin');
+
+  const requesterType = await getRequesterType(request, env);
+  if (requesterType !== 'admin') {
+    return jsonResponse({ success: false, error: 'Admin access required' }, 403, origin);
+  }
+
+  const url = new URL(request.url);
+  const action = url.searchParams.get('action') || '';
+  const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10));
+  const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get('limit') || '25', 10)));
+  const offset = (page - 1) * limit;
+
+  const sql = getDb(env);
+  if (!sql) return jsonResponse({ data: [], total: 0 }, 200, origin);
+
+  try {
+    const rows = await sql`
+      SELECT
+        a.id,
+        a.action,
+        a.entity_type AS resource_type,
+        a.entity_id AS resource_id,
+        a.ip_address,
+        a.created_at,
+        a.user_id,
+        u.email AS user_email
+      FROM audit_logs a
+      LEFT JOIN users u ON u.id = a.user_id
+      WHERE (${action}::text = '' OR a.action = ${action})
+      ORDER BY a.created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+    const totalRows = await sql`
+      SELECT COUNT(*)::int AS total FROM audit_logs a
+      WHERE (${action}::text = '' OR a.action = ${action})
+    `;
+    const total = totalRows[0]?.total ?? 0;
+
+    return jsonResponse({ data: rows || [], total }, 200, origin);
+  } catch (error) {
+    console.error('auditLogRealHandler query error:', error);
+    return jsonResponse({ data: [], total: 0 }, 200, origin);
+  }
+}
+
+// GET /api/audit-log/stats — aggregate counts (admin only)
+export async function auditLogStatsRealHandler(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin');
+
+  const requesterType = await getRequesterType(request, env);
+  if (requesterType !== 'admin') {
+    return jsonResponse({ success: false, error: 'Admin access required' }, 403, origin);
+  }
+
+  const sql = getDb(env);
+  const empty = { totalEvents: 0, today: 0, uniqueUsers: 0 };
+  if (!sql) return jsonResponse(empty, 200, origin);
+
+  try {
+    const result = await sql`
+      SELECT
+        (SELECT COUNT(*)::int FROM audit_logs) AS total_events,
+        (SELECT COUNT(*)::int FROM audit_logs WHERE created_at >= date_trunc('day', NOW())) AS today,
+        (SELECT COUNT(DISTINCT user_id)::int FROM audit_logs) AS unique_users
+    `;
+    const s = result[0] || {};
+    return jsonResponse({
+      totalEvents: s.total_events ?? 0,
+      today: s.today ?? 0,
+      uniqueUsers: s.unique_users ?? 0
+    }, 200, origin);
+  } catch (error) {
+    console.error('auditLogStatsRealHandler query error:', error);
+    return jsonResponse(empty, 200, origin);
+  }
+}
+
+// GET /api/audit-log/export — CSV export (admin only)
+export async function auditLogExportRealHandler(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin');
+
+  const requesterType = await getRequesterType(request, env);
+  if (requesterType !== 'admin') {
+    return jsonResponse({ success: false, error: 'Admin access required' }, 403, origin);
+  }
+
+  const sql = getDb(env);
+  const csvHeader = 'id,created_at,user_email,action,resource_type,resource_id,ip_address\n';
+
+  const csvResponse = (body: string) => new Response(body, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': 'attachment; filename="audit-log.csv"',
+      ...getCorsHeaders(origin)
+    }
+  });
+
+  if (!sql) return csvResponse(csvHeader);
+
+  try {
+    const rows = await sql`
+      SELECT
+        a.id,
+        a.created_at,
+        u.email AS user_email,
+        a.action,
+        a.entity_type AS resource_type,
+        a.entity_id AS resource_id,
+        a.ip_address
+      FROM audit_logs a
+      LEFT JOIN users u ON u.id = a.user_id
+      ORDER BY a.created_at DESC
+      LIMIT 10000
+    `;
+
+    const esc = (v: unknown): string => {
+      if (v === null || v === undefined) return '';
+      const s = String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+
+    const lines = (rows || []).map((r: any) =>
+      [r.id, r.created_at, r.user_email, r.action, r.resource_type, r.resource_id, r.ip_address].map(esc).join(',')
+    );
+
+    return csvResponse(csvHeader + lines.join('\n'));
+  } catch (error) {
+    console.error('auditLogExportRealHandler query error:', error);
+    return csvResponse(csvHeader);
   }
 }
 

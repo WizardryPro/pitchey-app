@@ -266,8 +266,9 @@ class AdminService {
 
   async flagPitch(pitchId: string, reasons: string[], notes: string): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/api/admin/flags`, {
-      method: 'GET',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contentId: pitchId, reasons, notes }),
       credentials: 'include'
     });
     await handleResponse<void>(response);
@@ -281,7 +282,7 @@ class AdminService {
     });
 
     const query = params.toString() ? `?${params.toString()}` : '';
-    const response = await fetch(`${API_BASE_URL}/api/admin/reports${query}`, {
+    const response = await fetch(`${API_BASE_URL}/api/admin/transactions${query}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include'

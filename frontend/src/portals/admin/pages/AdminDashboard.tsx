@@ -150,7 +150,7 @@ const AdminDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Users</p>
-                <p className="text-2xl font-bold text-gray-900">{stats?.totalUsers.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-gray-900">{(stats?.totalUsers ?? 0).toLocaleString()}</p>
               </div>
               <div className="text-blue-500 text-3xl">👥</div>
             </div>
@@ -161,7 +161,7 @@ const AdminDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Pitches</p>
-                <p className="text-2xl font-bold text-gray-900">{stats?.totalPitches.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-gray-900">{(stats?.totalPitches ?? 0).toLocaleString()}</p>
               </div>
               <div className="text-purple-500 text-3xl">🎬</div>
             </div>

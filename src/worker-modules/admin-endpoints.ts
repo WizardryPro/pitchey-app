@@ -85,6 +85,48 @@ export class AdminEndpointsHandler {
     private db: DatabaseService
   ) {}
 
+  // Resolve a tagged-template SQL client from the injected DatabaseService.
+  // WorkerDatabase exposes getSql(); fall back to .sql if present. Returns null
+  // when no client is available so handlers can degrade gracefully (never 500).
+  private getSqlClient(): ((strings: TemplateStringsArray, ...values: any[]) => Promise<any[]>) | null {
+    const anyDb = this.db as any;
+    if (anyDb && typeof anyDb.getSql === 'function') {
+      try { return anyDb.getSql(); } catch { /* fall through */ }
+    }
+    if (anyDb && typeof anyDb.sql === 'function') return anyDb.sql;
+    return null;
+  }
+
+  // Bare-body JSON response. Several admin endpoints are consumed by the admin
+  // frontend via handleResponse<T>() which returns response.json() verbatim, so
+  // the body must BE the array/object the page expects — not a {success,...} wrapper.
+  private bareJson(body: unknown, corsHeaders: Record<string, string>, status = 200): Response {
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+
+  // Best-effort audit trail. Admin actions write to audit_logs; never let an
+  // audit failure break the action itself.
+  private async writeAudit(
+    sql: (strings: TemplateStringsArray, ...values: any[]) => Promise<any[]>,
+    userId: number,
+    action: string,
+    entityType: string,
+    entityId: number,
+    details: Record<string, unknown> = {}
+  ): Promise<void> {
+    try {
+      await sql`
+        INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_values, event_category, description, created_at)
+        VALUES (${userId}, ${action}, ${entityType}, ${entityId},
+                ${JSON.stringify(details)}::jsonb, 'admin',
+                ${`${action} on ${entityType} #${entityId}`}, NOW())
+      `;
+    } catch { /* audit is non-critical */ }
+  }
+
   async handleRequest(request: Request, corsHeaders: Record<string, string>, userAuth?: AuthPayload): Promise<Response> {
     try {
       // Admin authentication required for all endpoints
@@ -166,6 +208,10 @@ export class AdminEndpointsHandler {
         return await this.handleFeatureContent(request, corsHeaders, userAuth, parseInt(relevantPath[1]));
       }
       
+      if (method === 'POST' && relevantPath[0] === 'flags') {
+        return await this.handleFlagContent(request, corsHeaders, userAuth);
+      }
+
       if (method === 'GET' && relevantPath[0] === 'flags') {
         return await this.handleGetFlags(request, corsHeaders, userAuth);
       }
@@ -194,6 +240,10 @@ export class AdminEndpointsHandler {
         return await this.handleAdminAnalytics(request, corsHeaders, userAuth);
       }
       
+      if (method === 'GET' && relevantPath[0] === 'transactions') {
+        return await this.handleGetTransactions(request, corsHeaders, userAuth);
+      }
+
       if (method === 'GET' && relevantPath[0] === 'reports') {
         return await this.handleGetReports(request, corsHeaders, userAuth);
       }
@@ -256,83 +306,42 @@ export class AdminEndpointsHandler {
     return adminUsers.includes(userAuth.email);
   }
 
-  // Admin Dashboard
+  // Admin Dashboard — returns a bare flat DashboardStats object (the frontend
+  // reads response.json() directly into its DashboardStats interface).
   private async handleAdminDashboard(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload): Promise<Response> {
+    const empty = {
+      totalUsers: 0, totalPitches: 0, totalRevenue: 0, pendingNDAs: 0,
+      activeUsers: 0, recentSignups: 0, approvedPitches: 0, rejectedPitches: 0
+    };
     try {
-      const dashboard = {
-        stats: {
-          users: {
-            total: 1247,
-            new_today: 23,
-            active_24h: 456,
-            growth_rate: 12.5
-          },
-          content: {
-            total_pitches: 834,
-            published_today: 15,
-            pending_review: 8,
-            flagged: 3
-          },
-          moderation: {
-            pending_flags: 12,
-            resolved_today: 28,
-            active_moderators: 5
-          },
-          financial: {
-            total_investments: 156780.50,
-            transactions_today: 23,
-            pending_ndas: 17
-          }
-        },
-        recent_activity: [
-          {
-            type: 'user_registered',
-            message: 'New user registered: john.doe@example.com',
-            timestamp: '2024-11-01T15:30:00Z'
-          },
-          {
-            type: 'content_flagged',
-            message: 'Pitch flagged for inappropriate content',
-            timestamp: '2024-11-01T15:25:00Z'
-          },
-          {
-            type: 'investment_processed',
-            message: 'Investment of $5,000 processed',
-            timestamp: '2024-11-01T15:20:00Z'
-          }
-        ],
-        alerts: [
-          {
-            type: 'warning',
-            message: 'High volume of spam reports detected',
-            severity: 'medium',
-            timestamp: '2024-11-01T15:00:00Z'
-          }
-        ],
-        quick_actions: [
-          { id: 'review_flags', name: 'Review Pending Flags', count: 12 },
-          { id: 'verify_users', name: 'Verify New Users', count: 8 },
-          { id: 'approve_content', name: 'Approve Content', count: 5 }
-        ]
-      };
+      const sql = this.getSqlClient();
+      if (!sql) return this.bareJson(empty, corsHeaders);
 
-      return new Response(JSON.stringify({
-        success: true,
-        dashboard
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
-
+      const rows = await sql`
+        SELECT
+          (SELECT COUNT(*)::int FROM users) AS total_users,
+          (SELECT COUNT(*)::int FROM users WHERE is_active = true) AS active_users,
+          (SELECT COUNT(*)::int FROM users WHERE created_at > NOW() - INTERVAL '7 days') AS recent_signups,
+          (SELECT COUNT(*)::int FROM pitches) AS total_pitches,
+          (SELECT COUNT(*)::int FROM pitches WHERE status IN ('published','active')) AS approved_pitches,
+          (SELECT COUNT(*)::int FROM pitches WHERE status = 'draft') AS draft_pitches,
+          (SELECT COUNT(*)::int FROM ndas WHERE status = 'pending') AS pending_ndas,
+          (SELECT COALESCE(SUM(amount), 0)::float FROM payments WHERE status = 'completed') AS total_revenue
+      `;
+      const s = (rows && rows[0]) || {};
+      return this.bareJson({
+        totalUsers: s.total_users ?? 0,
+        totalPitches: s.total_pitches ?? 0,
+        totalRevenue: Number(s.total_revenue ?? 0),
+        pendingNDAs: s.pending_ndas ?? 0,
+        activeUsers: s.active_users ?? 0,
+        recentSignups: s.recent_signups ?? 0,
+        approvedPitches: s.approved_pitches ?? 0,
+        rejectedPitches: 0
+      }, corsHeaders);
     } catch (error) {
       await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: { message: 'Failed to load admin dashboard', code: 'DASHBOARD_ERROR' } 
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      return this.bareJson(empty, corsHeaders);
     }
   }
 
@@ -399,109 +408,73 @@ export class AdminEndpointsHandler {
       const url = new URL(request.url);
       const status = url.searchParams.get('status');
       const user_type = url.searchParams.get('user_type');
-      const verified = url.searchParams.get('verified');
-      const search = url.searchParams.get('search') || '';
-      const page = parseInt(url.searchParams.get('page') || '1');
-      const limit = parseInt(url.searchParams.get('limit') || '50');
+      const search = (url.searchParams.get('search') || '').toLowerCase();
+      const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'));
+      const limit = Math.min(200, Math.max(1, parseInt(url.searchParams.get('limit') || '50')));
 
-      // Demo users data
-      const demoUsers: AdminUser[] = [
-        {
-          id: 1,
-          username: 'alex.creator',
-          email: 'alex.creator@demo.com',
-          user_type: 'creator',
-          status: 'active',
-          verified: true,
-          created_at: '2024-10-01T10:00:00Z',
-          last_login: '2024-11-01T15:30:00Z',
-          total_pitches: 12,
-          total_investments: 0,
-          flags_received: 0,
-          warnings_issued: 0
-        },
-        {
-          id: 2,
-          username: 'sarah.investor',
-          email: 'sarah.investor@demo.com',
-          user_type: 'investor',
-          status: 'active',
-          verified: true,
-          created_at: '2024-09-15T14:20:00Z',
-          last_login: '2024-11-01T12:15:00Z',
-          total_pitches: 0,
-          total_investments: 47,
-          flags_received: 0,
-          warnings_issued: 0
-        },
-        {
-          id: 3,
-          username: 'problem.user',
-          email: 'problem@example.com',
-          user_type: 'creator',
-          status: 'suspended',
-          verified: false,
-          created_at: '2024-10-20T16:45:00Z',
-          last_login: '2024-10-30T09:00:00Z',
-          total_pitches: 3,
-          total_investments: 0,
-          flags_received: 5,
-          warnings_issued: 2
-        }
-      ];
+      const sql = this.getSqlClient();
+      if (!sql) return this.bareJson([], corsHeaders);
 
-      // Apply filters
-      let filteredUsers = demoUsers;
+      const offset = (page - 1) * limit;
+      const like = search ? `%${search}%` : null;
 
-      if (status) {
-        filteredUsers = filteredUsers.filter(u => u.status === status);
-      }
+      const rows = await sql`
+        SELECT
+          u.id,
+          u.email,
+          COALESCE(
+            NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''),
+            NULLIF(u.username, ''),
+            NULLIF(u.company_name, ''),
+            u.email
+          ) AS name,
+          u.user_type,
+          u.is_active,
+          u.account_locked_until,
+          u.created_at,
+          u.last_login_at,
+          COALESCE(uc.balance, 0) AS credits,
+          (SELECT COUNT(*)::int FROM pitches p WHERE p.user_id = u.id) AS pitch_count,
+          (SELECT COUNT(*)::int FROM ndas n WHERE n.signer_id = u.id) AS investment_count
+        FROM users u
+        LEFT JOIN user_credits uc ON uc.user_id = u.id
+        WHERE (${user_type}::text IS NULL OR u.user_type = ${user_type})
+          AND (
+            ${like}::text IS NULL
+            OR LOWER(u.email) LIKE ${like}
+            OR LOWER(COALESCE(u.username, '')) LIKE ${like}
+            OR LOWER(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) LIKE ${like}
+          )
+        ORDER BY u.created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
 
-      if (user_type) {
-        filteredUsers = filteredUsers.filter(u => u.user_type === user_type);
-      }
+      const mapStatus = (r: any): string => {
+        if (r.is_active === false) return 'banned';
+        if (r.account_locked_until && new Date(r.account_locked_until) > new Date()) return 'suspended';
+        return 'active';
+      };
 
-      if (verified !== null && verified !== undefined) {
-        const isVerified = verified === 'true';
-        filteredUsers = filteredUsers.filter(u => u.verified === isVerified);
-      }
+      const users = (rows || [])
+        .map((r: any) => ({
+          id: String(r.id),
+          email: r.email,
+          name: r.name,
+          userType: r.user_type,
+          credits: Number(r.credits ?? 0),
+          status: mapStatus(r),
+          createdAt: r.created_at ? new Date(r.created_at).toISOString() : null,
+          lastLogin: r.last_login_at ? new Date(r.last_login_at).toISOString() : null,
+          pitchCount: Number(r.pitch_count ?? 0),
+          investmentCount: Number(r.investment_count ?? 0)
+        }))
+        .filter((u: any) => !status || u.status === status);
 
-      if (search) {
-        filteredUsers = filteredUsers.filter(u => 
-          u.username.toLowerCase().includes(search.toLowerCase()) ||
-          u.email.toLowerCase().includes(search.toLowerCase())
-        );
-      }
-
-      // Pagination
-      const startIndex = (page - 1) * limit;
-      const endIndex = startIndex + limit;
-      const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
-
-      return new Response(JSON.stringify({
-        success: true,
-        users: paginatedUsers,
-        pagination: {
-          total: filteredUsers.length,
-          page,
-          limit,
-          has_next: endIndex < filteredUsers.length,
-          has_prev: page > 1
-        }
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      return this.bareJson(users, corsHeaders);
 
     } catch (error) {
       await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: { message: 'Failed to get users', code: 'GET_USERS_ERROR' } 
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      return this.bareJson([], corsHeaders);
     }
   }
 
@@ -580,33 +553,51 @@ export class AdminEndpointsHandler {
     try {
       const body = await request.json() as {
         status?: 'active' | 'suspended' | 'banned';
+        credits?: number;
         verified?: boolean;
         user_type?: string;
         admin_notes?: string;
       };
 
-      // Log the admin action
+      const sql = this.getSqlClient();
+      if (!sql) {
+        return new Response(JSON.stringify({ success: false, error: { message: 'Database unavailable', code: 'DB_UNAVAILABLE' } }), {
+          status: 503, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      // Status → is_active / account lock
+      if (body.status === 'banned') {
+        await sql`UPDATE users SET is_active = false, updated_at = NOW() WHERE id = ${userId}`;
+      } else if (body.status === 'suspended') {
+        await sql`UPDATE users SET account_locked_until = NOW() + INTERVAL '30 days', updated_at = NOW() WHERE id = ${userId}`;
+      } else if (body.status === 'active') {
+        await sql`UPDATE users SET is_active = true, account_locked_until = NULL, updated_at = NOW() WHERE id = ${userId}`;
+      }
+
+      // Credits → user_credits balance (upsert)
+      if (typeof body.credits === 'number' && Number.isFinite(body.credits)) {
+        const credits = Math.max(0, Math.floor(body.credits));
+        await sql`
+          INSERT INTO user_credits (user_id, balance, last_updated)
+          VALUES (${userId}, ${credits}, NOW())
+          ON CONFLICT (user_id) DO UPDATE SET balance = ${credits}, last_updated = NOW()
+        `;
+      }
+
       await this.logger.captureMessage('Admin user update', 'info', {
           admin_id: userAuth.userId,
           target_user_id: userId,
           changes: body
       });
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'User updated successfully',
-        user_id: userId,
-        updated_fields: Object.keys(body)
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      return this.bareJson({ id: String(userId), ...body }, corsHeaders);
 
     } catch (error) {
       await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: { message: 'Failed to update user', code: 'UPDATE_USER_ERROR' } 
+      return new Response(JSON.stringify({
+        success: false,
+        error: { message: 'Failed to update user', code: 'UPDATE_USER_ERROR' }
       }), {
         status: 500,
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
@@ -815,378 +806,387 @@ export class AdminEndpointsHandler {
   private async handleGetContent(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload): Promise<Response> {
     try {
       const url = new URL(request.url);
-      const status = url.searchParams.get('status');
-      const flagged = url.searchParams.get('flagged') === 'true';
-      const featured = url.searchParams.get('featured') === 'true';
+      const statusFilter = url.searchParams.get('status') || '';
+      const genreFilter = url.searchParams.get('genre') || '';
 
-      // Demo content data
-      const content = [
-        {
-          id: 1,
-          title: 'Cyberpunk Noir Detective Story',
-          type: 'pitch',
-          creator: 'Alex Creator',
-          status: 'published',
-          created_at: '2024-11-01T10:00:00Z',
-          view_count: 2847,
-          flags: 0,
-          featured: false
-        },
-        {
-          id: 2,
-          title: 'Questionable Content Example',
-          type: 'pitch',
-          creator: 'Problem User',
-          status: 'flagged',
-          created_at: '2024-10-30T15:30:00Z',
-          view_count: 156,
-          flags: 3,
-          featured: false
+      const sql = this.getSqlClient();
+      if (!sql) return this.bareJson([], corsHeaders);
+
+      const rows = await sql`
+        SELECT
+          p.id,
+          p.title,
+          COALESCE(NULLIF(p.short_synopsis, ''), NULLIF(p.long_synopsis, ''), '') AS synopsis,
+          COALESCE(p.genre, '') AS genre,
+          COALESCE(NULLIF(p.estimated_budget, ''), p.budget_range, '') AS budget_raw,
+          p.status,
+          p.moderation_status,
+          p.moderation_notes,
+          p.created_at,
+          p.user_id,
+          u.email AS creator_email,
+          COALESCE(
+            NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''),
+            NULLIF(u.username, ''),
+            NULLIF(u.company_name, ''),
+            u.email
+          ) AS creator_name,
+          (
+            SELECT COALESCE(array_agg(DISTINCT cr.reason), ARRAY[]::text[])
+            FROM content_reports cr
+            WHERE cr.content_type = 'pitch' AND cr.content_id = p.id AND cr.status <> 'resolved'
+          ) AS flagged_reasons
+        FROM pitches p
+        LEFT JOIN users u ON u.id = p.user_id
+        WHERE (${genreFilter}::text = '' OR p.genre = ${genreFilter})
+        ORDER BY p.created_at DESC
+        LIMIT 200
+      `;
+
+      // Explicit moderation decisions win; otherwise fall back to the publish
+      // lifecycle so un-reviewed pitches still bucket sensibly.
+      const mapStatus = (moderation: string | null, s: string): string => {
+        if (moderation === 'approved' || moderation === 'rejected' || moderation === 'flagged' || moderation === 'pending') {
+          return moderation;
         }
-      ];
+        if (s === 'published' || s === 'active') return 'approved';
+        return 'pending';
+      };
 
-      return new Response(JSON.stringify({
-        success: true,
-        content: content.filter(c => {
-          if (status && c.status !== status) return false;
-          if (flagged && c.flags === 0) return false;
-          if (featured !== null && c.featured !== featured) return false;
-          return true;
+      // Budgets are stored loosely as free text / ranges (e.g. "100k-500k", "$2,000,000").
+      // Parse the first numeric token and scale a k/m suffix; 0 when unparseable.
+      const parseBudget = (raw: unknown): number => {
+        const m = String(raw ?? '').match(/([0-9][0-9.,]*)\s*([kKmM])?/);
+        if (!m) return 0;
+        let n = Number(m[1].replace(/,/g, '')) || 0;
+        const suffix = (m[2] || '').toLowerCase();
+        if (suffix === 'k') n *= 1_000;
+        else if (suffix === 'm') n *= 1_000_000;
+        return n;
+      };
+
+      const content = (rows || [])
+        .map((r: any) => {
+          const budget = parseBudget(r.budget_raw);
+          return {
+            id: String(r.id),
+            title: r.title || 'Untitled',
+            synopsis: r.synopsis || '',
+            genre: r.genre || '',
+            budget,
+            creator: {
+              id: String(r.user_id ?? ''),
+              name: r.creator_name || r.creator_email || 'Unknown',
+              email: r.creator_email || ''
+            },
+            status: mapStatus(r.moderation_status, r.status),
+            createdAt: r.created_at ? new Date(r.created_at).toISOString() : null,
+            moderationNotes: r.moderation_notes || undefined,
+            flaggedReasons: Array.isArray(r.flagged_reasons) ? r.flagged_reasons : [],
+            documents: []
+          };
         })
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+        .filter((c: any) => !statusFilter || c.status === statusFilter);
+
+      return this.bareJson(content, corsHeaders);
 
     } catch (error) {
       await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: { message: 'Failed to get content', code: 'GET_CONTENT_ERROR' } 
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      return this.bareJson([], corsHeaders);
     }
   }
 
-  // Remove Content
+  // Reject content — DELETE /api/admin/content/:id. Sets moderation_status and
+  // unpublishes the pitch (status → draft) so it leaves the public surface.
   private async handleRemoveContent(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload, contentId: number): Promise<Response> {
     try {
-      const body = await request.json() as {
-        reason: string;
-        notify_creator?: boolean;
-        permanent?: boolean;
-      };
+      const body = await request.json().catch(() => ({})) as { reason?: string };
+      const reason = (body.reason || '').trim();
 
-      if (!body.reason?.trim()) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: { message: 'Removal reason is required', code: 'VALIDATION_ERROR' } 
-        }), {
-          status: 422,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        });
+      const sql = this.getSqlClient();
+      if (!sql) return this.bareJson({ success: false, error: { message: 'Database unavailable', code: 'DB_UNAVAILABLE' } }, corsHeaders, 503);
+
+      const rows = await sql`
+        UPDATE pitches
+           SET moderation_status = 'rejected',
+               moderation_notes  = ${reason || null},
+               moderated_by      = ${userAuth.userId},
+               moderated_at      = NOW(),
+               status            = 'draft'
+         WHERE id = ${contentId}
+        RETURNING id, title
+      `;
+      if (!rows || rows.length === 0) {
+        return this.bareJson({ success: false, error: { message: 'Pitch not found', code: 'NOT_FOUND' } }, corsHeaders, 404);
       }
 
-      await this.logger.captureMessage('Content removed', 'warning', {
-          admin_id: userAuth.userId,
-          content_id: contentId,
-          reason: body.reason,
-          permanent: body.permanent
-      });
+      // Resolve any open reports against this pitch.
+      await sql`
+        UPDATE content_reports
+           SET status = 'resolved', moderator_id = ${userAuth.userId}, moderator_notes = ${reason || null}, resolved_at = NOW()
+         WHERE content_type = 'pitch' AND content_id = ${contentId} AND status <> 'resolved'
+      `;
+      await this.writeAudit(sql, userAuth.userId, 'content.reject', 'pitch', contentId, { reason });
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Content removed successfully',
-        removal: {
-          content_id: contentId,
-          reason: body.reason,
-          removed_at: new Date().toISOString(),
-          removed_by: userAuth.userId,
-          permanent: body.permanent || false
-        }
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      return this.bareJson({ success: true, message: 'Pitch rejected and unpublished', id: String(contentId), status: 'rejected' }, corsHeaders);
 
     } catch (error) {
       await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: { message: 'Failed to remove content', code: 'REMOVE_CONTENT_ERROR' } 
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      return this.bareJson({ success: false, error: { message: 'Failed to reject content', code: 'REMOVE_CONTENT_ERROR' } }, corsHeaders, 500);
     }
   }
 
-  // Feature Content
+  // Approve content — POST /api/admin/content/:id/feature. Marks the pitch
+  // approved, publishes it if still a draft, and clears any open reports.
   private async handleFeatureContent(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload, contentId: number): Promise<Response> {
     try {
-      const body = await request.json() as {
-        featured: boolean;
-        featured_until?: string;
-        reason?: string;
-      };
+      const body = await request.json().catch(() => ({})) as { notes?: string };
+      const notes = (body.notes || '').trim();
 
-      await this.logger.captureMessage('Content featured status changed', 'info', {
-          admin_id: userAuth.userId,
-          content_id: contentId,
-          featured: body.featured,
-          reason: body.reason
-      });
+      const sql = this.getSqlClient();
+      if (!sql) return this.bareJson({ success: false, error: { message: 'Database unavailable', code: 'DB_UNAVAILABLE' } }, corsHeaders, 503);
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: `Content ${body.featured ? 'featured' : 'unfeatured'} successfully`,
-        feature: {
-          content_id: contentId,
-          featured: body.featured,
-          featured_until: body.featured_until,
-          updated_at: new Date().toISOString(),
-          updated_by: userAuth.userId
-        }
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      const rows = await sql`
+        UPDATE pitches
+           SET moderation_status = 'approved',
+               moderation_notes  = ${notes || null},
+               moderated_by      = ${userAuth.userId},
+               moderated_at      = NOW(),
+               status            = CASE WHEN status = 'draft' THEN 'published' ELSE status END,
+               published_at      = COALESCE(published_at, NOW())
+         WHERE id = ${contentId}
+        RETURNING id, title, status
+      `;
+      if (!rows || rows.length === 0) {
+        return this.bareJson({ success: false, error: { message: 'Pitch not found', code: 'NOT_FOUND' } }, corsHeaders, 404);
+      }
+
+      await sql`
+        UPDATE content_reports
+           SET status = 'resolved', moderator_id = ${userAuth.userId}, moderator_notes = ${notes || null}, resolved_at = NOW()
+         WHERE content_type = 'pitch' AND content_id = ${contentId} AND status <> 'resolved'
+      `;
+      await this.writeAudit(sql, userAuth.userId, 'content.approve', 'pitch', contentId, { notes });
+
+      return this.bareJson({ success: true, message: 'Pitch approved', id: String(contentId), status: 'approved' }, corsHeaders);
 
     } catch (error) {
       await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: { message: 'Failed to update content feature status', code: 'FEATURE_CONTENT_ERROR' } 
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      return this.bareJson({ success: false, error: { message: 'Failed to approve content', code: 'FEATURE_CONTENT_ERROR' } }, corsHeaders, 500);
     }
   }
 
-  // Get Flags
+  // Flag content — POST /api/admin/flags. Marks the pitch flagged and opens a
+  // row in content_reports (the moderation queue).
+  private async handleFlagContent(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload): Promise<Response> {
+    try {
+      const body = await request.json().catch(() => ({})) as {
+        contentId?: number | string;
+        pitchId?: number | string;
+        reasons?: string[];
+        reason?: string;
+        notes?: string;
+      };
+      const cid = parseInt(String(body.contentId ?? body.pitchId ?? ''), 10);
+      if (!Number.isFinite(cid)) {
+        return this.bareJson({ success: false, error: { message: 'contentId is required', code: 'VALIDATION_ERROR' } }, corsHeaders, 422);
+      }
+      const reasons = Array.isArray(body.reasons) ? body.reasons.filter(Boolean) : (body.reason ? [body.reason] : []);
+      const reasonStr = reasons.join(', ') || 'flagged';
+      const notes = (body.notes || '').trim();
+
+      const sql = this.getSqlClient();
+      if (!sql) return this.bareJson({ success: false, error: { message: 'Database unavailable', code: 'DB_UNAVAILABLE' } }, corsHeaders, 503);
+
+      const upd = await sql`
+        UPDATE pitches
+           SET moderation_status = 'flagged',
+               moderation_notes  = ${notes || null},
+               moderated_by      = ${userAuth.userId},
+               moderated_at      = NOW()
+         WHERE id = ${cid}
+        RETURNING id
+      `;
+      if (!upd || upd.length === 0) {
+        return this.bareJson({ success: false, error: { message: 'Pitch not found', code: 'NOT_FOUND' } }, corsHeaders, 404);
+      }
+
+      const ins = await sql`
+        INSERT INTO content_reports (reporter_id, content_type, content_id, reason, description, status, created_at)
+        VALUES (${userAuth.userId}, 'pitch', ${cid}, ${reasonStr}, ${notes || null}, 'pending', NOW())
+        RETURNING id
+      `;
+      await this.writeAudit(sql, userAuth.userId, 'content.flag', 'pitch', cid, { reasons, notes });
+
+      return this.bareJson({ success: true, id: String(ins?.[0]?.id ?? ''), contentId: String(cid), status: 'flagged' }, corsHeaders);
+
+    } catch (error) {
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
+      return this.bareJson({ success: false, error: { message: 'Failed to flag content', code: 'FLAG_CONTENT_ERROR' } }, corsHeaders, 500);
+    }
+  }
+
+  // Get Flags — reads the live content_reports moderation queue.
   private async handleGetFlags(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload): Promise<Response> {
     try {
       const url = new URL(request.url);
-      const status = url.searchParams.get('status') || 'pending';
-      const priority = url.searchParams.get('priority');
-      const assigned_to = url.searchParams.get('assigned_to');
+      const status = url.searchParams.get('status') || '';
 
-      // Demo flags data
-      const flags: ContentFlag[] = [
-        {
-          id: 1,
-          content_type: 'pitch',
-          content_id: 2,
-          content_title: 'Questionable Content Example',
-          flag_type: 'inappropriate',
-          flag_reason: 'Contains inappropriate language and themes',
-          reporter_id: 5,
-          reporter_name: 'concerned.user',
-          status: 'pending',
-          priority: 'medium',
-          assigned_moderator: userAuth.userId,
-          created_at: '2024-11-01T14:30:00Z'
-        },
-        {
-          id: 2,
-          content_type: 'comment',
-          content_id: 15,
-          content_title: 'Spam comment on pitch',
-          flag_type: 'spam',
-          flag_reason: 'Promotional spam comment',
-          reporter_id: 8,
-          reporter_name: 'alert.user',
-          status: 'reviewing',
-          priority: 'low',
-          created_at: '2024-11-01T12:15:00Z'
-        }
-      ];
+      const sql = this.getSqlClient();
+      if (!sql) return this.bareJson({ success: true, flags: [], stats: { pending: 0, reviewing: 0, resolved: 0 } }, corsHeaders);
 
-      return new Response(JSON.stringify({
-        success: true,
-        flags: flags.filter(f => {
-          if (status && f.status !== status) return false;
-          if (priority && f.priority !== priority) return false;
-          if (assigned_to && f.assigned_moderator !== parseInt(assigned_to)) return false;
-          return true;
-        }),
-        stats: {
-          pending: flags.filter(f => f.status === 'pending').length,
-          reviewing: flags.filter(f => f.status === 'reviewing').length,
-          resolved: flags.filter(f => f.status === 'resolved').length
-        }
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      const rows = await sql`
+        SELECT
+          cr.id, cr.content_type, cr.content_id, cr.reason, cr.description,
+          cr.status, cr.reporter_id, cr.moderator_id, cr.created_at, cr.resolved_at,
+          COALESCE(p.title, '') AS content_title,
+          COALESCE(NULLIF(u.username, ''), u.email, '') AS reporter_name
+        FROM content_reports cr
+        LEFT JOIN pitches p ON cr.content_type = 'pitch' AND p.id = cr.content_id
+        LEFT JOIN users u ON u.id = cr.reporter_id
+        WHERE (${status}::text = '' OR cr.status = ${status})
+        ORDER BY cr.created_at DESC
+        LIMIT 200
+      `;
+
+      const flags = (rows || []).map((r: any) => ({
+        id: r.id,
+        content_type: r.content_type,
+        content_id: r.content_id,
+        content_title: r.content_title || `#${r.content_id}`,
+        flag_reason: r.reason || '',
+        flag_notes: r.description || '',
+        reporter_id: r.reporter_id,
+        reporter_name: r.reporter_name || 'Unknown',
+        status: r.status || 'pending',
+        assigned_moderator: r.moderator_id ?? undefined,
+        created_at: r.created_at ? new Date(r.created_at).toISOString() : null,
+        resolved_at: r.resolved_at ? new Date(r.resolved_at).toISOString() : null
+      }));
+
+      const statsRows = await sql`
+        SELECT status, COUNT(*)::int AS n FROM content_reports GROUP BY status
+      `;
+      const stats: Record<string, number> = { pending: 0, reviewing: 0, resolved: 0 };
+      for (const s of statsRows || []) stats[s.status] = s.n;
+
+      return this.bareJson({ success: true, flags, stats }, corsHeaders);
 
     } catch (error) {
       await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: { message: 'Failed to get flags', code: 'GET_FLAGS_ERROR' } 
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      return this.bareJson({ success: false, error: { message: 'Failed to get flags', code: 'GET_FLAGS_ERROR' } }, corsHeaders, 500);
     }
   }
 
-  // Get Flag Details
+  // Get Flag Details — single content_reports row.
   private async handleGetFlag(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload, flagId: number): Promise<Response> {
     try {
-      // Demo flag detail
-      const flagDetail = {
-        id: flagId,
-        content_type: 'pitch',
-        content_id: 2,
-        content_title: 'Questionable Content Example',
-        content_preview: 'Preview of the flagged content...',
-        flag_type: 'inappropriate',
-        flag_reason: 'Contains inappropriate language and themes not suitable for general audience',
-        reporter_id: 5,
-        reporter_name: 'concerned.user',
-        reporter_email: 'concerned@example.com',
-        status: 'pending',
-        priority: 'medium',
-        assigned_moderator: userAuth.userId,
-        created_at: '2024-11-01T14:30:00Z',
-        evidence: [
-          {
-            type: 'screenshot',
-            url: '/api/uploads/evidence/flag_1_screenshot.jpg',
-            description: 'Screenshot of inappropriate content'
-          }
-        ],
-        previous_flags: [
-          {
-            id: 10,
-            flag_type: 'spam',
-            resolved_at: '2024-10-25T16:20:00Z',
-            resolution: 'False positive - content approved'
-          }
-        ]
-      };
+      const sql = this.getSqlClient();
+      if (!sql) return this.bareJson({ success: false, error: { message: 'Database unavailable', code: 'DB_UNAVAILABLE' } }, corsHeaders, 503);
 
-      return new Response(JSON.stringify({
+      const rows = await sql`
+        SELECT
+          cr.id, cr.content_type, cr.content_id, cr.reason, cr.description,
+          cr.status, cr.reporter_id, cr.moderator_id, cr.moderator_notes,
+          cr.created_at, cr.resolved_at,
+          COALESCE(p.title, '') AS content_title,
+          COALESCE(NULLIF(u.username, ''), u.email, '') AS reporter_name,
+          u.email AS reporter_email
+        FROM content_reports cr
+        LEFT JOIN pitches p ON cr.content_type = 'pitch' AND p.id = cr.content_id
+        LEFT JOIN users u ON u.id = cr.reporter_id
+        WHERE cr.id = ${flagId}
+      `;
+      if (!rows || rows.length === 0) {
+        return this.bareJson({ success: false, error: { message: 'Flag not found', code: 'NOT_FOUND' } }, corsHeaders, 404);
+      }
+      const r: any = rows[0];
+
+      return this.bareJson({
         success: true,
-        flag: flagDetail
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+        flag: {
+          id: r.id,
+          content_type: r.content_type,
+          content_id: r.content_id,
+          content_title: r.content_title || `#${r.content_id}`,
+          flag_reason: r.reason || '',
+          flag_notes: r.description || '',
+          reporter_id: r.reporter_id,
+          reporter_name: r.reporter_name || 'Unknown',
+          reporter_email: r.reporter_email || '',
+          status: r.status || 'pending',
+          moderator_notes: r.moderator_notes || '',
+          assigned_moderator: r.moderator_id ?? undefined,
+          created_at: r.created_at ? new Date(r.created_at).toISOString() : null,
+          resolved_at: r.resolved_at ? new Date(r.resolved_at).toISOString() : null
+        }
+      }, corsHeaders);
 
     } catch (error) {
       await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: { message: 'Failed to get flag details', code: 'GET_FLAG_ERROR' } 
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      return this.bareJson({ success: false, error: { message: 'Failed to get flag details', code: 'GET_FLAG_ERROR' } }, corsHeaders, 500);
     }
   }
 
-  // Resolve Flag
+  // Resolve Flag — closes a content_reports row.
   private async handleResolveFlag(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload, flagId: number): Promise<Response> {
     try {
-      const body = await request.json() as {
-        resolution: 'approved' | 'removed' | 'dismissed';
-        resolution_notes: string;
-        action_taken?: string;
+      const body = await request.json().catch(() => ({})) as {
+        resolution?: string;
+        resolution_notes?: string;
       };
+      const notes = (body.resolution_notes || '').trim();
 
-      if (!body.resolution_notes?.trim()) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: { message: 'Resolution notes are required', code: 'VALIDATION_ERROR' } 
-        }), {
-          status: 422,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        });
+      const sql = this.getSqlClient();
+      if (!sql) return this.bareJson({ success: false, error: { message: 'Database unavailable', code: 'DB_UNAVAILABLE' } }, corsHeaders, 503);
+
+      const rows = await sql`
+        UPDATE content_reports
+           SET status = 'resolved', moderator_id = ${userAuth.userId}, moderator_notes = ${notes || null}, resolved_at = NOW()
+         WHERE id = ${flagId}
+        RETURNING id
+      `;
+      if (!rows || rows.length === 0) {
+        return this.bareJson({ success: false, error: { message: 'Flag not found', code: 'NOT_FOUND' } }, corsHeaders, 404);
       }
+      await this.writeAudit(sql, userAuth.userId, 'flag.resolve', 'content_report', flagId, { resolution: body.resolution, notes });
 
-      await this.logger.captureMessage('Flag resolved', 'info', {
-          admin_id: userAuth.userId,
-          flag_id: flagId,
-          resolution: body.resolution,
-          notes: body.resolution_notes
-      });
-
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Flag resolved successfully',
-        resolution: {
-          flag_id: flagId,
-          resolution: body.resolution,
-          resolution_notes: body.resolution_notes,
-          resolved_at: new Date().toISOString(),
-          resolved_by: userAuth.userId
-        }
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      return this.bareJson({ success: true, message: 'Flag resolved', id: String(flagId), status: 'resolved' }, corsHeaders);
 
     } catch (error) {
       await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: { message: 'Failed to resolve flag', code: 'RESOLVE_FLAG_ERROR' } 
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      return this.bareJson({ success: false, error: { message: 'Failed to resolve flag', code: 'RESOLVE_FLAG_ERROR' } }, corsHeaders, 500);
     }
   }
 
-  // Assign Flag
+  // Assign Flag — assigns a moderator to a content_reports row.
   private async handleAssignFlag(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload, flagId: number): Promise<Response> {
     try {
-      const body = await request.json() as {
-        assigned_to: number;
-        priority?: 'low' | 'medium' | 'high' | 'urgent';
-        notes?: string;
-      };
-
-      if (!body.assigned_to) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: { message: 'Moderator assignment is required', code: 'VALIDATION_ERROR' } 
-        }), {
-          status: 422,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        });
+      const body = await request.json().catch(() => ({})) as { assigned_to?: number };
+      const assignee = Number(body.assigned_to);
+      if (!Number.isFinite(assignee) || assignee <= 0) {
+        return this.bareJson({ success: false, error: { message: 'Moderator assignment is required', code: 'VALIDATION_ERROR' } }, corsHeaders, 422);
       }
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Flag assigned successfully',
-        assignment: {
-          flag_id: flagId,
-          assigned_to: body.assigned_to,
-          priority: body.priority || 'medium',
-          assigned_at: new Date().toISOString(),
-          assigned_by: userAuth.userId
-        }
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      const sql = this.getSqlClient();
+      if (!sql) return this.bareJson({ success: false, error: { message: 'Database unavailable', code: 'DB_UNAVAILABLE' } }, corsHeaders, 503);
+
+      const rows = await sql`
+        UPDATE content_reports
+           SET moderator_id = ${assignee}, status = CASE WHEN status = 'pending' THEN 'reviewing' ELSE status END
+         WHERE id = ${flagId}
+        RETURNING id
+      `;
+      if (!rows || rows.length === 0) {
+        return this.bareJson({ success: false, error: { message: 'Flag not found', code: 'NOT_FOUND' } }, corsHeaders, 404);
+      }
+      await this.writeAudit(sql, userAuth.userId, 'flag.assign', 'content_report', flagId, { assigned_to: assignee });
+
+      return this.bareJson({ success: true, message: 'Flag assigned', id: String(flagId), assigned_to: assignee }, corsHeaders);
 
     } catch (error) {
       await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: { message: 'Failed to assign flag', code: 'ASSIGN_FLAG_ERROR' } 
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      return this.bareJson({ success: false, error: { message: 'Failed to assign flag', code: 'ASSIGN_FLAG_ERROR' } }, corsHeaders, 500);
     }
   }
 
@@ -1265,245 +1265,383 @@ export class AdminEndpointsHandler {
   private async handleModerationLog(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload): Promise<Response> {
     try {
       const url = new URL(request.url);
-      const moderator_id = url.searchParams.get('moderator_id');
-      const action_type = url.searchParams.get('action_type');
-      const page = parseInt(url.searchParams.get('page') || '1');
-      const limit = parseInt(url.searchParams.get('limit') || '50');
+      const limit = Math.min(50, Math.max(1, parseInt(url.searchParams.get('limit') || '20')));
 
-      // Demo moderation log
-      const moderationLog: ModerationAction[] = [
-        {
-          id: 1,
-          action_type: 'suspension',
-          target_type: 'user',
-          target_id: 3,
-          moderator_id: userAuth.userId,
-          moderator_name: userAuth.email,
-          reason: 'Multiple inappropriate content violations',
-          duration: '7 days',
-          created_at: '2024-11-01T15:00:00Z',
-          expires_at: '2024-11-08T15:00:00Z',
-          status: 'active'
-        },
-        {
-          id: 2,
-          action_type: 'content_removal',
-          target_type: 'pitch',
-          target_id: 5,
-          moderator_id: userAuth.userId,
-          moderator_name: userAuth.email,
-          reason: 'Copyright violation',
-          created_at: '2024-11-01T14:30:00Z',
-          status: 'active'
-        }
-      ];
+      const sql = this.getSqlClient();
+      if (!sql) return this.bareJson([], corsHeaders);
 
-      return new Response(JSON.stringify({
-        success: true,
-        moderation_log: moderationLog,
-        pagination: {
-          page,
-          limit,
-          total: moderationLog.length,
-          has_next: false,
-          has_prev: page > 1
-        }
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      // Recent-activity feed assembled from real events. Both the dashboard
+      // (getRecentActivity) and the Moderation Log page consume this defensively.
+      const rows = await sql`
+        (SELECT
+            'user-' || u.id AS id,
+            'user_signup' AS type,
+            'New ' || COALESCE(u.user_type, 'user') || ' account: ' ||
+              COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), NULLIF(u.username, ''), u.email) AS description,
+            u.created_at AS ts,
+            u.email AS "user"
+          FROM users u ORDER BY u.created_at DESC LIMIT ${limit})
+        UNION ALL
+        (SELECT
+            'pitch-' || p.id,
+            'pitch_created',
+            'New pitch: ' || COALESCE(p.title, 'Untitled'),
+            p.created_at,
+            (SELECT email FROM users WHERE id = p.user_id)
+          FROM pitches p ORDER BY p.created_at DESC LIMIT ${limit})
+        UNION ALL
+        (SELECT
+            'nda-' || n.id,
+            'nda_signed',
+            'NDA ' || COALESCE(n.status, 'updated'),
+            COALESCE(n.signed_at, n.created_at),
+            (SELECT email FROM users WHERE id = n.signer_id)
+          FROM ndas n ORDER BY COALESCE(n.signed_at, n.created_at) DESC LIMIT ${limit})
+        ORDER BY ts DESC NULLS LAST
+        LIMIT ${limit}
+      `;
+
+      const activity = (rows || []).map((r: any) => ({
+        id: String(r.id),
+        type: r.type,
+        description: r.description,
+        timestamp: r.ts ? new Date(r.ts).toISOString() : new Date().toISOString(),
+        user: r.user || undefined
+      }));
+
+      return this.bareJson(activity, corsHeaders);
 
     } catch (error) {
       await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: { message: 'Failed to get moderation log', code: 'MODERATION_LOG_ERROR' } 
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      return this.bareJson([], corsHeaders);
     }
   }
 
   // Admin Analytics
+  // Real analytics over the live DB. Returns the camelCase shape AdminAnalytics.tsx
+  // reads directly (userGrowth / contentMetrics / financialMetrics / topGenres /
+  // engagementMetrics). Each metric degrades to 0 rather than failing the page.
   private async handleAdminAnalytics(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload): Promise<Response> {
+    const url = new URL(request.url);
+    const period = url.searchParams.get('period') || url.searchParams.get('timeframe') || '30d';
+    const days = period === '24h' ? 1 : period === '7d' ? 7 : period === '90d' ? 90 : 30;
+
+    // growthRate as a whole-number percentage change vs the preceding window.
+    const growth = (cur: number, prev: number): number => {
+      if (!prev) return cur > 0 ? 100 : 0;
+      return Math.round(((cur - prev) / prev) * 100);
+    };
+
+    const empty = {
+      userGrowth: { newUsers: 0, growthRate: 0, creators: 0, investors: 0, production: 0 },
+      contentMetrics: { newPitches: 0, growthRate: 0 },
+      financialMetrics: { revenue: 0, revenueGrowthRate: 0, totalTransactions: 0, avgTransaction: 0 },
+      topGenres: [] as { name: string; count: number }[],
+      engagementMetrics: { activeUsers: 0, activityGrowthRate: 0 }
+    };
+
     try {
-      const url = new URL(request.url);
-      const timeframe = url.searchParams.get('timeframe') || '30d';
+      const sql = this.getSqlClient();
+      if (!sql) return this.bareJson(empty, corsHeaders);
 
-      const analytics = {
-        user_growth: {
-          new_registrations: 156,
-          activation_rate: 0.78,
-          retention_rate: 0.65,
-          churn_rate: 0.12
+      const [agg] = await sql`
+        SELECT
+          (SELECT COUNT(*)::int FROM users WHERE created_at >= NOW() - ${days} * INTERVAL '1 day') AS new_users,
+          (SELECT COUNT(*)::int FROM users WHERE created_at >= NOW() - ${days * 2} * INTERVAL '1 day' AND created_at < NOW() - ${days} * INTERVAL '1 day') AS prev_new_users,
+          (SELECT COUNT(*)::int FROM users WHERE user_type = 'creator') AS creators,
+          (SELECT COUNT(*)::int FROM users WHERE user_type = 'investor') AS investors,
+          (SELECT COUNT(*)::int FROM users WHERE user_type = 'production') AS production,
+          (SELECT COUNT(*)::int FROM pitches WHERE created_at >= NOW() - ${days} * INTERVAL '1 day') AS new_pitches,
+          (SELECT COUNT(*)::int FROM pitches WHERE created_at >= NOW() - ${days * 2} * INTERVAL '1 day' AND created_at < NOW() - ${days} * INTERVAL '1 day') AS prev_new_pitches,
+          (SELECT COALESCE(SUM(amount), 0)::float FROM payments WHERE status = 'completed' AND created_at >= NOW() - ${days} * INTERVAL '1 day') AS revenue,
+          (SELECT COALESCE(SUM(amount), 0)::float FROM payments WHERE status = 'completed' AND created_at >= NOW() - ${days * 2} * INTERVAL '1 day' AND created_at < NOW() - ${days} * INTERVAL '1 day') AS prev_revenue,
+          (SELECT COUNT(*)::int FROM payments WHERE status = 'completed' AND created_at >= NOW() - ${days} * INTERVAL '1 day') AS txns,
+          (SELECT COUNT(*)::int FROM users WHERE last_login_at >= NOW() - ${days} * INTERVAL '1 day') AS active_users,
+          (SELECT COUNT(*)::int FROM users WHERE last_login_at >= NOW() - ${days * 2} * INTERVAL '1 day' AND last_login_at < NOW() - ${days} * INTERVAL '1 day') AS prev_active_users
+      `;
+
+      const genreRows = await sql`
+        SELECT genre AS name, COUNT(*)::int AS count
+        FROM pitches
+        WHERE genre IS NOT NULL AND genre <> ''
+        GROUP BY genre
+        ORDER BY count DESC
+        LIMIT 6
+      `;
+
+      const a: any = agg || {};
+      const revenue = Number(a.revenue || 0);
+      const txns = Number(a.txns || 0);
+
+      return this.bareJson({
+        userGrowth: {
+          newUsers: Number(a.new_users || 0),
+          growthRate: growth(Number(a.new_users || 0), Number(a.prev_new_users || 0)),
+          creators: Number(a.creators || 0),
+          investors: Number(a.investors || 0),
+          production: Number(a.production || 0)
         },
-        content_metrics: {
-          content_created: 89,
-          content_published: 73,
-          content_flagged: 8,
-          content_removed: 3
+        contentMetrics: {
+          newPitches: Number(a.new_pitches || 0),
+          growthRate: growth(Number(a.new_pitches || 0), Number(a.prev_new_pitches || 0))
         },
-        moderation_metrics: {
-          flags_received: 45,
-          flags_resolved: 38,
-          average_resolution_time: 4.2,
-          moderator_efficiency: 0.87
+        financialMetrics: {
+          revenue,
+          revenueGrowthRate: growth(revenue, Number(a.prev_revenue || 0)),
+          totalTransactions: txns,
+          avgTransaction: txns > 0 ? revenue / txns : 0
         },
-        engagement_metrics: {
-          total_views: 156780,
-          total_likes: 12456,
-          total_comments: 3456,
-          average_session_duration: 8.5
+        topGenres: (genreRows || []).map((g: any) => ({ name: g.name, count: Number(g.count || 0) })),
+        engagementMetrics: {
+          activeUsers: Number(a.active_users || 0),
+          activityGrowthRate: growth(Number(a.active_users || 0), Number(a.prev_active_users || 0))
         }
-      };
-
-      return new Response(JSON.stringify({
-        success: true,
-        analytics,
-        timeframe
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      }, corsHeaders);
 
     } catch (error) {
       await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: { message: 'Failed to get admin analytics', code: 'ADMIN_ANALYTICS_ERROR' } 
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      return this.bareJson(empty, corsHeaders);
     }
   }
 
   // Get Reports
-  private async handleGetReports(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload): Promise<Response> {
+  // Transactions — bare Transaction[] sourced from the payments table.
+  private async handleGetTransactions(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload): Promise<Response> {
     try {
-      const reports = [
-        {
-          id: 1,
-          name: 'Weekly User Activity Report',
-          type: 'user_activity',
-          status: 'completed',
-          generated_at: '2024-11-01T09:00:00Z',
-          file_url: '/api/admin/reports/download/1'
-        },
-        {
-          id: 2,
-          name: 'Monthly Content Moderation Report',
-          type: 'moderation',
-          status: 'generating',
-          started_at: '2024-11-01T15:00:00Z',
-          progress: 65
-        }
-      ];
+      const url = new URL(request.url);
+      const typeFilter = url.searchParams.get('type') || '';
+      const statusFilter = url.searchParams.get('status') || '';
 
-      return new Response(JSON.stringify({
-        success: true,
-        reports
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      const sql = this.getSqlClient();
+      if (!sql) return this.bareJson([], corsHeaders);
+
+      const rows = await sql`
+        SELECT
+          pm.id,
+          pm.type,
+          pm.amount,
+          COALESCE(pm.currency, 'USD') AS currency,
+          pm.status,
+          pm.description,
+          pm.stripe_payment_intent_id,
+          pm.created_at,
+          pm.completed_at,
+          pm.user_id,
+          u.email AS user_email,
+          u.user_type,
+          COALESCE(
+            NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''),
+            NULLIF(u.username, ''),
+            NULLIF(u.company_name, ''),
+            u.email
+          ) AS user_name
+        FROM payments pm
+        LEFT JOIN users u ON u.id = pm.user_id
+        ORDER BY pm.created_at DESC
+        LIMIT 200
+      `;
+
+      // payments.type → frontend Transaction.type enum
+      const mapType = (t: string): string => {
+        switch (t) {
+          case 'credits': return 'credit_purchase';
+          case 'success_fee': return 'commission';
+          case 'subscription': return 'subscription';
+          case 'refund': return 'refund';
+          default: return 'payment';
+        }
+      };
+
+      const txns = (rows || [])
+        .map((r: any) => ({
+          id: String(r.id),
+          type: mapType(r.type),
+          amount: Number(r.amount ?? 0),
+          currency: (r.currency || 'USD').toUpperCase(),
+          status: r.status || 'pending',
+          user: {
+            id: String(r.user_id ?? ''),
+            name: r.user_name || r.user_email || 'Unknown',
+            email: r.user_email || '',
+            userType: r.user_type || ''
+          },
+          description: r.description || '',
+          stripeTransactionId: r.stripe_payment_intent_id || undefined,
+          createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+          updatedAt: (r.completed_at || r.created_at) ? new Date(r.completed_at || r.created_at).toISOString() : new Date().toISOString(),
+          refundableAmount: r.status === 'completed' && r.type !== 'refund' ? Number(r.amount ?? 0) : 0
+        }))
+        .filter((t: any) => (!typeFilter || t.type === typeFilter) && (!statusFilter || t.status === statusFilter));
+
+      return this.bareJson(txns, corsHeaders);
 
     } catch (error) {
       await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: { message: 'Failed to get reports', code: 'GET_REPORTS_ERROR' } 
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      return this.bareJson([], corsHeaders);
     }
   }
 
-  // Generate Report
+  private async handleGetReports(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload): Promise<Response> {
+    // Reports are generated on demand (see handleGenerateReport → CSV download);
+    // there is no stored-report registry, so the list is empty by design.
+    return this.bareJson({ success: true, reports: [] }, corsHeaders);
+  }
+
+  // Render a row matrix as CSV (RFC-4180 quoting).
+  private toCsv(headers: string[], rows: (string | number | null | undefined)[][]): string {
+    const esc = (v: string | number | null | undefined): string => {
+      const s = v == null ? '' : String(v);
+      return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const lines = [headers.map(esc).join(',')];
+    for (const r of rows) lines.push(r.map(esc).join(','));
+    return lines.join('\r\n');
+  }
+
+  // Generate Report — POST /api/admin/reports/generate. Returns a real CSV blob
+  // built from live data for the requested type. Frontend sends {type, filters}.
   private async handleGenerateReport(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload): Promise<Response> {
     try {
-      const body = await request.json() as {
-        report_type: 'user_activity' | 'moderation' | 'content' | 'financial';
-        timeframe: string;
-        format: 'pdf' | 'csv' | 'excel';
-        filters?: any;
+      const body = await request.json().catch(() => ({})) as {
+        type?: string;
+        report_type?: string;
+        filters?: { dateFrom?: string; dateTo?: string };
       };
+      const type = body.type || body.report_type || 'users';
+      const from = body.filters?.dateFrom || null;
+      const to = body.filters?.dateTo || null;
 
-      const reportId = Math.floor(Math.random() * 1000) + 100;
+      const sql = this.getSqlClient();
+      if (!sql) return this.bareJson({ success: false, error: { message: 'Database unavailable', code: 'DB_UNAVAILABLE' } }, corsHeaders, 503);
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Report generation started',
-        report: {
-          id: reportId,
-          type: body.report_type,
-          status: 'generating',
-          started_at: new Date().toISOString(),
-          estimated_completion: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+      let headers: string[] = [];
+      let rows: (string | number | null)[][] = [];
+
+      if (type === 'users') {
+        const r = await sql`
+          SELECT id, email, COALESCE(username, '') AS username, COALESCE(user_type, '') AS user_type,
+                 COALESCE(is_active, true) AS is_active, created_at, last_login_at
+          FROM users
+          WHERE (${from}::timestamptz IS NULL OR created_at >= ${from}::timestamptz)
+            AND (${to}::timestamptz IS NULL OR created_at <= ${to}::timestamptz)
+          ORDER BY created_at DESC LIMIT 5000
+        `;
+        headers = ['id', 'email', 'username', 'user_type', 'is_active', 'created_at', 'last_login_at'];
+        rows = (r || []).map((x: any) => [x.id, x.email, x.username, x.user_type, x.is_active, x.created_at?.toISOString?.() ?? x.created_at, x.last_login_at?.toISOString?.() ?? x.last_login_at]);
+      } else if (type === 'transactions') {
+        const r = await sql`
+          SELECT pm.id, pm.type, pm.amount, COALESCE(pm.currency, 'USD') AS currency, pm.status,
+                 pm.created_at, u.email AS user_email
+          FROM payments pm LEFT JOIN users u ON u.id = pm.user_id
+          WHERE (${from}::timestamptz IS NULL OR pm.created_at >= ${from}::timestamptz)
+            AND (${to}::timestamptz IS NULL OR pm.created_at <= ${to}::timestamptz)
+          ORDER BY pm.created_at DESC LIMIT 5000
+        `;
+        headers = ['id', 'type', 'amount', 'currency', 'status', 'created_at', 'user_email'];
+        rows = (r || []).map((x: any) => [x.id, x.type, x.amount, x.currency, x.status, x.created_at?.toISOString?.() ?? x.created_at, x.user_email]);
+      } else if (type === 'content') {
+        const r = await sql`
+          SELECT p.id, p.title, COALESCE(p.genre, '') AS genre, p.status,
+                 COALESCE(p.moderation_status, '') AS moderation_status,
+                 p.created_at, u.email AS creator_email
+          FROM pitches p LEFT JOIN users u ON u.id = p.user_id
+          WHERE (${from}::timestamptz IS NULL OR p.created_at >= ${from}::timestamptz)
+            AND (${to}::timestamptz IS NULL OR p.created_at <= ${to}::timestamptz)
+          ORDER BY p.created_at DESC LIMIT 5000
+        `;
+        headers = ['id', 'title', 'genre', 'status', 'moderation_status', 'created_at', 'creator_email'];
+        rows = (r || []).map((x: any) => [x.id, x.title, x.genre, x.status, x.moderation_status, x.created_at?.toISOString?.() ?? x.created_at, x.creator_email]);
+      } else { // revenue — daily totals of completed payments
+        const r = await sql`
+          SELECT DATE(created_at) AS day, COUNT(*)::int AS transactions, COALESCE(SUM(amount), 0)::float AS revenue
+          FROM payments
+          WHERE status = 'completed'
+            AND (${from}::timestamptz IS NULL OR created_at >= ${from}::timestamptz)
+            AND (${to}::timestamptz IS NULL OR created_at <= ${to}::timestamptz)
+          GROUP BY DATE(created_at) ORDER BY day DESC LIMIT 5000
+        `;
+        headers = ['day', 'transactions', 'revenue'];
+        rows = (r || []).map((x: any) => [x.day?.toISOString?.()?.slice(0, 10) ?? x.day, x.transactions, x.revenue]);
+      }
+
+      const csv = this.toCsv(headers, rows);
+      const filename = `${type}-report-${new Date().toISOString().slice(0, 10)}.csv`;
+      return new Response(csv, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/csv; charset=utf-8',
+          'Content-Disposition': `attachment; filename="${filename}"`,
+          ...corsHeaders
         }
-      }), {
-        status: 202,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
       });
 
     } catch (error) {
       await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: { message: 'Failed to generate report', code: 'GENERATE_REPORT_ERROR' } 
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      return this.bareJson({ success: false, error: { message: 'Failed to generate report', code: 'GENERATE_REPORT_ERROR' } }, corsHeaders, 500);
     }
   }
 
   // System Health
+  // Real service health — pings DB, Redis, Stripe, Resend and returns the
+  // {status,timestamp,services:{...}} shape AdminSystemHealth.tsx reads.
   private async handleSystemHealth(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload): Promise<Response> {
-    try {
-      const health = {
-        status: 'healthy',
-        uptime: '15 days, 8 hours, 23 minutes',
-        services: {
-          database: { status: 'healthy', response_time: 45 },
-          redis: { status: 'healthy', response_time: 12 },
-          storage: { status: 'healthy', response_time: 89 },
-          email: { status: 'healthy', response_time: 156 }
-        },
-        metrics: {
-          cpu_usage: 34.5,
-          memory_usage: 67.2,
-          disk_usage: 45.8,
-          active_connections: 234
-        },
-        recent_alerts: [
-          {
-            type: 'warning',
-            message: 'High memory usage detected',
-            timestamp: '2024-11-01T14:00:00Z'
-          }
-        ]
-      };
+    const timestamp = new Date().toISOString();
 
-      return new Response(JSON.stringify({
-        success: true,
-        health
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    // Bound each probe so one slow dependency can't hang the page.
+    const timed = async (fn: () => Promise<void>): Promise<{ status: string; responseTime: number; message?: string }> => {
+      const start = Date.now();
+      try {
+        await Promise.race([
+          fn(),
+          new Promise<void>((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000))
+        ]);
+        return { status: 'healthy', responseTime: Date.now() - start };
+      } catch (e) {
+        return { status: 'unhealthy', responseTime: Date.now() - start, message: e instanceof Error ? e.message : String(e) };
+      }
+    };
+
+    const checkDb = async () => {
+      const sql = this.getSqlClient();
+      if (!sql) throw new Error('No DB client');
+      await sql`SELECT 1`;
+    };
+    const checkRedis = async () => {
+      if (!this.env.UPSTASH_REDIS_REST_URL) throw new Error('Not configured');
+      const r = await fetch(`${this.env.UPSTASH_REDIS_REST_URL}/ping`, {
+        headers: { Authorization: `Bearer ${this.env.UPSTASH_REDIS_REST_TOKEN}` }
       });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    };
+    const checkStripe = async () => {
+      if (!this.env.STRIPE_SECRET_KEY) throw new Error('Not configured');
+      const r = await fetch('https://api.stripe.com/v1/balance', {
+        headers: { Authorization: `Bearer ${this.env.STRIPE_SECRET_KEY}` }
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    };
+    const checkResend = async () => {
+      if (!this.env.RESEND_API_KEY) throw new Error('Not configured');
+      const r = await fetch('https://api.resend.com/domains', {
+        headers: { Authorization: `Bearer ${this.env.RESEND_API_KEY}` }
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    };
+
+    try {
+      const [database, redis, stripe, resend] = await Promise.all([
+        timed(checkDb), timed(checkRedis), timed(checkStripe), timed(checkResend)
+      ]);
+      const services = { database, redis, stripe, resend };
+      const statuses = Object.values(services).map(s => s.status);
+      const status = statuses.every(s => s === 'healthy') ? 'healthy'
+        : statuses.every(s => s === 'unhealthy') ? 'unhealthy' : 'degraded';
+
+      return this.bareJson({ status, timestamp, services }, corsHeaders);
 
     } catch (error) {
       await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: { message: 'Failed to get system health', code: 'SYSTEM_HEALTH_ERROR' } 
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      return this.bareJson({ status: 'unknown', timestamp, services: {} }, corsHeaders);
     }
   }
 
@@ -1550,89 +1688,78 @@ export class AdminEndpointsHandler {
   }
 
   // Get Settings
-  private async handleGetSettings(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload): Promise<Response> {
-    try {
-      const settings = {
-        general: {
-          site_name: 'Pitchey',
-          site_description: 'Movie pitch platform',
-          allow_registrations: true,
-          require_email_verification: true,
-          enable_notifications: true
-        },
-        moderation: {
-          auto_flag_keywords: ['spam', 'inappropriate'],
-          flag_threshold: 3,
-          auto_suspend_threshold: 5,
-          require_manual_approval: false
-        },
-        content: {
-          max_pitch_length: 5000,
-          allow_file_uploads: true,
-          max_file_size_mb: 50,
-          allowed_file_types: ['jpg', 'png', 'pdf', 'doc']
-        },
-        features: {
-          enable_real_time_chat: true,
-          enable_video_uploads: true,
-          enable_payment_processing: true,
-          enable_nda_workflow: true
+  // Well-formed defaults in the exact nested shape the SystemSettings page renders.
+  private defaultSettings(): Record<string, any> {
+    return {
+      maintenance: { enabled: false, message: '', scheduledStart: undefined, scheduledEnd: undefined },
+      features: {
+        userRegistration: true, pitchSubmission: true, payments: true,
+        messaging: true, ndaWorkflow: true, realTimeUpdates: true
+      },
+      limits: { maxPitchesPerUser: 50, maxFileUploadSize: 50, maxDocumentsPerPitch: 10, sessionTimeout: 43200 },
+      pricing: {
+        creditPrices: { single: 4.99, pack5: 19.99, pack10: 34.99, pack25: 74.99 },
+        subscriptionPlans: {
+          basic: { monthly: 19.99, yearly: 199.99 },
+          premium: { monthly: 29.99, yearly: 299.99 },
+          enterprise: { monthly: 39.99, yearly: 399.99 }
         }
-      };
+      },
+      notifications: { emailEnabled: true, smsEnabled: false, pushEnabled: true, weeklyDigest: true },
+      security: { enforceStrongPasswords: true, twoFactorRequired: false, sessionSecurity: 'normal', apiRateLimit: 100 }
+    };
+  }
 
-      return new Response(JSON.stringify({
-        success: true,
-        settings
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+  // Deep-merge stored overrides onto defaults so a partial save never drops sections.
+  private mergeSettings(base: any, over: any): any {
+    if (!over || typeof over !== 'object' || Array.isArray(over)) return over ?? base;
+    const out: Record<string, any> = Array.isArray(base) ? [] : { ...base };
+    for (const k of Object.keys(over)) {
+      out[k] = (base && typeof base[k] === 'object' && !Array.isArray(base[k]))
+        ? this.mergeSettings(base[k], over[k])
+        : over[k];
+    }
+    return out;
+  }
 
+  private async handleGetSettings(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload): Promise<Response> {
+    const defaults = this.defaultSettings();
+    try {
+      const sql = this.getSqlClient();
+      if (!sql) return this.bareJson(defaults, corsHeaders);
+      const rows = await sql`SELECT settings FROM platform_settings WHERE id = 1`;
+      const stored = rows?.[0]?.settings;
+      return this.bareJson(stored ? this.mergeSettings(defaults, stored) : defaults, corsHeaders);
     } catch (error) {
       await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: { message: 'Failed to get settings', code: 'GET_SETTINGS_ERROR' } 
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      return this.bareJson(defaults, corsHeaders);
     }
   }
 
-  // Update Settings
+  // Update Settings — persists the full SystemSettings object the page PUTs.
   private async handleUpdateSettings(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload): Promise<Response> {
     try {
-      const body = await request.json() as {
-        section: 'general' | 'moderation' | 'content' | 'features';
-        settings: Record<string, any>;
-      };
+      const incoming = await request.json().catch(() => ({})) as Record<string, any>;
 
-      await this.logger.captureMessage('Settings updated', 'info', {
-          admin_id: userAuth.userId,
-          section: body.section,
-          settings: body.settings
-      });
+      const sql = this.getSqlClient();
+      if (!sql) return this.bareJson({ success: false, error: { message: 'Database unavailable', code: 'DB_UNAVAILABLE' } }, corsHeaders, 503);
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Settings updated successfully',
-        updated_section: body.section,
-        updated_at: new Date().toISOString()
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      // Merge over any existing stored settings so partial PUTs are non-destructive.
+      const existingRows = await sql`SELECT settings FROM platform_settings WHERE id = 1`;
+      const merged = this.mergeSettings(existingRows?.[0]?.settings ?? {}, incoming);
+
+      await sql`
+        INSERT INTO platform_settings (id, settings, updated_by, updated_at)
+        VALUES (1, ${JSON.stringify(merged)}::jsonb, ${userAuth.userId}, NOW())
+        ON CONFLICT (id) DO UPDATE SET settings = EXCLUDED.settings, updated_by = EXCLUDED.updated_by, updated_at = NOW()
+      `;
+      await this.writeAudit(sql, userAuth.userId, 'settings.update', 'platform_settings', 1, {});
+
+      return this.bareJson(this.mergeSettings(this.defaultSettings(), merged), corsHeaders);
 
     } catch (error) {
       await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: { message: 'Failed to update settings', code: 'UPDATE_SETTINGS_ERROR' } 
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      return this.bareJson({ success: false, error: { message: 'Failed to update settings', code: 'UPDATE_SETTINGS_ERROR' } }, corsHeaders, 500);
     }
   }
 
