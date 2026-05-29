@@ -3,7 +3,7 @@ import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { UserPlus, Mail, User, Briefcase, AlertCircle, CheckCircle } from 'lucide-react';
 import PasswordInput from '../components/PasswordInput';
-import Turnstile from '../components/Turnstile';
+import Turnstile, { TURNSTILE_ENABLED } from '../components/Turnstile';
 import { setPendingReturnTo, isSafeReturnPath } from '@/utils/postLoginRedirect';
 
 
@@ -288,7 +288,7 @@ export default function Register() {
             <div>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || (TURNSTILE_ENABLED && !turnstileToken)}
                 className="w-full flex justify-center items-center btn-primary"
               >
                 {loading ? (

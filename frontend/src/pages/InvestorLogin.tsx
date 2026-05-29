@@ -4,7 +4,7 @@ import { useBetterAuthStore, MFARequiredError } from '../store/betterAuthStore';
 import { DollarSign, LogIn, Mail, AlertCircle } from 'lucide-react';
 import BackButton from '../components/BackButton';
 import PasswordInput from '../components/PasswordInput';
-import Turnstile from '../components/Turnstile';
+import Turnstile, { TURNSTILE_ENABLED } from '../components/Turnstile';
 import { useLoadingState } from '@/shared/hooks/useLoadingState';
 import { clearAuthenticationState } from '../utils/auth';
 import { isSafeReturnPath, resolvePostLoginRedirect } from '@/utils/postLoginRedirect';
@@ -180,7 +180,7 @@ export default function InvestorLogin() {
             <div>
               <button
                 type="submit"
-                disabled={loading || storeLoading}
+                disabled={loading || storeLoading || (TURNSTILE_ENABLED && !turnstileToken)}
                 className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-brand-portal-investor hover:bg-brand-portal-investor/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-portal-investor disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
                 {loading || storeLoading ? (

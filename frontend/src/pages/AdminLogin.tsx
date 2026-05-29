@@ -4,7 +4,7 @@ import { useBetterAuthStore, MFARequiredError } from '../store/betterAuthStore';
 import { Shield, LogIn, Mail, AlertCircle, ArrowLeft } from 'lucide-react';
 import BackButton from '../components/BackButton';
 import PasswordInput from '../components/PasswordInput';
-import Turnstile from '../components/Turnstile';
+import Turnstile, { TURNSTILE_ENABLED } from '../components/Turnstile';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
@@ -23,6 +23,12 @@ export default function AdminLogin() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
+    // Don't submit before Cloudflare's challenge has issued a token — sending an
+    // empty token returns 403 (TURNSTILE_FAILED). This guards both click and Enter.
+    if (TURNSTILE_ENABLED && !turnstileToken) {
+      setAuthError('Just finishing the security check — please try again in a moment.');
+      return;
+    }
     try {
       await login(formData.email, formData.password, turnstileToken);
       // Verify the user is actually an admin
@@ -119,7 +125,7 @@ export default function AdminLogin() {
             <div>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || (TURNSTILE_ENABLED && !turnstileToken)}
                 className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-purple-900 hover:bg-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-800 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
@@ -127,7 +133,7 @@ export default function AdminLogin() {
                 ) : (
                   <>
                     <LogIn className="h-5 w-5 mr-2" />
-                    Sign in
+                    {!TURNSTILE_ENABLED || turnstileToken ? 'Sign in' : 'Verifying…'}
                   </>
                 )}
               </button>

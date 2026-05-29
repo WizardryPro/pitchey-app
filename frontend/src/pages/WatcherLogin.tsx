@@ -4,7 +4,7 @@ import { useBetterAuthStore, MFARequiredError } from '../store/betterAuthStore';
 import { Eye, LogIn, Mail, AlertCircle } from 'lucide-react';
 import BackButton from '../components/BackButton';
 import PasswordInput from '../components/PasswordInput';
-import Turnstile from '../components/Turnstile';
+import Turnstile, { TURNSTILE_ENABLED } from '../components/Turnstile';
 import { isSafeReturnPath, resolvePostLoginRedirect } from '@/utils/postLoginRedirect';
 
 export default function WatcherLogin() {
@@ -132,7 +132,7 @@ export default function WatcherLogin() {
             <div>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || (TURNSTILE_ENABLED && !turnstileToken)}
                 className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-brand-portal-watcher hover:bg-brand-portal-watcher/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-portal-watcher disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
