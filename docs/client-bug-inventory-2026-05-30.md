@@ -68,3 +68,12 @@ Correct impl: (a) render `<DocumentUpload documents={formData.documents} onChang
 
 ### Verified-green so far (live prod, browser + observability)
 rating, comment, NDA gate (signer 200/anon 401/non-signer 403/covers public), add-character (persists), genre, edit draft load, edit format/genre repopulate + Save, pitch create/delete, credits+subscription→Stripe checkout. Zero non-cron worker errors.
+
+## Session 2 (cont.) — portal route sweep (chrome MCP + observability)
+Creator portal, clicked through with console+network capture:
+- /creator/dashboard — 25 reqs all 200, console clean ✓
+- /creator/messages — all 200, clean ✓
+- /creator/ndas — all 200, clean ✓ (note: real route is /creator/ndas, not /creator/nda-management)
+- **FIX #14 — input-validation 500s**: a bad /creator/:username path forwarded "nda-management" as a userId → `/api/pitches?userId=nda-management` → 500; and `/api/pitches/NaN` → 500. Non-numeric ids hit int columns → "invalid input syntax for integer". Fixed both: getPitches invalid userId → empty 200; getPitch non-numeric :id → 404. Verified live (worker 6692a587): NaN→404, bad userId→200 empty, valid→200. Pushed 7414804b.
+
+Remaining sweep: creator marketplace/following/portfolio/profile/settings/analytics/slates/team/collaborations/legal; investor/production/watcher portals; public route; + doc-upload-on-create (planned).
