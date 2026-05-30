@@ -23,6 +23,7 @@ import StartProjectModal from '../components/StartProjectModal';
 import { CollaboratorService } from '@/services/collaborator.service';
 import FollowButton from '@features/browse/components/FollowButton';
 import { pitchService } from '@features/pitches/services/pitch.service';
+import PitchDocuments from '@features/pitches/components/PitchDocuments';
 import SocialProofBadge from '@shared/components/SocialProofBadge';
 
 interface Pitch {
@@ -1233,29 +1234,16 @@ const ProductionPitchView: React.FC = () => {
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Production Materials</h3>
               {(isOwner || pitch.hasSignedNDA) ? (
-                <div className="space-y-2">
-                  {pitch.script && (
-                    <a href={pitch.script} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
-                      <span className="flex items-center text-blue-600"><FileText className="h-4 w-4 mr-2" />Full Script</span>
-                      <Download className="h-4 w-4 text-gray-400" />
-                    </a>
-                  )}
-                  {pitch.pitchDeck && (
-                    <a href={pitch.pitchDeck} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
-                      <span className="flex items-center text-blue-600"><FileText className="h-4 w-4 mr-2" />Pitch Deck</span>
-                      <Download className="h-4 w-4 text-gray-400" />
-                    </a>
-                  )}
-                  {pitch.trailer && (
-                    <a href={pitch.trailer} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
-                      <span className="flex items-center text-blue-600"><Film className="h-4 w-4 mr-2" />Concept Trailer</span>
-                      <Download className="h-4 w-4 text-gray-400" />
-                    </a>
-                  )}
-                  {!pitch.script && !pitch.pitchDeck && !pitch.trailer && (
-                    <p className="text-gray-500 text-sm">No materials attached</p>
-                  )}
-                </div>
+                ((pitch as any).documents?.length || pitch.script || pitch.pitchDeck || pitch.trailer) ? (
+                  <PitchDocuments
+                    documents={(pitch as any).documents}
+                    script={pitch.script}
+                    pitchDeck={pitch.pitchDeck}
+                    trailer={pitch.trailer}
+                  />
+                ) : (
+                  <p className="text-gray-500 text-sm">No materials attached</p>
+                )
               ) : (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between p-2">

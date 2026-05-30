@@ -13,6 +13,7 @@ import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { apiClient } from '@/lib/api-client';
 import { InvestorService } from '@features/deals/services/investor.service';
 import FormatDisplay from '@/components/FormatDisplay';
+import PitchDocuments from '@features/pitches/components/PitchDocuments';
 import { getCreditCost } from '@config/subscription-plans';
 
 interface Pitch {
@@ -984,39 +985,15 @@ const InvestorPitchView: React.FC = () => {
             </div>
 
             {/* Documents */}
-            {(pitch.pitchDeck || pitch.script) && (
+            {((pitch as any).documents?.length || pitch.pitchDeck || pitch.script || (pitch as any).trailer) && (
               <div className="bg-white rounded-xl shadow-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Investment Documents</h3>
-                <div className="space-y-2">
-                  {pitch.pitchDeck && (
-                    <a
-                      href={pitch.pitchDeck}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between p-2 hover:bg-gray-50 rounded"
-                    >
-                      <span className="flex items-center text-blue-600">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Investment Deck
-                      </span>
-                      <Download className="h-4 w-4 text-gray-400" />
-                    </a>
-                  )}
-                  {pitch.script && (
-                    <a
-                      href={pitch.script}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between p-2 hover:bg-gray-50 rounded"
-                    >
-                      <span className="flex items-center text-blue-600">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Full Script
-                      </span>
-                      <Download className="h-4 w-4 text-gray-400" />
-                    </a>
-                  )}
-                </div>
+                <PitchDocuments
+                  documents={(pitch as any).documents}
+                  script={pitch.script}
+                  pitchDeck={pitch.pitchDeck}
+                  trailer={(pitch as any).trailer}
+                />
               </div>
             )}
           </div>

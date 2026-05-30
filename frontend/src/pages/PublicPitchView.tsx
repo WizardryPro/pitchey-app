@@ -8,6 +8,7 @@ import { formatCurrency } from '@shared/utils/formatters';
 import PortalTopNav from '@shared/components/layout/PortalTopNav';
 import { ndaService } from '@features/ndas/services/nda.service';
 import NDAWizard from '@features/ndas/components/NDAWizard';
+import PitchDocuments from '@features/pitches/components/PitchDocuments';
 import FormatDisplay from '../components/FormatDisplay';
 import FeedbackSection from '../components/feedback/FeedbackSection';
 import { getPortalPath } from '@/utils/navigation';
@@ -355,36 +356,14 @@ export default function PublicPitchView() {
                     </div>
                   )}
                   
-                  {/* Media Assets */}
-                  <div className="grid grid-cols-2 gap-3 mt-4">
-                    {pitch.scriptUrl && (
-                      <a href={pitch.scriptUrl} target="_blank" rel="noopener noreferrer" 
-                        className="flex items-center gap-2 p-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100">
-                        <Briefcase className="w-4 h-4" />
-                        View Script
-                      </a>
-                    )}
-                    {pitch.lookbookUrl && (
-                      <a href={pitch.lookbookUrl} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-2 p-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100">
-                        <Briefcase className="w-4 h-4" />
-                        View Lookbook
-                      </a>
-                    )}
-                    {pitch.pitchDeckUrl && (
-                      <a href={pitch.pitchDeckUrl} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-2 p-3 bg-green-50 text-green-700 rounded-lg hover:bg-green-100">
-                        <Briefcase className="w-4 h-4" />
-                        View Pitch Deck
-                      </a>
-                    )}
-                    {pitch.trailerUrl && (
-                      <a href={pitch.trailerUrl} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg hover:bg-red-100">
-                        <Film className="w-4 h-4" />
-                        Watch Trailer
-                      </a>
-                    )}
+                  {/* Media Assets — uploaded documents (script, deck, etc.) */}
+                  <div className="mt-4">
+                    <PitchDocuments
+                      documents={(pitch as any).documents}
+                      script={(pitch as any).script ?? (pitch as any).scriptUrl}
+                      pitchDeck={(pitch as any).pitchDeck ?? (pitch as any).pitchDeckUrl}
+                      trailer={(pitch as any).trailer ?? (pitch as any).trailerUrl}
+                    />
                   </div>
                 </div>
               </div>
