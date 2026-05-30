@@ -201,6 +201,48 @@ export default function TeamMembers() {
     }
   };
 
+  const handleExport = () => {
+    const headers = ['Name', 'Email', 'Role', 'Department', 'Status', 'Join Date', 'Last Active'];
+    const rows = filteredMembers.map(m => [m.name, m.email, m.role, m.department, m.status, m.joinDate, m.lastActive]);
+    const csv = [headers, ...rows]
+      .map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `team-members-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleBulkRole = async () => {
+    if (!teamId) { toast.error('Bulk role changes require a formal team'); return; }
+    const newRole = prompt('Enter new role for the selected members (owner, editor, viewer):');
+    if (!newRole || !['owner', 'editor', 'viewer'].includes(newRole)) return;
+    try {
+      await Promise.all(selectedMembers.map(id => TeamService.updateMemberRole(teamId, id, newRole)));
+      toast.success(`Updated ${selectedMembers.length} member${selectedMembers.length > 1 ? 's' : ''}`);
+      setSelectedMembers([]);
+      await fetchTeamMembers();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update roles');
+    }
+  };
+
+  const handleBulkRemove = async () => {
+    if (!teamId) { toast.error('Bulk removal requires a formal team'); return; }
+    if (!confirm(`Remove ${selectedMembers.length} selected member${selectedMembers.length > 1 ? 's' : ''}?`)) return;
+    try {
+      await Promise.all(selectedMembers.map(id => TeamService.removeMember(teamId, id)));
+      setTeamMembers(prev => prev.filter(m => !selectedMembers.includes(m.id)));
+      toast.success(`Removed ${selectedMembers.length} member${selectedMembers.length > 1 ? 's' : ''}`);
+      setSelectedMembers([]);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to remove members');
+    }
+  };
+
   const handleSort = (field: typeof sortBy) => {
     if (sortBy === field) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -302,8 +344,9 @@ export default function TeamMembers() {
               Invite Member
             </button>
             <button
-              onClick={() => toast('Team export coming soon', { icon: 'ℹ️' })}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition flex items-center gap-2"
+              onClick={handleExport}
+              disabled={filteredMembers.length === 0}
+              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition flex items-center gap-2 disabled:opacity-50"
             >
               <Download className="w-5 h-5" />
               Export
@@ -403,13 +446,13 @@ export default function TeamMembers() {
             </div>
             <div className="flex gap-3">
               <button
-                onClick={() => toast('Bulk role update coming soon', { icon: 'ℹ️' })}
+                onClick={handleBulkRole}
                 className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
               >
                 Update Roles
               </button>
               <button
-                onClick={() => toast('Bulk removal coming soon', { icon: 'ℹ️' })}
+                onClick={handleBulkRemove}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
               >
                 Remove Members

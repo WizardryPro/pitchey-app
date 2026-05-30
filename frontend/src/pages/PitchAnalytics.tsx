@@ -157,7 +157,30 @@ export default function PitchAnalytics() {
             <option value="90d">Last 90 days</option>
           </select>
           <button
-            onClick={() => toast('Analytics export coming soon', { icon: 'ℹ️' })}
+            onClick={() => {
+              if (!analytics) { toast('No analytics to export yet', { icon: 'ℹ️' }); return; }
+              const a: any = analytics;
+              const series = (a.viewsByDay || a.viewsByDate || []) as any[];
+              const rows: any[][] = [
+                ['Date', 'Views', 'Likes'],
+                ...series.map((d) => [d.date || d.label || '', d.views ?? 0, d.likes ?? 0]),
+                [],
+                ['Total Views', a.totalViews ?? 0],
+                ['Total Likes', a.totalLikes ?? 0],
+                ['Total Messages', a.totalMessages ?? 0],
+                ['Total Shares', a.totalShares ?? 0],
+              ];
+              const csv = rows
+                .map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(','))
+                .join('\n');
+              const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+              const url = URL.createObjectURL(blob);
+              const el = document.createElement('a');
+              el.href = url;
+              el.download = `pitch-${id || 'analytics'}-${timeRange}.csv`;
+              el.click();
+              URL.revokeObjectURL(url);
+            }}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${theme.btnPrimary}`}
           >
             <Download className="w-4 h-4" />
