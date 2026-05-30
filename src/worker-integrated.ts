@@ -2439,8 +2439,9 @@ class RouteRegistry {
     // === PHASE 3: TRANSACTION ROUTES ===
     this.register('GET', '/api/transactions', this.getTransactions.bind(this));
     this.register('GET', '/api/transactions/:id', this.getTransactionById.bind(this));
-    this.register('POST', '/api/transactions', this.createTransaction.bind(this));
-    this.register('PUT', '/api/transactions/:id/status', this.updateTransactionStatus.bind(this));
+    // POST /api/transactions + PUT /api/transactions/:id/status removed — they ran a
+    // Math.random() fake payment processor that could mark investments funded with no
+    // real money. No frontend/backend caller; real payments go through /api/payments (Stripe).
     this.register('GET', '/api/transactions/export', this.exportTransactions.bind(this));
 
     // === AUDIT TRAIL ROUTES ===
@@ -2672,14 +2673,10 @@ class RouteRegistry {
     this.register('GET', '/api/analytics/user', this.getUserAnalytics.bind(this));
     this.register('GET', '/api/analytics/user/:userId', this.getUserAnalyticsById.bind(this));
 
-    // Database Performance Analytics (Cloudflare Analytics Engine)
-    this.register('GET', '/api/analytics/database/performance', this.getDatabasePerformance.bind(this));
-    this.register('GET', '/api/analytics/database/queries', this.getDatabaseQueryStats.bind(this));
-    this.register('GET', '/api/analytics/database/health', this.getDatabaseHealth.bind(this));
-    this.register('GET', '/api/analytics/database/slow-queries', this.getSlowQueries.bind(this));
-    this.register('GET', '/api/analytics/database/errors', this.getDatabaseErrors.bind(this));
-    this.register('GET', '/api/analytics/performance/endpoints', this.getEndpointPerformance.bind(this));
-    this.register('GET', '/api/analytics/performance/overview', this.getPerformanceOverview.bind(this));
+    // Database/performance analytics endpoints removed — they returned hardcoded
+    // fabricated metrics (uptime 99.99%, cache hit 89.5%, etc.) with no real data
+    // source and no callers. Real edge/DB telemetry lives in Cloudflare Observability,
+    // Sentry, and Axiom, not these endpoints.
     this.register('POST', '/api/analytics/events', this.trackAnalyticsEvents.bind(this));
 
     // Analytics aliases for frontend compatibility
@@ -2693,9 +2690,9 @@ class RouteRegistry {
     this.register('GET', '/api/traces/search', this.searchTraces.bind(this));
     this.register('GET', '/api/traces/:traceId', this.getTraceDetails.bind(this));
     this.register('GET', '/api/traces/:traceId/analysis', this.getTraceAnalysis.bind(this));
-    this.register('GET', '/api/traces/metrics/overview', this.getTraceMetrics.bind(this));
-    this.register('GET', '/api/traces/metrics/performance', this.getTracePerformanceMetrics.bind(this));
-    this.register('GET', '/api/traces/metrics/errors', this.getTraceErrorMetrics.bind(this));
+    // /api/traces/metrics/* removed — fabricated trace metrics (totalTraces: 15420,
+    // successRate: 98.7) with no Analytics Engine wiring and no callers. The real
+    // trace search/details/analysis routes above stay.
 
     // Payment routes
     this.register('GET', '/api/payments/credits/balance', this.getCreditsBalance.bind(this));
@@ -3558,6 +3555,20 @@ class RouteRegistry {
     this.register('GET', '/api/gdpr/consent-metrics', async (req: Request) => {
       const { gdprConsentRealHandler } = await import('./handlers/admin-real');
       return gdprConsentRealHandler(req, this.env);
+    });
+
+    // Audit Log (real DB, admin only — enforced inside the handlers)
+    this.register('GET', '/api/audit-log', async (req: Request) => {
+      const { auditLogRealHandler } = await import('./handlers/admin-real');
+      return auditLogRealHandler(req, this.env);
+    });
+    this.register('GET', '/api/audit-log/stats', async (req: Request) => {
+      const { auditLogStatsRealHandler } = await import('./handlers/admin-real');
+      return auditLogStatsRealHandler(req, this.env);
+    });
+    this.register('GET', '/api/audit-log/export', async (req: Request) => {
+      const { auditLogExportRealHandler } = await import('./handlers/admin-real');
+      return auditLogExportRealHandler(req, this.env);
     });
 
     // Categories endpoint (real DB)
@@ -5325,6 +5336,12 @@ pitchey_analytics_datapoints_per_minute 1250
       customFormat?: string;
       budget_range?: string;
       budgetRange?: string;
+      budgetBracket?: string;
+      estimatedBudget?: string;
+      productionTimeline?: string;
+      targetReleaseDate?: string;
+      comparableTitles?: string;
+      visibilitySettings?: Record<string, boolean> | null;
       target_audience?: string;
       targetAudience?: string;
       short_synopsis?: string;
@@ -5403,11 +5420,14 @@ pitchey_analytics_datapoints_per_minute 1250
           why_now, production_location, development_stage,
           video_url, video_password, video_platform,
           themes, world_description, characters,
-          ai_disclosure, ai_used
+          ai_disclosure, ai_used,
+          estimated_budget, budget_bracket, production_timeline,
+          target_release_date, visibility_settings
         ) VALUES (
           $1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'draft', 'private', NOW(), NOW(), $13,
           $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25,
-          $26, $27
+          $26, $27,
+          $28, $29, $30, $31, $32
         ) RETURNING *
       `, [
         authResult.user.id,
@@ -5424,7 +5444,7 @@ pitchey_analytics_datapoints_per_minute 1250
         data.long_synopsis || data.synopsis || data.logline || null,
         data.require_nda ?? false,
         data.toneAndStyle ?? null,
-        data.comps ?? null,
+        data.comps ?? data.comparableTitles ?? null,
         data.storyBreakdown ?? null,
         data.whyNow ?? null,
         data.productionLocation ?? null,
@@ -5436,7 +5456,12 @@ pitchey_analytics_datapoints_per_minute 1250
         data.worldDescription ?? null,
         JSON.stringify(data.characters || []),
         aiDisclosure,
-        aiDisclosure !== 'none'
+        aiDisclosure !== 'none',
+        data.estimatedBudget ?? null,
+        data.budgetBracket ?? null,
+        data.productionTimeline ?? null,
+        data.targetReleaseDate ?? null,
+        data.visibilitySettings ? JSON.stringify(data.visibilitySettings) : null
       ]) as unknown as DatabaseRow[];
 
       // Handle creative attachments if provided
@@ -5601,6 +5626,30 @@ pitchey_analytics_datapoints_per_minute 1250
           (typeof pitch.long_synopsis === 'string' && pitch.long_synopsis.length > SYNOPSIS_TEASER_CHARS)
         );
 
+        // Surface uploaded documents (script, pitch deck, trailer) the same way
+        // getPitch does, so non-creator viewers (public/investor/production) can
+        // actually download them. Owner sees all; others see public docs, plus
+        // NDA-gated docs once they've signed.
+        const isOwner = String(pitch.user_id) === String(userId);
+        let documents: Array<Record<string, unknown>> = [];
+        try {
+          const docRows = await this.db.query(`
+            SELECT id, file_name, original_file_name, file_url, file_type,
+                   mime_type, file_size, document_type, is_public, requires_nda, uploaded_at
+            FROM pitch_documents
+            WHERE pitch_id = $1
+            ORDER BY uploaded_at ASC
+          `, [pitchId]);
+          documents = (docRows || []).filter((d: any) =>
+            isOwner || d.is_public === true || (hasNDAAccess && d.requires_nda)
+          );
+        } catch (_e) { /* pitch_documents may not exist in all envs */ }
+        const findDoc = (...types: string[]): string | undefined => {
+          const hit = documents.find((d: any) =>
+            types.includes(String(d.document_type || '').toLowerCase()));
+          return hit ? (hit.file_url as string) : undefined;
+        };
+
         // Build response with conditional protected content
         const response: any = {
           id: pitch.id,
@@ -5614,6 +5663,10 @@ pitchey_analytics_datapoints_per_minute 1250
           synopsisTruncated,
           budget: pitch.budget_range || pitch.estimated_budget || pitch.budget,
           estimated_budget: pitch.estimated_budget,
+          budget_bracket: pitch.budget_bracket,
+          comps: pitch.comps,
+          target_release_date: pitch.target_release_date,
+          visibility_settings: pitch.visibility_settings,
           status: pitch.status,
           formatCategory: pitch.format_category || 'Film',
           formatSubtype: pitch.format_subtype || pitch.format,
@@ -5636,6 +5689,10 @@ pitchey_analytics_datapoints_per_minute 1250
           pitch_deck_url: pitch.pitch_deck_url,
           script_url: pitch.script_url,
           trailer_url: pitch.trailer_url,
+          documents,
+          pitchDeck: pitch.pitch_deck_url ?? findDoc('pitch_deck', 'pitchdeck', 'deck'),
+          script: pitch.script_url ?? findDoc('script', 'screenplay'),
+          trailer: pitch.trailer_url ?? findDoc('trailer', 'video'),
           creator: creatorInfo,
           hasSignedNDA: hasNDAAccess,
           requiresNDA: pitch.require_nda || false
@@ -5787,10 +5844,39 @@ pitchey_analytics_datapoints_per_minute 1250
         (typeof pitch.long_synopsis === 'string' && pitch.long_synopsis.length > SYNOPSIS_TEASER_CHARS)
       );
 
+      // Fetch uploaded documents (scripts, decks, etc.) linked to this pitch.
+      // The owner sees everything; other viewers see public docs or — once
+      // they've signed an NDA — the NDA-gated ones too. Mapped onto known
+      // attachment slots (pitchDeck/script/trailer) for back-compat, plus a
+      // generic `documents` array the UI can render in full.
+      let documents: Array<Record<string, unknown>> = [];
+      try {
+        const docRows = await sql`
+          SELECT id, file_name, original_file_name, file_url, file_type,
+                 mime_type, file_size, document_type, is_public, requires_nda,
+                 uploaded_at
+          FROM pitch_documents
+          WHERE pitch_id = ${pitchId}
+          ORDER BY uploaded_at ASC
+        `;
+        documents = (docRows || []).filter((d: any) =>
+          isOwner || d.is_public === true || (hasNDAAccess && d.requires_nda)
+        );
+      } catch { /* pitch_documents may not exist in all envs */ }
+      const findDoc = (...types: string[]): string | undefined => {
+        const hit = documents.find((d: any) =>
+          types.includes(String(d.document_type || '').toLowerCase()));
+        return hit ? (hit.file_url as string) : undefined;
+      };
+
       // Combine the data with proper creator object
       // Use pitches.view_count directly (accurate, maintained by view tracking)
       const fullPitch = {
         ...pitch,
+        documents,
+        pitchDeck: pitch.pitch_deck_url ?? findDoc('pitch_deck', 'pitchdeck', 'deck'),
+        script: pitch.script_url ?? findDoc('script', 'screenplay'),
+        trailer: pitch.trailer_url ?? findDoc('trailer', 'video'),
         short_synopsis: shortSynopsisOut,
         long_synopsis: longSynopsisOut,
         shortSynopsis: shortSynopsisOut,
@@ -5921,11 +6007,17 @@ pitchey_analytics_datapoints_per_minute 1250
       formatSubtype?: string;
       customFormat?: string;
       budgetRange?: string;
+      budgetBracket?: string;
+      estimatedBudget?: string;
+      productionTimeline?: string;
+      targetReleaseDate?: string;
+      comparableTitles?: string;
+      visibilitySettings?: Record<string, boolean> | null;
       targetAudience?: string;
       synopsis?: string;
       shortSynopsis?: string;
       longSynopsis?: string;
-      
+
       // Enhanced Story & Style Fields
       toneAndStyle?: string;
       comps?: string;
@@ -6004,6 +6096,11 @@ pitchey_analytics_datapoints_per_minute 1250
           title_image = COALESCE($25, title_image),
           ai_disclosure = COALESCE($26, ai_disclosure),
           ai_used = COALESCE($27, ai_used),
+          estimated_budget = COALESCE($28, estimated_budget),
+          budget_bracket = COALESCE($29, budget_bracket),
+          production_timeline = COALESCE($30, production_timeline),
+          target_release_date = COALESCE($31, target_release_date),
+          visibility_settings = COALESCE($32, visibility_settings),
           updated_at = NOW()
         WHERE id = $1
         RETURNING *
@@ -6021,7 +6118,7 @@ pitchey_analytics_datapoints_per_minute 1250
         data.shortSynopsis || data.synopsis,
         data.longSynopsis || data.synopsis,
         data.toneAndStyle,
-        data.comps,
+        data.comps ?? data.comparableTitles,
         data.storyBreakdown,
         data.whyNow,
         data.productionLocation,
@@ -6034,7 +6131,12 @@ pitchey_analytics_datapoints_per_minute 1250
         data.characters ? JSON.stringify(data.characters) : null,
         data.titleImage,
         updAiDisclosure,
-        updAiDisclosure === null ? null : updAiDisclosure !== 'none'
+        updAiDisclosure === null ? null : updAiDisclosure !== 'none',
+        data.estimatedBudget ?? null,
+        data.budgetBracket ?? null,
+        data.productionTimeline ?? null,
+        data.targetReleaseDate ?? null,
+        data.visibilitySettings ? JSON.stringify(data.visibilitySettings) : null
       ]);
 
       // Handle creative attachments if provided
@@ -6120,6 +6222,15 @@ pitchey_analytics_datapoints_per_minute 1250
       const formData = await request.formData();
       const file = formData.get('file') as File;
       const folder = (formData.get('folder') as string) || 'uploads';
+      // Optional pitch linkage — when present, the uploaded file is recorded
+      // in pitch_documents so it surfaces as a downloadable attachment on the
+      // pitch. Without this the file lands in R2 but is orphaned (the bug that
+      // hid creators' uploaded scripts/decks).
+      const pitchIdRaw = formData.get('pitchId') as string | null;
+      const pitchId = pitchIdRaw ? parseInt(pitchIdRaw) : null;
+      const documentType = (formData.get('documentType') as string) || 'document';
+      const isPublic = formData.get('isPublic') === 'true';
+      const requiresNda = formData.get('requiresNda') !== 'false';
 
       if (!file) {
         return new Response(JSON.stringify({ message: 'No file provided' }), { status: 400, headers });
@@ -6139,6 +6250,49 @@ pitchey_analytics_datapoints_per_minute 1250
 
       if (!uploadResult.success) {
         return new Response(JSON.stringify({ message: uploadResult.error || 'Upload failed' }), { status: 500, headers });
+      }
+
+      // Link the file to its pitch when a pitchId was supplied AND the caller
+      // owns the pitch. Owner check prevents attaching files to someone else's
+      // pitch. Best-effort: a linkage failure must not fail an upload the user
+      // already paid credits for, so we log and continue.
+      if (pitchId && !isNaN(pitchId)) {
+        try {
+          const ownerRows = await this.db.query(
+            `SELECT 1 FROM pitches WHERE id = $1 AND user_id = $2`,
+            [pitchId, authResult.user.id]
+          );
+          if (ownerRows.length > 0) {
+            await this.db.query(`
+              INSERT INTO pitch_documents (
+                pitch_id, file_name, original_file_name, file_url, file_key,
+                file_type, mime_type, file_size, document_type, is_public,
+                requires_nda, uploaded_by, uploaded_at, last_modified, download_count, metadata
+              ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+              )
+            `, [
+              pitchId,
+              file.name,
+              file.name,
+              uploadResult.url ?? null,
+              storagePath,
+              documentType,
+              file.type,
+              file.size,
+              documentType,
+              isPublic,
+              requiresNda,
+              authResult.user.id,
+              new Date(),
+              new Date(),
+              0,
+              JSON.stringify({ uploadedAt: new Date().toISOString(), originalName: file.name }),
+            ]);
+          }
+        } catch (linkErr) {
+          console.error('pitch_documents linkage failed (upload succeeded):', linkErr);
+        }
       }
 
       return new Response(JSON.stringify({
@@ -19695,381 +19849,8 @@ Signatures: [To be completed upon signing]
     }
   }
 
-  private async createTransaction(request: Request): Promise<Response> {
-    try {
-      const authCheck = await this.requireAuth(request);
-      if (!authCheck.authorized) return authCheck.response;
+  // createTransaction + updateTransactionStatus handlers removed (fake payment processor).
 
-      const data = await request.json() as Record<string, unknown>;
-
-      const handler = new (await import('./handlers/transactions')).TransactionsHandler(this.db);
-      const result = await handler.createTransaction(authCheck.user.id, data);
-
-      const origin = request.headers.get('Origin');
-      return new Response(JSON.stringify(result), {
-        headers: getCorsHeaders(origin),
-        status: result.success ? 201 : 400
-      });
-    } catch (error) {
-      return errorHandler(error, request);
-    }
-  }
-
-  private async updateTransactionStatus(request: Request): Promise<Response> {
-    try {
-      const authCheck = await this.requireAuth(request);
-      if (!authCheck.authorized) return authCheck.response;
-
-      const url = new URL(request.url);
-      const transactionId = parseInt(url.pathname.split('/')[3] || '0');
-      const { status } = await request.json() as { status: string };
-
-      const handler = new (await import('./handlers/transactions')).TransactionsHandler(this.db);
-      const result = await handler.updateTransactionStatus(authCheck.user.id, transactionId, status);
-
-      const origin = request.headers.get('Origin');
-      return new Response(JSON.stringify(result), {
-        headers: getCorsHeaders(origin),
-        status: result.success ? 200 : 400
-      });
-    } catch (error) {
-      return errorHandler(error, request);
-    }
-  }
-
-  // =================== DATABASE ANALYTICS ENDPOINTS ===================
-
-  /**
-   * Get database performance metrics from Analytics Engine
-   */
-  private async getDatabasePerformance(request: Request): Promise<Response> {
-    try {
-      // Requires Analytics Engine integration for real metrics
-      const performanceData = {
-        overview: {
-          total_queries: null,
-          avg_response_time: null,
-          slow_queries_count: null,
-          error_rate: null,
-          connections_active: null,
-          database_health: 'unknown'
-        },
-        query_performance: {
-          select_queries: { count: 0, avg_duration_ms: null, p95_duration_ms: null, p99_duration_ms: null },
-          insert_queries: { count: 0, avg_duration_ms: null, p95_duration_ms: null, p99_duration_ms: null },
-          update_queries: { count: 0, avg_duration_ms: null, p95_duration_ms: null, p99_duration_ms: null },
-          delete_queries: { count: 0, avg_duration_ms: null, p95_duration_ms: null, p99_duration_ms: null }
-        },
-        table_performance: {
-          most_accessed: [],
-          slowest: []
-        },
-        time_series: {
-          last_hour: [],
-          last_day: [],
-          last_week: []
-        }
-      };
-
-      const origin = request.headers.get('Origin');
-      return new Response(JSON.stringify({ success: true, data: performanceData }), {
-        headers: getCorsHeaders(origin),
-        status: 200
-      });
-    } catch (error) {
-      return errorHandler(error, request);
-    }
-  }
-
-  /**
-   * Get database query statistics
-   */
-  private async getDatabaseQueryStats(request: Request): Promise<Response> {
-    try {
-      const queryStats = {
-        query_types: {
-          SELECT: { count: 0, avg_duration: 45, success_rate: 99.9 },
-          INSERT: { count: 0, avg_duration: 52, success_rate: 99.8 },
-          UPDATE: { count: 0, avg_duration: 48, success_rate: 99.7 },
-          DELETE: { count: 0, avg_duration: 41, success_rate: 99.9 }
-        },
-        tables: {
-          most_accessed: [
-            { name: 'pitches', queries: 0, avg_duration: 45 },
-            { name: 'users', queries: 0, avg_duration: 38 },
-            { name: 'investments', queries: 0, avg_duration: 52 },
-            { name: 'ndas', queries: 0, avg_duration: 41 }
-          ],
-          slowest: [
-            { name: 'user_analytics_daily', avg_duration: 89 },
-            { name: 'pitch_view_history', avg_duration: 76 }
-          ]
-        },
-        patterns: {
-          peak_hours: ['09:00-10:00', '14:00-15:00', '20:00-21:00'],
-          query_distribution: {
-            reads: 78,
-            writes: 22
-          }
-        },
-        cache_performance: {
-          hit_rate: 89.5,
-          miss_rate: 10.5,
-          eviction_rate: 2.1
-        }
-      };
-
-      const origin = request.headers.get('Origin');
-      return new Response(JSON.stringify({ success: true, data: queryStats }), {
-        headers: getCorsHeaders(origin),
-        status: 200
-      });
-    } catch (error) {
-      return errorHandler(error, request);
-    }
-  }
-
-  /**
-   * Get database health metrics
-   */
-  private async getDatabaseHealth(request: Request): Promise<Response> {
-    try {
-      const healthData = {
-        status: 'healthy',
-        connection_pool: {
-          active_connections: 12,
-          max_connections: 100,
-          utilization: 12
-        },
-        performance_indicators: {
-          response_time_ms: 55,
-          throughput_qps: 245,
-          error_rate: 0.1,
-          availability: 99.99
-        },
-        database_size: {
-          total_tables: 169,
-          total_records: 0,
-          storage_used_mb: 125,
-          storage_available_mb: 9875
-        },
-        recent_issues: [],
-        recommendations: [
-          'All systems operating normally',
-          'Query performance is excellent',
-          'Connection pool utilization is optimal'
-        ]
-      };
-
-      const origin = request.headers.get('Origin');
-      return new Response(JSON.stringify({ success: true, data: healthData }), {
-        headers: getCorsHeaders(origin),
-        status: 200
-      });
-    } catch (error) {
-      return errorHandler(error, request);
-    }
-  }
-
-  /**
-   * Get slow queries analysis
-   */
-  private async getSlowQueries(request: Request): Promise<Response> {
-    try {
-      const slowQueries = {
-        threshold_ms: 100,
-        total_slow_queries: 0,
-        queries: [],
-        patterns: {
-          most_common_slow_operations: [
-            'Complex JOINs across multiple tables',
-            'Unindexed WHERE clauses',
-            'Large result set retrievals'
-          ],
-          affected_tables: [
-            { table: 'user_analytics_daily', slow_count: 0 },
-            { table: 'pitch_view_history', slow_count: 0 }
-          ]
-        },
-        recommendations: [
-          'Add indexes on frequently queried columns',
-          'Consider query optimization for complex JOINs',
-          'Implement result pagination for large datasets'
-        ]
-      };
-
-      const origin = request.headers.get('Origin');
-      return new Response(JSON.stringify({ success: true, data: slowQueries }), {
-        headers: getCorsHeaders(origin),
-        status: 200
-      });
-    } catch (error) {
-      return errorHandler(error, request);
-    }
-  }
-
-  /**
-   * Get database error analysis
-   */
-  private async getDatabaseErrors(request: Request): Promise<Response> {
-    try {
-      const errorData = {
-        total_errors: 0,
-        error_rate: 0.1,
-        error_categories: {
-          connection_errors: 0,
-          timeout_errors: 0,
-          constraint_violations: 0,
-          syntax_errors: 0,
-          permission_errors: 0
-        },
-        recent_errors: [],
-        error_trends: {
-          last_hour: 0,
-          last_day: 0,
-          last_week: 0
-        },
-        resolution_status: {
-          resolved: 0,
-          investigating: 0,
-          pending: 0
-        }
-      };
-
-      const origin = request.headers.get('Origin');
-      return new Response(JSON.stringify({ success: true, data: errorData }), {
-        headers: getCorsHeaders(origin),
-        status: 200
-      });
-    } catch (error) {
-      return errorHandler(error, request);
-    }
-  }
-
-  /**
-   * Get API endpoint performance metrics
-   */
-  private async getEndpointPerformance(request: Request): Promise<Response> {
-    try {
-      const endpointData = {
-        overview: {
-          total_requests: 0,
-          avg_response_time: 125,
-          error_rate: 0.5,
-          throughput_rps: 45
-        },
-        endpoints: [
-          {
-            path: '/api/pitches',
-            method: 'GET',
-            requests: 0,
-            avg_response_time: 89,
-            p95_response_time: 156,
-            error_rate: 0.2
-          },
-          {
-            path: '/api/auth/session',
-            method: 'GET',
-            requests: 0,
-            avg_response_time: 45,
-            p95_response_time: 78,
-            error_rate: 0.1
-          },
-          {
-            path: '/api/dashboard/creator',
-            method: 'GET',
-            requests: 0,
-            avg_response_time: 125,
-            p95_response_time: 245,
-            error_rate: 0.3
-          },
-          {
-            path: '/api/investments',
-            method: 'POST',
-            requests: 0,
-            avg_response_time: 167,
-            p95_response_time: 289,
-            error_rate: 0.8
-          }
-        ],
-        slowest_endpoints: [
-          { path: '/api/analytics/dashboard', avg_response_time: 234 },
-          { path: '/api/dashboard/production', avg_response_time: 189 },
-          { path: '/api/creator/analytics/overview', avg_response_time: 156 }
-        ],
-        cache_performance: {
-          cache_hit_endpoints: [
-            { path: '/api/pitches/trending', hit_rate: 95.2 },
-            { path: '/api/users/profile', hit_rate: 87.4 }
-          ],
-          cache_miss_endpoints: [
-            { path: '/api/notifications/unread', hit_rate: 12.3 },
-            { path: '/api/investments/pending', hit_rate: 8.7 }
-          ]
-        }
-      };
-
-      const origin = request.headers.get('Origin');
-      return new Response(JSON.stringify({ success: true, data: endpointData }), {
-        headers: getCorsHeaders(origin),
-        status: 200
-      });
-    } catch (error) {
-      return errorHandler(error, request);
-    }
-  }
-
-  /**
-   * Get overall performance overview
-   */
-  private async getPerformanceOverview(request: Request): Promise<Response> {
-    try {
-      const overview = {
-        health_score: 98.5,
-        status: 'excellent',
-        key_metrics: {
-          database_response_time: 55,
-          api_response_time: 125,
-          error_rate: 0.3,
-          uptime: 99.99,
-          active_users: 0,
-          requests_per_minute: 2700
-        },
-        performance_trends: {
-          last_24h: {
-            avg_response_time: 118,
-            peak_response_time: 245,
-            error_count: 12
-          },
-          last_7d: {
-            avg_response_time: 134,
-            peak_response_time: 289,
-            error_count: 87
-          }
-        },
-        infrastructure_status: {
-          database: { status: 'healthy', response_time: 55 },
-          cache: { status: 'healthy', hit_rate: 89.5 },
-          storage: { status: 'healthy', utilization: 12.5 },
-          workers: { status: 'healthy', cpu_usage: 23.4 }
-        },
-        alerts: [],
-        recommendations: [
-          'Performance is excellent across all metrics',
-          'Database query optimization is working effectively',
-          'Cache hit rates are within optimal range'
-        ]
-      };
-
-      const origin = request.headers.get('Origin');
-      return new Response(JSON.stringify({ success: true, data: overview }), {
-        headers: getCorsHeaders(origin),
-        status: 200
-      });
-    } catch (error) {
-      return errorHandler(error, request);
-    }
-  }
 
   /**
    * Track analytics events from frontend
@@ -20284,156 +20065,6 @@ Signatures: [To be completed upon signing]
     }
   }
 
-  /**
-   * Get trace metrics overview
-   */
-  private async getTraceMetrics(request: Request): Promise<Response> {
-    try {
-      const url = new URL(request.url);
-      const timeRange = url.searchParams.get('timeRange') || '24h';
-
-      // Mock metrics data - in real implementation, query Analytics Engine
-      const metrics = {
-        totalTraces: 15420,
-        successRate: 98.7,
-        averageDuration: 156,
-        p95Duration: 450,
-        p99Duration: 890,
-        errorRate: 1.3,
-        topOperations: [
-          { operation: 'api.pitches.get', count: 3420, avgDuration: 145 },
-          { operation: 'db.pitches.select', count: 2890, avgDuration: 89 },
-          { operation: 'api.auth.verify', count: 2156, avgDuration: 67 }
-        ],
-        topErrors: [
-          { operation: 'db.connection.timeout', count: 45, errorRate: 2.1 },
-          { operation: 'api.auth.invalid_token', count: 32, errorRate: 1.5 }
-        ],
-        timeRange,
-        generatedAt: new Date().toISOString()
-      };
-
-      const origin = request.headers.get('Origin');
-      return new Response(JSON.stringify({
-        success: true,
-        data: metrics
-      }), {
-        headers: getCorsHeaders(origin),
-        status: 200
-      });
-    } catch (error) {
-      return errorHandler(error, request);
-    }
-  }
-
-  /**
-   * Get trace performance metrics
-   */
-  private async getTracePerformanceMetrics(request: Request): Promise<Response> {
-    try {
-      const url = new URL(request.url);
-      const timeRange = url.searchParams.get('timeRange') || '24h';
-      const operation = url.searchParams.get('operation');
-
-      // Mock performance data - in real implementation, query Analytics Engine
-      const performanceData = {
-        timeRange,
-        operation: operation || 'all',
-        metrics: {
-          avgDuration: 156,
-          p50Duration: 98,
-          p95Duration: 450,
-          p99Duration: 890,
-          maxDuration: 2340,
-          minDuration: 12
-        },
-        timeline: Array.from({ length: 24 }, (_, i) => ({
-          timestamp: new Date(Date.now() - (23 - i) * 3600000).toISOString(),
-          avgDuration: 100 + ((i * 37 + 13) % 100),
-          requestCount: 200 + ((i * 73 + 41) % 500),
-          errorCount: (i * 3 + 1) % 10
-        })),
-        slowestOperations: [
-          { operation: 'db.complex_query', avgDuration: 1230, count: 156 },
-          { operation: 'external.api_call', avgDuration: 890, count: 89 },
-          { operation: 'file.upload', avgDuration: 678, count: 234 }
-        ]
-      };
-
-      const origin = request.headers.get('Origin');
-      return new Response(JSON.stringify({
-        success: true,
-        data: performanceData
-      }), {
-        headers: getCorsHeaders(origin),
-        status: 200
-      });
-    } catch (error) {
-      return errorHandler(error, request);
-    }
-  }
-
-  /**
-   * Get trace error metrics
-   */
-  private async getTraceErrorMetrics(request: Request): Promise<Response> {
-    try {
-      const url = new URL(request.url);
-      const timeRange = url.searchParams.get('timeRange') || '24h';
-
-      // Mock error data - in real implementation, query Analytics Engine
-      const errorData = {
-        timeRange,
-        summary: {
-          totalErrors: 198,
-          errorRate: 1.3,
-          criticalErrors: 12,
-          warningErrors: 89,
-          infoErrors: 97
-        },
-        topErrors: [
-          {
-            operation: 'db.connection.timeout',
-            errorMessage: 'Database connection timeout after 30s',
-            count: 45,
-            errorRate: 2.1,
-            impact: 'high',
-            firstSeen: new Date(Date.now() - 86400000).toISOString(),
-            lastSeen: new Date(Date.now() - 3600000).toISOString()
-          },
-          {
-            operation: 'api.auth.invalid_token',
-            errorMessage: 'Invalid or expired authentication token',
-            count: 32,
-            errorRate: 1.5,
-            impact: 'medium',
-            firstSeen: new Date(Date.now() - 43200000).toISOString(),
-            lastSeen: new Date(Date.now() - 1800000).toISOString()
-          }
-        ],
-        errorTimeline: Array.from({ length: 24 }, (_, i) => ({
-          timestamp: new Date(Date.now() - (23 - i) * 3600000).toISOString(),
-          errorCount: (i * 5 + 2) % 20,
-          requestCount: 200 + ((i * 73 + 41) % 500)
-        })),
-        affectedServices: [
-          { service: 'pitchey-api', errorCount: 156, errorRate: 1.8 },
-          { service: 'database', errorCount: 42, errorRate: 0.5 }
-        ]
-      };
-
-      const origin = request.headers.get('Origin');
-      return new Response(JSON.stringify({
-        success: true,
-        data: errorData
-      }), {
-        headers: getCorsHeaders(origin),
-        status: 200
-      });
-    } catch (error) {
-      return errorHandler(error, request);
-    }
-  }
 
   // ---------------------------------------------------------------------------
   // Referral Invites

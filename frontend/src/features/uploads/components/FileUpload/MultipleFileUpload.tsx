@@ -507,30 +507,9 @@ export default function MultipleFileUpload({
           </div>
         )}
 
-        {/* Folder Selection */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Upload to Folder
-          </label>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-            {PREDEFINED_FOLDERS.filter(folder => allowedFolders.includes(folder.id)).map(folder => (
-              <label key={folder.id} className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 transition-colors">
-                <input
-                  type="radio"
-                  name="folder"
-                  value={folder.id}
-                  checked={selectedFolder === folder.id}
-                  onChange={(e) => setSelectedFolder(e.target.value)}
-                  className="w-4 h-4 text-blue-600"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-gray-900 truncate">{folder.name}</div>
-                  <div className="text-xs text-gray-500 truncate">{folder.description}</div>
-                </div>
-              </label>
-            ))}
-          </div>
-        </div>
+        {/* Folder picker removed: the chosen folder was never persisted (dropped on the
+            deferred-upload path and never stored as a column), so it misled users.
+            Re-introduce only when folder grouping is wired end-to-end (see remediation doc A2). */}
 
         {/* Controls */}
         <div className="flex flex-col sm:flex-row gap-4">

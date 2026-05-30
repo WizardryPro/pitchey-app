@@ -69,7 +69,7 @@ export const CharacterSchema = v.object({
   )),
   description: v.pipe(
     v.string(),
-    v.maxLength(200, 'Character description must be less than 200 characters')
+    v.maxLength(1000, 'Character description must be less than 1000 characters')
   ),
   order: v.optional(v.number())
 });
@@ -193,6 +193,38 @@ export const DevelopmentStageSchema = v.optional(v.picklist([
   'other'
 ]));
 
+export const LongSynopsisSchema = v.optional(v.pipe(
+  v.string(),
+  v.maxLength(5000, 'Long synopsis must be less than 5000 characters')
+));
+
+export const TargetAudienceSchema = v.optional(v.pipe(
+  v.string(),
+  v.maxLength(2000, 'Target audience must be less than 2000 characters')
+));
+
+export const ProductionTimelineSchema = v.optional(v.pipe(
+  v.string(),
+  v.maxLength(2000, 'Production timeline must be less than 2000 characters')
+));
+
+export const EstimatedBudgetSchema = v.optional(v.pipe(
+  v.string(),
+  v.maxLength(100, 'Estimated budget must be less than 100 characters')
+));
+
+export const TargetReleaseDateSchema = v.optional(v.pipe(
+  v.string(),
+  v.maxLength(50, 'Target release date must be less than 50 characters')
+));
+
+export const VisibilitySettingsSchema = v.optional(v.object({
+  showShortSynopsis: v.optional(v.boolean()),
+  showCharacters: v.optional(v.boolean()),
+  showBudget: v.optional(v.boolean()),
+  showMedia: v.optional(v.boolean()),
+}));
+
 export const CreativeAttachmentSchema = v.object({
   id: v.string(),
   name: v.string(),
@@ -212,7 +244,8 @@ export const PitchFormSchema = v.object({
   customFormat: v.optional(v.string()),
   logline: LoglineSchema,
   shortSynopsis: ShortSynopsisSchema,
-  
+  longSynopsis: LongSynopsisSchema,
+
   // Themes & World
   themes: v.optional(ThemesSchema),
   worldDescription: v.optional(WorldDescriptionSchema),
@@ -227,6 +260,11 @@ export const PitchFormSchema = v.object({
   productionLocation: ProductionLocationSchema,
   developmentStage: DevelopmentStageSchema,
   developmentStageOther: v.optional(v.string()),
+  targetAudience: TargetAudienceSchema,
+  productionTimeline: ProductionTimelineSchema,
+  targetReleaseDate: TargetReleaseDateSchema,
+  estimatedBudget: EstimatedBudgetSchema,
+  visibilitySettings: VisibilitySettingsSchema,
   
   // Creative Team
   creativeAttachments: v.optional(v.array(CreativeAttachmentSchema)),

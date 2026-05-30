@@ -63,6 +63,7 @@ export default function CreatePitch() {
     customFormat: '',
     logline: '',
     shortSynopsis: '',
+    longSynopsis: '',
     themes: '',
     worldDescription: '',
     // New enhanced fields
@@ -73,6 +74,16 @@ export default function CreatePitch() {
     productionLocation: '',
     developmentStage: undefined,
     developmentStageOther: '',
+    targetAudience: '',
+    productionTimeline: '',
+    targetReleaseDate: '',
+    estimatedBudget: '',
+    visibilitySettings: {
+      showShortSynopsis: true,
+      showCharacters: false,
+      showBudget: false,
+      showMedia: false,
+    },
     creativeAttachments: [],
     videoUrl: '',
     videoPassword: '',
@@ -346,12 +357,16 @@ export default function CreatePitch() {
           format: finalFormat,
           logline: validatedData.logline,
           shortSynopsis: validatedData.shortSynopsis,
+          longSynopsis: validatedData.longSynopsis || undefined,
           requireNDA: validatedData.ndaConfig.requireNDA,
           seekingInvestment: validatedData.seekingInvestment,
           budgetRange: validatedData.budgetRange || undefined,
-          budgetBracket: validatedData.budgetRange || 'Medium',
-          estimatedBudget: 1000000,
-          productionTimeline: '6-12 months',
+          budgetBracket: validatedData.budgetRange || undefined,
+          estimatedBudget: validatedData.estimatedBudget || undefined,
+          productionTimeline: validatedData.productionTimeline || undefined,
+          targetAudience: validatedData.targetAudience || undefined,
+          targetReleaseDate: validatedData.targetReleaseDate || undefined,
+          visibilitySettings: validatedData.visibilitySettings || undefined,
           themes: validatedData.themes,
           worldDescription: validatedData.worldDescription,
           characters: serializeCharacters(validatedData.characters || []),
@@ -915,6 +930,23 @@ export default function CreatePitch() {
                 {formData.shortSynopsis.length}/1000 characters | {formData.shortSynopsis.length < 500 ? `${formData.shortSynopsis.length}/500` : '✓'} characters recommended
               </p>
             </div>
+
+            <div className="mt-6">
+              <label htmlFor="longSynopsis" className="block text-sm font-medium text-gray-700 mb-2">
+                Long Synopsis <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <textarea
+                id="longSynopsis"
+                name="longSynopsis"
+                value={formData.longSynopsis || ''}
+                onChange={handleInputChange}
+                rows={8}
+                maxLength={5000}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="A detailed, scene-by-scene account of the full story — the deeper read for interested parties."
+              />
+              <p className="text-xs text-gray-500 mt-1">{(formData.longSynopsis || '').length}/5000 characters</p>
+            </div>
           </div>
 
           {/* Themes & World Section */}
@@ -1035,6 +1067,54 @@ export default function CreatePitch() {
                   if (other !== undefined) setValue('developmentStageOther', other);
                 }}
               />
+
+              <div>
+                <label htmlFor="targetAudience" className="block text-sm font-medium text-gray-700 mb-2">
+                  Target Audience <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <textarea
+                  id="targetAudience"
+                  name="targetAudience"
+                  value={formData.targetAudience || ''}
+                  onChange={handleInputChange}
+                  rows={3}
+                  maxLength={2000}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="Who is this for? Demographics, comparable audiences, platform fit..."
+                />
+              </div>
+
+              <div>
+                <label htmlFor="productionTimeline" className="block text-sm font-medium text-gray-700 mb-2">
+                  Production Timeline <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <textarea
+                  id="productionTimeline"
+                  name="productionTimeline"
+                  value={formData.productionTimeline || ''}
+                  onChange={handleInputChange}
+                  rows={3}
+                  maxLength={2000}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="Key milestones and schedule — development, pre-production, shoot, post..."
+                />
+              </div>
+
+              <div>
+                <label htmlFor="targetReleaseDate" className="block text-sm font-medium text-gray-700 mb-2">
+                  Target Release Date <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  id="targetReleaseDate"
+                  name="targetReleaseDate"
+                  value={formData.targetReleaseDate || ''}
+                  onChange={handleInputChange}
+                  maxLength={50}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="e.g. Q4 2027, or a target month/year"
+                />
+              </div>
             </div>
           </div>
 
@@ -1100,6 +1180,24 @@ export default function CreatePitch() {
                   <p className="text-xs text-gray-500 mt-1">
                     This helps investors understand the scale of investment needed
                   </p>
+                </div>
+              )}
+
+              {formData.seekingInvestment && (
+                <div>
+                  <label htmlFor="estimatedBudget" className="block text-sm font-medium text-gray-700 mb-2">
+                    Estimated Budget <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="estimatedBudget"
+                    name="estimatedBudget"
+                    value={formData.estimatedBudget || ''}
+                    onChange={handleInputChange}
+                    maxLength={100}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="e.g. $2.5M, or a more specific figure than the range above"
+                  />
                 </div>
               )}
             </div>
@@ -1276,6 +1374,39 @@ export default function CreatePitch() {
             </div>
           </div>
 
+          {/* Public Visibility Section */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Public Visibility</h2>
+            <p className="text-sm text-gray-500 mb-6">
+              Choose what's visible on the public pitch page before a viewer signs an NDA.
+            </p>
+            <div className="space-y-3">
+              {([
+                { key: 'showShortSynopsis', label: 'Show short synopsis', desc: 'Display the short synopsis publicly.' },
+                { key: 'showCharacters', label: 'Show characters', desc: 'Reveal the character list publicly.' },
+                { key: 'showBudget', label: 'Show budget', desc: 'Display budget range / estimate publicly.' },
+                { key: 'showMedia', label: 'Show media', desc: 'Display images and media publicly.' },
+              ] as const).map((opt) => {
+                const current = formData.visibilitySettings || {};
+                const checked = !!(current as Record<string, boolean>)[opt.key];
+                return (
+                  <label key={opt.key} className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => setValue('visibilitySettings', { ...current, [opt.key]: !checked } as any)}
+                      className="mt-1 w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-gray-900">{opt.label}</span>
+                      <p className="text-xs text-gray-500">{opt.desc}</p>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Document Upload Hub with R2 Storage */}
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -1285,10 +1416,10 @@ export default function CreatePitch() {
               pitchId={undefined} // Will be set after pitch creation
               deferUploads={true} // Defer uploads until pitch is created
               onFilesSelected={(files: File[]) => {
-                // Add document files to upload manager for deferred upload
-                files.forEach(file => {
-                  uploadManager.addUpload(file, 'document');
-                });
+                // DocumentUploadHub re-emits the FULL current document set on every
+                // change. Treat it as authoritative (replace, don't append) so adding
+                // multiple docs doesn't duplicate them or double-charge credits.
+                uploadManager.setDocumentUploads(files);
               }}
               onUploadComplete={(results: EnhancedUploadResult[]) => {
                 // Store uploaded documents (for non-deferred mode)

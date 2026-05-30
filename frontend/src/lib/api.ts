@@ -74,6 +74,7 @@ function transformPitchData(pitch: any): any {
     pitchDeck: pitch.pitch_deck_url ?? pitch.pitchDeck,
     script: pitch.script_url ?? pitch.script,
     trailer: pitch.trailer_url ?? pitch.trailer,
+    documents: Array.isArray(pitch.documents) ? pitch.documents : [],
     characters: safeParseJsonArray(pitch.characters),
     themes: safeParseJsonArray(pitch.themes),
     locations: safeParseJsonArray(pitch.locations),

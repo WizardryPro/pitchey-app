@@ -56,9 +56,9 @@ describe('validateCharacter', () => {
   });
 
   it('fails for too-long description', () => {
-    const result = validateCharacter({ ...validCharacter, description: 'x'.repeat(501) });
+    const result = validateCharacter({ ...validCharacter, description: 'x'.repeat(1001) });
     expect(result.isValid).toBe(false);
-    expect(result.errors.description).toContain('500');
+    expect(result.errors.description).toContain('1000');
   });
 
   it('fails for too-long age', () => {

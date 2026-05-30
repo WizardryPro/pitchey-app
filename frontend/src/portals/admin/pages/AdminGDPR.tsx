@@ -100,7 +100,7 @@ export default function AdminGDPR() {
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Consent Preferences</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {(consent.preferences ?? consent.consents ?? []).map((pref: any, idx: number) => (
+            {(Array.isArray(consent.preferences) ? consent.preferences : Array.isArray(consent.consents) ? consent.consents : []).map((pref: any, idx: number) => (
               <div key={idx} className="bg-gray-50 rounded-lg p-4">
                 <p className="text-sm font-medium text-gray-700">{pref.type ?? pref.name ?? `Consent Type ${idx + 1}`}</p>
                 <p className="text-lg font-bold text-gray-900 mt-1">{pref.count ?? pref.granted ?? 0} users</p>

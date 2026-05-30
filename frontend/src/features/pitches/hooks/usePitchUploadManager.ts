@@ -26,6 +26,7 @@ export interface UploadManagerResult {
 export interface UsePitchUploadManagerReturn {
   pendingUploads: PendingUpload[];
   addUpload: (file: File, type: 'image' | 'video' | 'document', documentType?: string) => string;
+  setDocumentUploads: (files: File[]) => void;
   removeUpload: (id: string) => void;
   clearUploads: () => void;
   executeUploads: (pitchId: number) => Promise<UploadManagerResult>;
@@ -61,6 +62,35 @@ export function usePitchUploadManager(): UsePitchUploadManagerReturn {
 
     setPendingUploads(prev => [...prev, upload]);
     return id;
+  }, []);
+
+  /**
+   * Replace the full set of pending DOCUMENT uploads with `files` (image/video
+   * uploads are left untouched). Use this when the source emits the complete
+   * current document list on every change (e.g. DocumentUploadHub) — re-adding
+   * with addUpload() in that case duplicates files and double-charges credits.
+   * Existing matching entries (same name/size/lastModified) keep their id/status.
+   */
+  const setDocumentUploads = useCallback((files: File[]) => {
+    setPendingUploads(prev => {
+      const others = prev.filter(u => u.type !== 'document');
+      const existingDocs = prev.filter(u => u.type === 'document');
+      const docs: PendingUpload[] = files.map(file => {
+        const match = existingDocs.find(u =>
+          u.file.name === file.name &&
+          u.file.size === file.size &&
+          u.file.lastModified === file.lastModified
+        );
+        return match || {
+          id: crypto.randomUUID(),
+          file,
+          type: 'document' as const,
+          status: 'pending' as const,
+          progress: 0
+        };
+      });
+      return [...others, ...docs];
+    });
   }, []);
 
   /**
@@ -198,6 +228,7 @@ export function usePitchUploadManager(): UsePitchUploadManagerReturn {
   return {
     pendingUploads,
     addUpload,
+    setDocumentUploads,
     removeUpload,
     clearUploads,
     executeUploads,

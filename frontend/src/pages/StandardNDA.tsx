@@ -37,7 +37,7 @@ export default function StandardNDA() {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center gap-3">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/'))}
             className="p-2 hover:bg-gray-100 rounded-lg transition"
             aria-label="Go back"
           >

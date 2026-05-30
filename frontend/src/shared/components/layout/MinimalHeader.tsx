@@ -36,12 +36,31 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
 
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
 
+  // Fetch the credit balance with retry. The creator dashboard fans out 5+
+  // parallel requests on mount; on a cold worker/Neon start the balance call can
+  // return success:false (apiClient does NOT auto-retry error responses, only
+  // network errors), which previously left the pill stuck at "—" forever. Retry
+  // transient failures, then fall back to 0 so the pill never hangs.
   useEffect(() => {
-    paymentsAPI.getCreditBalance().then((data: any) => {
-      if (data) {
-        setCreditBalance(data.balance?.credits ?? data.credits ?? 0);
+    let cancelled = false;
+    const MAX_ATTEMPTS = 3;
+    const load = async (attempt = 0): Promise<void> => {
+      let value: number | null = null;
+      try {
+        const data: any = await paymentsAPI.getCreditBalance();
+        if (data) value = data.balance?.credits ?? data.credits ?? 0;
+      } catch { /* treat as transient */ }
+      if (cancelled) return;
+      if (value !== null) {
+        setCreditBalance(value);
+      } else if (attempt + 1 < MAX_ATTEMPTS) {
+        setTimeout(() => { void load(attempt + 1); }, 800 * (attempt + 1));
+      } else {
+        setCreditBalance(0);
       }
-    }).catch(() => { setCreditBalance(0); });
+    };
+    void load();
+    return () => { cancelled = true; };
   }, []);
 
   const handleLogout = async () => {

@@ -41,6 +41,17 @@ interface Pitch {
   pitchDeck?: string;
   script?: string;
   trailer?: string;
+  documents?: PitchDocument[];
+}
+
+interface PitchDocument {
+  id: number;
+  file_name: string;
+  original_file_name?: string;
+  file_url: string;
+  mime_type?: string;
+  document_type?: string;
+  requires_nda?: boolean;
 }
 
 interface Analytics {
@@ -617,10 +628,25 @@ const CreatorPitchView: React.FC = () => {
             </div>
 
             {/* Attachments */}
-            {(pitch.pitchDeck || pitch.script || pitch.trailer) && (
+            {(pitch.pitchDeck || pitch.script || pitch.trailer || (pitch.documents && pitch.documents.length > 0)) && (
               <div className="bg-white rounded-xl shadow-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Attachments</h3>
                 <div className="space-y-2">
+                  {pitch.documents && pitch.documents.map((doc) => (
+                    <a
+                      key={doc.id}
+                      href={doc.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between p-2 hover:bg-gray-50 rounded"
+                    >
+                      <span className="flex items-center text-blue-600">
+                        <FileText className="h-4 w-4 mr-2 shrink-0" />
+                        <span className="truncate">{doc.original_file_name || doc.file_name}</span>
+                      </span>
+                      <Download className="h-4 w-4 text-gray-400 shrink-0" />
+                    </a>
+                  ))}
                   {pitch.pitchDeck && (
                     <a
                       href={pitch.pitchDeck}

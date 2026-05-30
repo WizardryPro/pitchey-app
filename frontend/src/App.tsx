@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 // React Query temporarily disabled to resolve JavaScript initialization errors
 // Using Better Auth store instead of legacy authStore
 import { useBetterAuthStore } from './store/betterAuthStore';
+import { sessionCache } from './store/sessionCache';
 import { GlobalErrorBoundary } from '@shared/components/feedback/ConsoleErrorBoundary';
 import ToastProvider from '@shared/components/feedback/ToastProvider';
 import { NotificationToastProvider } from '@shared/components/feedback/NotificationToastContainer';
@@ -192,7 +193,6 @@ const MFAChallengePage = lazyRetry(() => import('./pages/MFAChallengePage'));
 const EmailOTPLogin = lazyRetry(() => import('./pages/EmailOTPLogin'));
 
 // Coming Soon Page for unimplemented routes
-const ComingSoon = lazyRetry(() => import('./pages/ComingSoon'));
 const NDARequests = lazyRetry(() => import('@portals/investor/pages/NDARequests'));
 
 // New Investor Pages
@@ -278,11 +278,29 @@ const NotFound = lazyRetry(() => import('./pages/NotFound'));
 
 // Component to handle pitch routing - conditionally shows authenticated vs public view
 function PitchRouter() {
-  const { isAuthenticated } = useBetterAuthStore();
-  
+  const { isAuthenticated, loading } = useBetterAuthStore();
+
+  // While auth is still resolving (e.g. cached session being revalidated on a
+  // hard refresh), don't fall through to the guest PublicPitchView — that view
+  // has no feedback UI, so a logged-in user would silently lose the feature
+  // during the hydration race. Show the app's standard loading state and only
+  // decide PitchDetail-vs-PublicPitchView once auth has settled.
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner size="lg" text="Loading..." />
+      </div>
+    );
+  }
+
+  // Also treat a valid cached session as authenticated for routing purposes, so
+  // the first render after a refresh (before the store finishes rehydrating)
+  // doesn't briefly drop to the public view.
+  const hasCachedSession = !!sessionCache.get();
+
   // Show authenticated PitchDetail for logged in users, PublicPitchView for guests
   // This ensures authenticated users get access to protected content when they have signed NDAs
-  if (isAuthenticated) {
+  if (isAuthenticated || hasCachedSession) {
     return <PitchDetail />;
   } else {
     return <PublicPitchView />;

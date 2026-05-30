@@ -188,7 +188,7 @@ describe('AdminService', () => {
       const result = await adminService.getTransactions()
 
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/admin/reports'),
+        expect.stringContaining('/api/admin/transactions'),
         expect.any(Object)
       )
       expect(result).toHaveLength(1)

@@ -4,6 +4,7 @@ import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
 import { ArrowLeft, Share2, Eye, Calendar, User, UserCircle, Clock, Tag, Film, LogIn, FileText, Lock, Shield, Briefcase, DollarSign, WifiOff, RefreshCw, Bookmark, Heart } from 'lucide-react';
 import PitcheyRating from '../components/PitcheyRating';
 import { pitchService } from '@features/pitches/services/pitch.service';
+import PitchDocuments from '@features/pitches/components/PitchDocuments';
 import { createDownloadClickHandler } from '../utils/fileDownloads';
 import type { Pitch } from '@features/pitches/services/pitch.service';
 import { useBetterAuthStore } from '../store/betterAuthStore';
@@ -796,49 +797,25 @@ export default function PitchDetail() {
             )}
 
             {/* Media */}
-            {(pitch.titleImage || pitch.scriptUrl || pitch.trailerUrl) && (
+            {(pitch.titleImage || (pitch as any).documents?.length || (pitch as any).script || (pitch as any).pitchDeck || (pitch as any).trailer || pitch.scriptUrl || pitch.trailerUrl) && (
               <div className="bg-white rounded-xl shadow-sm p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Media & Assets</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {pitch.titleImage && (
-                    <div className="border rounded-lg p-4">
-                      <h4 className="font-medium text-gray-900 mb-2">Cover Image</h4>
-                      <img 
-                        src={pitch.titleImage} 
-                        alt="Pitch cover" 
-                        className="w-full h-48 object-cover rounded-lg"
-                      />
-                    </div>
-                  )}
-                  {pitch.scriptUrl && (
-                    <div className="border rounded-lg p-4">
-                      <h4 className="font-medium text-gray-900 mb-2">Script</h4>
-                      <a 
-                        href={pitch.scriptUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-purple-600 hover:text-purple-700"
-                      >
-                        <User className="w-4 h-4" />
-                        View Script
-                      </a>
-                    </div>
-                  )}
-                  {pitch.trailerUrl && (
-                    <div className="border rounded-lg p-4">
-                      <h4 className="font-medium text-gray-900 mb-2">Trailer</h4>
-                      <a 
-                        href={pitch.trailerUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-purple-600 hover:text-purple-700"
-                      >
-                        <Film className="w-4 h-4" />
-                        Watch Trailer
-                      </a>
-                    </div>
-                  )}
-                </div>
+                {pitch.titleImage && (
+                  <div className="border rounded-lg p-4 mb-4 max-w-md">
+                    <h4 className="font-medium text-gray-900 mb-2">Cover Image</h4>
+                    <img
+                      src={pitch.titleImage}
+                      alt="Pitch cover"
+                      className="w-full h-48 object-cover rounded-lg"
+                    />
+                  </div>
+                )}
+                <PitchDocuments
+                  documents={(pitch as any).documents}
+                  script={(pitch as any).script ?? pitch.scriptUrl}
+                  pitchDeck={(pitch as any).pitchDeck ?? (pitch as any).pitchDeckUrl}
+                  trailer={(pitch as any).trailer ?? pitch.trailerUrl}
+                />
               </div>
             )}
 
