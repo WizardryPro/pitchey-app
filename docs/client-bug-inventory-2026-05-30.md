@@ -18,6 +18,21 @@ API-layer tests passed (backend was fine) while the **UI layer** stayed broken, 
 | 7 | "Won't let him upload any documents" | frontend | On create form "Upload All" called `uploadFile` w/o pitchId → file in R2 + credits charged but `pitch_documents` link skipped → orphaned, fake success. `DocumentUploadHub` had `deferUploads` but didn't pass to `MultipleFileUpload`. | thread `deferUploads` down; defer doc uploads until post-create | ☐ | ☐ |
 | 8 | New pitch invisible/undeletable right after create | backend | NOT Redis: (a) `creatorPitchesHandler` sent `Cache-Control: private,max-age=30` → browser served stale list 30s; (b) `deletePitch` ran DELETE w/o `RETURNING`, Neon HTTP returns `rows:[]` → **always 404** (all deletes broken) | (a) `no-store`; (b) add `RETURNING id` | ☐ (needs worker deploy) | ☐ |
 
+## FINAL STATUS (verified on canonical prod pitchey-5o8.pages.dev)
+All 8 reported bugs FIXED + DEPLOYED (worker `02f0a516`+, frontend `DxN8bR4i`) + pushed to PR #137:
+1. Rating saves ✅ ("Rating submitted!" persists, pitch 229)
+2. Title/filename duplication ✅ (renders once)
+3. Cover image upload ✅ (pitch created w/ cover, prod)
+4. Documents not forced ✅ (optional)
+5. Script NOT downloadable pre-NDA ✅ (anon 401, authed-non-signer 403, owner/signer OK, covers public 200)
+6. Genre persists ✅ (created "Action-Comedy", edit page shows "Action-Comedy" selected)
+7. Documents upload + attach ✅ (deferred w/ pitchId, lands in uploads/<uid>/)
+8. New pitch visible immediately ✅ + pitch DELETE works ✅ (204)
+
+### Discovered during verification (adjacent bugs)
+- **#9 Edit page couldn't load DRAFTS** — `PitchEdit` used `getById()` → `/api/pitches/public/:id` which 404s for drafts. FIXED → `getByIdAuthenticated()` (`/api/pitches/:id`). Verified: edit page loads draft, genre populated. ✅ deployed.
+- **#10 Format Category/Subtype not preserved create→edit (Save disabled)** — create persists only a single lowercased `format`; `format_category`/`format_subtype` come back null, so the edit Format Category select can't repopulate and "Save Changes" stays disabled. NOT in client's report; deeper data-model fix (store category/subtype separately, or reconstruct on edit). **OPEN follow-up.**
+
 ## Notes / observations during testing
 - Credits pill fix already deployed (shows "500", not "—"). ✓
 - Cover image upload uses `POST /api/creator/pitches/:id/media` AFTER pitch create (`POST /api/pitches`). Documents may differ.

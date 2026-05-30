@@ -151,8 +151,12 @@ export default function PitchEdit() {
 
   const fetchPitch = async (pitchId: number) => {
     try {
-      // Fetch the specific pitch by ID
-      const pitch = await pitchService.getById(pitchId);
+      // Fetch via the owner-authenticated endpoint (/api/pitches/:id), NOT the
+      // public one. getById() hits /api/pitches/public/:id which 404s for DRAFTS
+      // (drafts aren't public) — so creators could never edit their own drafts
+      // ("Failed to load pitch"). getByIdAuthenticated returns the owner's pitch
+      // regardless of draft/published status.
+      const pitch = await pitchService.getByIdAuthenticated(pitchId);
 
       if (!pitch) {
         throw new Error('Pitch not found');
