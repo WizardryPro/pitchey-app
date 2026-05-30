@@ -19732,20 +19732,28 @@ Signatures: [To be completed upon signing]
             const isOwner = Number(doc.pitch_owner_id) === Number(requestingUserId);
 
             if (!isOwner) {
-              // Check for a signed / approved NDA (covers signer_id column and
-              // the requester_id / pitch_access fallbacks used elsewhere).
+              // Check for a signed / approved NDA. The `ndas` table has column
+              // drift across history (signer_id vs requester_id) — and a single
+              // `signer_id = $2 OR requester_id = $2` throws the WHOLE query when
+              // either column is absent (Postgres plans all referenced columns).
+              // That bug denied legitimate signers (the ndas check always threw,
+              // falling through to pitch_access). So probe each column in its OWN
+              // try/catch — a missing column fails only that probe, not the check.
               let hasNDA = false;
-              try {
-                const ndaRows = await this.db.query(
-                  `SELECT 1 FROM ndas
-                   WHERE pitch_id = $1
-                     AND (signer_id = $2 OR requester_id = $2)
-                     AND (status = 'approved' OR status = 'signed')
-                   LIMIT 1`,
-                  [doc.pitch_id, requestingUserId]
-                );
-                hasNDA = ndaRows && ndaRows.length > 0;
-              } catch { /* signer_id / requester_id column drift — try pitch_access */ }
+              for (const col of ['signer_id', 'requester_id']) {
+                if (hasNDA) break;
+                try {
+                  const ndaRows = await this.db.query(
+                    `SELECT 1 FROM ndas
+                     WHERE pitch_id = $1
+                       AND ${col} = $2
+                       AND (status = 'approved' OR status = 'signed')
+                     LIMIT 1`,
+                    [doc.pitch_id, requestingUserId]
+                  );
+                  hasNDA = ndaRows && ndaRows.length > 0;
+                } catch { /* this column absent in this schema — try the next */ }
+              }
 
               if (!hasNDA) {
                 try {
