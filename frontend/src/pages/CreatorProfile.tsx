@@ -293,11 +293,16 @@ const CreatorProfile = () => {
 
             {/* Action Buttons */}
             <div className="flex flex-col gap-2">
-              <FollowButton
-                creatorId={creator.id}
-                variant="default"
-                className="min-w-[120px]"
-              />
+              {/* Don't show Follow on your OWN profile — you can't follow yourself
+                  (the API 400s), and a dead "Follow" button looked like "follow
+                  doesn't work / I can't follow anyone". */}
+              {String(user?.id ?? '') !== String(creator.id) && (
+                <FollowButton
+                  creatorId={creator.id}
+                  variant="default"
+                  className="min-w-[120px]"
+                />
+              )}
               <button
                 onClick={handleContactCreator}
                 className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
