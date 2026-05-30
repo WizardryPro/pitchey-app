@@ -10,7 +10,7 @@ export const VALIDATION_RULES = {
   },
   DESCRIPTION: {
     MIN_LENGTH: 10,
-    MAX_LENGTH: 500
+    MAX_LENGTH: 1000
   },
   AGE: {
     MAX_LENGTH: 20

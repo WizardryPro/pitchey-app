@@ -193,7 +193,6 @@ const MFAChallengePage = lazyRetry(() => import('./pages/MFAChallengePage'));
 const EmailOTPLogin = lazyRetry(() => import('./pages/EmailOTPLogin'));
 
 // Coming Soon Page for unimplemented routes
-const ComingSoon = lazyRetry(() => import('./pages/ComingSoon'));
 const NDARequests = lazyRetry(() => import('@portals/investor/pages/NDARequests'));
 
 // New Investor Pages

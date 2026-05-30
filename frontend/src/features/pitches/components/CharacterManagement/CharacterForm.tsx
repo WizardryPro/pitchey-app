@@ -85,8 +85,8 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({
       newErrors.description = 'Character description is required';
     } else if (formData.description.length < 10) {
       newErrors.description = 'Description should be at least 10 characters';
-    } else if (formData.description.length > 500) {
-      newErrors.description = 'Description must be less than 500 characters';
+    } else if (formData.description.length > 1000) {
+      newErrors.description = 'Description must be less than 1000 characters';
     }
 
     // Age validation (if provided)
@@ -201,7 +201,7 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({
                 value={formData.description}
                 onChange={handleInputChange}
                 rows={4}
-                maxLength={500}
+                maxLength={1000}
                 className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-colors resize-none ${
                   errors.description 
                     ? 'border-red-500 focus:ring-red-500' 
@@ -213,13 +213,13 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({
                 <p className="mt-1 text-sm text-red-600">{errors.description}</p>
               )}
               <p className={`mt-1 text-xs ${
-                formData.description.length > 450 
-                  ? 'text-red-500' 
-                  : formData.description.length > 400 
-                    ? 'text-orange-500' 
+                formData.description.length > 950
+                  ? 'text-red-500'
+                  : formData.description.length > 900
+                    ? 'text-orange-500'
                     : 'text-gray-500'
               }`}>
-                {formData.description.length}/500 characters
+                {formData.description.length}/1000 characters
                 {formData.description.length < 10 && ' (minimum 10 characters)'}
               </p>
             </div>
