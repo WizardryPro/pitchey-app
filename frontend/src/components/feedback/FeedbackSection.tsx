@@ -135,7 +135,10 @@ export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, use
         {/* Quick Rate — available to everyone except owner. Logged-in users
             also get the structured form below as the optional deeper path;
             both write to the same pitch_feedback row keyed by reviewer_id. */}
-        {canRate && (
+        {/* Hide the standalone quick-rate row while the written-feedback form is
+            open — the StructuredFeedbackForm renders its OWN rating selector, so
+            showing both at once made the rating appear twice ("double rating"). */}
+        {canRate && !showForm && (
           <div className="bg-gray-50 rounded-lg p-4 space-y-2">
             <p className="text-sm font-medium text-gray-700">
               {ratingDone ? 'Your rating' : 'Rate this Pitch'}
