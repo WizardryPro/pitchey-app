@@ -5339,6 +5339,12 @@ pitchey_analytics_datapoints_per_minute 1250
       customFormat?: string;
       budget_range?: string;
       budgetRange?: string;
+      budgetBracket?: string;
+      estimatedBudget?: string;
+      productionTimeline?: string;
+      targetReleaseDate?: string;
+      comparableTitles?: string;
+      visibilitySettings?: Record<string, boolean> | null;
       target_audience?: string;
       targetAudience?: string;
       short_synopsis?: string;
@@ -5417,11 +5423,14 @@ pitchey_analytics_datapoints_per_minute 1250
           why_now, production_location, development_stage,
           video_url, video_password, video_platform,
           themes, world_description, characters,
-          ai_disclosure, ai_used
+          ai_disclosure, ai_used,
+          estimated_budget, budget_bracket, production_timeline,
+          target_release_date, visibility_settings
         ) VALUES (
           $1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'draft', 'private', NOW(), NOW(), $13,
           $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25,
-          $26, $27
+          $26, $27,
+          $28, $29, $30, $31, $32
         ) RETURNING *
       `, [
         authResult.user.id,
@@ -5438,7 +5447,7 @@ pitchey_analytics_datapoints_per_minute 1250
         data.long_synopsis || data.synopsis || data.logline || null,
         data.require_nda ?? false,
         data.toneAndStyle ?? null,
-        data.comps ?? null,
+        data.comps ?? data.comparableTitles ?? null,
         data.storyBreakdown ?? null,
         data.whyNow ?? null,
         data.productionLocation ?? null,
@@ -5450,7 +5459,12 @@ pitchey_analytics_datapoints_per_minute 1250
         data.worldDescription ?? null,
         JSON.stringify(data.characters || []),
         aiDisclosure,
-        aiDisclosure !== 'none'
+        aiDisclosure !== 'none',
+        data.estimatedBudget ?? null,
+        data.budgetBracket ?? null,
+        data.productionTimeline ?? null,
+        data.targetReleaseDate ?? null,
+        data.visibilitySettings ? JSON.stringify(data.visibilitySettings) : null
       ]) as unknown as DatabaseRow[];
 
       // Handle creative attachments if provided
@@ -5615,6 +5629,30 @@ pitchey_analytics_datapoints_per_minute 1250
           (typeof pitch.long_synopsis === 'string' && pitch.long_synopsis.length > SYNOPSIS_TEASER_CHARS)
         );
 
+        // Surface uploaded documents (script, pitch deck, trailer) the same way
+        // getPitch does, so non-creator viewers (public/investor/production) can
+        // actually download them. Owner sees all; others see public docs, plus
+        // NDA-gated docs once they've signed.
+        const isOwner = String(pitch.user_id) === String(userId);
+        let documents: Array<Record<string, unknown>> = [];
+        try {
+          const docRows = await this.db.query(`
+            SELECT id, file_name, original_file_name, file_url, file_type,
+                   mime_type, file_size, document_type, is_public, requires_nda, uploaded_at
+            FROM pitch_documents
+            WHERE pitch_id = $1
+            ORDER BY uploaded_at ASC
+          `, [pitchId]);
+          documents = (docRows || []).filter((d: any) =>
+            isOwner || d.is_public === true || (hasNDAAccess && d.requires_nda)
+          );
+        } catch (_e) { /* pitch_documents may not exist in all envs */ }
+        const findDoc = (...types: string[]): string | undefined => {
+          const hit = documents.find((d: any) =>
+            types.includes(String(d.document_type || '').toLowerCase()));
+          return hit ? (hit.file_url as string) : undefined;
+        };
+
         // Build response with conditional protected content
         const response: any = {
           id: pitch.id,
@@ -5628,6 +5666,10 @@ pitchey_analytics_datapoints_per_minute 1250
           synopsisTruncated,
           budget: pitch.budget_range || pitch.estimated_budget || pitch.budget,
           estimated_budget: pitch.estimated_budget,
+          budget_bracket: pitch.budget_bracket,
+          comps: pitch.comps,
+          target_release_date: pitch.target_release_date,
+          visibility_settings: pitch.visibility_settings,
           status: pitch.status,
           formatCategory: pitch.format_category || 'Film',
           formatSubtype: pitch.format_subtype || pitch.format,
@@ -5650,6 +5692,10 @@ pitchey_analytics_datapoints_per_minute 1250
           pitch_deck_url: pitch.pitch_deck_url,
           script_url: pitch.script_url,
           trailer_url: pitch.trailer_url,
+          documents,
+          pitchDeck: pitch.pitch_deck_url ?? findDoc('pitch_deck', 'pitchdeck', 'deck'),
+          script: pitch.script_url ?? findDoc('script', 'screenplay'),
+          trailer: pitch.trailer_url ?? findDoc('trailer', 'video'),
           creator: creatorInfo,
           hasSignedNDA: hasNDAAccess,
           requiresNDA: pitch.require_nda || false
@@ -5964,11 +6010,17 @@ pitchey_analytics_datapoints_per_minute 1250
       formatSubtype?: string;
       customFormat?: string;
       budgetRange?: string;
+      budgetBracket?: string;
+      estimatedBudget?: string;
+      productionTimeline?: string;
+      targetReleaseDate?: string;
+      comparableTitles?: string;
+      visibilitySettings?: Record<string, boolean> | null;
       targetAudience?: string;
       synopsis?: string;
       shortSynopsis?: string;
       longSynopsis?: string;
-      
+
       // Enhanced Story & Style Fields
       toneAndStyle?: string;
       comps?: string;
@@ -6047,6 +6099,11 @@ pitchey_analytics_datapoints_per_minute 1250
           title_image = COALESCE($25, title_image),
           ai_disclosure = COALESCE($26, ai_disclosure),
           ai_used = COALESCE($27, ai_used),
+          estimated_budget = COALESCE($28, estimated_budget),
+          budget_bracket = COALESCE($29, budget_bracket),
+          production_timeline = COALESCE($30, production_timeline),
+          target_release_date = COALESCE($31, target_release_date),
+          visibility_settings = COALESCE($32, visibility_settings),
           updated_at = NOW()
         WHERE id = $1
         RETURNING *
@@ -6064,7 +6121,7 @@ pitchey_analytics_datapoints_per_minute 1250
         data.shortSynopsis || data.synopsis,
         data.longSynopsis || data.synopsis,
         data.toneAndStyle,
-        data.comps,
+        data.comps ?? data.comparableTitles,
         data.storyBreakdown,
         data.whyNow,
         data.productionLocation,
@@ -6077,7 +6134,12 @@ pitchey_analytics_datapoints_per_minute 1250
         data.characters ? JSON.stringify(data.characters) : null,
         data.titleImage,
         updAiDisclosure,
-        updAiDisclosure === null ? null : updAiDisclosure !== 'none'
+        updAiDisclosure === null ? null : updAiDisclosure !== 'none',
+        data.estimatedBudget ?? null,
+        data.budgetBracket ?? null,
+        data.productionTimeline ?? null,
+        data.targetReleaseDate ?? null,
+        data.visibilitySettings ? JSON.stringify(data.visibilitySettings) : null
       ]);
 
       // Handle creative attachments if provided
