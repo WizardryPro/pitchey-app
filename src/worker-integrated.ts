@@ -3886,9 +3886,13 @@ class RouteRegistry {
       '/api/metrics/current', // Platform metrics
       '/api/metrics/historical', // Historical metrics
       '/api/views/track', // View tracking (anonymous views allowed)
-      // NOTE: /api/media/file is NOT listed here — it enforces auth+NDA inside serveMediaFile.
-      // Public profile/cover images (paths: profiles/* covers/*) are allowed without a
-      // signed NDA; pitch documents (documents/* pitches/*) require auth and NDA where applicable.
+      // /api/media/file MUST be public so anonymous visitors can load cover/title
+      // images on the marketplace and public pitch pages. serveMediaFile does its
+      // OWN gating internally: public image prefixes (profiles/* covers/* pitch-images/*
+      // and cover images under pitches/<id>/media) are served freely; only files that
+      // match a pitch_documents row with requires_nda=true require auth + a signed NDA.
+      // (Removing it here 401'd cover images for logged-out users — regression.)
+      '/api/media/file',
       '/ws',            // WebSocket endpoint handles its own auth
       '/api/config',    // App configuration (genres, formats, etc.)
       '/api/browse/genres',     // Browse by genre
@@ -19682,21 +19686,23 @@ Signatures: [To be completed upon signing]
       // ── NDA / auth gate ──────────────────────────────────────────────────────
       // IMPORTANT: cover/title images and avatars MUST stay public — they are shown
       // on the marketplace and public pitch pages to anonymous (logged-out) visitors.
-      // In this codebase cover images live under MULTIPLE prefixes (profiles/*,
-      // covers/*, pitch-images/*) AND under pitches/<id>/media/* — the SAME prefix
-      // that also holds protected documents. So we cannot classify by path prefix
-      // alone. The only reliable signal that a file is protected is a pitch_documents
-      // row with requires_nda=true. Model: default-OPEN, and gate a file ONLY when it
-      // matches such a row. This keeps every cover image public while protecting
-      // registered NDA documents. (Earlier prefix-only gating 401'd marketplace covers.)
+      // But files under image-ish prefixes (pitch-images/*, pitches/<id>/media/*) can
+      // ALSO be NDA-protected documents (e.g. a poster or still marked requires_nda).
+      // So we cannot trust a prefix alone — the ONLY reliable signal that a file is
+      // protected is a pitch_documents row with requires_nda=true. Model: default-OPEN,
+      // gate a file ONLY when it matches such a row. Avatars (profiles/) and the
+      // dedicated cover bucket (covers/) are never documents, so they fast-path public
+      // without a DB lookup. Everything else is looked up; cover images (not in
+      // pitch_documents) fall through to public, protected docs get gated.
       const isAlwaysPublicAssetPath =
         storagePath.startsWith('profiles/') ||
-        storagePath.startsWith('covers/') ||
-        storagePath.startsWith('pitch-images/');
+        storagePath.startsWith('covers/');
+
+      let isProtectedDoc = false; // set true only for an NDA-gated doc we authorized
 
       if (!isAlwaysPublicAssetPath) {
-        // Could be a cover image stored under pitches/<id>/media/* (public) OR a
-        // protected document. Look it up; only gate if it's an NDA-required doc.
+        // Could be a cover/title image (public) OR a protected document. Look it up;
+        // only gate if it matches a pitch_documents row with requires_nda=true.
         try {
           const docRows = await this.db.query(
             `SELECT pd.requires_nda, pd.pitch_id, p.user_id AS pitch_owner_id
@@ -19712,6 +19718,7 @@ Signatures: [To be completed upon signing]
           // (cover image, public material, orphan upload). Serve without auth.
           if (docRows && docRows.length > 0 && docRows[0].requires_nda) {
             const doc = docRows[0] as { requires_nda: boolean; pitch_id: number; pitch_owner_id: number };
+            isProtectedDoc = true;
 
             // Protected document — require a valid session.
             const authCheck = await this.requireAuth(request);
@@ -19791,9 +19798,11 @@ Signatures: [To be completed upon signing]
       // be cached by shared caches (proxies, CDN edge nodes) because access is
       // per-user. The Worker sits directly on the CF edge so 'private' here
       // prevents the CF cache layer from serving one user's response to another.
-      const cacheControl = isPublicAssetPath
-        ? 'public, max-age=31536000, immutable'
-        : 'private, no-store';
+      // Public assets (avatars, cover/title images) cache aggressively; protected
+      // NDA documents must never be cached by shared caches (access is per-user).
+      const cacheControl = isProtectedDoc
+        ? 'private, no-store'
+        : 'public, max-age=31536000, immutable';
 
       return new Response(object.body, {
         status: 200,
