@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { CheckCircle, Trophy, Star, TrendingUp, DollarSign, Calendar, Users, MoreVertical, Eye, Download, BarChart3, Award, Film, Archive } from 'lucide-react';
 import { config, API_URL } from '@/config';
+import { ProductionService } from '@portals/production/services/production.service';
 
 interface Project {
   id: string;
@@ -431,8 +432,21 @@ export default function ProductionProjectsCompleted() {
                       Analytics
                     </button>
                     <button
-                      onClick={() => toast('Export will be available soon', { icon: 'ℹ️' })}
+                      onClick={async () => {
+                        try {
+                          const blob = await ProductionService.exportProjectData(Number(project.id), 'pdf');
+                          const url = URL.createObjectURL(blob);
+                          const el = document.createElement('a');
+                          el.href = url;
+                          el.download = `project-${project.id}-export.pdf`;
+                          el.click();
+                          URL.revokeObjectURL(url);
+                        } catch {
+                          toast.error('Export failed');
+                        }
+                      }}
                       className="flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+                      title="Export project"
                     >
                       <Download className="w-4 h-4" />
                     </button>

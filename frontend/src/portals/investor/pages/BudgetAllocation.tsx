@@ -14,6 +14,10 @@ const BudgetAllocation = () => {
   const [loading, setLoading] = useState(true);
   const [allocations, setAllocations] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [showNewModal, setShowNewModal] = useState(false);
+  const [newCategory, setNewCategory] = useState('');
+  const [newAmount, setNewAmount] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     loadBudgetAllocations();
@@ -41,6 +45,30 @@ const BudgetAllocation = () => {
     }
   };
 
+
+  const handleCreateAllocation = async () => {
+    const amount = parseFloat(newAmount);
+    if (!newCategory.trim()) { toast.error('Enter a category'); return; }
+    if (!Number.isFinite(amount) || amount <= 0) { toast.error('Enter a valid amount'); return; }
+    try {
+      setSaving(true);
+      const res = await investorApi.createBudgetAllocation({ category: newCategory.trim(), allocated_amount: amount });
+      if ((res as any)?.success !== false) {
+        toast.success('Allocation created');
+        setShowNewModal(false);
+        setNewCategory('');
+        setNewAmount('');
+        await loadBudgetAllocations();
+      } else {
+        toast.error('Failed to create allocation');
+      }
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      toast.error(e.message || 'Failed to create allocation');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -74,7 +102,7 @@ const BudgetAllocation = () => {
               <h1 className="text-3xl font-bold text-gray-900">Budget Allocation</h1>
               <p className="text-gray-600 mt-2">Manage your investment budget across different categories</p>
             </div>
-            <Button onClick={() => toast('Budget allocation coming soon')}>
+            <Button onClick={() => setShowNewModal(true)}>
               <Plus className="h-4 w-4 mr-2" />
               New Allocation
             </Button>
@@ -165,6 +193,53 @@ const BudgetAllocation = () => {
           </CardContent>
         </Card>
       </main>
+
+      {showNewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">New Budget Allocation</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <input
+                  type="text"
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value)}
+                  placeholder="e.g. Feature Films, Documentaries, Early Stage"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Allocated Amount (USD)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={newAmount}
+                  onChange={(e) => setNewAmount(e.target.value)}
+                  placeholder="e.g. 500000"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowNewModal(false)}
+                disabled={saving}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateAllocation}
+                disabled={saving}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:opacity-50"
+              >
+                {saving ? 'Creating…' : 'Create Allocation'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
