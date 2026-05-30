@@ -54,3 +54,17 @@ Verified live on canonical prod, cross-checked against Cloudflare Workers observ
 - Public/anonymous route: structured feedback + comment gated by 30s consumption gate that never opens for guests on PublicPitchView (view tracking requires isAuthenticated). Investigate/fix.
 - Every portal's clickable actions (investor/production/watcher dashboards, messaging, NDAs, slates, portfolio, settings) with observability capture.
 - main branch sync (post-#137 commits: ndas + comment fixes not yet on main; deployed to prod directly).
+
+## Session 2 (cont.) — verified live + loop plan
+- **Credits → payment screen**: VERIFIED WORKING live. Credit purchase ("Purchase Credits") AND subscription upgrade ("Upgrade to Creator+") both navigate to live Stripe checkout (`checkout.stripe.com/c/pay/cs_live_…`). Full chain frontend→worker→Stripe proven. Worker payments logs all 200/info, zero errors. NOT a current regression.
+- **Comment submit** (#11) deployed (frontend RnrfQgTb) + pushed (b7b4bf82).
+- main sync: PR #138 opened with post-#137 fixes (ndas signer, comment), auto-merge enabled.
+
+### Karl request: "project document upload on create new" — PLAN (execute w/ browser verify)
+CreatePitch.tsx currently uses `DocumentUploadHub` (was swapped FROM `DocumentUpload` per "Karl feedback #6", CreatePitch.tsx:19). Karl now wants the edit-page `DocumentUpload` (categorized Project Documents) on create. NOT a 1-line swap because:
+1. `DocumentUploadHub` bundles BOTH document upload AND the NDA settings radios + AI-disclosure (via onNDAChange). Replacing it would drop the NDA UI on create → regression. Must keep NDA + AI-disclosure section.
+2. Document upload on create works via `uploadManager.setDocumentUploads(files)` fed by DocumentUploadHub.onFilesSelected, then `uploadManager.executeUploads(pitchId)` after create. `DocumentUpload` only calls `onChange(DocumentFile[])` → `handleDocumentChange` (CreatePitch.tsx:297) which only `setValue('documents', …)` — does NOT feed the upload manager. So swapping naively = documents never upload (regress the #7 fix).
+Correct impl: (a) render `<DocumentUpload documents={formData.documents} onChange={handleDocumentChange} maxFiles={15} maxFileSize={10} enableDragDrop showPreview showProgress />` for the document area; (b) in `handleDocumentChange`, also `uploadManager.setDocumentUploads(documents.filter(d=>d.file).map(d=>d.file))` so deferred upload still fires on create; (c) keep the NDA + AI-disclosure UI (extract from DocumentUploadHub or render the NDA radios separately with onNDAChange→handleNDADocumentChange). Verify on prod: create a pitch with a PDF via the new component → confirm it lands in uploads/<uid>/ and shows on the pitch.
+
+### Verified-green so far (live prod, browser + observability)
+rating, comment, NDA gate (signer 200/anon 401/non-signer 403/covers public), add-character (persists), genre, edit draft load, edit format/genre repopulate + Save, pitch create/delete, credits+subscription→Stripe checkout. Zero non-cron worker errors.
