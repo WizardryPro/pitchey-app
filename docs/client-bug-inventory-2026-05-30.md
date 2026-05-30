@@ -41,3 +41,16 @@ All 8 reported bugs FIXED + DEPLOYED (worker `02f0a516`+, frontend `DxN8bR4i`) +
 
 ## Local verification harness
 `wrangler pages dev dist/` on :8788 (same-origin Pages proxy → prod API), login via same-origin fetch (bypasses Turnstile). Lets us drive the REAL UI with local fixes against real prod data before deploying.
+
+## Session 2 — deep verification + observability (autonomous)
+Verified live on canonical prod, cross-checked against Cloudflare Workers observability (no false positives — each confirmed by real action + log):
+- **Rating** (#1) re-verified: pitch 262, "Rating submitted!" ✅
+- **Comment submit** (#11) FIXED: `submitComment` used `res.data?.success` (backend returns `{success,data:<row>}`) → always false → comments looked broken though saved. Now `res.success`. Deployed + pushed (b7b4bf82).
+- **NDA signer access** (#13) FIXED: `ndas WHERE signer_id=$2 OR requester_id=$2` threw whole query (`requester_id` column absent) → legit signers wrongly 403'd. Now probes each column separately. Verified: sarah (signer on 1408) gets the script 200; anon 401. Worker 4281d550→.
+- **Add Character** (#12) WORKS end-to-end: form opens, validates (Name + Description ≥10 chars — submit stays DISABLED until valid, which is the "won't let me add" UX), character persists to backend (pitch 1430 → characters=[{name:"Jane Doe"}]). Backend createPitch persists `characters`; getPitch returns it.
+- **Observability**: zero non-cron error events 17:45–19:35Z while exercising rating/comment/character/create/edit/delete/NDA. Only recurring error = pre-existing `No such module "db"` CRON (not user-facing) — open follow-up.
+
+### Still to sweep (continuing autonomously)
+- Public/anonymous route: structured feedback + comment gated by 30s consumption gate that never opens for guests on PublicPitchView (view tracking requires isAuthenticated). Investigate/fix.
+- Every portal's clickable actions (investor/production/watcher dashboards, messaging, NDAs, slates, portfolio, settings) with observability capture.
+- main branch sync (post-#137 commits: ndas + comment fixes not yet on main; deployed to prod directly).
