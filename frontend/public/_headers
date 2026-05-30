@@ -76,8 +76,16 @@
 /*.otf
   Cache-Control: public, max-age=31536000, immutable
 
-# Service worker and manifest
+# Service workers — MUST revalidate so the kill-switch SW propagates (these
+# would otherwise be pinned 1yr immutable by the /*.js rule above, keeping a
+# stale SW alive for returning users).
 /sw.js
+  Cache-Control: no-cache
+
+/service-worker.js
+  Cache-Control: no-cache
+
+/sw-mobile.js
   Cache-Control: no-cache
 
 /manifest.json
