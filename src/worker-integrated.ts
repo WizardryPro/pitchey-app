@@ -5238,10 +5238,18 @@ pitchey_analytics_datapoints_per_minute 1250
         nextParamNum++;
       }
 
-      // Filter by user if requested
+      // Filter by user if requested. Guard against a non-numeric userId
+      // (e.g. a mistyped /creator/:username path forwarding "nda-management"):
+      // parseInt → NaN was being sent to an int column → Postgres "invalid input
+      // syntax for integer: NaN" → 500. Validate first; an invalid userId yields
+      // an empty result set (200) rather than crashing the query.
       if (userId) {
+        const userIdNum = parseInt(userId, 10);
+        if (!Number.isFinite(userIdNum)) {
+          return builder.paginated([], page, limit, 0);
+        }
         whereConditions.push(`(p.user_id = $${nextParamNum} OR p.creator_id = $${nextParamNum})`);
-        params.push(parseInt(userId));
+        params.push(userIdNum);
         nextParamNum++;
       }
 
@@ -5759,6 +5767,13 @@ pitchey_analytics_datapoints_per_minute 1250
     const params = (request as any).params;
     const sql = this.db.getSql() as any;
     const pitchId = params.id;
+
+    // Guard non-numeric ids (e.g. /api/pitches/NaN from a bad link): a string id
+    // hits an int column → Postgres "invalid input syntax for integer" → 500.
+    // Return 404 instead of crashing.
+    if (!/^\d+$/.test(String(pitchId ?? ''))) {
+      return builder.error(ErrorCode.NOT_FOUND, 'Pitch not found');
+    }
 
     try {
       const pitchResult = await sql`
