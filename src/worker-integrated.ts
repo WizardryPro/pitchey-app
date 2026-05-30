@@ -10192,10 +10192,24 @@ pitchey_analytics_datapoints_per_minute 1250
       const frontendUrl = (this.env as any).FRONTEND_URL || 'https://pitchey-5o8.pages.dev';
       const returnUrl = `${frontendUrl}/billing`;
 
-      const session = await stripe.createBillingPortalSession({
-        customerId,
-        returnUrl,
-      });
+      let session;
+      try {
+        session = await stripe.createBillingPortalSession({ customerId, returnUrl });
+      } catch (portalErr: any) {
+        // A persisted customer id can be stale — e.g. a TEST-mode customer saved
+        // before go-live, which is invalid against the live key ("No such customer …
+        // a similar object exists in test mode"). Re-resolve against the live keys
+        // (getOrCreateCustomer does an email search / create), persist, and retry once.
+        const msg = String(portalErr?.message || portalErr);
+        if (/no such customer|resource_missing/i.test(msg)) {
+          const customer = await stripe.getOrCreateCustomer(email, userId);
+          customerId = customer.id;
+          await sql`UPDATE users SET stripe_customer_id = ${customerId} WHERE id = ${userId}`;
+          session = await stripe.createBillingPortalSession({ customerId, returnUrl });
+        } else {
+          throw portalErr;
+        }
+      }
 
       return new ApiResponseBuilder(request).success({ url: session.url });
     } catch (e: any) {

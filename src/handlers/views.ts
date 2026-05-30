@@ -70,10 +70,17 @@ export async function trackViewHandler(request: Request, env: Env): Promise<Resp
       }
     }
 
-    // Insert new view
+    // Insert new view. Upsert on (user_id, pitch_id) so a concurrent initial
+    // track-view + heartbeat (which both pass the SELECT above before either
+    // inserts) can't violate views_user_id_pitch_id_key — the loser updates the
+    // duration instead of throwing. For anonymous views user_id is NULL, which a
+    // standard unique constraint treats as distinct, so each still inserts.
     const [view] = await sql`
       INSERT INTO views (pitch_id, viewer_id, user_id, session_id, view_type, ip_address, view_duration)
       VALUES (${pitchId}, ${viewerId || null}, ${viewerId || null}, ${sessionId}, 'page_view', ${ipAddress}, ${duration})
+      ON CONFLICT (user_id, pitch_id) DO UPDATE
+        SET view_duration = GREATEST(COALESCE(views.view_duration, 0), EXCLUDED.view_duration),
+            viewed_at = NOW()
       RETURNING id, viewed_at
     `;
 
