@@ -163,8 +163,12 @@ export class FeedbackService {
   /** Submit a comment */
   static async submitComment(pitchId: number, content: string): Promise<boolean> {
     try {
-      const res = await apiClient.post<{ success: boolean }>(`/api/pitches/${pitchId}/comments`, { content });
-      return res.data?.success ?? false;
+      // Backend returns { success: true, data: <comment row> } (201). After the
+      // api-client unwraps data.data, res.data is the comment row — no .success
+      // field — so res.data?.success was always undefined → false (comments looked
+      // broken even though they saved). Use res.success (the wrapper flag).
+      const res = await apiClient.post<{ id: number }>(`/api/pitches/${pitchId}/comments`, { content });
+      return res.success;
     } catch {
       return false;
     }
