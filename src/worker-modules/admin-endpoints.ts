@@ -351,33 +351,60 @@ export class AdminEndpointsHandler {
       const url = new URL(request.url);
       const timeframe = url.searchParams.get('timeframe') || '24h';
 
+      const sql = this.getSqlClient();
+      if (!sql) {
+        return new Response(JSON.stringify({ success: false, error: { message: 'Database unavailable', code: 'DB_UNAVAILABLE' } }), {
+          status: 503, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+      // Real counts. Each block is defensive so a missing table/column can't 500 the
+      // dashboard; metrics with no reliable source are honest 0 rather than fabricated.
+      const one = async (q: Promise<any[]>): Promise<Record<string, any>> => {
+        try { const r = await q; return r?.[0] || {}; } catch { return {}; }
+      };
+      const u = await one(sql`
+        SELECT COUNT(*)::int AS total,
+               COUNT(*) FILTER (WHERE last_active_at >= NOW() - INTERVAL '24 hours')::int AS active_24h,
+               COUNT(*) FILTER (WHERE created_at >= date_trunc('day', NOW()))::int AS new_today,
+               COUNT(*) FILTER (WHERE is_verified = true)::int AS verified,
+               COUNT(*) FILTER (WHERE account_locked_until > NOW())::int AS suspended,
+               COUNT(*) FILTER (WHERE is_active = false)::int AS banned
+        FROM users`);
+      const p = await one(sql`
+        SELECT COUNT(*)::int AS total,
+               COUNT(*) FILTER (WHERE status = 'published')::int AS published,
+               COUNT(*) FILTER (WHERE status = 'draft')::int AS draft
+        FROM pitches`);
+      const inv = await one(sql`SELECT COUNT(*)::int AS cnt, COALESCE(SUM(amount), 0)::float AS volume FROM investments`);
+      const nda = await one(sql`SELECT COUNT(*) FILTER (WHERE status IN ('signed','approved'))::int AS active FROM ndas`);
+
       const stats: SystemStats = {
         users: {
-          total: 1247,
-          active_24h: 456,
-          new_today: 23,
-          verified: 834,
-          suspended: 12,
-          banned: 3
+          total: u.total || 0,
+          active_24h: u.active_24h || 0,
+          new_today: u.new_today || 0,
+          verified: u.verified || 0,
+          suspended: u.suspended || 0,
+          banned: u.banned || 0
         },
         content: {
-          total_pitches: 834,
-          published_pitches: 723,
-          draft_pitches: 111,
-          flagged_content: 15,
-          removed_content: 8
+          total_pitches: p.total || 0,
+          published_pitches: p.published || 0,
+          draft_pitches: p.draft || 0,
+          flagged_content: 0,
+          removed_content: 0
         },
         moderation: {
-          pending_flags: 12,
-          actions_today: 28,
-          active_moderators: 5,
-          average_resolution_time: 4.2
+          pending_flags: 0,
+          actions_today: 0,
+          active_moderators: 0,
+          average_resolution_time: 0
         },
         financial: {
-          total_investments: 156780.50,
-          total_volume: 2345670.89,
-          active_ndas: 234,
-          pending_payments: 17
+          total_investments: inv.cnt || 0,
+          total_volume: inv.volume || 0,
+          active_ndas: nda.active || 0,
+          pending_payments: 0
         }
       };
 
@@ -481,31 +508,56 @@ export class AdminEndpointsHandler {
   // Get User Details
   private async handleGetUser(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload, userId: number): Promise<Response> {
     try {
-      // Demo user detail
+      // Real user detail (was hardcoded "alex.creator" demo data for every id).
+      const sql = this.getSqlClient();
+      if (!sql) {
+        return new Response(JSON.stringify({ success: false, error: { message: 'Database unavailable', code: 'DB_UNAVAILABLE' } }), {
+          status: 503, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+      const urRows = await sql`SELECT * FROM users WHERE id = ${userId}`;
+      if (!urRows || urRows.length === 0) {
+        return new Response(JSON.stringify({ success: false, error: { message: 'User not found', code: 'USER_NOT_FOUND' } }), {
+          status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+      const ur = urRows[0] as Record<string, any>;
+      let pstat: Record<string, any> = {};
+      try {
+        const r = await sql`
+          SELECT COUNT(*)::int AS total,
+                 COUNT(*) FILTER (WHERE status = 'published')::int AS published,
+                 COUNT(*) FILTER (WHERE status = 'draft')::int AS draft
+          FROM pitches WHERE user_id = ${userId}`;
+        pstat = r?.[0] || {};
+      } catch { /* pitches table shape drift */ }
+      const status = ur.is_active === false
+        ? 'banned'
+        : (ur.account_locked_until && new Date(ur.account_locked_until) > new Date() ? 'suspended' : 'active');
       const userDetail = {
-        id: userId,
-        username: userId === 1 ? 'alex.creator' : 'demo.user',
-        email: userId === 1 ? 'alex.creator@demo.com' : 'demo@example.com',
-        user_type: 'creator',
-        status: 'active',
-        verified: true,
-        created_at: '2024-10-01T10:00:00Z',
-        last_login: '2024-11-01T15:30:00Z',
+        id: ur.id,
+        username: ur.username ?? null,
+        email: ur.email,
+        user_type: ur.user_type,
+        status,
+        verified: ur.is_verified === true,
+        created_at: ur.created_at,
+        last_login: ur.last_active_at ?? null,
         profile: {
-          first_name: 'Alex',
-          last_name: 'Creator',
-          bio: 'Award-winning screenwriter and director',
-          location: 'Los Angeles, CA',
-          website: 'https://alexcreator.com'
+          first_name: ur.first_name ?? null,
+          last_name: ur.last_name ?? null,
+          bio: ur.bio ?? null,
+          location: ur.location ?? null,
+          website: ur.company_name ?? ur.website ?? null
         },
         stats: {
-          total_pitches: 12,
-          published_pitches: 10,
-          draft_pitches: 2,
-          total_views: 15847,
-          total_likes: 1247,
-          followers: 456,
-          following: 89
+          total_pitches: pstat.total || 0,
+          published_pitches: pstat.published || 0,
+          draft_pitches: pstat.draft || 0,
+          total_views: 0,
+          total_likes: 0,
+          followers: 0,
+          following: 0
         },
         moderation: {
           flags_received: 0,
@@ -514,18 +566,7 @@ export class AdminEndpointsHandler {
           last_warning: null,
           notes: []
         },
-        recent_activity: [
-          {
-            type: 'pitch_created',
-            description: 'Created new pitch "Cyberpunk Thriller"',
-            timestamp: '2024-11-01T10:00:00Z'
-          },
-          {
-            type: 'profile_updated',
-            description: 'Updated profile information',
-            timestamp: '2024-10-30T14:30:00Z'
-          }
-        ]
+        recent_activity: []
       };
 
       return new Response(JSON.stringify({
@@ -1840,41 +1881,40 @@ export class AdminEndpointsHandler {
       const user_id = url.searchParams.get('user_id');
       const page = parseInt(url.searchParams.get('page') || '1');
 
-      // Demo audit log
-      const auditLog = [
-        {
-          id: 1,
-          action: 'user_suspended',
-          actor_id: userAuth.userId,
-          actor_name: userAuth.email,
-          target_type: 'user',
-          target_id: 3,
-          details: { reason: 'Policy violation', duration: '7 days' },
-          ip_address: '192.168.1.1',
-          user_agent: 'Mozilla/5.0...',
-          timestamp: '2024-11-01T15:00:00Z'
-        },
-        {
-          id: 2,
-          action: 'settings_updated',
-          actor_id: userAuth.userId,
-          actor_name: userAuth.email,
-          target_type: 'settings',
-          target_id: null,
-          details: { section: 'moderation', changes: { flag_threshold: 3 } },
-          ip_address: '192.168.1.1',
-          user_agent: 'Mozilla/5.0...',
-          timestamp: '2024-11-01T14:30:00Z'
-        }
-      ];
+      // Real audit log from the audit_logs table (mirrors auditLogRealHandler's schema).
+      const sql = this.getSqlClient();
+      if (!sql) {
+        return new Response(JSON.stringify({ success: false, error: { message: 'Database unavailable', code: 'DB_UNAVAILABLE' } }), {
+          status: 503, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+      const actionFilter = action_type || '';
+      const limit = 50;
+      const offset = (Math.max(1, page) - 1) * limit;
+      let auditLog: any[] = [];
+      let total = 0;
+      try {
+        auditLog = await sql`
+          SELECT a.id, a.action, a.user_id AS actor_id, u.email AS actor_name,
+                 a.entity_type AS target_type, a.entity_id AS target_id,
+                 a.ip_address, a.created_at AS timestamp
+          FROM audit_logs a
+          LEFT JOIN users u ON u.id = a.user_id
+          WHERE (${actionFilter}::text = '' OR a.action = ${actionFilter})
+          ORDER BY a.created_at DESC
+          LIMIT ${limit} OFFSET ${offset}`;
+        const c = await sql`SELECT COUNT(*)::int AS total FROM audit_logs a WHERE (${actionFilter}::text = '' OR a.action = ${actionFilter})`;
+        total = c[0]?.total ?? 0;
+      } catch (_e) { /* audit_logs may be absent in some envs — return empty honestly */ }
+      void user_id;
 
       return new Response(JSON.stringify({
         success: true,
         audit_log: auditLog,
         pagination: {
           page,
-          total: auditLog.length,
-          has_next: false
+          total,
+          has_next: offset + auditLog.length < total
         }
       }), {
         status: 200,
