@@ -471,6 +471,10 @@ export interface CreatePitchInput {
 
 export interface UpdatePitchInput extends Partial<CreatePitchInput> {
   status?: 'draft' | 'published' | 'under_review' | 'archived';
+  longSynopsis?: string;
+  targetAudience?: string;
+  productionTimeline?: string;
+  targetReleaseDate?: string;
   visibilitySettings?: VisibilitySettings;
 }
 

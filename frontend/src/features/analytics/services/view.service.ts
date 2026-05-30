@@ -114,14 +114,16 @@ class ViewService {
     // Send initial view
     this.trackView({ pitchId }).catch(console.error);
     
-    // Update duration every 30 seconds
+    // Update duration every 10s so view_duration accumulates before the 30s feedback
+    // consumption gate (was 30s, which left the progress bar stuck at 0% the whole time
+    // and made users think feedback was broken and retry).
     const interval = setInterval(() => {
       const startTime = this.viewStartTime.get(pitchId);
       if (startTime) {
         const duration = Math.floor((Date.now() - startTime) / 1000);
         this.trackView({ pitchId, duration }).catch(console.error);
       }
-    }, 30000); // 30 seconds
+    }, 10000); // 10 seconds
     
     this.viewInterval.set(pitchId, interval);
   }

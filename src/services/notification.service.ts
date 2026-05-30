@@ -577,8 +577,8 @@ export class NotificationService {
         throw new Error('Failed to update preferences');
       }
 
-      // Clear cached preferences
-      await this.redis.del(`user_preferences:${userId}`);
+      // Clear cached preferences (Redis optional)
+      if (this.redis) await this.redis.del(`user_preferences:${userId}`);
 
       return this.convertPreferencesRow(updated[0]);
     } catch (error) {
@@ -613,7 +613,9 @@ export class NotificationService {
         createdAt: new Date()
       };
 
-      // Add to Redis queue based on priority
+      // Add to Redis queue based on priority. Redis is optional — if it isn't wired,
+      // skip async-channel queueing (in-app notifications are persisted separately).
+      if (!this.redis) return;
       const queueKey = `notification_queue:${data.priority}:${channel}`;
       await this.redis.rpush(queueKey, JSON.stringify(queueItem));
 
@@ -631,6 +633,7 @@ export class NotificationService {
    * Start the background queue processor
    */
   private startQueueProcessor(): void {
+    if (!this.redis) return; // No Redis configured — don't start the background drain loop
     setInterval(() => {
       if (!this.isProcessing) {
         this.processQueues();
@@ -642,6 +645,11 @@ export class NotificationService {
    * Process notification queues
    */
   private async processQueues(): Promise<void> {
+    // Redis is optional (wired as undefined in the live worker). Without it there is
+    // no async-channel queue to drain — bail before touching this.redis.lpop, which
+    // otherwise threw "Cannot read properties of undefined (reading 'lpop')" every
+    // 15 min on the cron. Surfaced via Cloudflare Observability 2026-05-30.
+    if (!this.redis) return;
     if (this.isProcessing) return;
 
     this.isProcessing = true;
@@ -999,6 +1007,7 @@ export class NotificationService {
    * Cache notification for real-time delivery
    */
   private async cacheNotification(notification: NotificationRow, userId: number): Promise<void> {
+    if (!this.redis) return; // Redis optional — skip the recent-notifications cache
     try {
       const cacheKey = `user_notifications:${userId}`;
       const notificationData = {
@@ -1136,8 +1145,8 @@ export class NotificationService {
         [new Date(), new Date(), notificationId]
       );
 
-      // Remove from cache
-      await this.redis.del(`user_notifications:${userId}`);
+      // Remove from cache (Redis optional)
+      if (this.redis) await this.redis.del(`user_notifications:${userId}`);
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }

@@ -3,6 +3,47 @@
 Consolidated from a 7-agent investigation into Karl's reported bugs + a full stub/placeholder audit (frontend + backend). Each item has root cause (file:line), what's already fixed, and a concrete fix plan with effort. Investigation was read-only; nothing here is fixed yet unless marked ✅.
 
 **Branch context:** work is on `docs/coverage-notes-scope-and-next-actions` (NOT merged to `main`). Several Karl items were already partially addressed by recent commits on this branch that **are deployed but not on main**. Karl is likely testing an older `main` build — some bugs may already be fixed in the current branch. **Confirm against `https://pitchey-5o8.pages.dev` after a fresh deploy before re-triaging.**
+**Update:** all of A1–A7, Batches 1–4, 3b, 3C, and the 6 quick wins are merged to `main` (PRs #131 + #132) and deployed. See the Progress log + the "Still open" scope below.
+
+---
+
+## STILL OPEN — scoped (2026-05-30)
+
+Nothing below is a hard launch-blocker; it's integrity polish, cleanup, and deferred features. Effort: S(<2h) / M(~half-day) / L(multi-day).
+
+**A. Karl-facing / launch-relevant**
+- **A6 production "lock"** (`EnhancedProductionNav.tsx:28`, `EnhancedNavigationShadcn.tsx:166`) — it's the `Shield` icon on Verification/Roles, not a real lock. S. Confirm with Karl; optional one-line icon swap. Pages work.
+- **Demo pitch has no documents** (`scripts/seed-demo-users.sql`) — A4 download UI is wired but demo data has no `pitch_documents` rows. S, but **blocked**: needs a real file in R2 to make a working download.
+- ~~**PitchEdit missing the new A7 fields**~~ ✅ DONE — PitchEdit now has long synopsis, target audience, production timeline, target release date, and visibility toggles. Also reworked **budget to a free-form input** (creator sets any value) in BOTH create + edit, replacing the fixed "Estimated Budget Range" dropdown (CreatePitch binds to `estimated_budget`, PitchEdit to `budget_range`; display uses `budget_range || estimated_budget`). Budget is now always-visible on create (was gated behind "seeking investment").
+
+**B. Dead backend to remove (zero callers)**
+- **Scheduled reports** — `worker-integrated.ts:2685-2687` + 3 handlers + dead service methods. No table/executor/UI. REMOVE. S–M.
+- **Container/cost endpoints** (~35 routes) — `worker-integrated.ts:3470-3504` + `container-worker-integration.ts`. Zero callers, not parked. REMOVE routes (S); DO classes need a migration (L, file an issue).
+
+**C. Cheap backend wins (live frontend shows fake zeros now)**
+- **`/api/investment/recommendations`** (`stub-routes.ts`; called `InvestorDashboard.tsx:192`) — IMPLEMENT, reuse live `/api/pitches/hot`/`trending`. S.
+- **`/api/production/investments/overview`** (`stub-routes.ts`; called `investment.service.ts:333`) — IMPLEMENT over `production_deals`/`production_pipeline` (migration 042). S–M. ⚠️ avoid generic `investments` table (INTEGER-vs-UUID drift, migrations 003/006).
+
+**D. Empty cron subsystem — needs a product decision** (`worker-integrated.ts:20742-20766`, all `console.log` no-ops)
+- `checkNDAExpirations` — leave (no-NDA-expiry decision `0a92edb0` makes it moot).
+- `sendDigestEmails` — digest emails never send. Decision: want them for launch? M–L if yes; delete stub if no.
+- `aggregateMetrics`/`monitorJobQueues`/`checkContainerHealth` — never run; delete (containers being removed in B).
+
+**E. Coming-soon needing new backend (recommend HIDE until built)**
+- Phone/SMS verify (`ProductionSettingsNotifications.tsx:177`) — L (Twilio). Hide.
+- Saved-pitch folders + bulk folder/status (`InvestorSaved.tsx:292,189`) — L. Hide + delete dead bulk branches.
+- Message reactions (`Messages.tsx:558`) — L. Hide.
+- Project Team Chat (`CollaborationProjectView.tsx:603`) — L. Leave/hide tab.
+- Session revoke + security report (`ProductionSettingsSecurity.tsx:172,225`) — M each (revoke = wire GET + 1 DELETE; report = CSV from existing activity query).
+- Test notification (`ProductionSettingsNotifications.tsx:172`) — S–M, send plumbing exists.
+
+**F. Tech-debt / polish**
+- NDA content drift: `EnhancedNDARequest`/`NDAPreviewModal` (PitchDetail path) renders old hardcoded NDA, not `/api/ndas/standard`. M.
+- 2 pre-existing `PublicPitchView` test failures (Back to Marketplace / Dashboard button) — stale assertions. S.
+- Drift comments: Sentry "temporarily removed" (`ErrorBoundary.tsx`), WS notifications "temporarily disabled" (`NotificationContext.tsx`), React Query disabled (`App.tsx`) — verify/fix. S.
+- Dead orphans: `EnhancedCreatorAnalytics.tsx` (test-referenced), unused `stub-routes` fallback helpers, dead `email.service.ts` SES stub. S.
+- `alert()`-for-UX → toast across many pages. S each / M bulk.
+- Better Auth Phase 1.5: frontend still bundles dead BA (`createAuthClient` dead-loaded). ~30min, separate track ([[project_ba_removed]]).
 
 ---
 
@@ -142,6 +183,12 @@ Sentry "temporarily removed" in `ErrorBoundary.tsx` (contradicts live sentry-con
 ---
 
 ## Progress log
+- **2026-05-30 — Observability-driven bug sweep (3 real bugs caught from Cloudflare logs, not manual testing):**
+  1. **Notification queue crash** (`notification.service.ts`) — `this.redis` is wired `undefined` ("Redis optional", `worker-integrated.ts:734`) but the queue code called `this.redis.lpop`/`rpush`/`del` unconditionally → `Cannot read properties of undefined (reading 'lpop')` every 15 min on the cron (740 cron errors/wk). Guarded every Redis use (processQueues/startQueueProcessor/queueNotification/cacheNotification/clear-cache) so the optional Redis is tolerated.
+  2. **`document_favorites` missing table** — `GET /api/legal/library` + favorite toggle logged `relation "document_favorites" does not exist` (10/wk); no migration ever created it. Added **migration 093** (document_id UUID, user_id INT, is_favorite bool — matches `generated_documents.id` uuid). Applied + recorded.
+  3. **Feedback/rating "redo + bugging"** (Karl) — `pitch-feedback.ts` POST used `ON CONFLICT DO NOTHING`, so structured feedback silently dropped (409) when a quick-rate row already existed → user re-entered everything. Changed to **upsert (DO UPDATE)** merging structured fields + preserving rating. Frontend: `FeedbackSection.handleQuickRate` now `loadData()` so the form seeds with the rating (no re-pick); view heartbeat 30s→10s; `PublicPitchView` now starts view tracking (the 30s consumption gate never opened there before). Worker `c051d9e6`.
+  Tooling note: this is the repeatable approach — query Cloudflare Observability (backend) + Sentry (frontend) for `$metadata.level = error`, don't manually click-test. Remaining log noise = transient Neon "connection lost" (cold-start) + expected turnstile auth failures.
+- **2026-05-30 — Group C (cheap backend wins):** replaced the two canned `stub-routes` endpoints with real handlers. `/api/investment/recommendations` now returns published pitches ranked by `heat_score` (investor dashboard recommendations panel was empty). `/api/production/investments/overview` now returns real totals (active deals, total invested, pipeline value, recent activity) over `production_deals`/`production_pipeline` for the authed company — `monthlyGrowth`/`topOpportunities` honest 0/[] (no cheap source). Stub entries removed. SQL validated against prod, worker `68196766`. Both auth-gated (correct — investor/production features); the only callers are authenticated dashboards.
 - **2026-05-30 — Quick wins (6 coming-soon buttons wired to live endpoints):** PitchAnalytics **Export** (client-side CSV of the loaded series + totals); ProductionProjectsCompleted **Export** (→ existing `ProductionService.exportProjectData` / `/api/production/projects/:id/export`); Team **Export** (client-side CSV of members), **Bulk role update** + **Bulk removal** (loop the live `TeamService.updateMemberRole`/`removeMember`); investor **New Allocation** (modal → existing `investorApi.createBudgetAllocation` / `POST /api/investor/budget/allocations`). All were "coming soon" toasts despite live backends — now functional. Frontend-only, `tsc` clean, 37 component tests green, deployed. Remaining coming-soon items (phone/SMS verify, saved-pitch folders, message reactions, project Team Chat, per-user security report/session-revoke) genuinely need new backend → left as honest "coming soon" / recommended hide.
 - **2026-05-30 — Batch 4 + 3C shipped:** **Batch 4 (frontend billing stubs):** rewrote `ProductionSettingsBilling` and investor `PaymentMethods` to show only the real `StripePortalCard` — removed the misleading "Free Plan / Paid plans coming soon" copy, the always-empty Payment Methods/Invoices tabs, and the save-nowhere billing form (all pre-dated the live Stripe integration). Verified live: billing chunk has 0 "coming soon", 1 "secure billing portal". **Batch 3C (backend):** wired the real signed-NDA count in the creator-analytics snapshot (`creator-analytics.ts` — was `0, -- TODO`; now a real `ndas` subquery, validated against prod). Worker `bcf4dd7f`. **Deliberately deferred as honest-not-lying / feature-work:** coming-soon *toast* buttons (they say "coming soon"), `BudgetAllocation` new-allocation, `getProductionTalentSearch` (honest 0s), `stub-routes` (honest empty payloads to avoid 404s), scheduled-report executor (records intent; needs a cron), container/cost shell endpoints (zero callers, dead). None of these serve fabricated data — they're empty/honest or unreached.
 - **2026-05-30 — Batch 3b (fabricated metrics) shipped:** Removed the 10 fabricated-metric endpoints (`/api/analytics/database/*`, `/api/analytics/performance/*`, `/api/traces/metrics/*`) — routes + 483 lines of dead handler methods that returned invented uptime/cache/trace numbers with no data source and no callers (verified 404 post-deploy; real `/api/traces/search|:id|:id/analysis` kept). Made the orphaned fake admin handlers real instead: `handleSystemStats` (`/api/admin/stats`) now runs real COUNT queries over users/pitches/investments/ndas (honest 0 for metrics with no source); `handleAuditLog` (`/api/admin/audit-log`) queries the real `audit_logs` table instead of 2 hardcoded 2024 demo rows. Bonus find during the sweep: `handleGetUser` (`/api/admin/user/:id`) returned hardcoded "alex.creator" demo data for *every* user id — now queries the real user. Worker `c091a57b`. Container/cost shell endpoints + scheduled-report executor still deferred (lower priority, see B-MEDIUM).

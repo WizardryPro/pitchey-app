@@ -11,6 +11,7 @@ import NDAWizard from '@features/ndas/components/NDAWizard';
 import PitchDocuments from '@features/pitches/components/PitchDocuments';
 import FormatDisplay from '../components/FormatDisplay';
 import FeedbackSection from '../components/feedback/FeedbackSection';
+import { viewService } from '@features/analytics/services/view.service';
 import { getPortalPath } from '@/utils/navigation';
 
 export default function PublicPitchView() {
@@ -66,6 +67,14 @@ export default function PublicPitchView() {
       void checkOwnershipAndNDAStatus(parseInt(id));
     }
   }, [id, pitch, isAuthenticated, user]);
+
+  // View-duration heartbeat — drives the feedback consumption gate. This page mounts
+  // FeedbackSection but never tracked views, so the 30s gate never opened here.
+  useEffect(() => {
+    if (!id || !pitch || isOwner || !isAuthenticated) return;
+    viewService.startViewTracking(id);
+    return () => { viewService.stopViewTracking(id); };
+  }, [id, pitch, isOwner, isAuthenticated]);
 
   const fetchPitch = async (pitchId: number) => {
     try {

@@ -12,21 +12,9 @@ export class StubRoutes {
   static getStubEndpoints(): Map<string, any> {
     const stubs = new Map();
     
-    // Investment endpoints
-    stubs.set('/api/production/investments/overview', {
-      data: {
-        totalInvested: 0,
-        activeProjects: 0,
-        roi: 0,
-        investments: []
-      }
-    });
-    
-    stubs.set('/api/investment/recommendations', {
-      recommendations: [],
-      totalCount: 0
-    });
-    
+    // Investment endpoints — now real routes in worker-integrated.ts
+    // (getInvestmentRecommendations + getProductionInvestmentsOverview). Stubs removed.
+
     // NDA endpoints — all now registered as real routes (removed stubs)
     // Analytics dashboard — registered as real route (removed stub)
     

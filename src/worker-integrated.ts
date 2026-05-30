@@ -2220,6 +2220,9 @@ class RouteRegistry {
       const { hotPitchesHandler } = await import('./handlers/heat-score');
       return hotPitchesHandler(req, this.env);
     });
+    // Real implementations replacing canned stub-routes (see stub-routes.ts)
+    this.register('GET', '/api/investment/recommendations', this.getInvestmentRecommendations.bind(this));
+    this.register('GET', '/api/production/investments/overview', this.getProductionInvestmentsOverview.bind(this));
     this.register('GET', '/api/pitches/:id/rating-status', (req) => getRatingStatus(req, this.env));
     this.register('POST', '/api/pitches/:id/rate', (req) => submitAnonymousRating(req, this.env));
     this.register('GET', '/api/pitches/:id/comments', (req) => getPitchComments(req, this.env));
@@ -8705,6 +8708,94 @@ pitchey_analytics_datapoints_per_minute 1250
       trending: result.rows,
       timeWindow,
       generated: new Date().toISOString()
+    });
+  }
+
+  // Investor dashboard recommendations — published pitches ranked by heat score
+  // (replaces a stub that always returned an empty list).
+  private async getInvestmentRecommendations(request: Request): Promise<Response> {
+    const builder = new ApiResponseBuilder(request);
+    const url = new URL(request.url);
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '12'), 50);
+    const result = await safeQuery(
+      () => this.db.query(`
+        SELECT p.id, p.title, p.logline, p.genre, p.format,
+               p.budget_range, p.estimated_budget,
+               COALESCE(p.heat_score, 0) AS heat_score
+        FROM pitches p
+        WHERE p.status = 'published'
+        ORDER BY COALESCE(p.heat_score, 0) DESC, p.created_at DESC
+        LIMIT $1
+      `, [limit]),
+      { fallback: [], context: 'worker-integrated.getInvestmentRecommendations' },
+    );
+    if (!result.ok) {
+      return builder.error(ErrorCode.SERVICE_UNAVAILABLE, 'Recommendations temporarily unavailable');
+    }
+    const recommendations = (result.rows as any[]).map((p) => ({
+      id: p.id,
+      title: p.title,
+      tagline: p.logline || '',
+      genre: p.genre,
+      format: p.format,
+      budget: p.budget_range || p.estimated_budget || 'TBD',
+    }));
+    return builder.success(recommendations);
+  }
+
+  // Production investments overview — real totals over production_deals/pipeline for
+  // the authed company (replaces a stub that returned canned zeros).
+  private async getProductionInvestmentsOverview(request: Request): Promise<Response> {
+    const builder = new ApiResponseBuilder(request);
+    const authCheck = await this.requireAuth(request);
+    if (!authCheck.authorized) return authCheck.response;
+    const companyId = authCheck.user.id;
+
+    const dealsResult = await safeQuery(
+      () => this.db.query(`
+        SELECT
+          COUNT(*) FILTER (WHERE deal_state NOT IN ('completed','cancelled'))::int AS active_deals,
+          COALESCE(SUM(COALESCE(purchase_price, option_amount, 0)), 0)::float AS total_invested
+        FROM production_deals
+        WHERE production_company_id = $1
+      `, [companyId]),
+      { fallback: [{ active_deals: 0, total_invested: 0 }], context: 'getProductionInvestmentsOverview.deals' },
+    );
+    const pipeResult = await safeQuery(
+      () => this.db.query(`
+        SELECT COALESCE(SUM(budget_allocated), 0)::float AS pipeline_value
+        FROM production_pipeline WHERE production_company_id = $1
+      `, [companyId]),
+      { fallback: [{ pipeline_value: 0 }], context: 'getProductionInvestmentsOverview.pipeline' },
+    );
+    const activityResult = await safeQuery(
+      () => this.db.query(`
+        SELECT d.deal_type, COALESCE(d.purchase_price, d.option_amount, 0)::float AS amount,
+               d.created_at, p.title
+        FROM production_deals d
+        LEFT JOIN pitches p ON p.id = d.pitch_id
+        WHERE d.production_company_id = $1
+        ORDER BY d.created_at DESC LIMIT 5
+      `, [companyId]),
+      { fallback: [], context: 'getProductionInvestmentsOverview.activity' },
+    );
+
+    const deals = (dealsResult.ok ? dealsResult.rows[0] : { active_deals: 0, total_invested: 0 }) as any;
+    const pipe = (pipeResult.ok ? pipeResult.rows[0] : { pipeline_value: 0 }) as any;
+    const recentActivity = (activityResult.ok ? activityResult.rows : []).map((r: any) => ({
+      type: 'investment' as const,
+      title: r.title || (r.deal_type ? String(r.deal_type) : 'Deal'),
+      amount: r.amount,
+      date: r.created_at,
+    }));
+
+    return builder.success({
+      totalInvestments: deals.total_invested || 0,
+      activeDeals: deals.active_deals || 0,
+      pipelineValue: pipe.pipeline_value || 0,
+      monthlyGrowth: 0,
+      topOpportunities: [],
+      recentActivity,
     });
   }
 
