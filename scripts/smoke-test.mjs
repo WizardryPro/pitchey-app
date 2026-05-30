@@ -10,17 +10,30 @@
  *   - API 5xx on page load
  *   - Console errors from the app (not third-party noise)
  *
+ * Also runs ACTION-level checks (see ACTION_CHECKS below) that exercise the
+ * core revenue/engagement paths per portal — create-pitch draft, NDA request,
+ * rate a pitch, like/save, Stripe checkout-URL generation — and assert on a
+ * concrete success signal (HTTP 200 + expected response shape), so CI fails
+ * when a BUTTON breaks, not just when a page fails to load. These run at the
+ * API layer through Playwright's authenticated request context (same auth the
+ * UI uses), which is far less flaky than DOM-clicking and still proves the
+ * exact endpoint the UI calls is alive and well-shaped.
+ *
  * Usage:
- *   node scripts/smoke-test.mjs                  # full run against prod
+ *   node scripts/smoke-test.mjs                  # full run (routes + actions) against prod
  *   BASE_URL=http://localhost:5173 node ...      # against local dev
  *   node scripts/smoke-test.mjs --filter=watcher # only routes matching "watcher"
+ *   node scripts/smoke-test.mjs --actions-only   # skip route-load tests, run actions only
+ *   node scripts/smoke-test.mjs --skip-actions   # legacy behaviour: route-load tests only
  *
- * Exit codes: 0 = all pass, 1 = one or more routes failed, 2 = script crashed.
+ * Exit codes: 0 = all pass, 1 = one or more routes/actions failed, 2 = script crashed.
  */
 import { chromium } from 'playwright';
 
 const BASE_URL = process.env.BASE_URL || 'https://pitchey-5o8.pages.dev';
 const FILTER = process.argv.find(a => a.startsWith('--filter='))?.split('=')[1] || '';
+const ACTIONS_ONLY = process.argv.includes('--actions-only');
+const SKIP_ACTIONS = process.argv.includes('--skip-actions');
 
 const DEMO_ACCOUNTS = {
   creator: { email: 'alex.creator@demo.com', password: 'Demo123', loginPath: '/api/auth/creator/login' },
@@ -92,6 +105,10 @@ const CONSOLE_NOISE = [
 // route tests can share the auth session. This avoids tripping the API's
 // login rate-limiter (~5 attempts / 15 min), which previously 429'd most runs.
 const storageStateByUser = new Map();
+// Caches the `user` object returned by login (id, userType, …) so action checks
+// can resolve the acting user's id without a follow-up /api/users/profile call
+// (which can 500 in some envs). Populated by getStorageStateFor.
+const loginUserByType = new Map();
 
 async function getStorageStateFor(browser, userType) {
   if (!userType) return undefined;
@@ -113,10 +130,252 @@ async function getStorageStateFor(browser, userType) {
     await ctx.close();
     throw new Error(`Login as ${userType} → success=false`);
   }
+  loginUserByType.set(userType, body.user);
   const state = await ctx.storageState();
   await ctx.close();
   storageStateByUser.set(userType, state);
   return state;
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// ACTION-LEVEL CHECKS
+//
+// Each check drives a core per-portal ACTION at the API layer through an
+// authenticated Playwright request context (the same cookie the UI sends), so
+// a broken button / failed submit FAILS CI loudly — unlike the route-load
+// tests above, which only prove the page paints. Every check asserts a
+// concrete success signal (HTTP 200/201 + expected response shape), not the
+// mere absence of a console error.
+//
+// PROD-WRITE POLICY (launch is imminent — Stripe is LIVE):
+//   • No real payments. The Stripe check asserts the checkout-session URL is
+//     returned and NEVER navigates to it (no card is ever submitted → no charge).
+//   • Writes are idempotent or self-healing where they touch prod:
+//       - like / save        → INSERT … ON CONFLICT DO NOTHING  (re-runnable, no dup)
+//       - rate a pitch        → INSERT … ON CONFLICT DO UPDATE   (overwrites same row)
+//       - NDA request         → de-duped server-side; after the first run it
+//                               returns ALREADY_EXISTS (no further credit burn).
+//                               We accept BOTH "fresh request" and ALREADY_EXISTS
+//                               as proof the route + auth + credit gate are alive.
+//       - create-pitch draft  → inserts a status='draft', visibility='private'
+//                               row (NOT published, never appears in marketplace).
+//                               This is the one net-new write per run; we tag the
+//                               title with a SMOKE-TEST marker so it's greppable
+//                               and cleanable. We do NOT publish.
+//   Each writing check is annotated "// WRITES TO PROD" below.
+//
+// Auth: reuses the cached storageState (cookie) from getStorageStateFor so we
+// never exceed the login rate-limiter. requestContextFor() hands back a
+// Playwright APIRequestContext already carrying that cookie + the production
+// Origin header (so CORS-gated handlers behave exactly as they do for the UI).
+// ───────────────────────────────────────────────────────────────────────────
+
+const requestContextByUser = new Map();
+
+async function requestContextFor(browser, userType) {
+  const cached = requestContextByUser.get(userType);
+  if (cached) return cached;
+  const storageState = await getStorageStateFor(browser, userType);
+  // A BrowserContext-bound APIRequestContext: carries the auth cookie from
+  // storageState and the production Origin (CORS) on every request. We expose
+  // ctx.request (.get/.post/.delete/.dispose) directly to the action checks.
+  const browserCtx = await browser.newContext({
+    storageState,
+    extraHTTPHeaders: { Origin: BASE_URL, 'Content-Type': 'application/json' },
+  });
+  requestContextByUser.set(userType, browserCtx.request);
+  return browserCtx.request;
+}
+
+// Find a published pitch the given user can act on (not their own, for raters).
+// Cached across checks so we hit /api/pitches once. excludeOwnerId lets the
+// rate/NDA checks skip a pitch owned by the acting user (self-review is blocked).
+let _publishedPitchesCache = null;
+async function getPublishedPitches(ctx) {
+  if (_publishedPitchesCache) return _publishedPitchesCache;
+  const res = await ctx.get(`${BASE_URL}/api/pitches?limit=20&status=published`);
+  if (!res.ok()) throw new Error(`GET /api/pitches → HTTP ${res.status()}`);
+  const body = await res.json();
+  const list = Array.isArray(body.data) ? body.data : (body.data?.pitches ?? []);
+  if (!Array.isArray(list) || list.length === 0) {
+    throw new Error('GET /api/pitches returned no published pitches to act on');
+  }
+  _publishedPitchesCache = list;
+  return list;
+}
+
+async function pickActionablePitch(ctx, excludeOwnerId) {
+  const list = await getPublishedPitches(ctx);
+  const pick = excludeOwnerId != null
+    ? list.find((p) => String(p.user_id) !== String(excludeOwnerId))
+    : list[0];
+  if (!pick) throw new Error('No published pitch available that is not owned by the acting user');
+  return pick;
+}
+
+// Shared create-pitch DRAFT check used by both the creator and production
+// portals. WRITES TO PROD: inserts a status='draft', visibility='private' row
+// (never published → never surfaces in marketplace), then DELETEs it again so a
+// successful run leaves zero residue. If the delete fails we don't fail the
+// check — the marker title (SMOKE-TEST DRAFT …) makes any stragglers greppable.
+async function createDraftCheck(ctx, { genre, format }) {
+  const marker = `SMOKE-TEST DRAFT ${new Date().toISOString()}`;
+  const res = await ctx.post(`${BASE_URL}/api/pitches`, {
+    data: {
+      title: marker,
+      logline: 'Automated smoke-test draft — safe to delete. Verifies createPitch endpoint.',
+      genre,
+      format,
+    },
+  });
+  if (!res.ok()) throw new Error(`HTTP ${res.status()} — ${(await res.text()).slice(0, 200)}`);
+  const body = await res.json();
+  const pitch = body?.data?.pitch;
+  if (!pitch?.id) throw new Error(`no pitch.id in response: ${JSON.stringify(body).slice(0, 200)}`);
+  if (pitch.status !== 'draft') throw new Error(`expected status=draft, got "${pitch.status}"`);
+  // Clean up the draft we just created (owner-scoped DELETE). Best-effort.
+  await ctx.delete(`${BASE_URL}/api/pitches/${pitch.id}`).catch(() => {});
+}
+
+// An action check is { name, as, run(ctx, browser) }. run() throws on failure;
+// returning normally = pass. `as` selects which authed context to use.
+const ACTION_CHECKS = [
+  // ── CREATOR ──────────────────────────────────────────────────────────────
+  {
+    name: 'creator: credits balance resolves to a real number (not "—")',
+    as: 'creator',
+    async run(ctx) {
+      const res = await ctx.get(`${BASE_URL}/api/payments/credits/balance`);
+      if (!res.ok()) throw new Error(`HTTP ${res.status()}`);
+      const body = await res.json();
+      const credits = body?.data?.credits ?? body?.data?.balance?.credits;
+      if (typeof credits !== 'number' || Number.isNaN(credits)) {
+        throw new Error(`credits not numeric: ${JSON.stringify(body?.data)}`);
+      }
+    },
+  },
+  {
+    name: 'creator: create-pitch saves a DRAFT', // WRITES TO PROD (draft only, never published; deleted on success)
+    as: 'creator',
+    run: (ctx) => createDraftCheck(ctx, { genre: 'Drama', format: 'Feature Film' }),
+  },
+  {
+    name: 'creator: Stripe checkout URL is generated (NO charge)',
+    as: 'creator',
+    async run(ctx) {
+      // Generates a Stripe Checkout Session and asserts the hosted-checkout URL.
+      // We NEVER navigate to it — no card is submitted, so no charge occurs.
+      const res = await ctx.post(`${BASE_URL}/api/payments/subscribe`, {
+        data: { tier: 'creator', billingInterval: 'monthly' },
+      });
+      if (!res.ok()) throw new Error(`HTTP ${res.status()} — ${(await res.text()).slice(0, 200)}`);
+      const body = await res.json();
+      const url = body?.data?.url;
+      if (typeof url !== 'string' || !/^https:\/\/checkout\.stripe\.com\//.test(url)) {
+        throw new Error(`no Stripe checkout URL returned: ${JSON.stringify(body?.data)}`);
+      }
+    },
+  },
+
+  // ── INVESTOR ─────────────────────────────────────────────────────────────
+  {
+    name: 'investor: NDA request endpoint is alive', // WRITES TO PROD (idempotent: de-duped + costs 10cr first time only)
+    as: 'investor',
+    async run(ctx) {
+      const pitch = await pickActionablePitch(ctx, /* excludeOwnerId */ null);
+      const res = await ctx.post(`${BASE_URL}/api/ndas/request`, {
+        data: { pitchId: String(pitch.id), reason: 'Smoke-test NDA request (automated).' },
+      });
+      const body = await res.json().catch(() => ({}));
+      // Accept: fresh success (201/200 success=true) OR ALREADY_EXISTS (re-run,
+      // no extra credit burn). Anything else — 5xx, unexpected error code, or a
+      // route 404 — is a genuine break.
+      const ok = body?.success === true;
+      const alreadyExists =
+        body?.error?.code === 'ALREADY_EXISTS' ||
+        /already exists/i.test(body?.error?.message || body?.message || '');
+      if (!ok && !alreadyExists) {
+        throw new Error(`HTTP ${res.status()} — ${JSON.stringify(body).slice(0, 200)}`);
+      }
+    },
+  },
+  {
+    name: 'investor: rate a pitch (structured-feedback path)', // WRITES TO PROD (idempotent: ON CONFLICT DO UPDATE)
+    as: 'investor',
+    async run(ctx) {
+      // Resolve the acting user's id from the cached login so we never rate our
+      // own pitch (server 403s self-review). Login already exposed user.id.
+      const myId = loginUserByType.get('investor')?.id ?? null;
+      const pitch = await pickActionablePitch(ctx, myId);
+      const res = await ctx.post(`${BASE_URL}/api/pitches/${pitch.id}/rate`, {
+        data: { rating: 7 },
+      });
+      if (!res.ok()) throw new Error(`HTTP ${res.status()} — ${(await res.text()).slice(0, 200)}`);
+      const body = await res.json();
+      if (body?.success !== true || body?.data?.rating !== 7) {
+        throw new Error(`rate did not echo rating=7: ${JSON.stringify(body).slice(0, 200)}`);
+      }
+    },
+  },
+
+  // ── PRODUCTION ───────────────────────────────────────────────────────────
+  {
+    name: 'production: create-pitch saves a DRAFT', // WRITES TO PROD (draft only, never published; deleted on success)
+    as: 'production',
+    run: (ctx) => createDraftCheck(ctx, { genre: 'Thriller', format: 'TV Series' }),
+  },
+
+  // ── WATCHER ──────────────────────────────────────────────────────────────
+  {
+    name: 'watcher: like a pitch (then unlike to stay idempotent)', // WRITES TO PROD (ON CONFLICT DO NOTHING + cleanup)
+    as: 'watcher',
+    async run(ctx) {
+      const pitch = await pickActionablePitch(ctx, null);
+      const res = await ctx.post(`${BASE_URL}/api/pitches/${pitch.id}/like`);
+      if (!res.ok()) throw new Error(`like HTTP ${res.status()} — ${(await res.text()).slice(0, 200)}`);
+      const body = await res.json();
+      if (body?.success !== true || body?.data?.liked !== true) {
+        throw new Error(`like did not return liked=true: ${JSON.stringify(body).slice(0, 200)}`);
+      }
+      // Clean up so we don't accumulate state / leave a like the watcher didn't intend.
+      await ctx.delete(`${BASE_URL}/api/pitches/${pitch.id}/like`).catch(() => {});
+    },
+  },
+  {
+    name: 'watcher: save a pitch (then unsave to stay idempotent)', // WRITES TO PROD (ON CONFLICT DO NOTHING + cleanup)
+    as: 'watcher',
+    async run(ctx) {
+      const pitch = await pickActionablePitch(ctx, null);
+      const res = await ctx.post(`${BASE_URL}/api/pitches/${pitch.id}/save`);
+      if (!res.ok()) throw new Error(`save HTTP ${res.status()} — ${(await res.text()).slice(0, 200)}`);
+      const body = await res.json();
+      if (body?.success !== true || body?.data?.saved !== true) {
+        throw new Error(`save did not return saved=true: ${JSON.stringify(body).slice(0, 200)}`);
+      }
+      await ctx.delete(`${BASE_URL}/api/pitches/${pitch.id}/save`).catch(() => {});
+    },
+  },
+];
+
+// Run a single action check with a one-shot retry to absorb cold-start / transient
+// flakes, while still failing loudly on a genuinely broken action.
+async function runActionCheck(browser, check) {
+  const errors = [];
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const ctx = await requestContextFor(browser, check.as);
+      await check.run(ctx, browser);
+      return { name: check.name, as: check.as, errors: [] };
+    } catch (err) {
+      if (attempt === 2) {
+        errors.push(err.message);
+      } else {
+        // brief backoff before the single retry
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    }
+  }
+  return { name: check.name, as: check.as, errors };
 }
 
 async function runRouteTest(browser, route, viewportName, storageState) {
@@ -234,19 +493,31 @@ async function runRouteTest(browser, route, viewportName, storageState) {
 
 async function main() {
   const filteredRoutes = FILTER ? ROUTES.filter((r) => r.path.includes(FILTER)) : ROUTES;
-  if (filteredRoutes.length === 0) {
+  if (!ACTIONS_ONLY && filteredRoutes.length === 0) {
     console.error(`No routes match filter "${FILTER}"`);
     process.exit(2);
   }
 
+  // Actions run on a full run; skipped when --skip-actions, or when a --filter is
+  // active (filter targets route-load tests — keep its run fast and predictable).
+  const runRoutes = !ACTIONS_ONLY;
+  const runActions = !SKIP_ACTIONS && !FILTER;
+
   console.log(`Smoke test → ${BASE_URL}`);
-  console.log(`Routes: ${filteredRoutes.length} × 2 viewports = ${filteredRoutes.length * 2} checks\n`);
+  if (runRoutes) {
+    console.log(`Routes: ${filteredRoutes.length} × 2 viewports = ${filteredRoutes.length * 2} checks`);
+  }
+  if (runActions) {
+    console.log(`Actions: ${ACTION_CHECKS.length} action-level checks`);
+  }
+  console.log('');
 
   const browser = await chromium.launch();
   const results = [];
+  const actionResults = [];
   const started = Date.now();
 
-  for (const route of filteredRoutes) {
+  for (const route of (runRoutes ? filteredRoutes : [])) {
     let storageState;
     try {
       storageState = await getStorageStateFor(browser, route.as);
@@ -269,21 +540,46 @@ async function main() {
     }
   }
 
+  if (runActions) {
+    if (runRoutes) console.log('');
+    console.log('Action-level checks:');
+    for (const check of ACTION_CHECKS) {
+      process.stdout.write(`  [${check.as.padEnd(10)}] ${check.name.padEnd(56)} `);
+      const result = await runActionCheck(browser, check);
+      process.stdout.write(result.errors.length === 0 ? '✓\n' : '✗\n');
+      actionResults.push(result);
+      await new Promise((r) => setTimeout(r, 300));
+    }
+    // Close any request contexts we opened for the action checks.
+    for (const ctx of requestContextByUser.values()) {
+      await ctx.dispose().catch(() => {});
+    }
+  }
+
   await browser.close();
 
-  const passed = results.filter((r) => r.errors.length === 0).length;
-  const failed = results.length - passed;
+  const routePassed = results.filter((r) => r.errors.length === 0).length;
+  const routeFailed = results.length - routePassed;
+  const actionPassed = actionResults.filter((r) => r.errors.length === 0).length;
+  const actionFailed = actionResults.length - actionPassed;
+  const totalFailed = routeFailed + actionFailed;
   const duration = ((Date.now() - started) / 1000).toFixed(1);
 
   console.log('\n' + '─'.repeat(60));
-  console.log(`Result: ${passed}/${results.length} passed in ${duration}s`);
+  if (runRoutes) console.log(`Routes:  ${routePassed}/${results.length} passed`);
+  if (runActions) console.log(`Actions: ${actionPassed}/${actionResults.length} passed`);
+  console.log(`Total:   ${routePassed + actionPassed}/${results.length + actionResults.length} passed in ${duration}s`);
   console.log('─'.repeat(60));
 
-  if (failed > 0) {
+  if (totalFailed > 0) {
     console.log('\nFailures:');
     for (const r of results.filter((x) => x.errors.length > 0)) {
       const tag = r.as ? `as ${r.as}` : 'anon';
-      console.log(`\n  ✗ ${r.route} [${r.viewport}, ${tag}]`);
+      console.log(`\n  ✗ ROUTE ${r.route} [${r.viewport}, ${tag}]`);
+      for (const err of r.errors) console.log(`      • ${err}`);
+    }
+    for (const r of actionResults.filter((x) => x.errors.length > 0)) {
+      console.log(`\n  ✗ ACTION [${r.as}] ${r.name}`);
       for (const err of r.errors) console.log(`      • ${err}`);
     }
     process.exit(1);

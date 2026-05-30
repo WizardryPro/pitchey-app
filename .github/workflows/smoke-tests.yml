@@ -1,9 +1,15 @@
 name: Smoke Tests (production)
 
-# Runs scripts/smoke-test.mjs against prod every 30 min + on PRs that touch
-# the frontend. Catches the class of drift we've been finding manually:
-# double-chrome headers, credit pills stuck loading, login fallback leaking,
-# 5xx cascades on page load.
+# Runs scripts/smoke-test.mjs against prod every 2h + on PRs that touch the
+# frontend/worker. Two layers:
+#   1. Route-load tests — ~22 routes × 2 viewports for known-bad drift:
+#      double-chrome headers, credit pills stuck loading, login fallback leaking,
+#      5xx cascades on page load.
+#   2. Action-level checks — exercises core revenue/engagement ACTIONS per portal
+#      (create-pitch draft, NDA request, rate a pitch, Stripe checkout-URL gen,
+#      like/save) and asserts a concrete success signal, so CI fails when a
+#      BUTTON breaks, not just when a page fails to load. Both run from the same
+#      `node scripts/smoke-test.mjs` invocation (actions run by default).
 #
 # Alerting pattern mirrors simple-health-check.yml — Slack if SLACK_WEBHOOK
 # is set, deduplicated GitHub issue otherwise.
@@ -76,9 +82,12 @@ jobs:
               ``,
               `Run: https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
               ``,
-              `Checks 18 audit routes × 2 viewports (mobile 390px / desktop 1280px)`,
-              `for known-bad patterns: double-chrome, credit pill stuck loading,`,
-              `"User data not received" error, 5xx network responses.`,
+              `Two layers: (1) ~22 audit routes × 2 viewports (mobile 390px /`,
+              `desktop 1280px) for known-bad patterns — double-chrome, credit pill`,
+              `stuck loading, "User data not received", 5xx network responses; and`,
+              `(2) per-portal ACTION checks — create-pitch draft, NDA request, rate`,
+              `a pitch, Stripe checkout-URL generation, like/save. The failure log`,
+              `above names the exact broken route or action.`,
               ``,
               `Auto-closed when next successful run completes.`,
             ].join('\n');

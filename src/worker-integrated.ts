@@ -9504,26 +9504,49 @@ pitchey_analytics_datapoints_per_minute 1250
       return new ApiResponseBuilder(request).error(ErrorCode.UNAUTHORIZED, 'Authentication required');
     }
 
-    let credits = 0;
-    let totalPurchased = 0;
-    let totalUsed = 0;
-    try {
-      const sql = this.db.getSql() as any;
-      if (sql && authResult.user?.id) {
-        const rows = await sql`
-          SELECT balance, total_purchased, total_used FROM user_credits WHERE user_id = ${authResult.user.id}
-        `;
-        if (rows.length > 0) {
-          credits = rows[0].balance || 0;
-          totalPurchased = rows[0].total_purchased || 0;
-          totalUsed = rows[0].total_used || 0;
-        }
-      }
-    } catch (e) {
-      console.error('Failed to fetch credits:', e);
+    const builder = new ApiResponseBuilder(request);
+
+    if (!authResult.user?.id) {
+      // No user id on a "valid" auth result should be impossible, but surface
+      // it honestly rather than returning a fake 0 balance.
+      return builder.error(ErrorCode.UNAUTHORIZED, 'Authentication required');
     }
 
-    return new ApiResponseBuilder(request).success({
+    // safeQuery + this.db.query(): two fixes in one.
+    //  1. this.db.query() carries the WorkerDatabase retry loop (DNS/cold-start
+    //     transients are retried), where the previous raw getSql() tagged-template
+    //     call had no retry and threw straight into a swallowing catch.
+    //  2. safeQuery splits "row absent → genuine 0 balance" from "query exploded".
+    //     The old catch returned credits:0 with success:true, so a transient DB
+    //     failure was indistinguishable from a real zero balance — and the
+    //     frontend pill, on a success:true with 0, would render "0", masking the
+    //     outage. On a real failure we now 503 so the frontend can retry/show an
+    //     error state instead of silently displaying a wrong balance.
+    const result = await safeQuery<{ balance: number; total_purchased: number; total_used: number }>(
+      () => this.db.query(
+        `SELECT balance, total_purchased, total_used FROM user_credits WHERE user_id = $1`,
+        [authResult.user.id],
+      ),
+      {
+        fallback: [],
+        context: 'worker-integrated.getCreditsBalance',
+        tags: { userId: String(authResult.user.id) },
+      },
+    );
+
+    if (!result.ok) {
+      // Honest 503: the credits pill can retry / show an error state rather than
+      // permanently rendering a stale or wrong balance. Sentry already captured
+      // the underlying error via safeQuery.
+      return builder.error(ErrorCode.SERVICE_UNAVAILABLE, 'Credit balance temporarily unavailable');
+    }
+
+    const row = result.rows[0];
+    const credits = Number(row?.balance) || 0;
+    const totalPurchased = Number(row?.total_purchased) || 0;
+    const totalUsed = Number(row?.total_used) || 0;
+
+    return builder.success({
       balance: { credits, totalPurchased, totalUsed },
       credits,
       currency: 'USD'
