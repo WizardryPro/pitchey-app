@@ -3886,7 +3886,9 @@ class RouteRegistry {
       '/api/metrics/current', // Platform metrics
       '/api/metrics/historical', // Historical metrics
       '/api/views/track', // View tracking (anonymous views allowed)
-      '/api/media/file',  // R2 media file serving (public — used in <img> tags)
+      // NOTE: /api/media/file is NOT listed here — it enforces auth+NDA inside serveMediaFile.
+      // Public profile/cover images (paths: profiles/* covers/*) are allowed without a
+      // signed NDA; pitch documents (documents/* pitches/*) require auth and NDA where applicable.
       '/ws',            // WebSocket endpoint handles its own auth
       '/api/config',    // App configuration (genres, formats, etc.)
       '/api/browse/genres',     // Browse by genre
@@ -5689,13 +5691,17 @@ pitchey_analytics_datapoints_per_minute 1250
           characters: pitch.characters,
           locations: pitch.locations,
           themes: pitch.themes,
-          pitch_deck_url: pitch.pitch_deck_url,
-          script_url: pitch.script_url,
-          trailer_url: pitch.trailer_url,
+          // Protected document URLs: only emit when the requesting user is the
+          // pitch owner or has a signed NDA. This prevents pre-NDA token harvest
+          // (the URL itself is a capability — serveMediaFile now also enforces at
+          // download time, but defense-in-depth requires not leaking the URL at all).
+          pitch_deck_url: (hasNDAAccess || isOwner) ? pitch.pitch_deck_url : undefined,
+          script_url: (hasNDAAccess || isOwner) ? pitch.script_url : undefined,
+          trailer_url: (hasNDAAccess || isOwner) ? pitch.trailer_url : undefined,
           documents,
-          pitchDeck: pitch.pitch_deck_url ?? findDoc('pitch_deck', 'pitchdeck', 'deck'),
-          script: pitch.script_url ?? findDoc('script', 'screenplay'),
-          trailer: pitch.trailer_url ?? findDoc('trailer', 'video'),
+          pitchDeck: (hasNDAAccess || isOwner) ? (pitch.pitch_deck_url ?? findDoc('pitch_deck', 'pitchdeck', 'deck')) : undefined,
+          script: (hasNDAAccess || isOwner) ? (pitch.script_url ?? findDoc('script', 'screenplay')) : undefined,
+          trailer: (hasNDAAccess || isOwner) ? (pitch.trailer_url ?? findDoc('trailer', 'video')) : undefined,
           creator: creatorInfo,
           hasSignedNDA: hasNDAAccess,
           requiresNDA: pitch.require_nda || false
@@ -5874,12 +5880,20 @@ pitchey_analytics_datapoints_per_minute 1250
 
       // Combine the data with proper creator object
       // Use pitches.view_count directly (accurate, maintained by view tracking)
-      const fullPitch = {
-        ...pitch,
+      //
+      // Protected document fields (script_url, pitch_deck_url, trailer_url) are
+      // stripped from the spread when the requester is neither owner nor NDA-signed.
+      // The explicit pitchDeck/script/trailer convenience keys are also gated.
+      // Cover images (title_image, thumbnail_url) remain visible to everyone.
+      const { pitch_deck_url: _pdu, script_url: _su, trailer_url: _tu, ...pitchWithoutProtectedUrls } = pitch as any;
+      const fullPitch: Record<string, unknown> = {
+        ...pitchWithoutProtectedUrls,
+        // Re-attach protected URL fields only for owner or NDA-signed viewers
+        ...(hasNDAAccess || isOwner ? { pitch_deck_url: _pdu, script_url: _su, trailer_url: _tu } : {}),
         documents,
-        pitchDeck: pitch.pitch_deck_url ?? findDoc('pitch_deck', 'pitchdeck', 'deck'),
-        script: pitch.script_url ?? findDoc('script', 'screenplay'),
-        trailer: pitch.trailer_url ?? findDoc('trailer', 'video'),
+        pitchDeck: (hasNDAAccess || isOwner) ? (_pdu ?? findDoc('pitch_deck', 'pitchdeck', 'deck')) : undefined,
+        script: (hasNDAAccess || isOwner) ? (_su ?? findDoc('script', 'screenplay')) : undefined,
+        trailer: (hasNDAAccess || isOwner) ? (_tu ?? findDoc('trailer', 'video')) : undefined,
         short_synopsis: shortSynopsisOut,
         long_synopsis: longSynopsisOut,
         shortSynopsis: shortSynopsisOut,
@@ -5889,7 +5903,7 @@ pitchey_analytics_datapoints_per_minute 1250
         isOwner,
         hasSignedNDA: hasNDAAccess,
         hasNDA: hasNDAAccess,
-        view_count: parseInt(pitch.view_count || '0'),
+        view_count: parseInt(String(pitch.view_count || '0')),
         investment_count: investmentCount,
         creator: {
           id: pitch.user_id,
@@ -6188,8 +6202,11 @@ pitchey_analytics_datapoints_per_minute 1250
     const params = (request as any).params;
 
     try {
+      // RETURNING id is required: Neon HTTP driver returns rows:[] for a DELETE
+      // with no RETURNING clause regardless of how many rows were matched, so
+      // result.length is always 0 without it — every delete would 404.
       const result = await this.db.query(
-        `DELETE FROM pitches WHERE id = $1 AND user_id = $2`,
+        `DELETE FROM pitches WHERE id = $1 AND user_id = $2 RETURNING id`,
         [params.id, authResult.user.id]
       );
 
@@ -19662,6 +19679,103 @@ Signatures: [To be completed upon signing]
 
       const storagePath = decodeURIComponent(encodedPath);
 
+      // ── NDA / auth gate ──────────────────────────────────────────────────────
+      // IMPORTANT: cover/title images and avatars MUST stay public — they are shown
+      // on the marketplace and public pitch pages to anonymous (logged-out) visitors.
+      // In this codebase cover images live under MULTIPLE prefixes (profiles/*,
+      // covers/*, pitch-images/*) AND under pitches/<id>/media/* — the SAME prefix
+      // that also holds protected documents. So we cannot classify by path prefix
+      // alone. The only reliable signal that a file is protected is a pitch_documents
+      // row with requires_nda=true. Model: default-OPEN, and gate a file ONLY when it
+      // matches such a row. This keeps every cover image public while protecting
+      // registered NDA documents. (Earlier prefix-only gating 401'd marketplace covers.)
+      const isAlwaysPublicAssetPath =
+        storagePath.startsWith('profiles/') ||
+        storagePath.startsWith('covers/') ||
+        storagePath.startsWith('pitch-images/');
+
+      if (!isAlwaysPublicAssetPath) {
+        // Could be a cover image stored under pitches/<id>/media/* (public) OR a
+        // protected document. Look it up; only gate if it's an NDA-required doc.
+        try {
+          const docRows = await this.db.query(
+            `SELECT pd.requires_nda, pd.pitch_id, p.user_id AS pitch_owner_id
+             FROM pitch_documents pd
+             JOIN pitches p ON p.id = pd.pitch_id
+             WHERE pd.file_key = $1
+                OR pd.file_url LIKE $2
+             LIMIT 1`,
+            [storagePath, `%${encodeURIComponent(storagePath)}%`]
+          );
+
+          // No matching document row, or it doesn't require an NDA → public asset
+          // (cover image, public material, orphan upload). Serve without auth.
+          if (docRows && docRows.length > 0 && docRows[0].requires_nda) {
+            const doc = docRows[0] as { requires_nda: boolean; pitch_id: number; pitch_owner_id: number };
+
+            // Protected document — require a valid session.
+            const authCheck = await this.requireAuth(request);
+            if (!authCheck.authorized) {
+              return new Response(
+                JSON.stringify({ success: false, error: 'Authentication required' }),
+                { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+              );
+            }
+            const requestingUserId = authCheck.user.id;
+            const isOwner = Number(doc.pitch_owner_id) === Number(requestingUserId);
+
+            if (!isOwner) {
+              // Check for a signed / approved NDA (covers signer_id column and
+              // the requester_id / pitch_access fallbacks used elsewhere).
+              let hasNDA = false;
+              try {
+                const ndaRows = await this.db.query(
+                  `SELECT 1 FROM ndas
+                   WHERE pitch_id = $1
+                     AND (signer_id = $2 OR requester_id = $2)
+                     AND (status = 'approved' OR status = 'signed')
+                   LIMIT 1`,
+                  [doc.pitch_id, requestingUserId]
+                );
+                hasNDA = ndaRows && ndaRows.length > 0;
+              } catch { /* signer_id / requester_id column drift — try pitch_access */ }
+
+              if (!hasNDA) {
+                try {
+                  const accessRows = await this.db.query(
+                    `SELECT 1 FROM pitch_access
+                     WHERE pitch_id = $1 AND user_id = $2
+                       AND (revoked_at IS NULL)
+                       AND (expires_at IS NULL OR expires_at > NOW())
+                     LIMIT 1`,
+                    [doc.pitch_id, requestingUserId]
+                  );
+                  hasNDA = accessRows && accessRows.length > 0;
+                } catch { /* pitch_access may not exist in all envs */ }
+              }
+
+              if (!hasNDA) {
+                return new Response(
+                  JSON.stringify({ success: false, error: 'NDA required to access this document' }),
+                  { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+                );
+              }
+            }
+          }
+        } catch (e) {
+          const err = e instanceof Error ? e : new Error(String(e));
+          console.error('serveMediaFile NDA check error:', err.message);
+          // Fail closed only for non-image document paths: if we cannot determine
+          // NDA status we must not serve a potentially protected document. Cover
+          // images under the always-public prefixes never reach this branch.
+          return new Response(
+            JSON.stringify({ success: false, error: 'Could not verify access permissions' }),
+            { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+          );
+        }
+      }
+      // ── end NDA gate ─────────────────────────────────────────────────────────
+
       if (!this.env.MEDIA_STORAGE) {
         return new Response('Storage not available', { status: 503, headers: corsHeaders });
       }
@@ -19673,16 +19787,25 @@ Signatures: [To be completed upon signing]
 
       const contentType = object.customMetadata?.['content-type'] || 'application/octet-stream';
 
+      // Public assets can be cached aggressively. Protected documents must not
+      // be cached by shared caches (proxies, CDN edge nodes) because access is
+      // per-user. The Worker sits directly on the CF edge so 'private' here
+      // prevents the CF cache layer from serving one user's response to another.
+      const cacheControl = isPublicAssetPath
+        ? 'public, max-age=31536000, immutable'
+        : 'private, no-store';
+
       return new Response(object.body, {
         status: 200,
         headers: {
           'Content-Type': contentType,
-          'Cache-Control': 'public, max-age=31536000, immutable',
+          'Cache-Control': cacheControl,
           ...corsHeaders
         }
       });
     } catch (error) {
-      console.error('Serve media file error:', error);
+      const e = error instanceof Error ? error : new Error(String(error));
+      console.error('Serve media file error:', e.message);
       return new Response('Internal error', { status: 500, headers: corsHeaders });
     }
   }

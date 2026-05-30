@@ -157,11 +157,22 @@ export default function PitchEdit() {
       if (!pitch) {
         throw new Error('Pitch not found');
       }
-      
+
+      // Normalize stored genre to match the select option casing.
+      // Older pitches were saved with a .toLowerCase() transform
+      // (e.g. "action-comedy") but the options have Title-Case values
+      // (e.g. "Action-Comedy"). Do a case-insensitive lookup so the
+      // select re-populates correctly regardless of what the DB stored.
+      const rawGenre = pitch.genre || '';
+      const availableGenres = getGenresSync() as readonly string[];
+      const normalizedGenre = availableGenres.find(
+        g => g.toLowerCase() === rawGenre.toLowerCase()
+      ) ?? rawGenre;
+
       setExistingImageUrl(pitch.titleImage || (pitch as any).title_image || null);
       setFormData({
         title: pitch.title || '',
-        genre: pitch.genre || '',
+        genre: normalizedGenre,
         format: pitch.format || '',
         formatCategory: pitch.formatCategory || '',
         formatSubtype: pitch.formatSubtype || '',

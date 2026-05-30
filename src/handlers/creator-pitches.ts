@@ -163,7 +163,9 @@ export async function creatorPitchesHandler(request: Request, env: Env): Promise
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'private, max-age=30',
+        // no-store: this is a write-visible list — a browser-cached response
+        // served within 30s of a create/delete would hide the mutation.
+        'Cache-Control': 'no-store',
         ...corsHeaders
       }
     });
