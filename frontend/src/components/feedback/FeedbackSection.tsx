@@ -92,6 +92,9 @@ export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, use
     if (ok) {
       setRatingDone(true);
       setRefreshKey((k) => k + 1);
+      // Refresh myFeedback so the structured form seeds with this rating instead of
+      // opening with empty stars and forcing the user to pick it again.
+      loadData();
     }
   };
 

@@ -231,16 +231,26 @@ export async function submitPitchFeedback(request: Request, env: Env): Promise<R
     const isInterested = body.is_interested ?? false;
     const isAnonymous = body.is_anonymous ?? false;
 
+    // Upsert (was DO NOTHING): a row may already exist from a prior quick-rate on the
+    // same pitch. DO NOTHING silently dropped the written feedback and returned 409, so
+    // the user re-entered everything ("the feedback thing is bugging" — Karl). Merge the
+    // structured fields into the existing row instead; preserve the existing rating when
+    // the structured submit doesn't carry one.
     const result = await sql`
       INSERT INTO pitch_feedback (pitch_id, reviewer_id, reviewer_type, rating, strengths, weaknesses, suggestions, overall_feedback, is_interested, is_anonymous, reviewer_weight)
       VALUES (${pitchId}, ${Number(userId)}, ${reviewerType}, ${rating}, ${strengths}, ${weaknesses}, ${suggestions}, ${overallFeedback}, ${isInterested}, ${isAnonymous}, ${reviewerWeight})
-      ON CONFLICT (pitch_id, reviewer_id) DO NOTHING
+      ON CONFLICT (pitch_id, reviewer_id) DO UPDATE SET
+        reviewer_type = EXCLUDED.reviewer_type,
+        rating = COALESCE(EXCLUDED.rating, pitch_feedback.rating),
+        strengths = EXCLUDED.strengths,
+        weaknesses = EXCLUDED.weaknesses,
+        suggestions = EXCLUDED.suggestions,
+        overall_feedback = EXCLUDED.overall_feedback,
+        is_interested = EXCLUDED.is_interested,
+        is_anonymous = EXCLUDED.is_anonymous,
+        reviewer_weight = EXCLUDED.reviewer_weight
       RETURNING id, created_at
     `;
-
-    if (result.length === 0) {
-      return errorResponse('You have already submitted feedback for this pitch. Use PUT to update.', origin, 409);
-    }
 
     await updateRatingStats(sql, pitchId);
 
