@@ -2439,8 +2439,9 @@ class RouteRegistry {
     // === PHASE 3: TRANSACTION ROUTES ===
     this.register('GET', '/api/transactions', this.getTransactions.bind(this));
     this.register('GET', '/api/transactions/:id', this.getTransactionById.bind(this));
-    this.register('POST', '/api/transactions', this.createTransaction.bind(this));
-    this.register('PUT', '/api/transactions/:id/status', this.updateTransactionStatus.bind(this));
+    // POST /api/transactions + PUT /api/transactions/:id/status removed — they ran a
+    // Math.random() fake payment processor that could mark investments funded with no
+    // real money. No frontend/backend caller; real payments go through /api/payments (Stripe).
     this.register('GET', '/api/transactions/export', this.exportTransactions.bind(this));
 
     // === AUDIT TRAIL ROUTES ===
@@ -19852,47 +19853,7 @@ Signatures: [To be completed upon signing]
     }
   }
 
-  private async createTransaction(request: Request): Promise<Response> {
-    try {
-      const authCheck = await this.requireAuth(request);
-      if (!authCheck.authorized) return authCheck.response;
-
-      const data = await request.json() as Record<string, unknown>;
-
-      const handler = new (await import('./handlers/transactions')).TransactionsHandler(this.db);
-      const result = await handler.createTransaction(authCheck.user.id, data);
-
-      const origin = request.headers.get('Origin');
-      return new Response(JSON.stringify(result), {
-        headers: getCorsHeaders(origin),
-        status: result.success ? 201 : 400
-      });
-    } catch (error) {
-      return errorHandler(error, request);
-    }
-  }
-
-  private async updateTransactionStatus(request: Request): Promise<Response> {
-    try {
-      const authCheck = await this.requireAuth(request);
-      if (!authCheck.authorized) return authCheck.response;
-
-      const url = new URL(request.url);
-      const transactionId = parseInt(url.pathname.split('/')[3] || '0');
-      const { status } = await request.json() as { status: string };
-
-      const handler = new (await import('./handlers/transactions')).TransactionsHandler(this.db);
-      const result = await handler.updateTransactionStatus(authCheck.user.id, transactionId, status);
-
-      const origin = request.headers.get('Origin');
-      return new Response(JSON.stringify(result), {
-        headers: getCorsHeaders(origin),
-        status: result.success ? 200 : 400
-      });
-    } catch (error) {
-      return errorHandler(error, request);
-    }
-  }
+  // createTransaction + updateTransactionStatus handlers removed (fake payment processor).
 
   // =================== DATABASE ANALYTICS ENDPOINTS ===================
 

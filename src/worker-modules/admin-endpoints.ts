@@ -624,6 +624,15 @@ export class AdminEndpointsHandler {
         });
       }
 
+      // Persist the suspension (mirrors handleUpdateUser's 'suspended' path).
+      const sql = this.getSqlClient();
+      if (!sql) {
+        return new Response(JSON.stringify({ success: false, error: { message: 'Database unavailable', code: 'DB_UNAVAILABLE' } }), {
+          status: 503, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+      await sql`UPDATE users SET account_locked_until = NOW() + INTERVAL '30 days', account_lock_reason = ${body.reason}, updated_at = NOW() WHERE id = ${userId}`;
+
       // Create moderation action
       const moderationAction: ModerationAction = {
         id: Math.floor(Math.random() * 1000) + 100,
@@ -686,6 +695,15 @@ export class AdminEndpointsHandler {
         });
       }
 
+      // Persist the ban (mirrors handleUpdateUser's 'banned' path → is_active=false).
+      const sql = this.getSqlClient();
+      if (!sql) {
+        return new Response(JSON.stringify({ success: false, error: { message: 'Database unavailable', code: 'DB_UNAVAILABLE' } }), {
+          status: 503, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+      await sql`UPDATE users SET is_active = false, account_lock_reason = ${body.reason}, updated_at = NOW() WHERE id = ${userId}`;
+
       await this.logger.captureMessage('User banned', 'error', {
           admin_id: userAuth.userId,
           banned_user_id: userId,
@@ -728,6 +746,15 @@ export class AdminEndpointsHandler {
         notes?: string;
       };
 
+      // Persist verification — sets the trust columns the badge logic reads.
+      const sql = this.getSqlClient();
+      if (!sql) {
+        return new Response(JSON.stringify({ success: false, error: { message: 'Database unavailable', code: 'DB_UNAVAILABLE' } }), {
+          status: 503, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+      await sql`UPDATE users SET is_verified = true, company_verified = true, verification_tier = 'gold', updated_at = NOW() WHERE id = ${userId}`;
+
       await this.logger.captureMessage('User verified', 'info', {
           admin_id: userAuth.userId,
           verified_user_id: userId,
@@ -768,6 +795,15 @@ export class AdminEndpointsHandler {
         reason?: string;
         notify_user?: boolean;
       };
+
+      // Persist restoration (mirrors handleUpdateUser's 'active' path).
+      const sql = this.getSqlClient();
+      if (!sql) {
+        return new Response(JSON.stringify({ success: false, error: { message: 'Database unavailable', code: 'DB_UNAVAILABLE' } }), {
+          status: 503, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+      await sql`UPDATE users SET is_active = true, account_locked_until = NULL, account_lock_reason = NULL, updated_at = NOW() WHERE id = ${userId}`;
 
       await this.logger.captureMessage('User restored', 'info', {
           admin_id: userAuth.userId,
@@ -1229,20 +1265,57 @@ export class AdminEndpointsHandler {
           reason: body.reason
       });
 
-      const results = body.target_ids.map(id => ({
-        id,
-        status: 'success',
-        message: `${body.action} applied successfully`
-      }));
+      const sql = this.getSqlClient();
+      if (!sql) {
+        return new Response(JSON.stringify({ success: false, error: { message: 'Database unavailable', code: 'DB_UNAVAILABLE' } }), {
+          status: 503, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
 
+      // Refunds can't be processed here — credit_transactions has no payment_intent
+      // linkage to Stripe, so an automated refund is impossible. Be honest instead of
+      // faking success (the admin Transactions page calls this for refunds).
+      if ((body.action as string) === 'refund') {
+        return new Response(JSON.stringify({
+          success: false,
+          error: { message: 'Automated refunds are not available — issue the refund from the Stripe dashboard.', code: 'NOT_IMPLEMENTED' }
+        }), {
+          status: 501,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      // Apply real writes for supported user actions; report anything else as failed
+      // rather than fabricating success.
+      const results: Array<{ id: number; status: string; message?: string }> = [];
+      for (const id of body.target_ids) {
+        try {
+          if (body.target_type === 'user' && body.action === 'suspend') {
+            await sql`UPDATE users SET account_locked_until = NOW() + INTERVAL '30 days', account_lock_reason = ${body.reason || 'Bulk suspension'}, updated_at = NOW() WHERE id = ${id}`;
+            results.push({ id, status: 'success' });
+          } else if (body.target_type === 'user' && body.action === 'ban') {
+            await sql`UPDATE users SET is_active = false, account_lock_reason = ${body.reason || 'Bulk ban'}, updated_at = NOW() WHERE id = ${id}`;
+            results.push({ id, status: 'success' });
+          } else if (body.target_type === 'user' && body.action === 'verify') {
+            await sql`UPDATE users SET is_verified = true, company_verified = true, verification_tier = 'gold', updated_at = NOW() WHERE id = ${id}`;
+            results.push({ id, status: 'success' });
+          } else {
+            results.push({ id, status: 'error', message: `Action '${body.action}' on '${body.target_type}' is not supported` });
+          }
+        } catch (_e) {
+          results.push({ id, status: 'error', message: 'Write failed' });
+        }
+      }
+
+      const successful = results.filter(r => r.status === 'success').length;
       return new Response(JSON.stringify({
-        success: true,
-        message: `Bulk ${body.action} completed`,
+        success: successful > 0,
+        message: `Bulk ${body.action}: ${successful}/${body.target_ids.length} applied`,
         results,
         summary: {
           total: body.target_ids.length,
-          successful: results.filter(r => r.status === 'success').length,
-          failed: results.filter(r => r.status !== 'success').length
+          successful,
+          failed: results.length - successful
         }
       }), {
         status: 200,
@@ -1660,26 +1733,22 @@ export class AdminEndpointsHandler {
           message: body.message
       });
 
+      // This endpoint never persisted anything (no maintenance-flag table). Maintenance
+      // is actually toggled through PUT /api/admin/settings (the `maintenance` block).
+      // Return an honest 501 instead of faking success.
       return new Response(JSON.stringify({
-        success: true,
-        message: `Maintenance mode ${body.enabled ? 'enabled' : 'disabled'}`,
-        maintenance: {
-          enabled: body.enabled,
-          message: body.message || 'System maintenance in progress',
-          started_at: body.enabled ? new Date().toISOString() : null,
-          scheduled_end: body.scheduled_end,
-          set_by: userAuth.userId
-        }
+        success: false,
+        error: { message: 'Use PUT /api/admin/settings to toggle maintenance — this endpoint is not implemented.', code: 'NOT_IMPLEMENTED' }
       }), {
-        status: 200,
+        status: 501,
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
       });
 
     } catch (error) {
       await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: { message: 'Failed to set maintenance mode', code: 'MAINTENANCE_ERROR' } 
+      return new Response(JSON.stringify({
+        success: false,
+        error: { message: 'Failed to set maintenance mode', code: 'MAINTENANCE_ERROR' }
       }), {
         status: 500,
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
@@ -1845,29 +1914,14 @@ export class AdminEndpointsHandler {
         });
       }
 
-      await this.logger.captureMessage('Broadcast message sent', 'info', {
-          admin_id: userAuth.userId,
-          target_audience: body.target_audience,
-          message_type: body.message_type,
-          send_email: body.send_email
-      });
-
+      // This never sent anything and returned hardcoded recipient counts. There is no
+      // admin UI for it. Return an honest 501 rather than faking a successful send;
+      // a real implementation needs a notifications fan-out (+ optional email).
       return new Response(JSON.stringify({
-        success: true,
-        message: 'Broadcast message sent successfully',
-        broadcast: {
-          id: Math.floor(Math.random() * 1000) + 100,
-          message: body.message,
-          target_audience: body.target_audience,
-          message_type: body.message_type,
-          sent_at: new Date().toISOString(),
-          sent_by: userAuth.userId,
-          estimated_recipients: body.target_audience === 'all' ? 1247 : 
-                               body.target_audience === 'creators' ? 834 :
-                               body.target_audience === 'investors' ? 289 : 124
-        }
+        success: false,
+        error: { message: 'Broadcast messaging is not implemented yet.', code: 'NOT_IMPLEMENTED' }
       }), {
-        status: 200,
+        status: 501,
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
       });
 
