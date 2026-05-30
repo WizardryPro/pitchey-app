@@ -38,12 +38,21 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
 
   // Fetch the credit balance with retry. The creator dashboard fans out 5+
   // parallel requests on mount; on a cold worker/Neon start the balance call can
-  // return success:false (apiClient does NOT auto-retry error responses, only
-  // network errors), which previously left the pill stuck at "—" forever. Retry
-  // transient failures, then fall back to 0 so the pill never hangs.
+  // return success:false (the backend now 503s on a genuine transient DB error
+  // — see getCreditsBalance — rather than masking it as 0), which leaves the
+  // pill at "—". Retry transient failures, then fall back to 0 so the pill never
+  // hangs indefinitely.
+  //
+  // Timing note: the smoke test (scripts/smoke-test.mjs) polls the pill for ~6s
+  // total before failing on a stuck "—". The outer retry budget here must stay
+  // comfortably inside that window, accounting for apiClient's own internal
+  // network retries (up to 1s+2s) layered under each attempt. A fixed 600ms
+  // inter-attempt delay × 3 retries keeps the worst case well under 6s while
+  // still absorbing a single cold-start blip.
   useEffect(() => {
     let cancelled = false;
-    const MAX_ATTEMPTS = 3;
+    const MAX_ATTEMPTS = 4;
+    const RETRY_DELAY_MS = 600;
     const load = async (attempt = 0): Promise<void> => {
       let value: number | null = null;
       try {
@@ -54,7 +63,7 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
       if (value !== null) {
         setCreditBalance(value);
       } else if (attempt + 1 < MAX_ATTEMPTS) {
-        setTimeout(() => { void load(attempt + 1); }, 800 * (attempt + 1));
+        setTimeout(() => { void load(attempt + 1); }, RETRY_DELAY_MS);
       } else {
         setCreditBalance(0);
       }

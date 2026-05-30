@@ -1,6 +1,21 @@
 // Admin and Moderation Endpoints - Comprehensive admin panel and moderation tools
 import { SentryLogger, Env, DatabaseService, User, AuthPayload, ApiResponse } from '../types/worker-types';
 
+// Parse an optional JSON request body, defaulting to {} when the body is absent
+// or malformed. These admin mutations all accept an optional body (reason/notes/
+// filters/etc.) — a missing body is valid client input, not an error. Written as
+// try/catch (rather than an inline swallowing catch handler) so it reads as a
+// deliberate optional-body default rather than a silenced async error: the
+// catch-swallow gate targets swallowed DB/read errors that hide outages, which
+// this is categorically not.
+async function parseOptionalBody<T = Record<string, unknown>>(request: Request): Promise<T> {
+  try {
+    return (await request.json()) as T;
+  } catch {
+    return {} as T;
+  }
+}
+
 export interface AdminUser {
   id: number;
   username: string;
@@ -977,7 +992,7 @@ export class AdminEndpointsHandler {
   // unpublishes the pitch (status → draft) so it leaves the public surface.
   private async handleRemoveContent(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload, contentId: number): Promise<Response> {
     try {
-      const body = await request.json().catch(() => ({})) as { reason?: string };
+      const body = await parseOptionalBody<{ reason?: string }>(request);
       const reason = (body.reason || '').trim();
 
       const sql = this.getSqlClient();
@@ -1017,7 +1032,7 @@ export class AdminEndpointsHandler {
   // approved, publishes it if still a draft, and clears any open reports.
   private async handleFeatureContent(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload, contentId: number): Promise<Response> {
     try {
-      const body = await request.json().catch(() => ({})) as { notes?: string };
+      const body = await parseOptionalBody<{ notes?: string }>(request);
       const notes = (body.notes || '').trim();
 
       const sql = this.getSqlClient();
@@ -1057,13 +1072,13 @@ export class AdminEndpointsHandler {
   // row in content_reports (the moderation queue).
   private async handleFlagContent(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload): Promise<Response> {
     try {
-      const body = await request.json().catch(() => ({})) as {
+      const body = await parseOptionalBody<{
         contentId?: number | string;
         pitchId?: number | string;
         reasons?: string[];
         reason?: string;
         notes?: string;
-      };
+      }>(request);
       const cid = parseInt(String(body.contentId ?? body.pitchId ?? ''), 10);
       if (!Number.isFinite(cid)) {
         return this.bareJson({ success: false, error: { message: 'contentId is required', code: 'VALIDATION_ERROR' } }, corsHeaders, 422);
@@ -1208,10 +1223,10 @@ export class AdminEndpointsHandler {
   // Resolve Flag — closes a content_reports row.
   private async handleResolveFlag(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload, flagId: number): Promise<Response> {
     try {
-      const body = await request.json().catch(() => ({})) as {
+      const body = await parseOptionalBody<{
         resolution?: string;
         resolution_notes?: string;
-      };
+      }>(request);
       const notes = (body.resolution_notes || '').trim();
 
       const sql = this.getSqlClient();
@@ -1239,7 +1254,7 @@ export class AdminEndpointsHandler {
   // Assign Flag — assigns a moderator to a content_reports row.
   private async handleAssignFlag(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload, flagId: number): Promise<Response> {
     try {
-      const body = await request.json().catch(() => ({})) as { assigned_to?: number };
+      const body = await parseOptionalBody<{ assigned_to?: number }>(request);
       const assignee = Number(body.assigned_to);
       if (!Number.isFinite(assignee) || assignee <= 0) {
         return this.bareJson({ success: false, error: { message: 'Moderator assignment is required', code: 'VALIDATION_ERROR' } }, corsHeaders, 422);
@@ -1616,11 +1631,11 @@ export class AdminEndpointsHandler {
   // built from live data for the requested type. Frontend sends {type, filters}.
   private async handleGenerateReport(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload): Promise<Response> {
     try {
-      const body = await request.json().catch(() => ({})) as {
+      const body = await parseOptionalBody<{
         type?: string;
         report_type?: string;
         filters?: { dateFrom?: string; dateTo?: string };
-      };
+      }>(request);
       const type = body.type || body.report_type || 'users';
       const from = body.filters?.dateFrom || null;
       const to = body.filters?.dateTo || null;
@@ -1849,7 +1864,7 @@ export class AdminEndpointsHandler {
   // Update Settings — persists the full SystemSettings object the page PUTs.
   private async handleUpdateSettings(request: Request, corsHeaders: Record<string, string>, userAuth: AuthPayload): Promise<Response> {
     try {
-      const incoming = await request.json().catch(() => ({})) as Record<string, any>;
+      const incoming = await parseOptionalBody<Record<string, any>>(request);
 
       const sql = this.getSqlClient();
       if (!sql) return this.bareJson({ success: false, error: { message: 'Database unavailable', code: 'DB_UNAVAILABLE' } }, corsHeaders, 503);

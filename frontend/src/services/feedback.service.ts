@@ -115,8 +115,11 @@ export class FeedbackService {
   }
 
   static async update(pitchId: number, data: FeedbackSubmission): Promise<boolean> {
-    const res = await apiClient.put<{ success: boolean }>(`/api/pitches/${pitchId}/feedback`, data);
-    return res.data?.success ?? false;
+    // Backend returns { success: true, data: { id, created_at } }. After api-client unwraps
+    // data.data, res.data becomes { id, created_at } — no .success field. Use res.success
+    // (the api-client wrapper flag, true on any 2xx) instead.
+    const res = await apiClient.put<{ id: number; created_at: string }>(`/api/pitches/${pitchId}/feedback`, data);
+    return res.success;
   }
 
   static async remove(pitchId: number): Promise<boolean> {
@@ -127,8 +130,11 @@ export class FeedbackService {
   /** Submit a quick rating (works for anonymous + authenticated users) */
   static async submitRating(pitchId: number, rating: number): Promise<boolean> {
     try {
-      const res = await apiClient.post<{ success: boolean }>(`/api/pitches/${pitchId}/rate`, { rating });
-      return res.data?.success ?? false;
+      // Backend returns { success: true, data: { rating } } (201). After api-client unwraps
+      // data.data, res.data becomes { rating } — no .success field. Use res.success
+      // (the api-client wrapper flag, true on any 2xx) instead.
+      const res = await apiClient.post<{ rating: number }>(`/api/pitches/${pitchId}/rate`, { rating });
+      return res.success;
     } catch {
       return false;
     }

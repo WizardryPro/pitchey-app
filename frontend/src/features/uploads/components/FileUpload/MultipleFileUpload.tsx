@@ -76,6 +76,12 @@ interface MultipleFileUploadProps {
   onUploadError?: (file: EnhancedMediaFile, error: string) => void;
   onBulkUpload?: (files: EnhancedMediaFile[]) => void;
   className?: string;
+  /**
+   * When true the "Upload All" button notifies the parent via onBulkUpload
+   * instead of immediately uploading files. Use this when the parent needs to
+   * defer uploads until a pitch ID is available (e.g. on the create form).
+   */
+  deferUploads?: boolean;
 }
 
 const FILE_CATEGORIES = [
@@ -120,7 +126,8 @@ export default function MultipleFileUpload({
   onUploadComplete,
   onUploadError,
   onBulkUpload,
-  className = ''
+  className = '',
+  deferUploads = false
 }: MultipleFileUploadProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [currentViewMode, setCurrentViewMode] = useState(viewMode);
@@ -334,12 +341,21 @@ export default function MultipleFileUpload({
 
   // Start bulk upload
   const startBulkUpload = useCallback(async () => {
-    const filesToUpload = files.filter(f => 
+    const filesToUpload = files.filter(f =>
       f.uploadStatus === 'queued' || f.uploadStatus === 'idle'
     );
 
     if (filesToUpload.length === 0) {
       error('No Files to Upload', 'All files have already been uploaded');
+      return;
+    }
+
+    // In deferred mode do NOT upload immediately — the parent controls when and
+    // where the upload happens (e.g. after pitch creation when a pitch ID exists).
+    // Notify the parent and show a holding message instead.
+    if (deferUploads) {
+      onBulkUpload?.(filesToUpload);
+      success('Files Queued', `${filesToUpload.length} file${filesToUpload.length !== 1 ? 's' : ''} will be uploaded when you create the pitch.`);
       return;
     }
 
@@ -349,7 +365,7 @@ export default function MultipleFileUpload({
       // Upload files in parallel with concurrency limit
       const concurrencyLimit = 3;
       const results = [];
-      
+
       for (let i = 0; i < filesToUpload.length; i += concurrencyLimit) {
         const batch = filesToUpload.slice(i, i + concurrencyLimit);
         const batchPromises = batch.map(file => uploadFile(file));
@@ -373,7 +389,7 @@ export default function MultipleFileUpload({
     } finally {
       setIsUploading(false);
     }
-  }, [files, uploadFile, success, error, onBulkUpload]);
+  }, [files, uploadFile, success, error, onBulkUpload, deferUploads]);
 
   // Update file details
   const updateFile = useCallback((id: string, updates: Partial<EnhancedMediaFile>) => {
@@ -776,7 +792,9 @@ function FileItem({
                 {file.title}
                 {file.isRenamed && <span className="text-xs text-blue-600 ml-1">(renamed)</span>}
               </div>
-              <div className="text-sm text-gray-500 truncate">{file.originalName}</div>
+              {file.isRenamed && (
+                <div className="text-sm text-gray-500 truncate">{file.originalName}</div>
+              )}
             </div>
           )}
         </div>
@@ -866,9 +884,11 @@ function FileItem({
           </div>
         )}
 
-        <div className="text-xs text-gray-500 mt-1 truncate" title={file.originalName}>
-          {file.originalName}
-        </div>
+        {file.isRenamed && (
+          <div className="text-xs text-gray-500 mt-1 truncate" title={file.originalName}>
+            {file.originalName}
+          </div>
+        )}
       </div>
 
       {/* Upload Progress */}

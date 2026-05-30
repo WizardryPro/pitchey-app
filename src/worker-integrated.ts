@@ -3886,7 +3886,13 @@ class RouteRegistry {
       '/api/metrics/current', // Platform metrics
       '/api/metrics/historical', // Historical metrics
       '/api/views/track', // View tracking (anonymous views allowed)
-      '/api/media/file',  // R2 media file serving (public — used in <img> tags)
+      // /api/media/file MUST be public so anonymous visitors can load cover/title
+      // images on the marketplace and public pitch pages. serveMediaFile does its
+      // OWN gating internally: public image prefixes (profiles/* covers/* pitch-images/*
+      // and cover images under pitches/<id>/media) are served freely; only files that
+      // match a pitch_documents row with requires_nda=true require auth + a signed NDA.
+      // (Removing it here 401'd cover images for logged-out users — regression.)
+      '/api/media/file',
       '/ws',            // WebSocket endpoint handles its own auth
       '/api/config',    // App configuration (genres, formats, etc.)
       '/api/browse/genres',     // Browse by genre
@@ -5689,13 +5695,17 @@ pitchey_analytics_datapoints_per_minute 1250
           characters: pitch.characters,
           locations: pitch.locations,
           themes: pitch.themes,
-          pitch_deck_url: pitch.pitch_deck_url,
-          script_url: pitch.script_url,
-          trailer_url: pitch.trailer_url,
+          // Protected document URLs: only emit when the requesting user is the
+          // pitch owner or has a signed NDA. This prevents pre-NDA token harvest
+          // (the URL itself is a capability — serveMediaFile now also enforces at
+          // download time, but defense-in-depth requires not leaking the URL at all).
+          pitch_deck_url: (hasNDAAccess || isOwner) ? pitch.pitch_deck_url : undefined,
+          script_url: (hasNDAAccess || isOwner) ? pitch.script_url : undefined,
+          trailer_url: (hasNDAAccess || isOwner) ? pitch.trailer_url : undefined,
           documents,
-          pitchDeck: pitch.pitch_deck_url ?? findDoc('pitch_deck', 'pitchdeck', 'deck'),
-          script: pitch.script_url ?? findDoc('script', 'screenplay'),
-          trailer: pitch.trailer_url ?? findDoc('trailer', 'video'),
+          pitchDeck: (hasNDAAccess || isOwner) ? (pitch.pitch_deck_url ?? findDoc('pitch_deck', 'pitchdeck', 'deck')) : undefined,
+          script: (hasNDAAccess || isOwner) ? (pitch.script_url ?? findDoc('script', 'screenplay')) : undefined,
+          trailer: (hasNDAAccess || isOwner) ? (pitch.trailer_url ?? findDoc('trailer', 'video')) : undefined,
           creator: creatorInfo,
           hasSignedNDA: hasNDAAccess,
           requiresNDA: pitch.require_nda || false
@@ -5874,12 +5884,20 @@ pitchey_analytics_datapoints_per_minute 1250
 
       // Combine the data with proper creator object
       // Use pitches.view_count directly (accurate, maintained by view tracking)
-      const fullPitch = {
-        ...pitch,
+      //
+      // Protected document fields (script_url, pitch_deck_url, trailer_url) are
+      // stripped from the spread when the requester is neither owner nor NDA-signed.
+      // The explicit pitchDeck/script/trailer convenience keys are also gated.
+      // Cover images (title_image, thumbnail_url) remain visible to everyone.
+      const { pitch_deck_url: _pdu, script_url: _su, trailer_url: _tu, ...pitchWithoutProtectedUrls } = pitch as any;
+      const fullPitch: Record<string, unknown> = {
+        ...pitchWithoutProtectedUrls,
+        // Re-attach protected URL fields only for owner or NDA-signed viewers
+        ...(hasNDAAccess || isOwner ? { pitch_deck_url: _pdu, script_url: _su, trailer_url: _tu } : {}),
         documents,
-        pitchDeck: pitch.pitch_deck_url ?? findDoc('pitch_deck', 'pitchdeck', 'deck'),
-        script: pitch.script_url ?? findDoc('script', 'screenplay'),
-        trailer: pitch.trailer_url ?? findDoc('trailer', 'video'),
+        pitchDeck: (hasNDAAccess || isOwner) ? (_pdu ?? findDoc('pitch_deck', 'pitchdeck', 'deck')) : undefined,
+        script: (hasNDAAccess || isOwner) ? (_su ?? findDoc('script', 'screenplay')) : undefined,
+        trailer: (hasNDAAccess || isOwner) ? (_tu ?? findDoc('trailer', 'video')) : undefined,
         short_synopsis: shortSynopsisOut,
         long_synopsis: longSynopsisOut,
         shortSynopsis: shortSynopsisOut,
@@ -5889,7 +5907,7 @@ pitchey_analytics_datapoints_per_minute 1250
         isOwner,
         hasSignedNDA: hasNDAAccess,
         hasNDA: hasNDAAccess,
-        view_count: parseInt(pitch.view_count || '0'),
+        view_count: parseInt(String(pitch.view_count || '0')),
         investment_count: investmentCount,
         creator: {
           id: pitch.user_id,
@@ -6188,8 +6206,11 @@ pitchey_analytics_datapoints_per_minute 1250
     const params = (request as any).params;
 
     try {
+      // RETURNING id is required: Neon HTTP driver returns rows:[] for a DELETE
+      // with no RETURNING clause regardless of how many rows were matched, so
+      // result.length is always 0 without it — every delete would 404.
       const result = await this.db.query(
-        `DELETE FROM pitches WHERE id = $1 AND user_id = $2`,
+        `DELETE FROM pitches WHERE id = $1 AND user_id = $2 RETURNING id`,
         [params.id, authResult.user.id]
       );
 
@@ -9504,26 +9525,49 @@ pitchey_analytics_datapoints_per_minute 1250
       return new ApiResponseBuilder(request).error(ErrorCode.UNAUTHORIZED, 'Authentication required');
     }
 
-    let credits = 0;
-    let totalPurchased = 0;
-    let totalUsed = 0;
-    try {
-      const sql = this.db.getSql() as any;
-      if (sql && authResult.user?.id) {
-        const rows = await sql`
-          SELECT balance, total_purchased, total_used FROM user_credits WHERE user_id = ${authResult.user.id}
-        `;
-        if (rows.length > 0) {
-          credits = rows[0].balance || 0;
-          totalPurchased = rows[0].total_purchased || 0;
-          totalUsed = rows[0].total_used || 0;
-        }
-      }
-    } catch (e) {
-      console.error('Failed to fetch credits:', e);
+    const builder = new ApiResponseBuilder(request);
+
+    if (!authResult.user?.id) {
+      // No user id on a "valid" auth result should be impossible, but surface
+      // it honestly rather than returning a fake 0 balance.
+      return builder.error(ErrorCode.UNAUTHORIZED, 'Authentication required');
     }
 
-    return new ApiResponseBuilder(request).success({
+    // safeQuery + this.db.query(): two fixes in one.
+    //  1. this.db.query() carries the WorkerDatabase retry loop (DNS/cold-start
+    //     transients are retried), where the previous raw getSql() tagged-template
+    //     call had no retry and threw straight into a swallowing catch.
+    //  2. safeQuery splits "row absent → genuine 0 balance" from "query exploded".
+    //     The old catch returned credits:0 with success:true, so a transient DB
+    //     failure was indistinguishable from a real zero balance — and the
+    //     frontend pill, on a success:true with 0, would render "0", masking the
+    //     outage. On a real failure we now 503 so the frontend can retry/show an
+    //     error state instead of silently displaying a wrong balance.
+    const result = await safeQuery<{ balance: number; total_purchased: number; total_used: number }>(
+      () => this.db.query(
+        `SELECT balance, total_purchased, total_used FROM user_credits WHERE user_id = $1`,
+        [authResult.user.id],
+      ),
+      {
+        fallback: [],
+        context: 'worker-integrated.getCreditsBalance',
+        tags: { userId: String(authResult.user.id) },
+      },
+    );
+
+    if (!result.ok) {
+      // Honest 503: the credits pill can retry / show an error state rather than
+      // permanently rendering a stale or wrong balance. Sentry already captured
+      // the underlying error via safeQuery.
+      return builder.error(ErrorCode.SERVICE_UNAVAILABLE, 'Credit balance temporarily unavailable');
+    }
+
+    const row = result.rows[0];
+    const credits = Number(row?.balance) || 0;
+    const totalPurchased = Number(row?.total_purchased) || 0;
+    const totalUsed = Number(row?.total_used) || 0;
+
+    return builder.success({
       balance: { credits, totalPurchased, totalUsed },
       credits,
       currency: 'USD'
@@ -10192,10 +10236,24 @@ pitchey_analytics_datapoints_per_minute 1250
       const frontendUrl = (this.env as any).FRONTEND_URL || 'https://pitchey-5o8.pages.dev';
       const returnUrl = `${frontendUrl}/billing`;
 
-      const session = await stripe.createBillingPortalSession({
-        customerId,
-        returnUrl,
-      });
+      let session;
+      try {
+        session = await stripe.createBillingPortalSession({ customerId, returnUrl });
+      } catch (portalErr: any) {
+        // A persisted customer id can be stale — e.g. a TEST-mode customer saved
+        // before go-live, which is invalid against the live key ("No such customer …
+        // a similar object exists in test mode"). Re-resolve against the live keys
+        // (getOrCreateCustomer does an email search / create), persist, and retry once.
+        const msg = String(portalErr?.message || portalErr);
+        if (/no such customer|resource_missing/i.test(msg)) {
+          const customer = await stripe.getOrCreateCustomer(email, userId);
+          customerId = customer.id;
+          await sql`UPDATE users SET stripe_customer_id = ${customerId} WHERE id = ${userId}`;
+          session = await stripe.createBillingPortalSession({ customerId, returnUrl });
+        } else {
+          throw portalErr;
+        }
+      }
 
       return new ApiResponseBuilder(request).success({ url: session.url });
     } catch (e: any) {
@@ -19625,6 +19683,106 @@ Signatures: [To be completed upon signing]
 
       const storagePath = decodeURIComponent(encodedPath);
 
+      // ── NDA / auth gate ──────────────────────────────────────────────────────
+      // IMPORTANT: cover/title images and avatars MUST stay public — they are shown
+      // on the marketplace and public pitch pages to anonymous (logged-out) visitors.
+      // But files under image-ish prefixes (pitch-images/*, pitches/<id>/media/*) can
+      // ALSO be NDA-protected documents (e.g. a poster or still marked requires_nda).
+      // So we cannot trust a prefix alone — the ONLY reliable signal that a file is
+      // protected is a pitch_documents row with requires_nda=true. Model: default-OPEN,
+      // gate a file ONLY when it matches such a row. Avatars (profiles/) and the
+      // dedicated cover bucket (covers/) are never documents, so they fast-path public
+      // without a DB lookup. Everything else is looked up; cover images (not in
+      // pitch_documents) fall through to public, protected docs get gated.
+      const isAlwaysPublicAssetPath =
+        storagePath.startsWith('profiles/') ||
+        storagePath.startsWith('covers/');
+
+      let isProtectedDoc = false; // set true only for an NDA-gated doc we authorized
+
+      if (!isAlwaysPublicAssetPath) {
+        // Could be a cover/title image (public) OR a protected document. Look it up;
+        // only gate if it matches a pitch_documents row with requires_nda=true.
+        try {
+          const docRows = await this.db.query(
+            `SELECT pd.requires_nda, pd.pitch_id, p.user_id AS pitch_owner_id
+             FROM pitch_documents pd
+             JOIN pitches p ON p.id = pd.pitch_id
+             WHERE pd.file_key = $1
+                OR pd.file_url LIKE $2
+             LIMIT 1`,
+            [storagePath, `%${encodeURIComponent(storagePath)}%`]
+          );
+
+          // No matching document row, or it doesn't require an NDA → public asset
+          // (cover image, public material, orphan upload). Serve without auth.
+          if (docRows && docRows.length > 0 && docRows[0].requires_nda) {
+            const doc = docRows[0] as { requires_nda: boolean; pitch_id: number; pitch_owner_id: number };
+            isProtectedDoc = true;
+
+            // Protected document — require a valid session.
+            const authCheck = await this.requireAuth(request);
+            if (!authCheck.authorized) {
+              return new Response(
+                JSON.stringify({ success: false, error: 'Authentication required' }),
+                { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+              );
+            }
+            const requestingUserId = authCheck.user.id;
+            const isOwner = Number(doc.pitch_owner_id) === Number(requestingUserId);
+
+            if (!isOwner) {
+              // Check for a signed / approved NDA (covers signer_id column and
+              // the requester_id / pitch_access fallbacks used elsewhere).
+              let hasNDA = false;
+              try {
+                const ndaRows = await this.db.query(
+                  `SELECT 1 FROM ndas
+                   WHERE pitch_id = $1
+                     AND (signer_id = $2 OR requester_id = $2)
+                     AND (status = 'approved' OR status = 'signed')
+                   LIMIT 1`,
+                  [doc.pitch_id, requestingUserId]
+                );
+                hasNDA = ndaRows && ndaRows.length > 0;
+              } catch { /* signer_id / requester_id column drift — try pitch_access */ }
+
+              if (!hasNDA) {
+                try {
+                  const accessRows = await this.db.query(
+                    `SELECT 1 FROM pitch_access
+                     WHERE pitch_id = $1 AND user_id = $2
+                       AND (revoked_at IS NULL)
+                       AND (expires_at IS NULL OR expires_at > NOW())
+                     LIMIT 1`,
+                    [doc.pitch_id, requestingUserId]
+                  );
+                  hasNDA = accessRows && accessRows.length > 0;
+                } catch { /* pitch_access may not exist in all envs */ }
+              }
+
+              if (!hasNDA) {
+                return new Response(
+                  JSON.stringify({ success: false, error: 'NDA required to access this document' }),
+                  { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+                );
+              }
+            }
+          }
+        } catch (e) {
+          const err = e instanceof Error ? e : new Error(String(e));
+          console.error('serveMediaFile NDA check error:', err.message);
+          // Fail closed only for non-image document paths: if we cannot determine
+          // NDA status we must not serve a potentially protected document. Cover
+          // images under the always-public prefixes never reach this branch.
+          return new Response(
+            JSON.stringify({ success: false, error: 'Could not verify access permissions' }),
+            { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+          );
+        }
+      }
+      // ── end NDA gate ─────────────────────────────────────────────────────────
+
       if (!this.env.MEDIA_STORAGE) {
         return new Response('Storage not available', { status: 503, headers: corsHeaders });
       }
@@ -19636,16 +19794,27 @@ Signatures: [To be completed upon signing]
 
       const contentType = object.customMetadata?.['content-type'] || 'application/octet-stream';
 
+      // Public assets can be cached aggressively. Protected documents must not
+      // be cached by shared caches (proxies, CDN edge nodes) because access is
+      // per-user. The Worker sits directly on the CF edge so 'private' here
+      // prevents the CF cache layer from serving one user's response to another.
+      // Public assets (avatars, cover/title images) cache aggressively; protected
+      // NDA documents must never be cached by shared caches (access is per-user).
+      const cacheControl = isProtectedDoc
+        ? 'private, no-store'
+        : 'public, max-age=31536000, immutable';
+
       return new Response(object.body, {
         status: 200,
         headers: {
           'Content-Type': contentType,
-          'Cache-Control': 'public, max-age=31536000, immutable',
+          'Cache-Control': cacheControl,
           ...corsHeaders
         }
       });
     } catch (error) {
-      console.error('Serve media file error:', error);
+      const e = error instanceof Error ? error : new Error(String(error));
+      console.error('Serve media file error:', e.message);
       return new Response('Internal error', { status: 500, headers: corsHeaders });
     }
   }

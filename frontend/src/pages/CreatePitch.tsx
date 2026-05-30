@@ -246,7 +246,8 @@ export default function CreatePitch() {
     const file = e.target.files?.[0] || null;
 
     if (file) {
-      // Validate the file immediately
+      // Validate the file immediately — pass the raw File so ImageFileSchema
+      // (instanceof File check) evaluates correctly.
       validateField(fileType, file).then(errors => {
         if (errors.length > 0) {
           // Announce file error
@@ -254,15 +255,14 @@ export default function CreatePitch() {
           return;
         }
 
-        // Add to upload manager for deferred upload after pitch creation
-        const uploadId = uploadManager.addUpload(file, fileType);
+        // Add to upload manager for deferred upload after pitch creation.
+        // We do NOT store the uploadId on the schema value — ImageFileSchema
+        // expects a bare File (instanceof File) and storing {file, uploadId, preview}
+        // causes the schema check to fail at submit time, blocking submission.
+        uploadManager.addUpload(file, fileType);
 
-        // Set the file with upload reference
-        setValue(fileType as keyof PitchFormData, {
-          file,
-          uploadId,
-          preview: URL.createObjectURL(file)
-        } as any);
+        // Store the raw File so the schema validates cleanly on submit.
+        setValue(fileType as keyof PitchFormData, file as any);
 
         // Announce successful file selection
         a11y.announcer.announce(`File ${file.name} selected for upload`);
@@ -273,10 +273,19 @@ export default function CreatePitch() {
   };
 
   const removeFile = (fileType: 'image' | 'video') => {
-    // Get current file data to remove from upload manager
-    const currentFile = formData[fileType] as { uploadId?: string } | null;
-    if (currentFile?.uploadId) {
-      uploadManager.removeUpload(currentFile.uploadId);
+    // The stored value is now a bare File (not {file, uploadId, preview}).
+    // Uploads are deferred — nothing has been sent to the server yet — so we
+    // clear the pending upload from the manager by filtering on the File
+    // reference, then null out the form value.
+    const currentFile = formData[fileType] as File | null;
+    if (currentFile instanceof File) {
+      // Remove the matching pending upload by file identity
+      const match = uploadManager.pendingUploads.find(
+        u => u.type === fileType && u.file === currentFile
+      );
+      if (match) {
+        uploadManager.removeUpload(match.id);
+      }
     }
 
     setValue(fileType as keyof PitchFormData, null as any);
@@ -355,6 +364,12 @@ export default function CreatePitch() {
           title: validatedData.title,
           genre: validatedData.genre,
           format: finalFormat,
+          // Persist the structured format taxonomy too (proper-cased) so the Edit
+          // form can repopulate the Format Category / Subtype selects. Without these
+          // the backend stored NULL for format_category/format_subtype and the edit
+          // page left "Select a format category" → Save Changes stayed disabled.
+          formatCategory: validatedData.formatCategory,
+          formatSubtype: validatedData.formatSubtype,
           logline: validatedData.logline,
           shortSynopsis: validatedData.shortSynopsis,
           longSynopsis: validatedData.longSynopsis || undefined,

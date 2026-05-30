@@ -151,20 +151,52 @@ export default function PitchEdit() {
 
   const fetchPitch = async (pitchId: number) => {
     try {
-      // Fetch the specific pitch by ID
-      const pitch = await pitchService.getById(pitchId);
+      // Fetch via the owner-authenticated endpoint (/api/pitches/:id), NOT the
+      // public one. getById() hits /api/pitches/public/:id which 404s for DRAFTS
+      // (drafts aren't public) — so creators could never edit their own drafts
+      // ("Failed to load pitch"). getByIdAuthenticated returns the owner's pitch
+      // regardless of draft/published status.
+      const pitch = await pitchService.getByIdAuthenticated(pitchId);
 
       if (!pitch) {
         throw new Error('Pitch not found');
       }
-      
+
+      // Normalize stored genre to match the select option casing.
+      // Older pitches were saved with a .toLowerCase() transform
+      // (e.g. "action-comedy") but the options have Title-Case values
+      // (e.g. "Action-Comedy"). Do a case-insensitive lookup so the
+      // select re-populates correctly regardless of what the DB stored.
+      const rawGenre = pitch.genre || '';
+      const availableGenres = getGenresSync() as readonly string[];
+      const normalizedGenre = availableGenres.find(
+        g => g.toLowerCase() === rawGenre.toLowerCase()
+      ) ?? rawGenre;
+
+      // Resolve Format Category + Subtype. Prefer the stored structured values
+      // (new pitches). Older pitches stored only a lowercased `format` (the subtype),
+      // leaving category/subtype empty → "Save Changes" stayed disabled. For those,
+      // reverse-derive the (category, subtype) pair from the formatCategories
+      // taxonomy by case-insensitively matching the stored format string.
+      let resolvedCategory = pitch.formatCategory || '';
+      let resolvedSubtype = pitch.formatSubtype || '';
+      if (!resolvedCategory || !resolvedSubtype) {
+        const rawFormat = (pitch.format || '').toLowerCase();
+        if (rawFormat) {
+          for (const [cat, subs] of Object.entries(formatCategories)) {
+            const matchSub = (subs as string[]).find(s => s.toLowerCase() === rawFormat);
+            if (matchSub) { resolvedCategory = cat; resolvedSubtype = matchSub; break; }
+          }
+        }
+      }
+
       setExistingImageUrl(pitch.titleImage || (pitch as any).title_image || null);
       setFormData({
         title: pitch.title || '',
-        genre: pitch.genre || '',
+        genre: normalizedGenre,
         format: pitch.format || '',
-        formatCategory: pitch.formatCategory || '',
-        formatSubtype: pitch.formatSubtype || '',
+        formatCategory: resolvedCategory,
+        formatSubtype: resolvedSubtype,
         customFormat: pitch.customFormat || '',
         logline: pitch.logline || '',
         shortSynopsis: pitch.shortSynopsis || '',

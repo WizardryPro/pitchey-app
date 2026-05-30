@@ -499,6 +499,7 @@ export default function DocumentUploadHub({
         enableRenaming={true}
         enableFiltering={true}
         onBulkUpload={handleBulkUpload}
+        deferUploads={deferUploads}
         className="border-0 shadow-sm"
       />
 

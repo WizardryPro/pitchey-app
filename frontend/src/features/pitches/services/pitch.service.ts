@@ -399,7 +399,12 @@ function transformPitchData(pitch: RawPitchData | null | undefined): Partial<Pit
     updatedAt: pitch.updated_at ?? pitch.updatedAt,
     shortSynopsis: pitch.short_synopsis ?? pitch.shortSynopsis,
     longSynopsis: pitch.long_synopsis ?? pitch.longSynopsis,
-    
+    // Map the structured format taxonomy snake_case → camelCase so the Edit form
+    // can repopulate the Format Category / Subtype selects (the spread above keeps
+    // only the snake_case keys). Without this, Save Changes stayed disabled.
+    formatCategory: (pitch as any).format_category ?? (pitch as any).formatCategory,
+    formatSubtype: (pitch as any).format_subtype ?? (pitch as any).formatSubtype,
+
     // Transform enhanced fields from snake_case
     toneAndStyle: pitch.tone_and_style ?? pitch.toneAndStyle,
     comps: pitch.comps,
@@ -422,7 +427,12 @@ export class PitchService {
     // Map frontend values to backend expectations
     const mappedData = {
       ...input,
-      genre: genreMap[input.genre] ?? input.genre.toLowerCase(),
+      // genreMap only covers the legacy 8-value enum subset. For all expanded
+      // genres (e.g. "Action-Comedy", "Crime Drama") we pass the value through
+      // unchanged so the DB stores the same casing that the select options have —
+      // preventing the edit-form mismatch where stored "action-comedy" fails to
+      // match the "<option value="Action-Comedy">" rendered in PitchEdit.
+      genre: genreMap[input.genre] ?? input.genre,
       format: formatMap[input.format] ?? input.format.toLowerCase(),
       // Ensure proper data types
       estimatedBudget: input.estimatedBudget ?? undefined,
@@ -536,7 +546,7 @@ export class PitchService {
     // Map frontend values to backend expectations if needed
     const mappedData = {
       ...input,
-      genre: input.genre !== undefined ? (genreMap[input.genre] ?? input.genre.toLowerCase()) : undefined,
+      genre: input.genre !== undefined ? (genreMap[input.genre] ?? input.genre) : undefined,
       format: input.format !== undefined ? (formatMap[input.format] ?? input.format.toLowerCase()) : undefined,
     };
 

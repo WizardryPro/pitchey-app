@@ -502,23 +502,20 @@ export default function PitchDetail() {
             {/* Basic Information */}
             <div className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex items-start justify-between mb-6">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-2">{pitch.title}</h2>
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <Tag className="w-4 h-4" />
-                      {pitch.genre}
-                    </div>
-                    <HumanMadeBadge aiUsed={(pitch as any).aiUsed ?? (pitch as any).ai_used} />
-                    <div className="flex items-center gap-1">
-                      <Film className="w-4 h-4" />
-                      <FormatDisplay
-                        formatCategory={pitch.formatCategory}
-                        formatSubtype={pitch.formatSubtype}
-                        format={pitch.format}
-                        variant="compact"
-                      />
-                    </div>
+                <div className="flex items-center gap-4 text-sm text-gray-600">
+                  <div className="flex items-center gap-1">
+                    <Tag className="w-4 h-4" />
+                    {pitch.genre}
+                  </div>
+                  <HumanMadeBadge aiUsed={(pitch as any).aiUsed ?? (pitch as any).ai_used} />
+                  <div className="flex items-center gap-1">
+                    <Film className="w-4 h-4" />
+                    <FormatDisplay
+                      formatCategory={pitch.formatCategory}
+                      formatSubtype={pitch.formatSubtype}
+                      format={pitch.format}
+                      variant="compact"
+                    />
                   </div>
                 </div>
                 {pitch.status === 'published' && (
