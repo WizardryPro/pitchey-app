@@ -173,13 +173,30 @@ export default function PitchEdit() {
         g => g.toLowerCase() === rawGenre.toLowerCase()
       ) ?? rawGenre;
 
+      // Resolve Format Category + Subtype. Prefer the stored structured values
+      // (new pitches). Older pitches stored only a lowercased `format` (the subtype),
+      // leaving category/subtype empty → "Save Changes" stayed disabled. For those,
+      // reverse-derive the (category, subtype) pair from the formatCategories
+      // taxonomy by case-insensitively matching the stored format string.
+      let resolvedCategory = pitch.formatCategory || '';
+      let resolvedSubtype = pitch.formatSubtype || '';
+      if (!resolvedCategory || !resolvedSubtype) {
+        const rawFormat = (pitch.format || '').toLowerCase();
+        if (rawFormat) {
+          for (const [cat, subs] of Object.entries(formatCategories)) {
+            const matchSub = (subs as string[]).find(s => s.toLowerCase() === rawFormat);
+            if (matchSub) { resolvedCategory = cat; resolvedSubtype = matchSub; break; }
+          }
+        }
+      }
+
       setExistingImageUrl(pitch.titleImage || (pitch as any).title_image || null);
       setFormData({
         title: pitch.title || '',
         genre: normalizedGenre,
         format: pitch.format || '',
-        formatCategory: pitch.formatCategory || '',
-        formatSubtype: pitch.formatSubtype || '',
+        formatCategory: resolvedCategory,
+        formatSubtype: resolvedSubtype,
         customFormat: pitch.customFormat || '',
         logline: pitch.logline || '',
         shortSynopsis: pitch.shortSynopsis || '',

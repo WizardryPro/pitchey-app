@@ -399,7 +399,12 @@ function transformPitchData(pitch: RawPitchData | null | undefined): Partial<Pit
     updatedAt: pitch.updated_at ?? pitch.updatedAt,
     shortSynopsis: pitch.short_synopsis ?? pitch.shortSynopsis,
     longSynopsis: pitch.long_synopsis ?? pitch.longSynopsis,
-    
+    // Map the structured format taxonomy snake_case → camelCase so the Edit form
+    // can repopulate the Format Category / Subtype selects (the spread above keeps
+    // only the snake_case keys). Without this, Save Changes stayed disabled.
+    formatCategory: (pitch as any).format_category ?? (pitch as any).formatCategory,
+    formatSubtype: (pitch as any).format_subtype ?? (pitch as any).formatSubtype,
+
     // Transform enhanced fields from snake_case
     toneAndStyle: pitch.tone_and_style ?? pitch.toneAndStyle,
     comps: pitch.comps,

@@ -31,7 +31,7 @@ All 8 reported bugs FIXED + DEPLOYED (worker `02f0a516`+, frontend `DxN8bR4i`) +
 
 ### Discovered during verification (adjacent bugs)
 - **#9 Edit page couldn't load DRAFTS** — `PitchEdit` used `getById()` → `/api/pitches/public/:id` which 404s for drafts. FIXED → `getByIdAuthenticated()` (`/api/pitches/:id`). Verified: edit page loads draft, genre populated. ✅ deployed.
-- **#10 Format Category/Subtype not preserved create→edit (Save disabled)** — create persists only a single lowercased `format`; `format_category`/`format_subtype` come back null, so the edit Format Category select can't repopulate and "Save Changes" stays disabled. NOT in client's report; deeper data-model fix (store category/subtype separately, or reconstruct on edit). **OPEN follow-up.**
+- **#10 Format Category/Subtype not preserved create→edit (Save disabled)** — FIXED ✅. Three parts: (a) `CreatePitch` now sends `formatCategory`/`formatSubtype` in the create payload (was only sending `format`; backend already had the columns); (b) `transformPitchData` maps `format_category`/`format_subtype` snake→camel so PitchEdit can read them; (c) PitchEdit reverse-derives category/subtype from the stored `format` string (case-insensitive) for OLDER pitches that have null category/subtype. Verified on prod: edited existing pitch 229 — Format Category "Television - Scripted" + Subtype "Limited Series (closed-ended)" repopulated, Save enabled, save round-tripped (Updated 30/05/2026). frontend `BW9if8C0`.
 
 ## Notes / observations during testing
 - Credits pill fix already deployed (shows "500", not "—"). ✓

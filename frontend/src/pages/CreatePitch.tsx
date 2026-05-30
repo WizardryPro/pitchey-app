@@ -364,6 +364,12 @@ export default function CreatePitch() {
           title: validatedData.title,
           genre: validatedData.genre,
           format: finalFormat,
+          // Persist the structured format taxonomy too (proper-cased) so the Edit
+          // form can repopulate the Format Category / Subtype selects. Without these
+          // the backend stored NULL for format_category/format_subtype and the edit
+          // page left "Select a format category" → Save Changes stayed disabled.
+          formatCategory: validatedData.formatCategory,
+          formatSubtype: validatedData.formatSubtype,
           logline: validatedData.logline,
           shortSynopsis: validatedData.shortSynopsis,
           longSynopsis: validatedData.longSynopsis || undefined,
