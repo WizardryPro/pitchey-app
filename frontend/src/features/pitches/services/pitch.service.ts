@@ -404,6 +404,9 @@ function transformPitchData(pitch: RawPitchData | null | undefined): Partial<Pit
     // only the snake_case keys). Without this, Save Changes stayed disabled.
     formatCategory: (pitch as any).format_category ?? (pitch as any).formatCategory,
     formatSubtype: (pitch as any).format_subtype ?? (pitch as any).formatSubtype,
+    // Map require_nda snake→camel so PitchEdit restores the NDA selection
+    // (otherwise it reads undefined → "No NDA Required" → forgets the standard NDA).
+    requireNDA: (pitch as any).require_nda ?? (pitch as any).requireNDA ?? false,
 
     // Transform enhanced fields from snake_case
     toneAndStyle: pitch.tone_and_style ?? pitch.toneAndStyle,

@@ -5365,7 +5365,8 @@ pitchey_analytics_datapoints_per_minute 1250
       long_synopsis?: string;
       synopsis?: string;
       require_nda?: boolean;
-      
+      requireNDA?: boolean; // frontend (CreatePitch) sends camelCase; accept both
+
       // Enhanced Story & Style Fields
       toneAndStyle?: string;
       comps?: string;
@@ -5459,7 +5460,7 @@ pitchey_analytics_datapoints_per_minute 1250
         data.target_audience || data.targetAudience || null,
         data.short_synopsis || data.synopsis || data.logline || null,
         data.long_synopsis || data.synopsis || data.logline || null,
-        data.require_nda ?? false,
+        (data.requireNDA ?? data.require_nda) ?? false,
         data.toneAndStyle ?? null,
         data.comps ?? data.comparableTitles ?? null,
         data.storyBreakdown ?? null,
