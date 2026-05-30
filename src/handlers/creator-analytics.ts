@@ -689,8 +689,10 @@ export class CreatorAnalyticsHandler {
           COALESCE(SUM(pa.likes), 0),
           COALESCE(SUM(pa.saves), 0),
           COALESCE(SUM(pa.nda_requests), 0),
-          0, -- TODO: Calculate signed NDAs
-          CASE 
+          (SELECT COUNT(*) FROM ndas n
+             WHERE n.pitch_id IN (SELECT id FROM pitches WHERE user_id = $1)
+               AND n.status IN ('signed', 'approved')),
+          CASE
             WHEN SUM(pa.views) > 0 
             THEN (SUM(pa.likes) + SUM(pa.saves))::FLOAT / SUM(pa.views) * 100
             ELSE 0

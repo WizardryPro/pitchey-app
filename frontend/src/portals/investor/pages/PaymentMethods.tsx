@@ -1,8 +1,12 @@
-import {
-  CreditCard, Shield, Building2
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card';
+import { Shield } from 'lucide-react';
+import { Card, CardContent } from '@shared/components/ui/card';
+import StripePortalCard from '@features/billing/components/StripePortalCard';
 
+/**
+ * Investor payment methods. Cards/invoices/subscription are managed through Stripe's
+ * hosted Customer Portal (StripePortalCard). The previous "payment integration coming
+ * soon" placeholder pre-dated the live Stripe integration and was removed.
+ */
 const PaymentMethods = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -11,56 +15,22 @@ const PaymentMethods = () => {
           <div className="mb-8">
             <h1 className="text-3xl font-bold">Payment Methods</h1>
             <p className="text-muted-foreground mt-2">
-              Manage your payment methods for investments and transactions
+              Manage your payment methods and billing for investments and subscriptions
             </p>
           </div>
 
-          {/* Security Notice */}
-          <Card className="mb-6 border-blue-200 bg-blue-50/50">
+          <div className="mb-6">
+            <StripePortalCard />
+          </div>
+
+          <Card className="border-blue-200 bg-blue-50/50">
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
-                <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
-                <div>
-                  <p className="font-medium text-blue-900">Bank-Level Security</p>
-                  <p className="text-sm text-blue-700 mt-1">
-                    Your payment information will be encrypted and secured with industry-standard protection.
-                    We never store sensitive card details on our servers.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Empty State */}
-          <div className="text-center py-16">
-            <CreditCard className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Payment integration coming soon</h3>
-            <p className="text-gray-500 max-w-md mx-auto mb-6">
-              Secure payment processing via Stripe is being integrated.
-              You will be able to add credit cards, bank accounts, and wire transfers for investments.
-            </p>
-          </div>
-
-          {/* Payment Information */}
-          <Card className="mt-8">
-            <CardHeader>
-              <CardTitle>Payment Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h4 className="font-medium mb-2">Accepted Payment Methods</h4>
-                <p className="text-sm text-muted-foreground">
-                  We will accept all major credit cards (Visa, Mastercard, American Express),
-                  ACH bank transfers, and wire transfers for investments over $100,000.
+                <Shield className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+                <p className="text-sm text-blue-700">
+                  Cards, invoices, and billing details are handled in the secure Stripe portal above.
+                  We never store sensitive card details on our servers.
                 </p>
-              </div>
-              <div>
-                <h4 className="font-medium mb-2">Processing Times</h4>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  <li className="flex items-center gap-2"><CreditCard className="h-4 w-4" /> Credit/Debit Cards: Instant</li>
-                  <li className="flex items-center gap-2"><Building2 className="h-4 w-4" /> ACH Transfers: 2-3 business days</li>
-                  <li className="flex items-center gap-2"><Shield className="h-4 w-4" /> Wire Transfers: 1-2 business days</li>
-                </ul>
               </div>
             </CardContent>
           </Card>
