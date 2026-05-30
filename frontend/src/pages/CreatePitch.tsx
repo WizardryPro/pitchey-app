@@ -1155,51 +1155,25 @@ export default function CreatePitch() {
                 </div>
               </div>
 
-              {/* Budget Range (only show if seeking investment) */}
-              {formData.seekingInvestment && (
-                <div>
-                  <label htmlFor="budgetRange" className="block text-sm font-medium text-gray-700 mb-2">
-                    Estimated Budget Range
-                  </label>
-                  <select
-                    id="budgetRange"
-                    name="budgetRange"
-                    value={formData.budgetRange}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none"
-                  >
-                    <option value="">Select a budget range</option>
-                    <option value="0-100k">Under $100K (Micro-budget)</option>
-                    <option value="100k-500k">$100K - $500K (Low budget)</option>
-                    <option value="500k-1m">$500K - $1M (Medium budget)</option>
-                    <option value="1m-5m">$1M - $5M (Moderate budget)</option>
-                    <option value="5m-20m">$5M - $20M (Mid-level budget)</option>
-                    <option value="20m-50m">$20M - $50M (High budget)</option>
-                    <option value="50m+">$50M+ (Blockbuster)</option>
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">
-                    This helps investors understand the scale of investment needed
-                  </p>
-                </div>
-              )}
-
-              {formData.seekingInvestment && (
-                <div>
-                  <label htmlFor="estimatedBudget" className="block text-sm font-medium text-gray-700 mb-2">
-                    Estimated Budget <span className="text-gray-400 font-normal">(optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="estimatedBudget"
-                    name="estimatedBudget"
-                    value={formData.estimatedBudget || ''}
-                    onChange={handleInputChange}
-                    maxLength={100}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    placeholder="e.g. $2.5M, or a more specific figure than the range above"
-                  />
-                </div>
-              )}
+              {/* Budget — free-form, set by the creator (no fixed ranges) */}
+              <div>
+                <label htmlFor="estimatedBudget" className="block text-sm font-medium text-gray-700 mb-2">
+                  Budget <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  id="estimatedBudget"
+                  name="estimatedBudget"
+                  value={formData.estimatedBudget || ''}
+                  onChange={handleInputChange}
+                  maxLength={100}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="Set your budget — e.g. $2.5M, £400K, or a range you're comfortable sharing"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Free text — set whatever's right for your project.
+                </p>
+              </div>
             </div>
           </div>
 

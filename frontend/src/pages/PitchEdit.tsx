@@ -24,7 +24,18 @@ interface PitchFormData {
   shortSynopsis: string;
   themes: string;
   worldDescription: string;
+  longSynopsis: string;
   budgetRange: string;
+  estimatedBudget: string;
+  targetAudience: string;
+  productionTimeline: string;
+  targetReleaseDate: string;
+  visibilitySettings: {
+    showShortSynopsis: boolean;
+    showCharacters: boolean;
+    showBudget: boolean;
+    showMedia: boolean;
+  };
   image: File | null;
   pdf: File | null;
   video: File | null;
@@ -61,7 +72,18 @@ export default function PitchEdit() {
     shortSynopsis: '',
     themes: '',
     worldDescription: '',
+    longSynopsis: '',
     budgetRange: '',
+    estimatedBudget: '',
+    targetAudience: '',
+    productionTimeline: '',
+    targetReleaseDate: '',
+    visibilitySettings: {
+      showShortSynopsis: true,
+      showCharacters: false,
+      showBudget: false,
+      showMedia: false,
+    },
     image: null,
     pdf: null,
     video: null,
@@ -148,7 +170,18 @@ export default function PitchEdit() {
         shortSynopsis: pitch.shortSynopsis || '',
         themes: pitch.themes || '',
         worldDescription: pitch.worldDescription || '',
+        longSynopsis: (pitch as any).longSynopsis ?? (pitch as any).long_synopsis ?? '',
         budgetRange: (pitch as any).budgetRange ?? (pitch as any).budget_range ?? pitch.budget ?? '',
+        estimatedBudget: (pitch as any).estimatedBudget ?? (pitch as any).estimated_budget ?? '',
+        targetAudience: (pitch as any).targetAudience ?? (pitch as any).target_audience ?? '',
+        productionTimeline: (pitch as any).productionTimeline ?? (pitch as any).production_timeline ?? '',
+        targetReleaseDate: (pitch as any).targetReleaseDate ?? (pitch as any).target_release_date ?? '',
+        visibilitySettings: {
+          showShortSynopsis: (pitch as any).visibility_settings?.showShortSynopsis ?? (pitch as any).visibilitySettings?.showShortSynopsis ?? true,
+          showCharacters: (pitch as any).visibility_settings?.showCharacters ?? (pitch as any).visibilitySettings?.showCharacters ?? false,
+          showBudget: (pitch as any).visibility_settings?.showBudget ?? (pitch as any).visibilitySettings?.showBudget ?? false,
+          showMedia: (pitch as any).visibility_settings?.showMedia ?? (pitch as any).visibilitySettings?.showMedia ?? false,
+        },
         image: null,
         pdf: null,
         video: null,
@@ -287,7 +320,12 @@ export default function PitchEdit() {
         shortSynopsis: formData.shortSynopsis,
         themes: formData.themes,
         worldDescription: formData.worldDescription,
+        longSynopsis: formData.longSynopsis || undefined,
         budgetRange: formData.budgetRange || undefined,
+        targetAudience: formData.targetAudience || undefined,
+        productionTimeline: formData.productionTimeline || undefined,
+        targetReleaseDate: formData.targetReleaseDate || undefined,
+        visibilitySettings: formData.visibilitySettings,
         requireNDA: formData.ndaConfig.requireNDA,
         characters: serializeCharacters(formData.characters)
       };
@@ -519,6 +557,23 @@ export default function PitchEdit() {
                 {formData.shortSynopsis.length}/500 characters recommended
               </p>
             </div>
+
+            <div className="mt-6">
+              <label htmlFor="longSynopsis" className="block text-sm font-medium text-gray-700 mb-2">
+                Long Synopsis <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <textarea
+                id="longSynopsis"
+                name="longSynopsis"
+                value={formData.longSynopsis}
+                onChange={handleInputChange}
+                rows={8}
+                maxLength={5000}
+                className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
+                placeholder="A detailed, scene-by-scene account of the full story — the deeper read for interested parties."
+              />
+              <p className="text-xs text-gray-500 mt-1">{formData.longSynopsis.length}/5000 characters</p>
+            </div>
           </div>
 
           {/* Themes & World Section */}
@@ -566,31 +621,112 @@ export default function PitchEdit() {
             </div>
           </div>
 
+          {/* Market & Production Section */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-6">Market & Production</h2>
+            <div className="space-y-6">
+              <div>
+                <label htmlFor="targetAudience" className="block text-sm font-medium text-gray-700 mb-2">
+                  Target Audience <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <textarea
+                  id="targetAudience"
+                  name="targetAudience"
+                  value={formData.targetAudience}
+                  onChange={handleInputChange}
+                  rows={3}
+                  maxLength={2000}
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
+                  placeholder="Who is this for? Demographics, comparable audiences, platform fit..."
+                />
+              </div>
+              <div>
+                <label htmlFor="productionTimeline" className="block text-sm font-medium text-gray-700 mb-2">
+                  Production Timeline <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <textarea
+                  id="productionTimeline"
+                  name="productionTimeline"
+                  value={formData.productionTimeline}
+                  onChange={handleInputChange}
+                  rows={3}
+                  maxLength={2000}
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
+                  placeholder="Key milestones and schedule — development, pre-production, shoot, post..."
+                />
+              </div>
+              <div>
+                <label htmlFor="targetReleaseDate" className="block text-sm font-medium text-gray-700 mb-2">
+                  Target Release Date <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  id="targetReleaseDate"
+                  name="targetReleaseDate"
+                  value={formData.targetReleaseDate}
+                  onChange={handleInputChange}
+                  maxLength={50}
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
+                  placeholder="e.g. Q4 2027, or a target month/year"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Budget Section */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <label htmlFor="budgetRange" className="block text-sm font-medium text-gray-700 mb-2">
-              Estimated Budget Range
+              Budget
             </label>
-            <select
+            <input
+              type="text"
               id="budgetRange"
               name="budgetRange"
               value={formData.budgetRange}
               onChange={handleInputChange}
               disabled={isSubmitting}
+              maxLength={100}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none"
-            >
-              <option value="">Select a budget range</option>
-              <option value="0-100k">Under $100K (Micro-budget)</option>
-              <option value="100k-500k">$100K - $500K (Low budget)</option>
-              <option value="500k-1m">$500K - $1M (Medium budget)</option>
-              <option value="1m-5m">$1M - $5M (Moderate budget)</option>
-              <option value="5m-20m">$5M - $20M (Mid-level budget)</option>
-              <option value="20m-50m">$20M - $50M (High budget)</option>
-              <option value="50m+">$50M+ (Blockbuster)</option>
-            </select>
+              placeholder="Set your budget — e.g. $2.5M, £400K, or a range you're comfortable sharing"
+            />
             <p className="text-xs text-gray-500 mt-1">
-              This helps investors understand the scale of investment needed.
+              Enter the budget you want to share with investors. Free text — set whatever's right for your project.
             </p>
+          </div>
+
+          {/* Public Visibility Section */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Public Visibility</h2>
+            <p className="text-sm text-gray-500 mb-6">
+              Choose what's visible on the public pitch page before a viewer signs an NDA.
+            </p>
+            <div className="space-y-3">
+              {([
+                { key: 'showShortSynopsis', label: 'Show short synopsis', desc: 'Display the short synopsis publicly.' },
+                { key: 'showCharacters', label: 'Show characters', desc: 'Reveal the character list publicly.' },
+                { key: 'showBudget', label: 'Show budget', desc: 'Display the budget publicly.' },
+                { key: 'showMedia', label: 'Show media', desc: 'Display images and media publicly.' },
+              ] as const).map((opt) => {
+                const checked = !!formData.visibilitySettings[opt.key];
+                return (
+                  <label key={opt.key} className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => setFormData(prev => ({
+                        ...prev,
+                        visibilitySettings: { ...prev.visibilitySettings, [opt.key]: !checked },
+                      }))}
+                      className="mt-1 w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-gray-900">{opt.label}</span>
+                      <p className="text-xs text-gray-500">{opt.desc}</p>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
           </div>
 
           {/* Characters Section */}

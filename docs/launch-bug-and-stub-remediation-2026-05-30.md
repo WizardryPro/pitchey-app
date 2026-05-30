@@ -14,7 +14,7 @@ Nothing below is a hard launch-blocker; it's integrity polish, cleanup, and defe
 **A. Karl-facing / launch-relevant**
 - **A6 production "lock"** (`EnhancedProductionNav.tsx:28`, `EnhancedNavigationShadcn.tsx:166`) — it's the `Shield` icon on Verification/Roles, not a real lock. S. Confirm with Karl; optional one-line icon swap. Pages work.
 - **Demo pitch has no documents** (`scripts/seed-demo-users.sql`) — A4 download UI is wired but demo data has no `pitch_documents` rows. S, but **blocked**: needs a real file in R2 to make a working download.
-- **PitchEdit missing the new A7 fields** (`frontend/src/pages/PitchEdit.tsx`) — creators can create long synopsis/budget/timeline/visibility but can't edit them (UPDATE COALESCEs, no data loss). M.
+- ~~**PitchEdit missing the new A7 fields**~~ ✅ DONE — PitchEdit now has long synopsis, target audience, production timeline, target release date, and visibility toggles. Also reworked **budget to a free-form input** (creator sets any value) in BOTH create + edit, replacing the fixed "Estimated Budget Range" dropdown (CreatePitch binds to `estimated_budget`, PitchEdit to `budget_range`; display uses `budget_range || estimated_budget`). Budget is now always-visible on create (was gated behind "seeking investment").
 
 **B. Dead backend to remove (zero callers)**
 - **Scheduled reports** — `worker-integrated.ts:2685-2687` + 3 handlers + dead service methods. No table/executor/UI. REMOVE. S–M.
