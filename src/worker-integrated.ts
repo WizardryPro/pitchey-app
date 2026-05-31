@@ -6079,6 +6079,10 @@ pitchey_analytics_datapoints_per_minute 1250
       characters?: any[];
       aiDisclosure?: string;
       aiUsed?: boolean;
+      // NDA requirement — editable on the edit page (was create-only before).
+      // camelCase from the frontend; accept snake_case too.
+      requireNDA?: boolean;
+      require_nda?: boolean;
       creativeAttachments?: Array<{
         id?: string;
         name: string;
@@ -6138,6 +6142,7 @@ pitchey_analytics_datapoints_per_minute 1250
           production_timeline = COALESCE($30, production_timeline),
           target_release_date = COALESCE($31, target_release_date),
           visibility_settings = COALESCE($32, visibility_settings),
+          require_nda = COALESCE($33, require_nda),
           updated_at = NOW()
         WHERE id = $1
         RETURNING *
@@ -6173,7 +6178,8 @@ pitchey_analytics_datapoints_per_minute 1250
         data.budgetBracket ?? null,
         data.productionTimeline ?? null,
         data.targetReleaseDate ?? null,
-        data.visibilitySettings ? JSON.stringify(data.visibilitySettings) : null
+        data.visibilitySettings ? JSON.stringify(data.visibilitySettings) : null,
+        (data.requireNDA ?? data.require_nda) ?? null
       ]);
 
       // Handle creative attachments if provided
