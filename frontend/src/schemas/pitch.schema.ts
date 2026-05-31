@@ -111,11 +111,19 @@ export const PDFFileSchema = v.custom<File>(
   'Invalid PDF file. Must be under 20MB'
 );
 
+// Permissive: documents are owned/validated by the DocumentUpload component and
+// uploaded separately (create flow uploads raw formData.documents after the
+// pitch exists; see CreatePitch PHASE 2b). The form-level schema only needs to
+// let the component's DocumentFile shape through — it must NOT impose name/PDF/
+// 4-type constraints the component doesn't use (those were blocking submit with
+// "Invalid key: Expected 'name'"). Unknown keys are stripped by v.object.
 export const DocumentFileSchema = v.object({
   id: v.optional(v.string()),
-  name: v.string(),
-  type: v.picklist(['script', 'treatment', 'pitch_deck', 'other']),
-  file: v.optional(v.union([PDFFileSchema, v.string()])), // File or URL
+  name: v.optional(v.string()),
+  title: v.optional(v.string()),
+  type: v.optional(v.string()),
+  file: v.optional(v.any()), // File or URL or undefined (staged vs uploaded)
+  url: v.optional(v.string()),
   uploadedAt: v.optional(v.string())
 });
 
@@ -223,6 +231,7 @@ export const VisibilitySettingsSchema = v.optional(v.object({
   showCharacters: v.optional(v.boolean()),
   showBudget: v.optional(v.boolean()),
   showMedia: v.optional(v.boolean()),
+  showCreatorName: v.optional(v.boolean()),
 }));
 
 export const CreativeAttachmentSchema = v.object({

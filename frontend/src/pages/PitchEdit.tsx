@@ -35,6 +35,7 @@ interface PitchFormData {
     showCharacters: boolean;
     showBudget: boolean;
     showMedia: boolean;
+    showCreatorName: boolean;
   };
   image: File | null;
   pdf: File | null;
@@ -83,6 +84,7 @@ export default function PitchEdit() {
       showCharacters: false,
       showBudget: false,
       showMedia: false,
+      showCreatorName: true,
     },
     image: null,
     pdf: null,
@@ -213,6 +215,8 @@ export default function PitchEdit() {
           showCharacters: (pitch as any).visibility_settings?.showCharacters ?? (pitch as any).visibilitySettings?.showCharacters ?? false,
           showBudget: (pitch as any).visibility_settings?.showBudget ?? (pitch as any).visibilitySettings?.showBudget ?? false,
           showMedia: (pitch as any).visibility_settings?.showMedia ?? (pitch as any).visibilitySettings?.showMedia ?? false,
+          // undefined → true (existing pitches keep showing the name)
+          showCreatorName: (pitch as any).visibility_settings?.showCreatorName ?? (pitch as any).visibilitySettings?.showCreatorName ?? true,
         },
         image: null,
         pdf: null,
@@ -738,8 +742,12 @@ export default function PitchEdit() {
                 { key: 'showCharacters', label: 'Show characters', desc: 'Reveal the character list publicly.' },
                 { key: 'showBudget', label: 'Show budget', desc: 'Display the budget publicly.' },
                 { key: 'showMedia', label: 'Show media', desc: 'Display images and media publicly.' },
+                { key: 'showCreatorName', label: 'Show creator name', desc: 'When off, anonymous (logged-out) visitors see "Anonymous Creator"; signed-in users still see your name.' },
               ] as const).map((opt) => {
-                const checked = !!formData.visibilitySettings[opt.key];
+                // showCreatorName defaults to shown when unset (backward compat)
+                const checked = opt.key === 'showCreatorName'
+                  ? formData.visibilitySettings[opt.key] !== false
+                  : !!formData.visibilitySettings[opt.key];
                 return (
                   <label key={opt.key} className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 cursor-pointer">
                     <input
@@ -777,6 +785,7 @@ export default function PitchEdit() {
             <DocumentUpload
               documents={formData.documents}
               onChange={handleDocumentChange}
+              pitchId={id ? parseInt(id) : undefined}
               maxFiles={15}
               maxFileSize={10}
               disabled={isSubmitting}
