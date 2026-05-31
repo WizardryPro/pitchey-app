@@ -1,18 +1,16 @@
 name: Deploy Frontend to Cloudflare Pages
 
-# This workflow automatically deploys the frontend when you push to main
+# MANUAL break-glass frontend deployer only.
+# Production frontend is deployed by Cloudflare Pages' Git integration (auto-build
+# on push to main) — that is the single source of truth. This workflow used to also
+# auto-deploy on push, which meant two pipelines racing to deploy the same commit to
+# the same Pages project. Trigger reduced to workflow_dispatch so it only runs when
+# someone deliberately needs a wrangler-based deploy (e.g. CF Git integration outage).
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/deploy-frontend.yml'
-  workflow_dispatch: # Allow manual trigger
+  workflow_dispatch: # Manual trigger only
 
 env:
-  # wrangler >=4 requires Node >=22; Node 20 made `wrangler pages deploy` exit 1
-  # *after* a successful Vite build, silently freezing prod at the 2026-05-05 build.
-  NODE_VERSION: '22'
+  NODE_VERSION: '22' # wrangler >=4 requires Node >=22
 
 jobs:
   deploy:
