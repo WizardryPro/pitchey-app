@@ -332,11 +332,13 @@ export interface UpdatePitchInput extends Partial<CreatePitchInput> {
   targetAudience?: string;
   productionTimeline?: string;
   targetReleaseDate?: string;
+  videoUrl?: string;
   visibilitySettings?: {
     showShortSynopsis?: boolean;
     showCharacters?: boolean;
     showBudget?: boolean;
     showMedia?: boolean;
+    showCreatorName?: boolean;
   };
 }
 

@@ -366,6 +366,10 @@ export default function PitchEdit() {
         characters: serializeCharacters(formData.characters)
       };
 
+      // Collects names of any media/documents that failed to upload during this
+      // save so we can surface them without aborting the whole update.
+      const failedDocs: string[] = [];
+
       // Upload image via /api/upload and set as title image
       if (formData.image) {
         const result = await uploadService.uploadDocument(formData.image, 'image', {
@@ -377,12 +381,43 @@ export default function PitchEdit() {
         }
       }
 
+      // Upload the standalone Script/Treatment PDF (this widget previously
+      // accepted a file but never uploaded it — silent data loss). Attach it as
+      // a 'script' document so it surfaces alongside other pitch documents.
+      if (formData.pdf) {
+        try {
+          await uploadService.uploadDocument(formData.pdf, 'script', {
+            pitchId: parseInt(id!),
+            requiresNda: true,
+          });
+        } catch (pdfErr) {
+          console.error('Script/Treatment PDF upload failed:', pdfErr);
+          failedDocs.push(formData.pdf.name);
+        }
+      }
+
+      // Upload the pitch video (same prior gap — staged but never saved) and set
+      // it as the pitch video URL.
+      if (formData.video) {
+        try {
+          const vid = await uploadService.uploadDocument(formData.video, 'video', {
+            pitchId: parseInt(id!),
+            folder: 'pitch-videos',
+          });
+          if (vid.url) {
+            updateData.videoUrl = vid.url;
+          }
+        } catch (vidErr) {
+          console.error('Pitch video upload failed:', vidErr);
+          failedDocs.push(formData.video.name);
+        }
+      }
+
       // Upload any newly added project documents (scripts, decks, budget, etc.)
       // and link them to this pitch. Each carries its own document_type so it
       // surfaces in the right slot on the pitch view. Per-document failures are
       // collected rather than aborting the whole save.
       const pendingDocs = formData.documents.filter((d) => d.file && !d.url);
-      const failedDocs: string[] = [];
       for (const doc of pendingDocs) {
         try {
           await uploadService.uploadDocument(doc.file, doc.type, {

@@ -71,6 +71,7 @@ export interface VisibilitySettings {
   showCharacters: boolean;
   showBudget: boolean;
   showMedia: boolean;
+  showCreatorName?: boolean;
 }
 
 // Pitch Types
@@ -475,6 +476,7 @@ export interface UpdatePitchInput extends Partial<CreatePitchInput> {
   targetAudience?: string;
   productionTimeline?: string;
   targetReleaseDate?: string;
+  videoUrl?: string;
   visibilitySettings?: VisibilitySettings;
 }
 
