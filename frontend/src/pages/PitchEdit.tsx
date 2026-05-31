@@ -777,6 +777,7 @@ export default function PitchEdit() {
             <DocumentUpload
               documents={formData.documents}
               onChange={handleDocumentChange}
+              pitchId={id ? parseInt(id) : undefined}
               maxFiles={15}
               maxFileSize={10}
               disabled={isSubmitting}

@@ -46,6 +46,15 @@ interface DocumentUploadProps {
   maxFileSize?: number; // in MB
   allowedTypes?: string[];
   disabled?: boolean;
+  // When set, in-component uploads are linked to this pitch (recorded in
+  // pitch_documents) instead of orphaned in R2. Required for uploads to
+  // actually attach to a pitch — see /api/upload handler.
+  pitchId?: number;
+  // When false, files are only staged locally (status 'idle', no network call,
+  // no credit charge). The parent uploads them later once a pitchId exists
+  // (the create-pitch flow, where there is no pitch to attach to yet).
+  // Defaults to true to preserve the edit-page auto-upload behavior.
+  autoUpload?: boolean;
   showProgress?: boolean;
   enableDragDrop?: boolean;
   showPreview?: boolean;
@@ -112,6 +121,8 @@ export default function DocumentUpload({
   maxFileSize = 10,
   allowedTypes = DEFAULT_ALLOWED_TYPES,
   disabled = false,
+  pitchId,
+  autoUpload = true,
   showProgress = true,
   enableDragDrop = true,
   showPreview = true,
@@ -252,14 +263,16 @@ export default function DocumentUpload({
       onChange(newDocuments);
       success('Files added', `${validFiles.length} file(s) ready for upload.`);
       
-      // Auto-start uploads if concurrent uploading is enabled
-      if (enableConcurrentUploads) {
+      // Auto-start uploads if concurrent uploading is enabled. When autoUpload
+      // is false (create-pitch flow), files are staged only — the parent
+      // uploads them after the pitch is created so they attach with a pitchId.
+      if (autoUpload && enableConcurrentUploads) {
         validFiles.forEach(doc => {
           setUploadQueue(prev => [...prev, doc.id]);
         });
       }
     }
-  }, [documents, maxFiles, validateFile, detectDocumentType, onChange, error, success, enableConcurrentUploads]);
+  }, [documents, maxFiles, validateFile, detectDocumentType, onChange, error, success, enableConcurrentUploads, autoUpload]);
 
   // Handle file selection
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -343,6 +356,8 @@ export default function DocumentUpload({
         document.file,
         document.type,
         {
+          pitchId,
+          requiresNda: document.type !== 'lookbook',
           signal: controller.signal,
           onProgress: (progress) => {
             const stats = uploadStats.current.get(document.id);
@@ -420,7 +435,7 @@ export default function DocumentUpload({
         return newSet;
       });
     }
-  }, [updateDocument, success, error, onUploadComplete, onUploadError]);
+  }, [updateDocument, success, error, onUploadComplete, onUploadError, pitchId]);
 
   // Enhanced file utilities
   const formatFileSize = useCallback((bytes: number): string => {
@@ -731,7 +746,7 @@ export default function DocumentUpload({
               Documents ({documents.length})
             </h3>
             <div className="flex items-center gap-2">
-              {documents.some(doc => doc.uploadStatus === 'idle') && (
+              {autoUpload && documents.some(doc => doc.uploadStatus === 'idle') && (
                 <button
                   onClick={() => {
                     documents
@@ -963,7 +978,7 @@ export default function DocumentUpload({
                         </button>
                       )}
                       
-                      {document.uploadStatus === 'idle' && (
+                      {autoUpload && document.uploadStatus === 'idle' && (
                         <button
                           type="button"
                           onClick={() => { void uploadDocument(document); }}

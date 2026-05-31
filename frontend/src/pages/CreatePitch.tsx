@@ -17,10 +17,11 @@ import { CharacterManagement } from '@features/pitches/components/CharacterManag
 import type { Character } from '@shared/types/character';
 import { serializeCharacters } from '@features/pitches/utils/characterUtils';
 // DocumentUpload removed — using DocumentUploadHub instead (Karl feedback #6)
-import type { DocumentFile } from '@features/uploads/components/DocumentUpload';
-import DocumentUploadHub from '@features/uploads/components/FileUpload/DocumentUploadHub';
-import type { NDADocument } from '@features/ndas/components/NDAUploadSection';
-import type { EnhancedUploadResult } from '@features/uploads/services/enhanced-upload.service';
+// Use the same typed document uploader (Script/Treatment/Pitch Deck/etc.) as the
+// Edit page, instead of the generic DocumentUploadHub drag-drop — per Karl's
+// request for parity with edit. NDA selection is rendered via NDAUploadSection.
+import { DocumentUpload, type DocumentFile } from '@features/uploads/components/DocumentUpload';
+import NDAUploadSection, { type NDADocument } from '@features/ndas/components/NDAUploadSection';
 import {
   ToneAndStyleSection,
   CompsSection,
@@ -410,6 +411,25 @@ export default function CreatePitch() {
         // PHASE 1: Create the pitch first to get the pitchId
         const pitch = await pitchService.create(pitchData);
         const pitchId = pitch.id;
+
+        // PHASE 2b: Upload typed project documents now that we have the pitchId.
+        // These come from the DocumentUpload component (held in formData.documents);
+        // same upload path as the Edit page so they attach to the pitch (uploads/<uid>/
+        // + pitch_documents row). Per-doc failures don't abort the create.
+        const pendingDocs = (formData.documents || []).filter((d: any) => d?.file && !d?.url);
+        if (pendingDocs.length > 0) {
+          setCurrentStep('uploading');
+          for (const doc of pendingDocs) {
+            try {
+              await uploadService.uploadDocument((doc as any).file, (doc as any).type, {
+                pitchId,
+                requiresNda: (doc as any).type !== 'lookbook',
+              });
+            } catch (docErr) {
+              console.error('Document upload failed:', (doc as any).title, docErr);
+            }
+          }
+        }
 
         // PHASE 2: Upload any pending media files with the actual pitchId
         if (uploadManager.hasUploads) {
@@ -1401,28 +1421,10 @@ export default function CreatePitch() {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Pitch Documents & NDA Settings
             </h3>
-            <DocumentUploadHub
-              pitchId={undefined} // Will be set after pitch creation
-              deferUploads={true} // Defer uploads until pitch is created
-              onFilesSelected={(files: File[]) => {
-                // DocumentUploadHub re-emits the FULL current document set on every
-                // change. Treat it as authoritative (replace, don't append) so adding
-                // multiple docs doesn't duplicate them or double-charge credits.
-                uploadManager.setDocumentUploads(files);
-              }}
-              onUploadComplete={(results: EnhancedUploadResult[]) => {
-                // Store uploaded documents (for non-deferred mode)
-                const documentUrls = results.map(r => ({
-                  url: (r as any).cdnUrl || (r as any).url,
-                  filename: (r as any).filename,
-                  size: (r as any).size,
-                  type: (r as any).type,
-                  r2Key: (r as any).r2Key
-                }));
-                setValue('documents', documentUrls as any);
-                success('Documents uploaded successfully');
-              }}
-              onNDAChange={(nda: NDADocument | null) => {
+            {/* NDA selection (same component the edit page uses for NDA config) */}
+            <NDAUploadSection
+              disabled={isSubmitting}
+              onChange={(nda: NDADocument | null) => {
                 setNdaDocument(nda);
                 if (nda && nda.ndaType !== 'none') {
                   const schemaType = nda.ndaType === 'custom' ? 'custom' : 'platform';
@@ -1439,9 +1441,25 @@ export default function CreatePitch() {
                   } as any);
                 }
               }}
-              disabled={isSubmitting}
-              className="border-t pt-6"
             />
+
+            {/* Typed document uploader (Script/Treatment/Pitch Deck/etc.) — same as
+                the Edit page. Files are held in formData.documents and uploaded after
+                the pitch is created (PHASE 2b in submit), so they attach with pitchId. */}
+            <div className="border-t pt-6 mt-6">
+              <h4 className="text-base font-semibold text-gray-900 mb-4">Project Documents</h4>
+              <DocumentUpload
+                documents={(formData.documents ?? []) as unknown as DocumentFile[]}
+                onChange={handleDocumentChange as unknown as (docs: DocumentFile[]) => void}
+                maxFiles={15}
+                maxFileSize={10}
+                disabled={isSubmitting}
+                autoUpload={false}
+                showProgress={true}
+                enableDragDrop={true}
+                showPreview={true}
+              />
+            </div>
 
             {/* AI Usage Disclosure */}
             <div className="border-t pt-6 mt-6">
