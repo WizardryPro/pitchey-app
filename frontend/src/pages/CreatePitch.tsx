@@ -84,6 +84,7 @@ export default function CreatePitch() {
       showCharacters: false,
       showBudget: false,
       showMedia: false,
+      showCreatorName: true,
     },
     creativeAttachments: [],
     videoUrl: '',
@@ -1395,6 +1396,7 @@ export default function CreatePitch() {
                 { key: 'showCharacters', label: 'Show characters', desc: 'Reveal the character list publicly.' },
                 { key: 'showBudget', label: 'Show budget', desc: 'Display budget range / estimate publicly.' },
                 { key: 'showMedia', label: 'Show media', desc: 'Display images and media publicly.' },
+                { key: 'showCreatorName', label: 'Show creator name', desc: 'When off, anonymous (logged-out) visitors see "Anonymous Creator"; signed-in users still see your name.' },
               ] as const).map((opt) => {
                 const current = formData.visibilitySettings || {};
                 const checked = !!(current as Record<string, boolean>)[opt.key];

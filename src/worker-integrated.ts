@@ -265,6 +265,17 @@ function getEnvHash(env: Env): string {
   return `${env.DATABASE_URL?.substring(0, 50) ?? 'no-db'}-${env.ENVIRONMENT ?? 'unknown'}`;
 }
 
+// pitches.visibility_settings is JSONB (object from the Neon client) but older
+// rows / some envs may store it as a JSON string. Parse defensively; never throw.
+function parseVisibilitySettings(raw: unknown): Record<string, boolean> | null {
+  if (!raw) return null;
+  if (typeof raw === 'object') return raw as Record<string, boolean>;
+  if (typeof raw === 'string') {
+    try { return JSON.parse(raw) as Record<string, boolean>; } catch { return null; }
+  }
+  return null;
+}
+
 function getOrCreateRouter(env: Env): RouteRegistry {
   const currentHash = getEnvHash(env);
 
@@ -5604,15 +5615,22 @@ pitchey_analytics_datapoints_per_minute 1250
       if (result.length > 0) {
         const pitch = result[0];
 
+        // Hide creator name from ANONYMOUS (logged-out) viewers when the creator
+        // opted out via visibility_settings.showCreatorName === false. Signed-in
+        // viewers always see it; undefined → shown (backward compatible).
+        const hideCreatorName = !userId && parseVisibilitySettings(pitch.visibility_settings)?.showCreatorName === false;
+
         // Determine creator display based on NDA access
         let creatorInfo;
         if (hasNDAAccess) {
           // Show full creator info if NDA is signed
           creatorInfo = {
             id: pitch.user_id,
-            name: pitch.creator_type === 'production' && pitch.company_name
-              ? pitch.company_name
-              : (pitch.creator_name || 'Unknown Creator'),
+            name: hideCreatorName
+              ? 'Anonymous Creator'
+              : (pitch.creator_type === 'production' && pitch.company_name
+                ? pitch.company_name
+                : (pitch.creator_name || 'Unknown Creator')),
             type: pitch.creator_type,
             email: null // Still don't expose email publicly
           };
@@ -5620,7 +5638,9 @@ pitchey_analytics_datapoints_per_minute 1250
           // Show basic creator info pre-NDA (user_id is already exposed for messaging)
           creatorInfo = {
             id: pitch.user_id,
-            name: (pitch.creator_name as string)?.split(' ')[0] || 'Creator',
+            name: hideCreatorName
+              ? 'Anonymous Creator'
+              : ((pitch.creator_name as string)?.split(' ')[0] || 'Creator'),
             type: pitch.creator_type,
             email: null
           };
@@ -5862,6 +5882,8 @@ pitchey_analytics_datapoints_per_minute 1250
       // so full story details stay gated behind industry signup / NDA.
       const SYNOPSIS_TEASER_CHARS = 300;
       const isAudienceView = !isOwner && !hasNDAAccess && (viewerUserType === 'viewer' || !authUserId);
+      // Hide creator name from anonymous (logged-out) viewers when opted out.
+      const hideCreatorName = !authUserId && parseVisibilitySettings(pitch.visibility_settings)?.showCreatorName === false;
       const teaseText = (s: unknown): unknown => {
         if (!isAudienceView || typeof s !== 'string' || s.length <= SYNOPSIS_TEASER_CHARS) return s;
         return s.slice(0, SYNOPSIS_TEASER_CHARS).trimEnd() + '…';
@@ -5910,6 +5932,8 @@ pitchey_analytics_datapoints_per_minute 1250
         ...pitchWithoutProtectedUrls,
         // Re-attach protected URL fields only for owner or NDA-signed viewers
         ...(hasNDAAccess || isOwner ? { pitch_deck_url: _pdu, script_url: _su, trailer_url: _tu } : {}),
+        // Override spread creator_name for anonymous opt-out (see hideCreatorName)
+        ...(hideCreatorName ? { creator_name: 'Anonymous Creator' } : {}),
         documents,
         pitchDeck: (hasNDAAccess || isOwner) ? (_pdu ?? findDoc('pitch_deck', 'pitchdeck', 'deck')) : undefined,
         script: (hasNDAAccess || isOwner) ? (_su ?? findDoc('script', 'screenplay')) : undefined,
@@ -5927,7 +5951,7 @@ pitchey_analytics_datapoints_per_minute 1250
         investment_count: investmentCount,
         creator: {
           id: pitch.user_id,
-          name: pitch.creator_name || 'Unknown Creator',
+          name: hideCreatorName ? 'Anonymous Creator' : (pitch.creator_name || 'Unknown Creator'),
           userType: pitch.creator_type
         },
         userId: pitch.user_id,

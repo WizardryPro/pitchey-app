@@ -231,6 +231,7 @@ export const VisibilitySettingsSchema = v.optional(v.object({
   showCharacters: v.optional(v.boolean()),
   showBudget: v.optional(v.boolean()),
   showMedia: v.optional(v.boolean()),
+  showCreatorName: v.optional(v.boolean()),
 }));
 
 export const CreativeAttachmentSchema = v.object({
