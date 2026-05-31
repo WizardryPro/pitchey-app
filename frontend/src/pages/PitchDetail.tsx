@@ -422,6 +422,11 @@ export default function PitchDetail() {
                   <div className="flex items-center gap-1.5">
                     <Lock className="w-4 h-4 text-gray-400" />
                     <span className="text-gray-500 italic">Creator info hidden — NDA required</span>
+                    {/* Following is a public action — allow it pre-NDA without
+                        revealing the creator's name (button only needs the id). */}
+                    {isAuthenticated && !isOwner && pitch.creator?.id && (
+                      <FollowButton creatorId={pitch.creator.id} variant="small" />
+                    )}
                   </div>
                 )}
                 <div className="flex items-center gap-1.5">
