@@ -10,7 +10,7 @@ on:
     - cron: '0 2 * * *'
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'  # wrangler >=4 requires Node >=22 (see deploy-frontend.yml)
   FRONTEND_DIR: './frontend'
   WORKER_DIR: './src'
   
