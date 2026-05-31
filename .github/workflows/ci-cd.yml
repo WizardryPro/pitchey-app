@@ -165,7 +165,13 @@ jobs:
   deploy-production:
     name: 🚀 Deploy to Production
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    # DISABLED — redundant + hazardous. Frontend is owned by Cloudflare Pages' Git
+    # integration; the worker is deployed manually via deploy-production.yml
+    # (workflow_dispatch). This job also re-synced Worker secrets from GitHub secrets
+    # on every push, which would silently overwrite prod secrets with anything stale
+    # (e.g. a rotated NEON URL → outage). Kept in-file (not deleted) so the manual
+    # deploy reference stays visible. Re-enable only behind a deliberate decision.
+    if: false && github.ref == 'refs/heads/main'
     needs: [security-scan, frontend-test, worker-test, database-test]
     environment: production
 
