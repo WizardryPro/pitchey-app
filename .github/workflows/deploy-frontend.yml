@@ -10,7 +10,9 @@ on:
   workflow_dispatch: # Allow manual trigger
 
 env:
-  NODE_VERSION: '20'
+  # wrangler >=4 requires Node >=22; Node 20 made `wrangler pages deploy` exit 1
+  # *after* a successful Vite build, silently freezing prod at the 2026-05-05 build.
+  NODE_VERSION: '22'
 
 jobs:
   deploy:
