@@ -1,0 +1,68 @@
+name: Deploy Worker to Cloudflare
+
+# Auto-deploys the API Worker (pitchey-api-prod) on push to main.
+#
+# Why this exists: the Worker has historically been deployed BY HAND, so it
+# silently drifted behind main. On 2026-05-31 that drift caused a live 500 on
+# /api/views/track — the ON CONFLICT fix had been on main for a day but the last
+# manual deploy was from a stale local checkout. Frontend auto-deploys via CF
+# Pages Git integration; this gives the Worker the same guarantee.
+#
+# Deliberately SAFE: it runs `wrangler deploy` only. It does NOT re-sync Worker
+# secrets (DATABASE_URL/JWT/etc.) — a plain deploy preserves existing prod
+# secrets, and re-pushing them from GitHub secrets is an outage risk if any are
+# stale (see the disabled ci-cd.yml deploy-production job). It does NOT deploy
+# the frontend (CF Pages Git integration owns that).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'wrangler.toml'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/deploy-worker.yml'
+  workflow_dispatch: # manual trigger
+
+# Never interrupt an in-flight deploy; queue pushes so the latest commit wins.
+concurrency:
+  group: deploy-worker-production
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '22' # wrangler >=4 requires Node >=22
+
+jobs:
+  deploy:
+    name: Build & Deploy Worker
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      # Build gate — esbuild bundles the Worker exactly as Cloudflare will.
+      # Fails the job on import/syntax/bundling breakage BEFORE we ship to prod.
+      - name: 🏗️ Build Worker (bundle check)
+        run: npm run build:worker
+
+      - name: 🚀 Deploy Worker to production
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: ✅ Done
+        run: |
+          echo "Worker deployed: pitchey-api-prod"
+          echo "Commit: ${{ github.sha }}"
