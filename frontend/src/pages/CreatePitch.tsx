@@ -1424,6 +1424,7 @@ export default function CreatePitch() {
             {/* NDA selection (same component the edit page uses for NDA config) */}
             <NDAUploadSection
               disabled={isSubmitting}
+              ndaDocument={ndaDocument ?? undefined}
               onChange={(nda: NDADocument | null) => {
                 setNdaDocument(nda);
                 if (nda && nda.ndaType !== 'none') {
