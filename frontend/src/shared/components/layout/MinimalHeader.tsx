@@ -142,8 +142,10 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
 
         {/* Credits — just count on mobile, count + label on sm+ (prevents "500 Credits" pill wrapping at 390px viewports) */}
         <button
-          className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 ${theme.creditPill} rounded-full text-sm font-medium transition whitespace-nowrap`}
-          aria-label={creditBalance === null ? 'Credits loading' : `${creditBalance} credits`}
+          onClick={() => navigate(`/${getPortalPath(userType)}/billing?tab=credits`)}
+          className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 ${theme.creditPill} rounded-full text-sm font-medium transition whitespace-nowrap cursor-pointer hover:opacity-90`}
+          aria-label={creditBalance === null ? 'Credits loading — open billing' : `${creditBalance} credits — open billing to buy more`}
+          title="Buy more credits"
         >
           <Coins className="w-4 h-4 shrink-0" />
           <span>{creditBalance === null ? '—' : creditBalance}</span>
