@@ -81,7 +81,9 @@ jobs:
           CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE: ${{ secrets.E2E_DATABASE_URL }}
         run: |
           npx wrangler dev --port 8001 > /tmp/wrangler.log 2>&1 &
-          (cd frontend && VITE_API_URL=http://localhost:8001 VITE_WS_URL=ws://localhost:8001 npm run dev > /tmp/vite.log 2>&1 &)
+          # --host 127.0.0.1 forces vite onto IPv4 — by default it binds IPv6-only
+          # ([::1]:5173), which wait-on's `tcp:127.0.0.1:5173` (IPv4) never matches.
+          (cd frontend && VITE_API_URL=http://localhost:8001 VITE_WS_URL=ws://localhost:8001 npm run dev -- --host 127.0.0.1 --port 5173 > /tmp/vite.log 2>&1 &)
           # Wait for both to listen. On timeout, dump both logs in THIS step so the
           # cause is visible (a later step can't reliably capture it).
           if ! npx wait-on -t 120000 tcp:127.0.0.1:8001 tcp:127.0.0.1:5173; then
