@@ -47,10 +47,9 @@ export default function Messages() {
   const { user } = useBetterAuthStore();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Get messaging cost for creators
-  const messageCost = getCreditCost('send_message');
-  const isCreator = user?.userType === 'creator';
-  const isFreeForUser = !isCreator;
+  // 1 credit per NEW person contacted (charged when a conversation is created);
+  // messaging within an existing conversation is free. Unlimited plans skip it.
+  const messageCost = getCreditCost('contact_recipient');
   
   // State management
   const [selectedConversation, setSelectedConversation] = useState<number | null>(null);
@@ -1225,24 +1224,12 @@ export default function Messages() {
                       </div>
                     )}
                     
-                    {/* Cost information for creators */}
-                    {isCreator && (
-                      <div className="p-3 bg-yellow-50 border-b border-yellow-200">
-                        <p className="text-xs text-yellow-800">
-                          💬 <strong>Messaging Cost:</strong> {messageCost} credits per message
-                          {isFreeForUser && <span className="text-green-600 ml-1">(Free for you!)</span>}
-                        </p>
-                      </div>
-                    )}
-                    
-                    {/* Free messaging notice for investors/production */}
-                    {isFreeForUser && (
-                      <div className="p-3 bg-green-50 border-b border-green-200">
-                        <p className="text-xs text-green-800">
-                          ✨ <strong>Free Messaging:</strong> You can send messages at no cost!
-                        </p>
-                      </div>
-                    )}
+                    {/* Messaging cost notice — per new person, then free */}
+                    <div className="p-3 bg-yellow-50 border-b border-yellow-200">
+                      <p className="text-xs text-yellow-800">
+                        💬 <strong>Messaging:</strong> {messageCost} credit to start a conversation with a new person — then messaging them is free.
+                      </p>
+                    </div>
                     
                     <div className="p-4">
                       <div className="flex items-end gap-2">

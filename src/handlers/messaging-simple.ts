@@ -26,6 +26,23 @@ export class SimpleMessagingHandler {
     }
   }
 
+  // Eligibility to START a conversation: a follow relationship in either direction
+  // OR a shared signed NDA. ("Everybody can message everybody through the following
+  // system" + preserves the existing NDA → message flow.)
+  async canStartConversation(userId: number, recipientId: number): Promise<boolean> {
+    try {
+      const follow = await this.db.query(
+        `SELECT 1 FROM follows
+         WHERE (follower_id = $1 AND following_id = $2)
+            OR (follower_id = $2 AND following_id = $1)
+         LIMIT 1`,
+        [userId, recipientId]
+      );
+      if (follow.length > 0) return true;
+    } catch { /* follows table may differ across envs — fall through to NDA */ }
+    return this.hasSignedNDA(userId, recipientId);
+  }
+
   // Get all messages for a user
   async getMessages(userId: number, limit: number = 50, offset: number = 0) {
     try {
@@ -220,10 +237,10 @@ export class SimpleMessagingHandler {
       if (existing.length > 0) {
         conversationId = existing[0].id;
       } else {
-        // NDA required to start a new conversation
-        const hasNDA = await this.hasSignedNDA(userId, recipientId);
-        if (!hasNDA) {
-          return { success: false, error: 'A signed NDA is required to start a conversation with this user' };
+        // Must follow the person (either direction) or share a signed NDA.
+        const allowed = await this.canStartConversation(userId, recipientId);
+        if (!allowed) {
+          return { success: false, error: 'Follow this user (or sign their NDA) to start a conversation' };
         }
 
         // Create new direct conversation

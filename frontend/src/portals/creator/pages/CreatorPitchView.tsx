@@ -286,12 +286,20 @@ const CreatorPitchView: React.FC = () => {
               </div>
             )}
 
-            {/* Follow the creator — only when viewing someone else's pitch. Without
-                this, a signed-in creator viewing another creator's pitch had no way
-                to follow (the option exists logged-out on PublicPitchView, then
-                vanished after sign-in because this portal view lacked it). */}
+            {/* Viewing someone else's pitch: a creator can Follow + Message the
+                creator (no NDA request for creators). Message starts a conversation
+                (1 credit per new person). Follow previously vanished after sign-in
+                because this portal view lacked it. */}
             {!isOwner && pitch.userId && (
-              <FollowButton creatorId={parseInt(pitch.userId)} />
+              <div className="flex items-center gap-3">
+                <FollowButton creatorId={parseInt(pitch.userId)} />
+                <button
+                  onClick={() => navigate(`/creator/messages?recipient=${pitch.userId}&pitch=${id}`)}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                >
+                  <MessageSquare className="h-4 w-4 mr-1" /> Message
+                </button>
+              </div>
             )}
           </div>
         </div>
