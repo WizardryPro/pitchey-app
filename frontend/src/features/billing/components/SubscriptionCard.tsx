@@ -222,6 +222,10 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
           const annualSavings = !isFree && monthly > 0
             ? Math.max(0, monthly * 12 - annual)
             : 0;
+          // A paid tier priced below the current tier is a downgrade, not an upgrade
+          // (e.g. Karl on the unlimited/top plan sees "Downgrade" for cheaper tiers).
+          const currentMonthly = currentTierDef?.price?.monthly ?? 0;
+          const isDowngrade = !isCurrentPlan && !isFree && monthly < currentMonthly;
 
           return (
             <div
@@ -300,6 +304,8 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
                 className={`w-full py-3 px-4 rounded-lg font-medium text-sm transition-colors ${
                   isCurrentPlan || isFree
                     ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                    : isDowngrade
+                    ? 'border-2 border-gray-300 text-gray-700 hover:bg-gray-50'
                     : isPopular
                     ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:shadow-lg'
                     : 'bg-purple-600 text-white hover:bg-purple-700'
@@ -311,6 +317,8 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
                   ? 'Current Plan'
                   : isFree
                   ? 'Free Forever'
+                  : isDowngrade
+                  ? `Downgrade to ${plan.name}`
                   : `Upgrade to ${plan.name}`}
               </button>
             </div>

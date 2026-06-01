@@ -25,7 +25,7 @@ function FeedbackCard({ entry }: { entry: FeedbackEntry }) {
     <div className="border border-gray-100 rounded-xl p-4 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="font-medium text-gray-900 text-sm">{entry.reviewer_name}</span>
+          <span className="font-medium text-gray-900 text-sm">{entry.is_anonymous ? 'Anonymous' : entry.reviewer_name}</span>
           <ReviewerBadge type={entry.reviewer_type} />
           {entry.is_interested && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
