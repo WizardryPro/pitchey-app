@@ -60,6 +60,7 @@ export function EnhancedNavigationShadcn({
 
   useEffect(() => {
     if (userType === 'creator') {
+      // fire-and-forget: cosmetic credit pill; defaults to 0 if it fails
       paymentsAPI.getCreditBalance().then((data: any) => {
         if (data) {
           setCreditBalance(data.balance?.credits ?? data.credits ?? 0);

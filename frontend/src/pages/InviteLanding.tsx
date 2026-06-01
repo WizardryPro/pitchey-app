@@ -56,11 +56,20 @@ export default function InviteLanding() {
     void loadInvite();
   }, [code]);
 
-  // If already authenticated, try to redeem and redirect
+  // If already authenticated, redeem THEN redirect — only navigate on success.
+  // (Previously the redeem was fire-and-forgotten and we navigated regardless, so a
+  // failed redeem sent the user to the dashboard as if they'd joined the team.)
   useEffect(() => {
     if (isAuthenticated && code && invite?.valid) {
-      apiClient.post(`/api/invites/${code}/redeem`, {}).catch(() => {});
-      navigate('/creator/dashboard', { replace: true });
+      void (async () => {
+        try {
+          await apiClient.post(`/api/invites/${code}/redeem`, {});
+          navigate('/creator/dashboard', { replace: true });
+        } catch (err) {
+          const e = err instanceof Error ? err : new Error(String(err));
+          setError(`Could not redeem this invite: ${e.message}`);
+        }
+      })();
     }
   }, [isAuthenticated, code, invite, navigate]);
 
