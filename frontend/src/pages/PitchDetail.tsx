@@ -798,28 +798,46 @@ export default function PitchDetail() {
               ) : null
             )}
 
-            {/* Media */}
-            {(pitch.titleImage || (pitch as any).documents?.length || (pitch as any).script || (pitch as any).pitchDeck || (pitch as any).trailer || pitch.scriptUrl || pitch.trailerUrl) && (
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Media & Assets</h3>
-                {pitch.titleImage && (
-                  <div className="border rounded-lg p-4 mb-4 max-w-md">
-                    <h4 className="font-medium text-gray-900 mb-2">Cover Image</h4>
-                    <img
-                      src={pitch.titleImage}
-                      alt="Pitch cover"
-                      className="w-full h-48 object-cover rounded-lg"
+            {/* Media. Cover image is a public asset (shown on marketplace +
+                public pitch pages); document downloads (script/deck/trailer/
+                attachments) are gated to owner + NDA-signed viewers — they
+                were previously rendered to anyone, leaking downloadable files
+                to anonymous / press viewers. */}
+            {(() => {
+              const canViewDocuments = isOwner || hasSignedNDA;
+              const hasDocuments = !!(
+                (pitch as any).documents?.length ||
+                (pitch as any).script ||
+                (pitch as any).pitchDeck ||
+                (pitch as any).trailer ||
+                pitch.scriptUrl ||
+                pitch.trailerUrl
+              );
+              if (!pitch.titleImage && !(hasDocuments && canViewDocuments)) return null;
+              return (
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Media & Assets</h3>
+                  {pitch.titleImage && (
+                    <div className="border rounded-lg p-4 mb-4 max-w-md">
+                      <h4 className="font-medium text-gray-900 mb-2">Cover Image</h4>
+                      <img
+                        src={pitch.titleImage}
+                        alt="Pitch cover"
+                        className="w-full h-48 object-cover rounded-lg"
+                      />
+                    </div>
+                  )}
+                  {canViewDocuments && (
+                    <PitchDocuments
+                      documents={(pitch as any).documents}
+                      script={(pitch as any).script ?? pitch.scriptUrl}
+                      pitchDeck={(pitch as any).pitchDeck ?? (pitch as any).pitchDeckUrl}
+                      trailer={(pitch as any).trailer ?? pitch.trailerUrl}
                     />
-                  </div>
-                )}
-                <PitchDocuments
-                  documents={(pitch as any).documents}
-                  script={(pitch as any).script ?? pitch.scriptUrl}
-                  pitchDeck={(pitch as any).pitchDeck ?? (pitch as any).pitchDeckUrl}
-                  trailer={(pitch as any).trailer ?? pitch.trailerUrl}
-                />
-              </div>
-            )}
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Feedback & Ratings — visible to all viewers (anon included).
                 Quick-rate (1-5 stars) is open to anyone except the owner;

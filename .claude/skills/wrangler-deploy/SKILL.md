@@ -22,15 +22,25 @@ triggers:
 ## Deployment Commands
 
 ### Frontend (Pages)
-**CRITICAL: Must run from `frontend/` directory, NOT repo root.**
-Running from root skips the Functions bundle (`functions/`) and breaks SPA routing (all non-root URLs 404).
+**TWO CRITICAL flags/rules — get either wrong and the deploy looks successful but isn't live:**
+
+1. **Must run from `frontend/` directory, NOT repo root.** Running from root skips the Functions bundle (`functions/`) and breaks SPA routing (all non-root URLs 404). Note: **bash cwd resets between turns** — always re-`cd` in the same command; a `cd` from a previous turn does NOT persist.
+2. **Must pass `--branch=main`.** Without it the deploy publishes a *preview* (a `<hash>.pitchey-5o8.pages.dev` alias) and the canonical `pitchey-5o8.pages.dev` keeps serving the OLD build. The CLI prints a hashed URL either way, so the printed URL does NOT tell you whether prod updated — you must verify the canonical hostname (below).
+
 ```bash
-# Build + deploy (MUST be in frontend/)
+# Build + deploy production (MUST be in frontend/, MUST pass --branch=main)
 cd frontend && npm run build
-npx wrangler pages deploy dist/ --project-name=pitchey
+npx wrangler pages deploy dist/ --project-name=pitchey --branch=main
 
 # Check deployment status
 npx wrangler pages deployment list --project-name pitchey
+```
+
+**MANDATORY verification — confirm canonical prod serves the new bundle.** The build prints the entry hash (`dist/assets/index-XXXX.js`); confirm the live canonical host serves the same hash:
+```bash
+curl -s https://pitchey-5o8.pages.dev/ | grep -oE 'assets/index-[A-Za-z0-9_]+\.js' | head -1
+# Must match the index-XXXX.js the build just emitted. If it doesn't, you shipped a preview
+# (forgot --branch=main) or deployed from the wrong dir.
 ```
 
 ### Backend (Workers)
@@ -46,13 +56,16 @@ curl -s https://pitchey-api-prod.ndlovucavelle.workers.dev/api/health | jq
 # 1. Deploy Worker API (from repo root)
 npx wrangler deploy
 
-# 2. Build + deploy frontend (MUST cd into frontend/)
-cd frontend && npm run build && npx wrangler pages deploy dist/ --project-name=pitchey
+# 2. Build + deploy frontend (MUST cd into frontend/, MUST pass --branch=main)
+cd frontend && npm run build && npx wrangler pages deploy dist/ --project-name=pitchey --branch=main
 
-# 3. Verify both
+# 3. Verify both — canonical hosts, not the printed preview alias
 curl -s https://pitchey-api-prod.ndlovucavelle.workers.dev/api/health | jq
-curl -s -o /dev/null -w "%{http_code}" https://pitchey-5o8.pages.dev
+curl -s https://pitchey-5o8.pages.dev/ | grep -oE 'assets/index-[A-Za-z0-9_]+\.js' | head -1  # match build hash
 ```
+
+### Auto-deploy topology (GitHub Actions)
+Pushing to `main` also auto-deploys via `deploy-frontend.yml` (frontend) and `deploy-worker.yml` (worker), both on Node 22. There is **NO Cloudflare Git integration** — all deploys are ad-hoc/wrangler (verified). A manual `wrangler pages deploy` and a CI run do the same thing; don't disable one believing the other is a CF-native build. Verify what's actually live via the deployments API / bundle hash, not CI history.
 
 ## Pre-Deploy Checklist
 1. Run `npm run build` - must succeed with no errors
@@ -83,10 +96,10 @@ npx wrangler deployments list
 # Rollback to specific version
 npx wrangler rollback --version VERSION_ID
 
-# Pages rollback: redeploy previous git commit (MUST be in frontend/)
+# Pages rollback: redeploy previous git commit (MUST be in frontend/, MUST pass --branch=main)
 git checkout PREVIOUS_COMMIT
 cd frontend && npm run build
-npx wrangler pages deploy dist/ --project-name=pitchey
+npx wrangler pages deploy dist/ --project-name=pitchey --branch=main
 ```
 
 ## Common Deployment Issues
