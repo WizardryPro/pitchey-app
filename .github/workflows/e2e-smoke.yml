@@ -82,8 +82,13 @@ jobs:
         run: |
           npx wrangler dev --port 8001 > /tmp/wrangler.log 2>&1 &
           (cd frontend && VITE_API_URL=http://localhost:8001 VITE_WS_URL=ws://localhost:8001 npm run dev > /tmp/vite.log 2>&1 &)
-          # Wait for both to listen (CI runner allows sleep).
-          npx wait-on -t 120000 tcp:127.0.0.1:8001 tcp:127.0.0.1:5173
+          # Wait for both to listen. On timeout, dump both logs in THIS step so the
+          # cause is visible (a later step can't reliably capture it).
+          if ! npx wait-on -t 120000 tcp:127.0.0.1:8001 tcp:127.0.0.1:5173; then
+            echo "===== wrangler.log ====="; cat /tmp/wrangler.log || true
+            echo "===== vite.log ====="; cat /tmp/vite.log || true
+            exit 1
+          fi
           echo "worker + frontend are up"
 
       - name: Run smoke-regression suite
@@ -94,7 +99,7 @@ jobs:
 
       - name: Worker log on failure
         if: failure()
-        run: tail -50 /tmp/wrangler.log /tmp/vite.log || true
+        run: tail -n 80 /tmp/wrangler.log /tmp/vite.log || true
 
       - name: Upload Playwright report
         if: always()
