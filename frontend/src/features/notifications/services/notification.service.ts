@@ -164,7 +164,8 @@ export class NotificationService {
     const sound = this.sounds[soundType];
     if (sound) {
       sound.currentTime = 0;
-      sound.play().catch(() => { /* Audio autoplay may be blocked */ });
+      // fire-and-forget: browser autoplay policy may block this; non-actionable
+      sound.play().catch(() => {});
     }
   }
 

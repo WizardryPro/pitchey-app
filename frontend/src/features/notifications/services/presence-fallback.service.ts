@@ -77,9 +77,8 @@ class PresenceFallbackService {
     // Only try to send offline status if the service was running successfully
     // (i.e. not stopped due to endpoint failures)
     if (wasPolling && this.consecutiveFailures < this.MAX_CONSECUTIVE_FAILURES) {
-      this.updatePresence({ status: 'offline' }).catch(() => {
-        // Ignore — we're stopping anyway
-      });
+      // fire-and-forget: best-effort offline ping while tearing down
+      this.updatePresence({ status: 'offline' }).catch(() => {});
     }
   }
 

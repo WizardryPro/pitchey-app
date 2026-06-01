@@ -135,7 +135,8 @@ export class FeedbackService {
       // (the api-client wrapper flag, true on any 2xx) instead.
       const res = await apiClient.post<{ rating: number }>(`/api/pitches/${pitchId}/rate`, { rating });
       return res.success;
-    } catch {
+    } catch (e) {
+      console.error('[feedback] submitRating failed', e);
       return false;
     }
   }
@@ -169,7 +170,8 @@ export class FeedbackService {
       // broken even though they saved). Use res.success (the wrapper flag).
       const res = await apiClient.post<{ id: number }>(`/api/pitches/${pitchId}/comments`, { content });
       return res.success;
-    } catch {
+    } catch (e) {
+      console.error('[feedback] submitComment failed', e);
       return false;
     }
   }

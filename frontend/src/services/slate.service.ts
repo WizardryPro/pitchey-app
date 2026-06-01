@@ -63,7 +63,8 @@ export class SlateService {
     try {
       const res = await apiClient.post<Slate>('/api/slates', data);
       return (res as any)?.data ?? res ?? null;
-    } catch {
+    } catch (e) {
+      console.error('[slate] create failed', e);
       return null;
     }
   }
@@ -72,7 +73,8 @@ export class SlateService {
     try {
       const res = await apiClient.put<Slate>(`/api/slates/${id}`, data);
       return (res as any)?.data ?? res ?? null;
-    } catch {
+    } catch (e) {
+      console.error('[slate] update failed', e);
       return null;
     }
   }
@@ -81,7 +83,8 @@ export class SlateService {
     try {
       await apiClient.delete(`/api/slates/${id}`);
       return true;
-    } catch {
+    } catch (e) {
+      console.error('[slate] remove failed', e);
       return false;
     }
   }
@@ -90,7 +93,8 @@ export class SlateService {
     try {
       await apiClient.post(`/api/slates/${slateId}/pitches`, { pitch_id: pitchId });
       return true;
-    } catch {
+    } catch (e) {
+      console.error('[slate] addPitch failed', e);
       return false;
     }
   }
@@ -99,7 +103,8 @@ export class SlateService {
     try {
       await apiClient.delete(`/api/slates/${slateId}/pitches/${pitchId}`);
       return true;
-    } catch {
+    } catch (e) {
+      console.error('[slate] removePitch failed', e);
       return false;
     }
   }
@@ -108,7 +113,8 @@ export class SlateService {
     try {
       await apiClient.put(`/api/slates/${slateId}/pitches/reorder`, { pitch_ids: pitchIds });
       return true;
-    } catch {
+    } catch (e) {
+      console.error('[slate] reorderPitches failed', e);
       return false;
     }
   }

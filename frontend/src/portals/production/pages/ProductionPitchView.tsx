@@ -486,7 +486,8 @@ const ProductionPitchView: React.FC = () => {
       if (result.checklist) {
         const merged = { ...productionChecklist, ...result.checklist };
         setProductionChecklist(merged);
-        await ProductionService.updatePitchChecklist(pitchId, merged).catch(() => {});
+        await ProductionService.updatePitchChecklist(pitchId, merged).catch(() =>
+          toast.error('Checklist filled on screen but failed to save — it will not persist on reload.'));
       }
 
       // Apply team (preserve existing names if AI returns empty ones)
@@ -500,7 +501,8 @@ const ProductionPitchView: React.FC = () => {
           };
         });
         setTeamMembers(newTeam);
-        await ProductionService.updatePitchTeam(pitchId, newTeam).catch(() => {});
+        await ProductionService.updatePitchTeam(pitchId, newTeam).catch(() =>
+          toast.error('Team filled on screen but failed to save — it will not persist on reload.'));
       }
 
       // Apply notes — create each via API
