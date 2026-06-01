@@ -35,7 +35,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # Node 22: wrangler 4.x / miniflare require >=22. Node 20 makes
+          # `wrangler dev` fail to boot (EBADENGINE) → ports never open → wait-on
+          # times out. Same reason the deploy workflows run Node 22 (#145).
+          node-version: '22'
           cache: 'npm'
 
       - name: Fail fast if DB secret missing
