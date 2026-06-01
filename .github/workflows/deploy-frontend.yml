@@ -1,13 +1,22 @@
 name: Deploy Frontend to Cloudflare Pages
 
-# MANUAL break-glass frontend deployer only.
-# Production frontend is deployed by Cloudflare Pages' Git integration (auto-build
-# on push to main) — that is the single source of truth. This workflow used to also
-# auto-deploy on push, which meant two pipelines racing to deploy the same commit to
-# the same Pages project. Trigger reduced to workflow_dispatch so it only runs when
-# someone deliberately needs a wrangler-based deploy (e.g. CF Git integration outage).
+# Frontend auto-deployer (single source of truth for prod frontend).
+#
+# Correction (2026-06-01): the Pages project has NO Git integration
+# (`pages projects get` → source: null; every deployment is trigger=ad_hoc, i.e.
+# a wrangler CLI upload). An earlier assumption that CF Git integration auto-built
+# on push was wrong, and on that false premise #145 reduced this to
+# workflow_dispatch-only — which left the frontend with NO auto-deploy at all.
+# Restored to push-on-main. This `wrangler pages deploy` is the only thing that
+# ships the frontend; ci-cd.yml's deploy-production (the other pages-deploy) stays
+# disabled, so there's exactly one auto-deployer, no race.
 on:
-  workflow_dispatch: # Manual trigger only
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy-frontend.yml'
+  workflow_dispatch: # manual trigger
 
 env:
   NODE_VERSION: '22' # wrangler >=4 requires Node >=22
