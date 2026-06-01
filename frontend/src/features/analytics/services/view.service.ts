@@ -108,9 +108,17 @@ class ViewService {
    * Start tracking view duration for a pitch
    */
   startViewTracking(pitchId: string): void {
+    // Idempotent: if we're already tracking this pitch, don't fire a second
+    // initial view or leak a second interval. PitchDetail's effect can invoke
+    // this twice on mount (prod has no StrictMode cleanup between the calls),
+    // which previously sent two concurrent POST /api/views/track — the losing
+    // insert raced on the (user_id,pitch_id) unique index. stopViewTracking
+    // deletes the interval, so re-visiting the same pitch tracks again cleanly.
+    if (this.viewInterval.has(pitchId)) return;
+
     // Record start time
     this.viewStartTime.set(pitchId, Date.now());
-    
+
     // Send initial view
     this.trackView({ pitchId }).catch(console.error);
     

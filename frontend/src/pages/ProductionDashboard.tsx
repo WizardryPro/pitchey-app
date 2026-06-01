@@ -439,7 +439,13 @@ function ProductionDashboard() {
     return () => {
       if (fetchCleanup) fetchCleanup();
     };
-  }, [fetchData, sessionChecked, isAuthenticated]);
+    // Trigger on the stable user id, not the fetchData callback ref. fetchData's
+    // deps include user?.username/companyName, which populate after session
+    // validation (cache → server), changing its ref and re-running this whole
+    // load 2–3×. The data keys off the auth cookie, not those display fields, so
+    // firing once when the user id is ready is correct.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionChecked, isAuthenticated, user?.id]);
 
   const handleViewTerms = (nda: any) => {
     setSelectedNDA(nda);
