@@ -64,10 +64,12 @@ test.describe('smoke-regression: silent-failure guards', () => {
     await login(page, 'creator');
     await openEdit(page);
 
+    // Capture the current value so we can restore it — this runs on every PR
+    // against a shared demo pitch; the test must leave it as it found it.
+    const original = await page.getByRole('textbox', { name: /Short Synopsis/i }).inputValue();
     const marker = `E2E persistence ${Date.now()}`;
-    const synopsis = page.getByRole('textbox', { name: /Short Synopsis/i });
-    await synopsis.fill(marker);
 
+    await page.getByRole('textbox', { name: /Short Synopsis/i }).fill(marker);
     await page.getByRole('button', { name: /Save Changes/i }).click();
     // Success path redirects to the pitch list.
     await page.waitForURL(/\/creator\/pitches/, { timeout: 20000 });
@@ -75,6 +77,11 @@ test.describe('smoke-regression: silent-failure guards', () => {
     // Re-open the edit page fresh — the value must come back from the server.
     await openEdit(page);
     await expect(page.getByRole('textbox', { name: /Short Synopsis/i })).toHaveValue(marker);
+
+    // Restore the original value so the demo pitch isn't left mutated.
+    await page.getByRole('textbox', { name: /Short Synopsis/i }).fill(original);
+    await page.getByRole('button', { name: /Save Changes/i }).click();
+    await page.waitForURL(/\/creator\/pitches/, { timeout: 20000 });
   });
 
   test('2. like state survives a reload (server hydration)', async ({ page }) => {
