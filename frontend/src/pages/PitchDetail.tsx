@@ -53,7 +53,13 @@ export default function PitchDetail() {
   };
   
   const currentUserId = getUserId();
-  
+
+  // Only investors and production companies may request enhanced/NDA access.
+  // Creators (and watchers) are excluded — a creator viewing another creator's
+  // pitch should not be requesting access.
+  const viewerType = ((user as any)?.userType || (user as any)?.user_type || '').toLowerCase();
+  const canRequestNDA = viewerType === 'investor' || viewerType === 'production';
+
   // Secure owner check - only return true if IDs are valid and match
   const isOwner = (() => {
     // First check the backend-provided isOwner flag (most reliable)
@@ -462,7 +468,7 @@ export default function PitchDetail() {
                 </button>
               ) : (
                 <>
-                  {!hasSignedNDA && !isOwner && (
+                  {!hasSignedNDA && !isOwner && canRequestNDA && (
                     <button
                       onClick={() => setShowEnhancedNDARequest(true)}
                       className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium shadow-sm"

@@ -11,6 +11,7 @@ import apiClient from '@/lib/api-client';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import FormatDisplay from '@/components/FormatDisplay';
 import FeedbackDisplay from '@/components/feedback/FeedbackDisplay';
+import FollowButton from '@features/browse/components/FollowButton';
 
 interface Pitch {
   id: string;
@@ -283,6 +284,14 @@ const CreatorPitchView: React.FC = () => {
                   Delete
                 </button>
               </div>
+            )}
+
+            {/* Follow the creator — only when viewing someone else's pitch. Without
+                this, a signed-in creator viewing another creator's pitch had no way
+                to follow (the option exists logged-out on PublicPitchView, then
+                vanished after sign-in because this portal view lacked it). */}
+            {!isOwner && pitch.userId && (
+              <FollowButton creatorId={parseInt(pitch.userId)} />
             )}
           </div>
         </div>

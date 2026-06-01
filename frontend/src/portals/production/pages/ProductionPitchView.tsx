@@ -1119,13 +1119,6 @@ const ProductionPitchView: React.FC = () => {
                     </button>
                   )}
                   <button
-                    onClick={() => setShowScheduleModal(true)}
-                    className="w-full flex items-center justify-between px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  >
-                    <span>Schedule Meeting</span>
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                  <button
                     onClick={() => {
                       navigate(`/production/messages?recipient=${pitch?.userId}&pitch=${id}`);
                       toast('Start your negotiation discussion');
@@ -1196,8 +1189,10 @@ const ProductionPitchView: React.FC = () => {
               </div>
             </div>
 
-            {/* AI Auto-fill — only for pitches the user owns or has a project for */}
-            {(isOwner || hasExistingProject) && <div className="bg-white rounded-xl shadow-lg p-6">
+            {/* AI Assessment — owner only. Removed when viewing someone else's pitch
+                (a production user assessing another creator's pitch shouldn't see the
+                owner-side auto-fill toolkit). */}
+            {isOwner && <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">AI Assessment</h3>
               <p className="text-sm text-gray-500 mb-4">
                 Upload a script, treatment, or pitch deck to auto-fill the feasibility checklist, team priorities, and production notes.

@@ -14,6 +14,7 @@ import { apiClient } from '@/lib/api-client';
 import { InvestorService } from '@features/deals/services/investor.service';
 import FormatDisplay from '@/components/FormatDisplay';
 import PitchDocuments from '@features/pitches/components/PitchDocuments';
+import FollowButton from '@features/browse/components/FollowButton';
 import { getCreditCost } from '@config/subscription-plans';
 
 interface Pitch {
@@ -590,6 +591,14 @@ const InvestorPitchView: React.FC = () => {
                     by {pitch.creatorName || pitch.creatorCompany}
                     {pitch.creatorName && pitch.creatorCompany && ` • ${pitch.creatorCompany}`}
                   </p>
+                )}
+
+                {/* Follow the creator — investors had no follow option once signed in
+                    (it existed logged-out on PublicPitchView, then vanished). */}
+                {pitch.userId && (
+                  <div className="mb-4">
+                    <FollowButton creatorId={parseInt(pitch.userId)} />
+                  </div>
                 )}
 
                 <div className="flex flex-wrap gap-2 mb-6">
