@@ -92,6 +92,20 @@ describe('viewService', () => {
       );
     });
 
+    it('is idempotent — a second start for the same pitch fires no extra initial view', () => {
+      mockAxiosPost.mockResolvedValue({ data: { success: true } });
+
+      viewService.startViewTracking('idem-pitch');
+      const callsAfterFirst = mockAxiosPost.mock.calls.length;
+      // PitchDetail's effect can invoke this twice on mount; the guard must not
+      // fire a second concurrent POST /api/views/track (the views/track 500 race).
+      viewService.startViewTracking('idem-pitch');
+
+      expect(mockAxiosPost.mock.calls.length).toBe(callsAfterFirst);
+
+      viewService.stopViewTracking('idem-pitch'); // cleanup interval
+    });
+
     it('records start time for the pitch', () => {
       mockAxiosPost.mockResolvedValue({ data: {} });
 

@@ -103,7 +103,10 @@ function CreatorDashboard() {
 
     void fetchDashboardData();
     void fetchFundingData(); // Fetch funding data in parallel
-  }, [authUser, sessionChecked, isAuthenticated]);
+    // Depend on the stable user id, not the authUser object reference — the auth
+    // store swaps authUser (cache → server-validated) during checkSession, and
+    // depending on the object ref re-ran this whole load (8 calls) a second time.
+  }, [authUser?.id, sessionChecked, isAuthenticated]);
 
   const fetchFundingData = async () => {
     setSectionStatus(prev => ({ ...prev, funding: { loaded: false, error: null } }));
