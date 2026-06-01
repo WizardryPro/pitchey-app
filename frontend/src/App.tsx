@@ -164,6 +164,7 @@ const Contact = lazyRetry(() => import('./pages/Contact'));
 const Terms = lazyRetry(() => import('./pages/Terms'));
 const Privacy = lazyRetry(() => import('./pages/Privacy'));
 const StandardNDA = lazyRetry(() => import('./pages/StandardNDA'));
+const Debug = lazyRetry(() => import('./pages/Debug'));
 const ForgotPassword = lazyRetry(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazyRetry(() => import('./pages/ResetPassword'));
 
@@ -439,6 +440,7 @@ function App() {
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/legal/standard-nda" element={<StandardNDA />} />
+          <Route path="/debug" element={<Debug />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           
