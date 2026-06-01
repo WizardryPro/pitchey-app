@@ -10,6 +10,7 @@ import type { Pitch } from '@features/pitches/services/pitch.service';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import BackButton from '../components/BackButton';
 import EnhancedNDARequest from '@features/ndas/components/NDA/EnhancedNDARequest';
+import { ndaService } from '@features/ndas/services/nda.service';
 import FormatDisplay from '../components/FormatDisplay';
 import FollowButton from '@features/browse/components/FollowButton';
 import SocialProofBadge from '@shared/components/SocialProofBadge';
@@ -36,6 +37,10 @@ export default function PitchDetail() {
   const [shareCopied, setShareCopied] = useState(false);
   const [showEnhancedNDARequest, setShowEnhancedNDARequest] = useState(false);
   const [hasSignedNDA, setHasSignedNDA] = useState(false);
+  // In-progress NDA request (requested/approved but not yet granting full access).
+  // Lets us show a "pending" state instead of re-offering the request button, and
+  // keeps Following decoupled from NDA — a follower with no request sees the optional CTA.
+  const [ndaPending, setNdaPending] = useState(false);
   const isOnline = useOnlineStatus();
 
   // Check if current user owns this pitch
@@ -107,6 +112,28 @@ export default function PitchDetail() {
     viewService.startViewTracking(id);
     return () => { viewService.stopViewTracking(id); };
   }, [id, pitch, isOwner, isAuthenticated]);
+
+  // Detect an in-progress NDA request so the UI can show "pending" rather than
+  // re-offering the request button. Only relevant for non-owner investor/production
+  // viewers who haven't already been granted access. Following needs none of this.
+  useEffect(() => {
+    if (!id || !pitch || isOwner || hasSignedNDA || !isAuthenticated || !canRequestNDA) {
+      setNdaPending(false);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { existingNDA } = await ndaService.canRequestNDA(parseInt(id));
+        if (cancelled) return;
+        const status = (existingNDA as { status?: string } | undefined)?.status;
+        setNdaPending(status === 'pending' || status === 'approved' || status === 'requested');
+      } catch {
+        if (!cancelled) setNdaPending(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [id, pitch, isOwner, hasSignedNDA, isAuthenticated, canRequestNDA]);
 
 
   const hasValidSession = (): boolean => {
@@ -468,7 +495,7 @@ export default function PitchDetail() {
                 </button>
               ) : (
                 <>
-                  {!hasSignedNDA && !isOwner && canRequestNDA && (
+                  {!hasSignedNDA && !isOwner && canRequestNDA && !ndaPending && (
                     <button
                       onClick={() => setShowEnhancedNDARequest(true)}
                       className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium shadow-sm"
@@ -476,6 +503,12 @@ export default function PitchDetail() {
                       <Shield className="w-4 h-4" />
                       Request Enhanced Access
                     </button>
+                  )}
+                  {!hasSignedNDA && !isOwner && ndaPending && (
+                    <span className="flex items-center gap-2 px-4 py-2.5 bg-amber-100 text-amber-800 rounded-lg font-medium">
+                      <Clock className="w-4 h-4" />
+                      NDA Request Pending
+                    </span>
                   )}
                   {hasSignedNDA && (
                     <span className="flex items-center gap-2 px-4 py-2.5 bg-green-100 text-green-700 rounded-lg font-medium">
@@ -515,6 +548,26 @@ export default function PitchDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Overall feedback — surfaced at the top of the content. Was only in the
+                sidebar, which stacks below all content on mobile (the "buried at the
+                bottom" report). Detailed reviews still live in FeedbackSection below. */}
+            {((pitch as any).pitchey_score_avg > 0 || (pitch as any).viewer_score_avg > 0) && (
+              <div className="bg-white rounded-xl shadow-sm p-5 space-y-3">
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Overall Feedback</h3>
+                {(pitch as any).pitchey_score_avg > 0 && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-gray-600">Pitchey Score <span className="text-gray-400">· Industry</span></span>
+                    <PitcheyRating mode="display" value={(pitch as any).pitchey_score_avg} />
+                  </div>
+                )}
+                {(pitch as any).viewer_score_avg > 0 && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-gray-600">Viewer Score <span className="text-gray-400">· Audience</span></span>
+                    <PitcheyRating mode="display" value={(pitch as any).viewer_score_avg} />
+                  </div>
+                )}
+              </div>
+            )}
             {/* Basic Information */}
             <div className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex items-start justify-between mb-6">
@@ -597,13 +650,26 @@ export default function PitchDetail() {
                         Distribution Strategy & Comparables
                       </li>
                     </ul>
-                    <button
-                      onClick={() => setShowEnhancedNDARequest(true)}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                    >
-                      <Shield className="w-5 h-5" />
-                      Request Access
-                    </button>
+                    {ndaPending ? (
+                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-100 text-amber-800 rounded-lg font-medium">
+                        <Clock className="w-5 h-5" />
+                        Access request pending review
+                      </div>
+                    ) : canRequestNDA ? (
+                      <button
+                        onClick={() => setShowEnhancedNDARequest(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                      >
+                        <Shield className="w-5 h-5" />
+                        Request Access
+                      </button>
+                    ) : null}
+                    {/* Following is the low-commitment path — no NDA needed to keep up. */}
+                    {!ndaPending && isAuthenticated && !isOwner && pitch.creator?.id && (
+                      <p className="mt-3 text-xs text-gray-500">
+                        Not ready to request? <span className="font-medium text-gray-600">Follow</span> the creator to get notified of new pitches and updates — no NDA required.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -865,30 +931,9 @@ export default function PitchDetail() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Ratings — quality scores (Pitchey + Viewer). The detailed
-                distribution + per-reviewer cards live in FeedbackSection below;
-                this is the at-a-glance summary. */}
-            {((pitch as any).pitchey_score_avg > 0 || (pitch as any).viewer_score_avg > 0) && (
-              <div className="bg-white rounded-xl shadow-sm p-5 space-y-3">
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Ratings</h3>
-                {(pitch as any).pitchey_score_avg > 0 && (
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm text-gray-600">
-                      Pitchey Score <span className="text-gray-400">· Industry</span>
-                    </span>
-                    <PitcheyRating mode="display" value={(pitch as any).pitchey_score_avg} />
-                  </div>
-                )}
-                {(pitch as any).viewer_score_avg > 0 && (
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm text-gray-600">
-                      Viewer Score <span className="text-gray-400">· Audience</span>
-                    </span>
-                    <PitcheyRating mode="display" value={(pitch as any).viewer_score_avg} />
-                  </div>
-                )}
-              </div>
-            )}
+            {/* Ratings moved to the top of the main content column (see "Overall
+                Feedback" above) so it's visible without scrolling — especially on
+                mobile, where this sidebar stacks below all content. */}
 
             {/* Reception — popularity/engagement (Heat + Views + Likes + breakdowns).
                 Aggregate visible to all authenticated viewers; named likers/viewers
@@ -1013,15 +1058,17 @@ export default function PitchDetail() {
                         {canRequestNDA && (
                           <button
                             onClick={() => setShowEnhancedNDARequest(true)}
-                            disabled={hasSignedNDA}
+                            disabled={hasSignedNDA || ndaPending}
                             className={`w-full flex items-center gap-2 px-4 py-2 rounded-lg transition ${
                               hasSignedNDA
                                 ? 'bg-green-100 text-green-700 cursor-not-allowed'
+                                : ndaPending
+                                ? 'bg-amber-100 text-amber-800 cursor-not-allowed'
                                 : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                             }`}
                           >
-                            <FileText className="w-4 h-4" />
-                            {hasSignedNDA ? 'NDA Signed' : 'Request NDA Access'}
+                            {ndaPending && !hasSignedNDA ? <Clock className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                            {hasSignedNDA ? 'NDA Signed' : ndaPending ? 'Request Pending' : 'Request NDA Access'}
                           </button>
                         )}
                         {pitch.creator?.id && (
