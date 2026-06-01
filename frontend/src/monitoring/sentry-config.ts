@@ -188,6 +188,34 @@ export function initSentry() {
   }
 }
 
+/**
+ * Attach the authenticated user to all subsequent Sentry events so a specific
+ * user's errors are filterable by who they are AND which portal/code-path they
+ * are on. Call on every auth change (wired via a store subscription in main.tsx);
+ * pass null on logout to clear. The init-time setUser above only runs once,
+ * before async login resolves — this keeps the user in sync afterwards.
+ */
+export function setSentryUser(
+  user: { id: string | number; email?: string; username?: string; userType?: string } | null,
+): void {
+  if (!user) {
+    Sentry.setUser(null)
+    Sentry.setTag('portal', undefined)
+    Sentry.setTag('segment', undefined)
+    return
+  }
+  Sentry.setUser({
+    id: String(user.id),
+    email: user.email,
+    username: user.username,
+    ip_address: '{{auto}}',
+  })
+  // userType (creator/investor/production/watcher) is the highest-signal tag —
+  // it tells you whether the user is on a code path you never hit yourself.
+  Sentry.setTag('portal', user.userType ?? 'unknown')
+  Sentry.setTag('segment', user.userType ?? 'unknown')
+}
+
 // Performance monitoring utilities
 export const SentryPerformance = {
   // Start a span (Sentry v8 API)

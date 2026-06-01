@@ -24,10 +24,25 @@ import { createRoot } from 'react-dom/client';
 import './index.css'
 import './lib/fix-all-apis.ts' // Fix all API URLs globally
 import App from './App.tsx'
-import { initSentry } from './monitoring/sentry-config'
+import { initSentry, setSentryUser } from './monitoring/sentry-config'
+import { useBetterAuthStore } from './store/betterAuthStore'
 
 // Initialize Sentry for production error tracking
 initSentry()
+
+// Keep Sentry's user/portal tags in sync with auth state so any user's errors
+// are filterable by who they are and which portal they're on. Fires on login,
+// session restore, and logout. (initSentry's one-shot setUser runs before async
+// login resolves, so it usually catches nobody.)
+let _lastSentryUserId: string | number | null = null
+setSentryUser(useBetterAuthStore.getState().user)
+_lastSentryUserId = useBetterAuthStore.getState().user?.id ?? null
+useBetterAuthStore.subscribe((state) => {
+  const id = state.user?.id ?? null
+  if (id === _lastSentryUserId) return // only re-tag when the user actually changes
+  _lastSentryUserId = id
+  setSentryUser(state.user)
+})
 
 // Handle stale chunk errors after deployment — Vite fires this when a
 // lazy-loaded module can't be fetched (e.g. old hash no longer on CDN).

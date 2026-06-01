@@ -52,6 +52,9 @@ jobs:
           VITE_WS_URL: 'wss://pitchey-api-prod.ndlovucavelle.workers.dev'
           VITE_DISABLE_WEBSOCKET: 'false'
           VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN || 'https://fd5664ae577039ccb7cce31e91f54533@o4510137537396736.ingest.de.sentry.io/4510138308755536' }}
+          # Commit SHA becomes the Sentry `release` + the /debug "Client build" so a
+          # user's screenshot/events identify exactly which deploy they're on.
+          VITE_APP_VERSION: ${{ github.sha }}
           NODE_ENV: production
 
       - name: 🚀 Deploy to Cloudflare Pages (using Wrangler)

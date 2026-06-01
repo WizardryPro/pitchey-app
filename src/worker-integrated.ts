@@ -1799,6 +1799,7 @@ class RouteRegistry {
   private registerRoutes() {
     // Health check route
     this.register('GET', '/api/health', this.handleHealth.bind(this));
+    this.register('GET', '/api/version', this.handleVersion.bind(this));
     this.register('GET', '/api/health/database', this.handleDatabaseHealth.bind(this));
 
     // Monitoring endpoints for synthetic monitoring and dashboard
@@ -3850,6 +3851,7 @@ class RouteRegistry {
     // Define public endpoints that don't require authentication
     const publicEndpoints = [
       '/api/health',
+      '/api/version',
       '/api/auth/login',
       '/api/auth/register',
       '/api/auth/sign-in',
@@ -4521,6 +4523,28 @@ class RouteRegistry {
     // Always clear the session cookie, even if Better Auth isn't available
     // This ensures logout always works
     return this.handleLogoutSimple(request);
+  }
+
+  // Lightweight, public, no-store version probe. Returns the deployed Worker
+  // version (CF_VERSION_METADATA) so the /debug page can compare client build vs
+  // server build and surface frontend/worker deploy skew. No DB, no auth.
+  private handleVersion(request: Request): Response {
+    const v = this.env.CF_VERSION_METADATA;
+    return new Response(
+      JSON.stringify({
+        version: v?.id ?? 'unknown',
+        tag: v?.tag ?? null,
+        timestamp: v?.timestamp ?? null,
+      }),
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store',
+          ...getCorsHeaders(request.headers.get('Origin')),
+        },
+      },
+    );
   }
 
   private async handleHealth(request: Request): Promise<Response> {
