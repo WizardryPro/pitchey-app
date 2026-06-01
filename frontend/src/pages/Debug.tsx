@@ -26,7 +26,22 @@ function probeScript(src: string, timeoutMs = 8000): Promise<boolean> {
   });
 }
 
-function probeWebSocket(url: string, timeoutMs = 6000): Promise<boolean> {
+// Replicate the app's real WS handshake: fetch a cross-origin token, then connect
+// to `${WS_URL}/ws?token=…`. A bare WS_URL connection is rejected by the worker
+// (no token) and would always show ❌ — a misleading false negative. With a valid
+// token, onopen means WebSocket genuinely works for this user; onerror/timeout
+// means it's actually blocked (CSP/firewall/extension) or the user isn't authed.
+async function probeWebSocket(timeoutMs = 7000): Promise<boolean> {
+  let token = '';
+  try {
+    const tr = await fetch('/api/ws/token', { credentials: 'include', headers: { Accept: 'application/json' } });
+    if (tr.ok) token = (await tr.json())?.token || '';
+  } catch { /* fall through — the connect below will fail, which is the honest result */ }
+
+  let base = WS_URL.replace(/^http/, 'ws');
+  if (base.endsWith('/ws')) base = base.slice(0, -3);
+  const url = `${base}/ws${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+
   return new Promise((resolve) => {
     let done = false;
     const finish = (ok: boolean) => { if (!done) { done = true; try { ws.close(); } catch { /* noop */ } resolve(ok); } };
@@ -37,8 +52,6 @@ function probeWebSocket(url: string, timeoutMs = 6000): Promise<boolean> {
       resolve(false);
       return;
     }
-    // onopen = the wss upgrade succeeded → network path is NOT blocked (the server
-    // may close afterwards for missing auth; that's fine, we only probe reachability).
     ws.onopen = () => finish(true);
     ws.onerror = () => finish(false);
     setTimeout(() => finish(false), timeoutMs);
@@ -88,7 +101,7 @@ export default function Debug() {
 
     probeScript('https://js.stripe.com/v3/').then((ok) => setCheck('Stripe JS', ok ? 'ok' : 'fail'));
     probeScript('https://challenges.cloudflare.com/turnstile/v0/api.js').then((ok) => setCheck('Turnstile JS', ok ? 'ok' : 'fail'));
-    probeWebSocket(WS_URL).then((ok) => setCheck('WebSocket', ok ? 'ok' : 'fail'));
+    probeWebSocket().then((ok) => setCheck('WebSocket', ok ? 'ok' : 'fail'));
 
     return () => { alive = false; };
   }, []);
