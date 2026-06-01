@@ -1,0 +1,120 @@
+name: E2E Smoke (browser)
+
+# Browser-level regression guards for the SILENT-failure class — bugs that ship
+# without throwing (Sentry/Axiom miss them) and without breaking a unit test
+# (jsdom has no layout; component tests mock the server). Complements the
+# request-level scripts/smoke-test.mjs (smoke-tests.yml) which hits prod.
+#
+# This one needs a real browser + a live local stack (vite + wrangler dev) so it
+# can log in, round-trip a save, reload to check per-user state hydration, and
+# verify layout reachability. See frontend/e2e/smoke-regression.spec.ts.
+#
+# Requires repo secret E2E_DATABASE_URL — a Postgres connection string the local
+# wrangler-dev Hyperdrive binding connects to (the demo accounts must exist in it;
+# the Neon prod DB works). Without it the login-gated tests cannot reach the DB.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'frontend/src/**'
+      - 'frontend/e2e/**'
+      - 'frontend/playwright.config.ts'
+      - 'src/**'
+      - '.github/workflows/e2e-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22: wrangler 4.x / miniflare require >=22. Node 20 makes
+          # `wrangler dev` fail to boot (EBADENGINE) → ports never open → wait-on
+          # times out. Same reason the deploy workflows run Node 22 (#145).
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Fail fast if DB secret missing
+        # NOTE: the `secrets` context is NOT allowed in `if:` — must surface it via
+        # env and test the value in the script, otherwise the workflow file is invalid.
+        env:
+          E2E_DATABASE_URL: ${{ secrets.E2E_DATABASE_URL }}
+        run: |
+          if [ -z "$E2E_DATABASE_URL" ]; then
+            echo "::error::E2E_DATABASE_URL secret is not set — the login-gated smoke tests cannot reach the DB."
+            echo "Add it under Settings → Secrets → Actions (the Neon prod connection string works)."
+            exit 1
+          fi
+          echo "E2E_DATABASE_URL is present."
+
+      - name: Install root deps (wrangler)
+        run: npm ci --no-audit --no-fund
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Chromium (Playwright)
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Write local worker vars (.dev.vars is gitignored)
+        env:
+          DATABASE_URL: ${{ secrets.E2E_DATABASE_URL }}
+        run: |
+          # The auth/session path reads env.DATABASE_URL via neon() directly (NOT the
+          # Hyperdrive binding) — without it every query throws "No database connection
+          # string was provided to neon()" and login never completes. Unquoted heredoc
+          # so $DATABASE_URL expands.
+          cat > .dev.vars <<EOF
+          BETTER_AUTH_SECRET=ci-e2e-placeholder-not-a-real-secret-32chars
+          JWT_SECRET=ci-e2e-placeholder-jwt-secret-not-real-32chars
+          ENVIRONMENT=development
+          SENTRY_ENVIRONMENT=development
+          TURNSTILE_ENABLED=false
+          DATABASE_URL=$DATABASE_URL
+          EOF
+
+      - name: Start worker (wrangler dev :8001) + frontend (vite :5173)
+        env:
+          # Hyperdrive local emulation connects here. Strip channel_binding —
+          # the local node-postgres driver doesn't support it.
+          CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE: ${{ secrets.E2E_DATABASE_URL }}
+        run: |
+          npx wrangler dev --port 8001 > /tmp/wrangler.log 2>&1 &
+          # --host 127.0.0.1 forces vite onto IPv4 — by default it binds IPv6-only
+          # ([::1]:5173), which wait-on's `tcp:127.0.0.1:5173` (IPv4) never matches.
+          (cd frontend && VITE_API_URL=http://localhost:8001 VITE_WS_URL=ws://localhost:8001 npm run dev -- --host 127.0.0.1 --port 5173 > /tmp/vite.log 2>&1 &)
+          # Wait for both to listen. On timeout, dump both logs in THIS step so the
+          # cause is visible (a later step can't reliably capture it).
+          if ! npx wait-on -t 120000 tcp:127.0.0.1:8001 tcp:127.0.0.1:5173; then
+            echo "===== wrangler.log ====="; cat /tmp/wrangler.log || true
+            echo "===== vite.log ====="; cat /tmp/vite.log || true
+            exit 1
+          fi
+          echo "worker + frontend are up"
+
+      - name: Run smoke-regression suite
+        working-directory: frontend
+        # CI=true makes playwright.config skip its own webServer block, so it uses
+        # the servers started above at baseURL http://localhost:5173.
+        run: npx playwright test --project=smoke-regression --reporter=line
+
+      - name: Worker log on failure
+        if: failure()
+        run: tail -n 80 /tmp/wrangler.log /tmp/vite.log || true
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-smoke-report
+          path: frontend/test-results/
+          retention-days: 7

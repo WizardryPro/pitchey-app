@@ -43,6 +43,26 @@ function DocRow({ url, label }: { url?: string; label: string }) {
   );
 }
 
+// Image files (covers, stills, posters) are visual assets — they render as the
+// cover-image preview, not as downloadable "document" rows. Filter them out of
+// the attachment list so e.g. a `test-upload.png` never surfaces as a download
+// link under the cover image.
+const IMAGE_EXT = /\.(png|jpe?g|gif|webp|heic|heif|bmp|svg|avif|tiff?)$/i;
+function isImageDoc(d: PitchDocumentRow): boolean {
+  const name = d.original_file_name || d.file_name || '';
+  // file_url may carry ?token=…&filename=… query params — test the path only.
+  const urlPath = (d.file_url || d.url || '').split('?')[0];
+  const type = (d.document_type || '').toLowerCase();
+  return (
+    IMAGE_EXT.test(name) ||
+    IMAGE_EXT.test(decodeURIComponent(urlPath)) ||
+    type.includes('image') ||
+    type.includes('cover') ||
+    type.includes('poster') ||
+    type.includes('still')
+  );
+}
+
 export default function PitchDocuments({
   documents = [],
   script,
@@ -50,7 +70,7 @@ export default function PitchDocuments({
   trailer,
   className = '',
 }: PitchDocumentsProps) {
-  const docs = Array.isArray(documents) ? documents : [];
+  const docs = (Array.isArray(documents) ? documents : []).filter((d) => !isImageDoc(d));
   const legacy = [
     script ? { label: 'Script', url: script } : null,
     pitchDeck ? { label: 'Pitch Deck', url: pitchDeck } : null,

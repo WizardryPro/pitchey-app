@@ -55,10 +55,18 @@ export function PortalLayout({ userType }: PortalLayoutProps) {
         userType={userType}
       />
 
-      <div className="flex h-[calc(100vh-4rem)]">
-        {/* Sidebar - Desktop */}
+      {/* min-h (not fixed h) so the row grows with content and the WINDOW scrolls.
+          A fixed h-[calc(100vh-4rem)] + overflow-y-auto on <main> made content scroll
+          inside an inner pane — on shorter/mobile viewports 100vh overshoots the visible
+          area, leaving the bottom of long forms (the Save button) unreachable, plus
+          blank-strip repaint while scrolling. The sticky header (top-0) + sticky sidebar
+          (top-16) keep the chrome pinned during natural window scroll. */}
+      <div className="flex min-h-[calc(100vh-4rem)]">
+        {/* Sidebar - Desktop. sticky + self-start so it stays pinned beside the
+            scrolling content; own height + overflow so a long nav scrolls internally. */}
         <aside className={`
           hidden lg:block transition-all duration-300 ease-in-out
+          sticky top-16 self-start h-[calc(100vh-4rem)] overflow-y-auto
           ${isDesktopSidebarCollapsed ? 'w-16' : 'w-64'}
         `}>
           {renderSidebar()}
@@ -84,8 +92,9 @@ export function PortalLayout({ userType }: PortalLayoutProps) {
           </>
         )}
 
-        {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto">
+        {/* Main Content Area — flows naturally; the window scrolls (min-w-0 keeps
+            flex children from forcing horizontal overflow). */}
+        <main className="flex-1 min-w-0">
           {/* Persistent portal identity strip — 3px colored bar that stays visible
               across every route inside this portal. Primary "you are in Watcher"
               signal when page chrome is otherwise shared/neutral. */}
