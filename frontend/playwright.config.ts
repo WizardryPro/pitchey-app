@@ -57,6 +57,20 @@ export default defineConfig({
       timeout: 120000, // Extended timeout for setup
     },
 
+    // Smoke-regression: fast guards for silent-failure bugs (persistence, per-user
+    // state hydration, layout reachability, gating). Runs against local dev where
+    // Turnstile is disabled. No setup dependency — logs in inline per test.
+    {
+      name: 'smoke-regression',
+      testMatch: /smoke-regression\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1400, height: 900 },
+        trace: 'on-first-retry',
+      },
+      timeout: 60000,
+    },
+
     // PRIORITY 1: Critical User Journey Tests (run first)
     {
       name: 'critical-user-journeys',
@@ -225,7 +239,7 @@ export default defineConfig({
       testMatch: /pitch-upload-with-media\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
-        baseURL: 'https://pitchey.pages.dev',
+        baseURL: 'https://pitchey-5o8.pages.dev', // pitchey.pages.dev was deleted 2026-04-21 (NXDOMAIN)
         viewport: { width: 1400, height: 900 },
         video: 'on',
         trace: 'on'
