@@ -261,10 +261,15 @@ export default defineConfig({
         }
       },
       {
-        command: 'cd .. && npx wrangler dev',
+        // --port 8001 is required: vite (above) calls the API at :8001, but
+        // `wrangler dev` defaults to :8787, so without this the API is unreachable
+        // and Playwright times out waiting for :8001. Hyperdrive needs a local
+        // Postgres conn string — set CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE
+        // (see e2e README) so the worker can reach the DB during local E2E.
+        command: 'cd .. && npx wrangler dev --port 8001',
         port: 8001,
         reuseExistingServer: true,
-        timeout: 60000,
+        timeout: 90000,
       },
     ],
   }),

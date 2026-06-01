@@ -1,5 +1,4 @@
 import { test, expect, type Page } from '@playwright/test';
-import { TEST_USERS } from './fixtures/test-data';
 
 /**
  * Smoke-regression suite — the silent-failure class.
@@ -32,13 +31,15 @@ const PORTAL_LOGIN = {
 type Portal = keyof typeof PORTAL_LOGIN;
 
 async function login(page: Page, portal: Portal): Promise<void> {
-  const user = TEST_USERS[portal];
   // NOTE: route is /login/<portal>, NOT /<portal>/login — the older auth.setup.ts
   // had this backwards, which is why its .auth/*-login-failed.png artifacts exist.
   await page.goto(PORTAL_LOGIN[portal]);
-  await page.locator('input[name="email"], input[type="email"]').first().fill(user.email);
-  await page.locator('input[name="password"], input[type="password"]').first().fill(user.password);
-  await page.locator('button[type="submit"]').first().click();
+  // The normal "Sign in" submit is gated behind Turnstile (disabled with no token
+  // in headless). The "Use Demo <Portal> Account" button auto-submits demo creds
+  // and isn't gated; with the local/CI worker's TURNSTILE_ENABLED=false the empty
+  // token is accepted. (These tests are local/CI only — never against prod, where
+  // Turnstile is enforced.)
+  await page.getByRole('button', { name: /Use Demo .*Account/i }).click();
   await page.waitForURL(`**/${portal}/dashboard`, { timeout: 20000 });
 }
 
