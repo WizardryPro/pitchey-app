@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Menu, X, LogOut, Plus, Eye, Coins, CreditCard,
   Users, Home, Film, Search, Shield, BarChart3,
-  Settings, ChevronDown
+  Settings, ChevronDown, Activity
 } from 'lucide-react';
 import { NotificationBell } from '@features/notifications/components/NotificationBell';
 import { NDANotificationBadge } from '@features/ndas/components/NDANotifications';
@@ -109,7 +109,7 @@ export default function DashboardHeader({
         return [
           ...commonItems,
           { label: 'Projects', href: '/production/projects', icon: Film },
-          { label: 'Submissions', href: '/production/submissions', icon: Eye },
+          { label: 'Activity', href: '/production/activity', icon: Activity },
           { label: 'Team', href: '/production/team', icon: Users },
           { label: 'Analytics', href: '/production/analytics', icon: BarChart3 },
           { label: 'Settings', href: '/settings', icon: Settings },
