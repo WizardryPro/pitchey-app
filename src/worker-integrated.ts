@@ -5824,6 +5824,7 @@ pitchey_analytics_datapoints_per_minute 1250
 
       // Check if the authenticated user has liked this pitch and if they own it
       let isLiked = false;
+      let isSaved = false;
       let isOwner = false;
       let authUserId: number | null = null;
       let viewerUserType: string | null = null;
@@ -5838,6 +5839,17 @@ pitchey_analytics_datapoints_per_minute 1250
             SELECT 1 FROM likes WHERE user_id = ${authResult.user.id} AND pitch_id = ${pitchId} LIMIT 1
           `;
           isLiked = likeResult.length > 0;
+          // Per-user save state. saved_pitches uses user_id::text comparison to
+          // tolerate id-type drift (matches checkPitchSaved). Wrapped so a missing
+          // table in older envs can't 500 the whole pitch view.
+          try {
+            const saveResult = await sql`
+              SELECT 1 FROM saved_pitches
+              WHERE user_id::text = ${String(authResult.user.id)} AND pitch_id = ${pitchId}
+              LIMIT 1
+            `;
+            isSaved = saveResult.length > 0;
+          } catch { /* saved_pitches may not exist in all envs */ }
           // NDA access — primary check via signer_id (matches engagement handler).
           // Fallback to requester_id / user_id / pitch_access for legacy
           // records from older schemas.
@@ -5944,6 +5956,7 @@ pitchey_analytics_datapoints_per_minute 1250
         longSynopsis: longSynopsisOut,
         synopsisTruncated,
         isLiked,
+        isSaved,
         isOwner,
         hasSignedNDA: hasNDAAccess,
         hasNDA: hasNDAAccess,

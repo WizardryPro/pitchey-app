@@ -148,6 +148,7 @@ export default function PitchDetail() {
       // this the heart always renders empty ("Like") on load even when the
       // viewer already liked the pitch, only flipping after a click this session.
       setIsLiked(!!(pitch as any).isLiked);
+      setIsSaved(!!(pitch as any).isSaved);
       const ndaStatus = pitch.hasSignedNDA || pitch.hasNDA || hasProtectedFields;
       setHasSignedNDA(ndaStatus);
       
