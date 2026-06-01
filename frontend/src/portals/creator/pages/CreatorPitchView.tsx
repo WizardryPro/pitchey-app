@@ -11,6 +11,7 @@ import apiClient from '@/lib/api-client';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import FormatDisplay from '@/components/FormatDisplay';
 import FeedbackDisplay from '@/components/feedback/FeedbackDisplay';
+import FollowButton from '@features/browse/components/FollowButton';
 
 interface Pitch {
   id: string;
@@ -281,6 +282,22 @@ const CreatorPitchView: React.FC = () => {
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete
+                </button>
+              </div>
+            )}
+
+            {/* Viewing someone else's pitch: a creator can Follow + Message the
+                creator (no NDA request for creators). Message starts a conversation
+                (1 credit per new person). Follow previously vanished after sign-in
+                because this portal view lacked it. */}
+            {!isOwner && pitch.userId && (
+              <div className="flex items-center gap-3">
+                <FollowButton creatorId={parseInt(pitch.userId)} />
+                <button
+                  onClick={() => navigate(`/creator/messages?recipient=${pitch.userId}&pitch=${id}`)}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                >
+                  <MessageSquare className="h-4 w-4 mr-1" /> Message
                 </button>
               </div>
             )}

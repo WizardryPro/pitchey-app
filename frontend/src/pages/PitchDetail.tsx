@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
-import { ArrowLeft, Share2, Eye, Calendar, User, UserCircle, Clock, Tag, Film, LogIn, FileText, Lock, Shield, Briefcase, DollarSign, WifiOff, RefreshCw, Bookmark, Heart } from 'lucide-react';
+import { ArrowLeft, Share2, Eye, Calendar, User, UserCircle, Clock, Tag, Film, LogIn, FileText, Lock, Shield, Briefcase, DollarSign, WifiOff, RefreshCw, Bookmark, Heart, MessageSquare } from 'lucide-react';
 import PitcheyRating from '../components/PitcheyRating';
 import { pitchService } from '@features/pitches/services/pitch.service';
 import PitchDocuments from '@features/pitches/components/PitchDocuments';
@@ -53,7 +53,13 @@ export default function PitchDetail() {
   };
   
   const currentUserId = getUserId();
-  
+
+  // Only investors and production companies may request enhanced/NDA access.
+  // Creators (and watchers) are excluded — a creator viewing another creator's
+  // pitch should not be requesting access.
+  const viewerType = ((user as any)?.userType || (user as any)?.user_type || '').toLowerCase();
+  const canRequestNDA = viewerType === 'investor' || viewerType === 'production';
+
   // Secure owner check - only return true if IDs are valid and match
   const isOwner = (() => {
     // First check the backend-provided isOwner flag (most reliable)
@@ -462,7 +468,7 @@ export default function PitchDetail() {
                 </button>
               ) : (
                 <>
-                  {!hasSignedNDA && !isOwner && (
+                  {!hasSignedNDA && !isOwner && canRequestNDA && (
                     <button
                       onClick={() => setShowEnhancedNDARequest(true)}
                       className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium shadow-sm"
@@ -1001,19 +1007,33 @@ export default function PitchDetail() {
                         </button>
                       </>
                     ) : (
-                      // Viewer actions (non-owner)
-                      <button
-                        onClick={() => setShowEnhancedNDARequest(true)}
-                        disabled={hasSignedNDA}
-                        className={`w-full flex items-center gap-2 px-4 py-2 rounded-lg transition ${
-                          hasSignedNDA 
-                            ? 'bg-green-100 text-green-700 cursor-not-allowed' 
-                            : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                        }`}
-                      >
-                        <FileText className="w-4 h-4" />
-                        {hasSignedNDA ? 'NDA Signed' : 'Request NDA Access'}
-                      </button>
+                      // Viewer actions (non-owner): Message for everyone; Request NDA
+                      // only for investors/production (creators get Message only).
+                      <div className="space-y-2">
+                        {canRequestNDA && (
+                          <button
+                            onClick={() => setShowEnhancedNDARequest(true)}
+                            disabled={hasSignedNDA}
+                            className={`w-full flex items-center gap-2 px-4 py-2 rounded-lg transition ${
+                              hasSignedNDA
+                                ? 'bg-green-100 text-green-700 cursor-not-allowed'
+                                : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                            }`}
+                          >
+                            <FileText className="w-4 h-4" />
+                            {hasSignedNDA ? 'NDA Signed' : 'Request NDA Access'}
+                          </button>
+                        )}
+                        {pitch.creator?.id && (
+                          <button
+                            onClick={() => navigate(`/messages?recipient=${pitch.creator?.id}&pitch=${pitch.id}`)}
+                            className="w-full flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 transition"
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                            Message
+                          </button>
+                        )}
+                      </div>
                     )}
                   </>
                 ) : (

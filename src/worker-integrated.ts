@@ -19678,10 +19678,37 @@ Signatures: [To be completed upon signing]
       }
 
       const handler = new (await import('./handlers/messaging-simple')).SimpleMessagingHandler(this.db);
+
+      // Messaging model: 1 credit per NEW person contacted. Re-opening an existing
+      // conversation is free. Gate (follow-either-direction OR shared NDA) and charge
+      // BEFORE creation so a 0-credit user can't get a free conversation.
+      const existingConv = await this.db.query(
+        `SELECT c.id FROM conversations c
+         JOIN conversation_participants cp1 ON cp1.conversation_id = c.id AND cp1.user_id = $1
+         JOIN conversation_participants cp2 ON cp2.conversation_id = c.id AND cp2.user_id = $2
+         WHERE c.is_group = FALSE LIMIT 1`,
+        [authCheck.user.id, recipientId]
+      );
+      if (!existingConv || existingConv.length === 0) {
+        const origin = request.headers.get('Origin');
+        const allowed = await handler.canStartConversation(authCheck.user.id, recipientId);
+        if (!allowed) {
+          return new Response(JSON.stringify({ success: false, error: 'Follow this user (or sign their NDA) to start a conversation' }), {
+            headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) }, status: 403
+          });
+        }
+        const charge = await this.deductCreditsInternal(authCheck.user.id, 1, 'Start conversation', 'contact_recipient', pitchId);
+        if (!charge.success) {
+          return new Response(JSON.stringify({ success: false, error: charge.error }), {
+            headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) }, status: 402
+          });
+        }
+      }
+
       const result = await handler.findOrCreateConversation(authCheck.user.id, recipientId, pitchId);
 
       const origin = request.headers.get('Origin');
-      const httpStatus = result.success ? 200 : (typeof result.error === 'string' && result.error.includes('NDA') ? 403 : 400);
+      const httpStatus = result.success ? 200 : (typeof result.error === 'string' && (result.error.includes('NDA') || result.error.includes('Follow')) ? 403 : 400);
       return new Response(JSON.stringify(result), {
         headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) },
         status: httpStatus
