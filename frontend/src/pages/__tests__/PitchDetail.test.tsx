@@ -50,6 +50,13 @@ vi.mock('@features/ndas/components/NDA/EnhancedNDARequest', () => ({
     ) : null,
 }))
 
+vi.mock('@features/ndas/services/nda.service', () => ({
+  ndaService: {
+    // Default: eligible to request, no existing request → not pending.
+    canRequestNDA: vi.fn().mockResolvedValue({ canRequest: true }),
+  },
+}))
+
 vi.mock('../../components/FormatDisplay', () => ({
   default: ({ format }: any) => <span>{format || 'Feature Film'}</span>,
 }))
@@ -188,7 +195,9 @@ describe('PitchDetail', () => {
   describe('Authenticated User', () => {
     beforeEach(() => {
       mockAuthStore.isAuthenticated = true
-      mockAuthStore.user = { id: 3, email: 'user@test.com', name: 'User' }
+      // Investor — only investor/production may request NDA access, so the
+      // request affordances under test are role-gated to this type.
+      mockAuthStore.user = { id: 3, email: 'user@test.com', name: 'User', userType: 'investor' }
       mockPitchService.getByIdAuthenticated.mockResolvedValue(createMockPitch())
     })
 
@@ -364,7 +373,8 @@ describe('PitchDetail', () => {
   describe('NDA State', () => {
     beforeEach(() => {
       mockAuthStore.isAuthenticated = true
-      mockAuthStore.user = { id: 3, email: 'user@test.com' }
+      // Investor — NDA-request affordances are gated to investor/production.
+      mockAuthStore.user = { id: 3, email: 'user@test.com', userType: 'investor' }
     })
 
     it('shows NDA Signed badge when NDA is signed', async () => {
@@ -412,6 +422,25 @@ describe('PitchDetail', () => {
       await waitFor(() => {
         expect(screen.getByTestId('nda-modal')).toBeInTheDocument()
       })
+    })
+
+    it('shows pending state instead of request button when a request is in progress', async () => {
+      const { ndaService } = await import('@features/ndas/services/nda.service')
+      ;(ndaService.canRequestNDA as any).mockResolvedValueOnce({
+        canRequest: false,
+        existingNDA: { status: 'pending' },
+      })
+      mockPitchService.getByIdAuthenticated.mockResolvedValue(
+        createMockPitch({ hasSignedNDA: false })
+      )
+
+      renderPitchDetail()
+
+      await waitFor(() => {
+        expect(screen.getByText('NDA Request Pending')).toBeInTheDocument()
+      })
+      // The request CTA should no longer be offered while a request is pending.
+      expect(screen.queryByText('Request Enhanced Access')).not.toBeInTheDocument()
     })
   })
 
