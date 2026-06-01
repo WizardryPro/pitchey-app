@@ -355,6 +355,26 @@ const ACTION_CHECKS = [
       await ctx.delete(`${BASE_URL}/api/pitches/${pitch.id}/save`).catch(() => {});
     },
   },
+
+  // ── ANY VIEWER — regression guard for the 2026-05-31 views/track 500 ───────
+  {
+    name: 'viewer: pitch-detail view tracking survives the double-fire (no 5xx)', // WRITES TO PROD (idempotent: one view row per user+pitch via ON CONFLICT upsert)
+    as: 'investor',
+    async run(ctx) {
+      const pitch = await pickActionablePitch(ctx, null);
+      // PitchDetail fires POST /api/views/track twice on mount. Before the
+      // ON CONFLICT fix (commit 6af12159), the losing concurrent insert 500'd
+      // on the (user_id, pitch_id) unique index — invisible to users (background
+      // call) but a real prod error. Fire two concurrently; assert NEITHER 5xxes.
+      const fire = () => ctx.post(`${BASE_URL}/api/views/track`, { data: { pitchId: String(pitch.id) } });
+      const [r1, r2] = await Promise.all([fire(), fire()]);
+      for (const r of [r1, r2]) {
+        if (r.status() >= 500) {
+          throw new Error(`views/track ${r.status()} — ${(await r.text()).slice(0, 200)}`);
+        }
+      }
+    },
+  },
 ];
 
 // Run a single action check with a one-shot retry to absorb cold-start / transient
@@ -517,7 +537,25 @@ async function main() {
   const actionResults = [];
   const started = Date.now();
 
-  for (const route of (runRoutes ? filteredRoutes : [])) {
+  // Inject a real pitch-detail route. The static ROUTES list never visited
+  // /pitch/:id, so the whole pitch-detail page — and the /api/views/track call
+  // that 500'd on 2026-05-31 — went unexercised. Resolve a published pitch and
+  // let the existing per-route 5xx + console listeners cover feedback,
+  // engagement, comments, rating, consumption-status and follow-stats too.
+  // Skipped under --filter to keep filtered runs predictable.
+  const routesToRun = [...filteredRoutes];
+  if (runRoutes && !FILTER) {
+    try {
+      const ctx = await requestContextFor(browser, 'investor');
+      const pitch = await pickActionablePitch(ctx, null);
+      routesToRun.push({ path: `/pitch/${pitch.id}`, as: 'investor' });
+      console.log(`(+ pitch-detail route /pitch/${pitch.id})\n`);
+    } catch (err) {
+      console.log(`(skipped pitch-detail route — could not resolve a pitch: ${err.message})\n`);
+    }
+  }
+
+  for (const route of (runRoutes ? routesToRun : [])) {
     let storageState;
     try {
       storageState = await getStorageStateFor(browser, route.as);
