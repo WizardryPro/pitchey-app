@@ -66,12 +66,20 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Write local worker vars (.dev.vars is gitignored)
+        env:
+          DATABASE_URL: ${{ secrets.E2E_DATABASE_URL }}
         run: |
-          cat > .dev.vars <<'EOF'
+          # The auth/session path reads env.DATABASE_URL via neon() directly (NOT the
+          # Hyperdrive binding) — without it every query throws "No database connection
+          # string was provided to neon()" and login never completes. Unquoted heredoc
+          # so $DATABASE_URL expands.
+          cat > .dev.vars <<EOF
           BETTER_AUTH_SECRET=ci-e2e-placeholder-not-a-real-secret-32chars
+          JWT_SECRET=ci-e2e-placeholder-jwt-secret-not-real-32chars
           ENVIRONMENT=development
           SENTRY_ENVIRONMENT=development
           TURNSTILE_ENABLED=false
+          DATABASE_URL=$DATABASE_URL
           EOF
 
       - name: Start worker (wrangler dev :8001) + frontend (vite :5173)
