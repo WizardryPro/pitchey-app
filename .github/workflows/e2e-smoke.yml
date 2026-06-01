@@ -39,11 +39,17 @@ jobs:
           cache: 'npm'
 
       - name: Fail fast if DB secret missing
-        if: ${{ secrets.E2E_DATABASE_URL == '' }}
+        # NOTE: the `secrets` context is NOT allowed in `if:` — must surface it via
+        # env and test the value in the script, otherwise the workflow file is invalid.
+        env:
+          E2E_DATABASE_URL: ${{ secrets.E2E_DATABASE_URL }}
         run: |
-          echo "::error::E2E_DATABASE_URL secret is not set — the login-gated smoke tests cannot reach the DB."
-          echo "Add it under Settings → Secrets → Actions (the Neon prod connection string works)."
-          exit 1
+          if [ -z "$E2E_DATABASE_URL" ]; then
+            echo "::error::E2E_DATABASE_URL secret is not set — the login-gated smoke tests cannot reach the DB."
+            echo "Add it under Settings → Secrets → Actions (the Neon prod connection string works)."
+            exit 1
+          fi
+          echo "E2E_DATABASE_URL is present."
 
       - name: Install root deps (wrangler)
         run: npm ci --no-audit --no-fund
