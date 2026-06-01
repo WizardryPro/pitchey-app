@@ -144,6 +144,10 @@ export default function PitchDetail() {
       }
 
       setPitch(pitch);
+      // Hydrate the per-user like state from the server's isLiked flag — without
+      // this the heart always renders empty ("Like") on load even when the
+      // viewer already liked the pitch, only flipping after a click this session.
+      setIsLiked(!!(pitch as any).isLiked);
       const ndaStatus = pitch.hasSignedNDA || pitch.hasNDA || hasProtectedFields;
       setHasSignedNDA(ndaStatus);
       
