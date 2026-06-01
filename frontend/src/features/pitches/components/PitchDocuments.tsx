@@ -48,6 +48,11 @@ function DocRow({ url, label }: { url?: string; label: string }) {
 // the attachment list so e.g. a `test-upload.png` never surfaces as a download
 // link under the cover image.
 const IMAGE_EXT = /\.(png|jpe?g|gif|webp|heic|heif|bmp|svg|avif|tiff?)$/i;
+// decodeURIComponent throws on a malformed % sequence; a bad URL must never crash
+// the whole document list render. Fall back to the raw string.
+function safeDecode(s: string): string {
+  try { return decodeURIComponent(s); } catch { return s; }
+}
 function isImageDoc(d: PitchDocumentRow): boolean {
   const name = d.original_file_name || d.file_name || '';
   // file_url may carry ?token=…&filename=… query params — test the path only.
@@ -55,7 +60,7 @@ function isImageDoc(d: PitchDocumentRow): boolean {
   const type = (d.document_type || '').toLowerCase();
   return (
     IMAGE_EXT.test(name) ||
-    IMAGE_EXT.test(decodeURIComponent(urlPath)) ||
+    IMAGE_EXT.test(safeDecode(urlPath)) ||
     type.includes('image') ||
     type.includes('cover') ||
     type.includes('poster') ||

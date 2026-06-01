@@ -65,8 +65,13 @@ test.describe('smoke-regression: silent-failure guards', () => {
     await openEdit(page);
 
     // Capture the current value so we can restore it — this runs on every PR
-    // against a shared demo pitch; the test must leave it as it found it.
-    const original = await page.getByRole('textbox', { name: /Short Synopsis/i }).inputValue();
+    // against a shared demo pitch; the test must leave it as it found it. If a
+    // prior run died before its restore step (leaving a marker), DON'T propagate
+    // that marker — reset to a clean placeholder so the demo pitch self-heals.
+    const current = await page.getByRole('textbox', { name: /Short Synopsis/i }).inputValue();
+    const restoreTo = /^E2E persistence \d+/.test(current)
+      ? 'A gripping story — full synopsis available to verified viewers.'
+      : current;
     const marker = `E2E persistence ${Date.now()}`;
 
     await page.getByRole('textbox', { name: /Short Synopsis/i }).fill(marker);
@@ -78,8 +83,9 @@ test.describe('smoke-regression: silent-failure guards', () => {
     await openEdit(page);
     await expect(page.getByRole('textbox', { name: /Short Synopsis/i })).toHaveValue(marker);
 
-    // Restore the original value so the demo pitch isn't left mutated.
-    await page.getByRole('textbox', { name: /Short Synopsis/i }).fill(original);
+    // Restore so the demo pitch isn't left mutated (clean value if the incoming
+    // state was itself a leftover marker).
+    await page.getByRole('textbox', { name: /Short Synopsis/i }).fill(restoreTo);
     await page.getByRole('button', { name: /Save Changes/i }).click();
     await page.waitForURL(/\/creator\/pitches/, { timeout: 20000 });
   });
