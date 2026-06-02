@@ -8,11 +8,8 @@ import {
 } from 'lucide-react';
 import { paymentsAPI } from '@/lib/apiServices';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
-import {
-  getSubscriptionTiersByUserType,
-  getSubscriptionTier,
-  type SubscriptionTier,
-} from '@/config/subscription-plans';
+import { type SubscriptionTier } from '@/config/subscription-plans';
+import { usePlans } from '@/services/plans.service';
 import { useCurrency } from '@/config/currency';
 
 interface SubscriptionCardProps {
@@ -29,6 +26,9 @@ const POPULAR_TIER_BY_PORTAL: Record<string, string> = {
 
 export default function SubscriptionCard({ subscription, onRefresh }: SubscriptionCardProps) {
   const { symbol: currencySymbol, currency } = useCurrency();
+  // Plans from the backend (/api/plans single source) with bundled fallback.
+  const { tiers, forUserType } = usePlans();
+  const findTier = (id: string): SubscriptionTier | null => tiers.find((t) => t.id === id) ?? null;
   const { user } = useBetterAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,14 +51,14 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
   // Watchers are audience-only — no subscription paths shown.
   // Fall back to creator tiers for viewer (legacy alias).
   const portalForTiers = userType === 'viewer' ? 'watcher' : userType;
-  const availableTiers: SubscriptionTier[] = getSubscriptionTiersByUserType(portalForTiers);
+  const availableTiers: SubscriptionTier[] = forUserType(portalForTiers);
   const popularTierId = POPULAR_TIER_BY_PORTAL[portalForTiers] || '';
 
-  const currentTierDef = currentTierId ? getSubscriptionTier(currentTierId) : null;
+  const currentTierDef = currentTierId ? findTier(currentTierId) : null;
   const currentTierName = currentTierDef?.name || 'Free';
 
   const handleUpgrade = async (planKey: string) => {
-    const plan = getSubscriptionTier(planKey);
+    const plan = findTier(planKey);
     if (!plan || plan.price.monthly === 0) return; // free tier — nothing to subscribe to
 
     try {

@@ -14,7 +14,7 @@ import {
   Lock
 } from 'lucide-react';
 import { paymentsAPI } from '@/lib/apiServices';
-import { CREDIT_PACKAGES, CREDIT_COSTS } from '@config/subscription-plans';
+import { usePlans } from '@/services/plans.service';
 import { useCurrency } from '@config/currency';
 
 interface CreditPurchaseProps {
@@ -35,33 +35,37 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
 const currencySymbol = (currency?: string) =>
   CURRENCY_SYMBOLS[(currency || 'EUR').toUpperCase()] ?? (currency || 'EUR');
 
-// Adapt centralized credit packages for UI display
-const UI_CREDIT_PACKAGES = CREDIT_PACKAGES.map((pkg, index) => {
-  const icons = [Zap, TrendingUp, Star, Crown];
-  const descriptions = [
-    'Perfect for getting started',
-    'Great for growing creators',
-    'Best value for professionals',
-    'Maximum value for power users'
-  ];
+// Adapt centralized credit packages for UI display. Built at render-time from
+// usePlans() (backend /api/plans single source) so the displayed packages can't
+// drift from what checkout charges.
+type CreditPackageInput = { credits: number; price: number; bonus?: number; currency?: string; description?: string };
+const buildUiCreditPackages = (packages: CreditPackageInput[]) =>
+  packages.map((pkg, index) => {
+    const icons = [Zap, TrendingUp, Star, Crown];
+    const descriptions = [
+      'Perfect for getting started',
+      'Great for growing creators',
+      'Best value for professionals',
+      'Maximum value for power users'
+    ];
 
-  const symbol = currencySymbol(pkg.currency);
+    const symbol = currencySymbol(pkg.currency);
 
-  return {
-    id: `package_${index}`,
-    name: `${pkg.credits} Credit${pkg.credits === 1 ? '' : 's'}${pkg.bonus ? ` + ${pkg.bonus} Bonus` : ''}`,
-    credits: pkg.credits,
-    price: pkg.price,
-    symbol,
-    // Per-credit cost over the EFFECTIVE credits (incl. bonus), to 2 decimals —
-    // 3 decimals read as "a fraction of a pence" and were incomprehensible.
-    value: `${symbol}${(pkg.price / (pkg.credits + (pkg.bonus ?? 0))).toFixed(2)} per credit`,
-    icon: icons[index] || Coins,
-    description: pkg.description || descriptions[index] || 'Credit package',
-    popular: index === 1, // Make second package popular
-    bonus: pkg.bonus || 0
-  };
-});
+    return {
+      id: `package_${index}`,
+      name: `${pkg.credits} Credit${pkg.credits === 1 ? '' : 's'}${pkg.bonus ? ` + ${pkg.bonus} Bonus` : ''}`,
+      credits: pkg.credits,
+      price: pkg.price,
+      symbol,
+      // Per-credit cost over the EFFECTIVE credits (incl. bonus), to 2 decimals —
+      // 3 decimals read as "a fraction of a pence" and were incomprehensible.
+      value: `${symbol}${(pkg.price / (pkg.credits + (pkg.bonus ?? 0))).toFixed(2)} per credit`,
+      icon: icons[index] || Coins,
+      description: pkg.description || descriptions[index] || 'Credit package',
+      popular: index === 1, // Make second package popular
+      bonus: pkg.bonus || 0
+    };
+  });
 
 // Derived from the backend's single source of truth (CREDIT_COSTS in
 // subscription-plans.ts) so the "How Credits Work" guide can never drift from
@@ -79,15 +83,17 @@ const CREDIT_ACTION_META: Record<string, { label: string; icon: typeof Coins }> 
   nda_request: { label: 'NDA Access Request', icon: Lock },
 };
 
-const CREDIT_USAGE = CREDIT_COSTS.map((c) => {
-  const meta = CREDIT_ACTION_META[c.action];
-  return {
-    action: meta?.label ?? c.action,
-    cost: c.credits,
-    icon: meta?.icon ?? Coins,
-    description: c.description,
-  };
-});
+type CreditCostInput = { action: string; credits: number; description?: string };
+const buildCreditUsage = (costs: CreditCostInput[]) =>
+  costs.map((c) => {
+    const meta = CREDIT_ACTION_META[c.action];
+    return {
+      action: meta?.label ?? c.action,
+      cost: c.credits,
+      icon: meta?.icon ?? Coins,
+      description: c.description,
+    };
+  });
 
 export default function CreditPurchase({ credits, onRefresh }: CreditPurchaseProps) {
   const [loading, setLoading] = useState(false);
@@ -96,6 +102,11 @@ export default function CreditPurchase({ credits, onRefresh }: CreditPurchasePro
   // Same numeric amount across currencies (owner decision) — only the symbol
   // changes by selected currency. EUR while multi-currency is disabled.
   const { symbol: displaySymbol, currency } = useCurrency();
+  // Packages + usage guide from the backend (/api/plans single source), bundled
+  // fallback for first paint.
+  const { creditPackages, creditCosts } = usePlans();
+  const UI_CREDIT_PACKAGES = buildUiCreditPackages(creditPackages);
+  const CREDIT_USAGE = buildCreditUsage(creditCosts);
   const perCredit = (pkg: { price: number; credits: number; bonus: number }) =>
     `${displaySymbol}${(pkg.price / (pkg.credits + (pkg.bonus ?? 0))).toFixed(2)} per credit`;
 
