@@ -112,7 +112,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     id: 'creator',
     name: 'Creator',
     price: { monthly: 19.99, annual: 199 },
-    stripePriceId: { monthly: 'price_1TbgA0Gfa7gtG8Qy0IKu4kUO', annual: 'price_1TbgJIGfa7gtG8Qyhh1BtwNR' },
+    stripePriceId: { monthly: 'price_1TdxasGfa7gtG8QyS2D9LMhh', annual: 'price_1TdxatGfa7gtG8QyvfkXGv8E' },
     credits: 10,
     analytics: 'basic',
     features: [
@@ -127,7 +127,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     id: 'creator_plus',
     name: 'Creator+',
     price: { monthly: 29.99, annual: 299 },
-    stripePriceId: { monthly: 'price_1TbgCnGfa7gtG8QyQpBUOaf5', annual: 'price_1TbgJvGfa7gtG8QycMQjlnUB' },
+    stripePriceId: { monthly: 'price_1TdxatGfa7gtG8QytZYRhfRS', annual: 'price_1TdxauGfa7gtG8Qy8VYyfCx1' },
     credits: 30,
     analytics: 'enhanced',
     features: [
@@ -142,7 +142,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     id: 'creator_unlimited',
     name: 'Creator Unlimited',
     price: { monthly: 39.99, annual: 399 },
-    stripePriceId: { monthly: 'price_1TbgFPGfa7gtG8QyOEVd45Dp', annual: 'price_1TbgICGfa7gtG8QyT4vdxXEI' },
+    stripePriceId: { monthly: 'price_1TdxavGfa7gtG8QyIYgPS003', annual: 'price_1TdxavGfa7gtG8QyWrqs3zor' },
     credits: -1, // Unlimited
     analytics: 'customizable',
     features: [
@@ -158,7 +158,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     id: 'production',
     name: 'Production Company',
     price: { monthly: 19.99, annual: 199 },
-    stripePriceId: { monthly: 'price_1TbgLDGfa7gtG8QyW7Qpe528', annual: 'price_1TbgMAGfa7gtG8Qyku7xIHHE' },
+    stripePriceId: { monthly: 'price_1TdxawGfa7gtG8Qy83sx1kv7', annual: 'price_1TdxawGfa7gtG8QyBe5fPemg' },
     credits: 20,
     analytics: 'basic',
     features: [
@@ -174,7 +174,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     id: 'production_plus',
     name: 'Production Company+',
     price: { monthly: 29.99, annual: 299 },
-    stripePriceId: { monthly: 'price_1TbgX6Gfa7gtG8QyZJEvAkeh', annual: 'price_1TbgX6Gfa7gtG8QyCeVTfUYC' },
+    stripePriceId: { monthly: 'price_1TdxaxGfa7gtG8QyKBElqaHy', annual: 'price_1TdxayGfa7gtG8QykmlbKoLK' },
     credits: 40,
     analytics: 'enhanced',
     features: [
@@ -190,7 +190,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     id: 'production_unlimited',
     name: 'Production Company Unlimited',
     price: { monthly: 39.99, annual: 399 },
-    stripePriceId: { monthly: 'price_1TbgYLGfa7gtG8QyAEXziPu2', annual: 'price_1TbgYoGfa7gtG8QyMOlKAHOQ' },
+    stripePriceId: { monthly: 'price_1TdxayGfa7gtG8QyNkZy8Sin', annual: 'price_1TdxazGfa7gtG8QyJCXPKJdd' },
     credits: -1, // Unlimited
     analytics: 'customizable',
     features: [
@@ -208,7 +208,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     id: 'exec',
     name: 'Exec/Studio',
     price: { monthly: 39.99, annual: 399 },
-    stripePriceId: { monthly: 'price_1TbgaTGfa7gtG8QywRU1eSyT', annual: 'price_1TbgaTGfa7gtG8QykqA7SoAY' },
+    stripePriceId: { monthly: 'price_1Tdxb0Gfa7gtG8QySYVulTSs', annual: 'price_1Tdxb0Gfa7gtG8Qy1zehbaFm' },
     credits: 30,
     analytics: 'basic',
     features: [
@@ -223,7 +223,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     id: 'exec_unlimited',
     name: 'Exec/Studio Unlimited',
     price: { monthly: 49.99, annual: 499 },
-    stripePriceId: { monthly: 'price_1TbgbVGfa7gtG8QylWn9PeN9', annual: 'price_1TbgbVGfa7gtG8QyIc8JP9kl' },
+    stripePriceId: { monthly: 'price_1Tdxb1Gfa7gtG8QyjP70fyya', annual: 'price_1Tdxb1Gfa7gtG8Qy5u3O5NRW' },
     credits: -1, // Unlimited
     analytics: 'customizable',
     features: [
