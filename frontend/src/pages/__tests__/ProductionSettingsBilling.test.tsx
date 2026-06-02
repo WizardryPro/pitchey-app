@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import React from 'react'
 
@@ -45,6 +45,12 @@ vi.mock('../../components/ui/badge', () => ({
   Badge: ({ children, ...props }: any) => <span {...props}>{children}</span>,
 }))
 
+// StripePortalCard pulls in the billing/auth/API stack; stub it so this stays a
+// focused unit test of the billing page shell.
+vi.mock('@features/billing/components/StripePortalCard', () => ({
+  default: () => <div data-testid="stripe-portal-card">Stripe portal</div>,
+}))
+
 const mockToast = { success: vi.fn(), error: vi.fn(), loading: vi.fn() }
 vi.mock('react-hot-toast', () => ({
   default: mockToast,
@@ -69,72 +75,34 @@ function renderComponent() {
   )
 }
 
+// The page was rewritten to delegate all real billing (cards, invoices, billing
+// address, cancellation) to Stripe's hosted Customer Portal via StripePortalCard.
+// The old stub tabbed UI (Overview / Payment Methods / Billing Info / Invoices)
+// was removed, so the tests now assert the current shell.
 describe('ProductionSettingsBilling', () => {
-  it('renders the page title', () => {
+  it('renders the page title and subtitle', () => {
     renderComponent()
     expect(screen.getByText('Billing & Payments')).toBeInTheDocument()
-    expect(screen.getByText('Manage your subscription, payment methods, and billing information')).toBeInTheDocument()
+    expect(
+      screen.getByText('Manage your subscription, payment methods, and invoices.')
+    ).toBeInTheDocument()
   })
 
-  it('renders tab navigation', () => {
+  it('renders the Stripe customer portal card', () => {
     renderComponent()
-    expect(screen.getByText('Overview')).toBeInTheDocument()
-    expect(screen.getByText('Payment Methods')).toBeInTheDocument()
-    expect(screen.getByText('Billing Info')).toBeInTheDocument()
-    expect(screen.getByText('Invoices')).toBeInTheDocument()
+    expect(screen.getByTestId('stripe-portal-card')).toBeInTheDocument()
   })
 
-  it('shows the overview tab by default with plan info', () => {
+  it('explains that billing is managed in the secure Stripe portal', () => {
     renderComponent()
-    expect(screen.getByText('Current Plan')).toBeInTheDocument()
-    expect(screen.getByText('Free Plan')).toBeInTheDocument()
-    expect(screen.getByText('Active')).toBeInTheDocument()
+    expect(screen.getByText(/managed in the\s+secure billing portal above/i)).toBeInTheDocument()
   })
 
-  it('displays coming soon message for paid plans in overview', () => {
+  it('no longer renders the old stub tabbed UI', () => {
     renderComponent()
-    expect(screen.getByText(/Paid plans with premium features are coming soon/)).toBeInTheDocument()
-  })
-
-  it('does not show old plan feature rows', () => {
-    renderComponent()
-    expect(screen.queryByText('Unlimited')).not.toBeInTheDocument()
-    expect(screen.queryByText('per month')).not.toBeInTheDocument()
-  })
-
-  it('does not show Upgrade Plan or Change Plan buttons', () => {
-    renderComponent()
-    expect(screen.queryByText('Upgrade Plan')).not.toBeInTheDocument()
-    expect(screen.queryByText('Change Plan')).not.toBeInTheDocument()
-  })
-
-  it('switches to Payment Methods tab', () => {
-    renderComponent()
-    fireEvent.click(screen.getByText('Payment Methods'))
-    expect(screen.getByText('Add Payment Method')).toBeInTheDocument()
-  })
-
-  it('shows payment methods with card info', () => {
-    renderComponent()
-    fireEvent.click(screen.getByText('Payment Methods'))
-    // No payment methods by default — only the Add Payment Method button is shown
-    expect(screen.getByText('Add Payment Method')).toBeInTheDocument()
-  })
-
-  it('switches to Invoices tab and shows invoice list', () => {
-    renderComponent()
-    fireEvent.click(screen.getByText('Invoices'))
-    expect(screen.getByText('Invoice History')).toBeInTheDocument()
-    // No invoices by default — only the empty table is shown
-    expect(screen.queryByText('INV-2024-001')).not.toBeInTheDocument()
-  })
-
-  it('switches to Billing Info tab and shows form fields', () => {
-    renderComponent()
-    fireEvent.click(screen.getByText('Billing Info'))
-    expect(screen.getByText('Billing Information')).toBeInTheDocument()
-    // Company starts empty; email is pre-filled from user session
-    expect(screen.getByText('Company Name')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('production@test.com')).toBeInTheDocument()
+    expect(screen.queryByText('Overview')).not.toBeInTheDocument()
+    expect(screen.queryByText('Billing Info')).not.toBeInTheDocument()
+    expect(screen.queryByText('Add Payment Method')).not.toBeInTheDocument()
+    expect(screen.queryByText('Current Plan')).not.toBeInTheDocument()
   })
 })
