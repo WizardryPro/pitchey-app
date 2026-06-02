@@ -97,7 +97,6 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
       '10 Creator Credits per month',
       'Basic Analytics',
       'Profile views, pitch views, search appearances',
-      'First month free (12 month contract)'
     ],
     userType: 'creator'
   },
@@ -111,7 +110,6 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
       '30 Creator Credits per month',
       'Enhanced Analytics',
       'Who viewed, time spent, location/device',
-      'First month free (12 month contract)'
     ],
     userType: 'creator'
   },
@@ -124,7 +122,6 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     features: [
       'Unlimited Creator Credits per month',
       'Enhanced & Customizable Analytics',
-      'First month free (12 month contract)'
     ],
     userType: 'creator'
   },
@@ -140,7 +137,6 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
       '20 Credits per month',
       'Basic Analytics',
       'Profile views, pitch views, search appearances',
-      'First month free (12 month contract)'
     ],
     userType: 'production'
   },
@@ -154,7 +150,6 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
       '40 Creator Credits per month',
       'Enhanced Analytics',
       'Who viewed, time spent, location/device',
-      'First month free (12 month contract)'
     ],
     userType: 'production'
   },
@@ -168,7 +163,6 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
       'Unlimited Creator Credits per month',
       'Enhanced & Customizable Analytics',
       'Choose what to track, export, or monitor in real time',
-      'First month free (12 month contract)'
     ],
     userType: 'production'
   },
@@ -184,7 +178,6 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
       '30 Credits per month',
       'Basic Analytics',
       'Profile views, pitch views, search appearances',
-      'First month free (12 month contract)'
     ],
     userType: 'exec'
   },
@@ -198,7 +191,6 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
       'Unlimited Credits per month',
       'Enhanced & Customizable Analytics',
       'Choose what to track, export, or monitor in real time',
-      'First month free (12 month contract)'
     ],
     userType: 'exec'
   }
