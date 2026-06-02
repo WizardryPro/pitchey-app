@@ -14,13 +14,16 @@ import * as Sentry from '@sentry/cloudflare';
 
 type DbEnv = { DATABASE_URL: string };
 
-export type ActivityAction = 'pitch_published' | 'pitch_updated' | 'user_followed';
+export type ActivityAction = 'pitch_published' | 'pitch_updated' | 'user_followed' | 'message_attachment';
 
 export interface RecordActivityInput {
   actorId: number;
   action: ActivityAction | string;
-  objectType: 'pitch' | 'user' | string;
+  objectType: 'pitch' | 'user' | 'message' | string;
   objectId?: number | null;
+  /** When set, the event is PRIVATE — visible only to this recipient, never
+   *  fanned out to the actor's followers. Used for messaged attachments. */
+  recipientId?: number | null;
   metadata?: Record<string, unknown>;
 }
 
@@ -29,12 +32,13 @@ export async function recordActivity(env: DbEnv, input: RecordActivityInput): Pr
     if (!input.actorId || Number.isNaN(input.actorId)) return;
     const sql = postgres(env.DATABASE_URL);
     await sql`
-      INSERT INTO activity_feed (actor_id, action, object_type, object_id, metadata)
+      INSERT INTO activity_feed (actor_id, action, object_type, object_id, recipient_id, metadata)
       VALUES (
         ${input.actorId},
         ${input.action},
         ${input.objectType},
         ${input.objectId ?? null},
+        ${input.recipientId ?? null},
         ${JSON.stringify(input.metadata ?? {})}::jsonb
       )
     `;
@@ -110,10 +114,18 @@ export async function getActivityFeed(
       LEFT JOIN pitches p ON af.object_type = 'pitch' AND p.id = af.object_id
       WHERE af.actor_id <> ${viewerId}
         AND (
-          af.actor_id IN (SELECT following_id FROM follows WHERE follower_id = ${viewerId})
+          -- PRIVATE events: visible only to their recipient (e.g. messaged attachments).
+          af.recipient_id = ${viewerId}
           OR (
-            af.object_type = 'pitch'
-            AND af.object_id IN (SELECT pitch_id FROM saved_pitches WHERE user_id = ${viewerId})
+            -- BROADCAST events: fanned out to followers + saved-pitch watchers.
+            af.recipient_id IS NULL
+            AND (
+              af.actor_id IN (SELECT following_id FROM follows WHERE follower_id = ${viewerId})
+              OR (
+                af.object_type = 'pitch'
+                AND af.object_id IN (SELECT pitch_id FROM saved_pitches WHERE user_id = ${viewerId})
+              )
+            )
           )
         )
         -- Don't surface published pitches that have since been unpublished/archived.

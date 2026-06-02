@@ -151,10 +151,73 @@ export class SimpleMessagingHandler {
         ).catch(() => {});
       }
 
+      // Surface messaged attachments in the recipient's activity feed (Phase 4A).
+      // PRIVATE event — recipient-scoped only, never fanned out to followers, since
+      // message attachments are not NDA-gated. Non-blocking.
+      if (hasAttachments && convId && message[0]) {
+        await this.recordMessageAttachmentActivity(
+          userId, convId, Number(message[0].id), attachments, recipient_id
+        ).catch(() => {});
+      }
+
       return { success: true, data: { message: message[0] } };
     } catch (error) {
       console.error('Send message error:', error);
       return { success: false, error: 'Failed to send message' };
+    }
+  }
+
+  // Write a PRIVATE (recipient-scoped) activity_feed row per conversation recipient
+  // when a message carries attachments. Visibility is limited to each recipient —
+  // these never fan out to the actor's followers. Best-effort; never throws.
+  private async recordMessageAttachmentActivity(
+    senderId: number,
+    convId: number,
+    messageId: number,
+    attachments: any[],
+    directRecipientId?: number
+  ): Promise<void> {
+    try {
+      // Resolve recipients: the other active participants in the conversation.
+      let recipientIds: number[] = [];
+      if (directRecipientId) {
+        recipientIds = [Number(directRecipientId)];
+      } else {
+        const rows = await this.db.query(
+          `SELECT user_id FROM conversation_participants
+           WHERE conversation_id = $1 AND user_id <> $2`,
+          [convId, senderId]
+        );
+        recipientIds = rows.map((r: any) => Number(r.user_id)).filter((n: number) => n && n !== senderId);
+      }
+      if (recipientIds.length === 0) return;
+
+      // Pitch context for the feed card link (conversations may be tied to a pitch).
+      let pitchId: number | null = null;
+      try {
+        const [conv] = await this.db.query(`SELECT pitch_id FROM conversations WHERE id = $1`, [convId]);
+        pitchId = conv?.pitch_id ?? null;
+      } catch { /* pitch_id optional */ }
+
+      const list = Array.isArray(attachments) ? attachments : [];
+      const first = list[0] || {};
+      const metadata = {
+        conversationId: convId,
+        pitchId,
+        attachmentCount: list.length,
+        fileName: first.originalName || first.name || first.fileName || 'a file',
+      };
+
+      for (const recipientId of recipientIds) {
+        await this.db.query(
+          `INSERT INTO activity_feed (actor_id, action, object_type, object_id, recipient_id, metadata)
+           VALUES ($1, 'message_attachment', 'message', $2, $3, $4::jsonb)`,
+          [senderId, messageId, recipientId, JSON.stringify(metadata)]
+        );
+      }
+    } catch (err) {
+      // Best-effort — a missing recipient_id column (pre-migration 095) lands here.
+      console.error('recordMessageAttachmentActivity failed:', err instanceof Error ? err.message : String(err));
     }
   }
 

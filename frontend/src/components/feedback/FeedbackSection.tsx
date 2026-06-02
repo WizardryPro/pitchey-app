@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { MessageSquare, ChevronDown, ChevronUp, Clock, Send } from 'lucide-react';
+import { MessageSquare, ChevronDown, ChevronUp, Clock, Send, TrendingUp, Pencil } from 'lucide-react';
 import { FeedbackService } from '../../services/feedback.service';
-import type { FeedbackEntry, ConsumptionStatus, CommentEntry } from '../../services/feedback.service';
+import type { FeedbackEntry, ConsumptionStatus, CommentEntry, FeedbackProgress } from '../../services/feedback.service';
 import StructuredFeedbackForm from './StructuredFeedbackForm';
 import FeedbackDisplay from './FeedbackDisplay';
 import PitcheyRating from '../PitcheyRating';
@@ -17,6 +17,7 @@ interface Props {
 
 export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, userType, showScoreSummary = true }: Props) {
   const [myFeedback, setMyFeedback] = useState<FeedbackEntry | null>(null);
+  const [feedbackProgress, setFeedbackProgress] = useState<FeedbackProgress | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [loadingMine, setLoadingMine] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -47,6 +48,13 @@ export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, use
       setMyFeedback(fb);
       setConsumption(cs);
       setLoadingMine(false);
+      // If the viewer has left feedback, surface whether the pitch has moved since.
+      if (fb) {
+        const progress = await FeedbackService.getFeedbackProgress(pitchId);
+        setFeedbackProgress(progress);
+      } else {
+        setFeedbackProgress(null);
+      }
     }
     // Load existing rating status for quick-rate
     if (canRate) {
@@ -172,6 +180,35 @@ export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, use
                   />
                 </div>
                 <p className="text-xs text-gray-400">{consumption.viewDuration}s / {consumption.threshold}s</p>
+              </div>
+            )}
+
+            {/* Progress from feedback (WS-5): show the reviewer that the pitch moved
+                since they weighed in — edits made and/or score delta. */}
+            {feedbackProgress && (feedbackProgress.editedSinceFeedback || feedbackProgress.scoreDelta != null) && (
+              <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-emerald-800 mb-1">
+                  <TrendingUp className="w-4 h-4" />
+                  Progress since your feedback
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-emerald-700">
+                  {feedbackProgress.editedSinceFeedback && (
+                    <span className="flex items-center gap-1">
+                      <Pencil className="w-3.5 h-3.5" />
+                      {feedbackProgress.editCount > 0
+                        ? `Updated ${feedbackProgress.editCount} time${feedbackProgress.editCount === 1 ? '' : 's'}`
+                        : 'Updated'} since your feedback
+                    </span>
+                  )}
+                  {feedbackProgress.scoreDelta != null && feedbackProgress.scoreDelta !== 0 && (
+                    <span className="font-semibold">
+                      Pitchey Score {feedbackProgress.scoreAtFeedback?.toFixed(1)} → {feedbackProgress.scoreNow?.toFixed(1)}
+                      <span className={feedbackProgress.scoreDelta > 0 ? 'text-emerald-600' : 'text-red-600'}>
+                        {' '}({feedbackProgress.scoreDelta > 0 ? '+' : ''}{feedbackProgress.scoreDelta.toFixed(1)})
+                      </span>
+                    </span>
+                  )}
+                </div>
               </div>
             )}
 

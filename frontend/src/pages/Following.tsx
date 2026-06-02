@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, TrendingUp, Users, Film, Calendar, MapPin, Eye, Heart, AlertCircle, Search, Bookmark } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Users, Film, Calendar, MapPin, Eye, Heart, AlertCircle, Search, Bookmark, FileText } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { API_URL } from '../config';
 import { useBetterAuthStore } from '../store/betterAuthStore';
@@ -27,7 +27,7 @@ interface Creator {
 
 interface ActivityUpdate {
   id: number;
-  type: 'pitch_created' | 'pitch_updated' | 'new_follower';
+  type: 'pitch_created' | 'pitch_updated' | 'new_follower' | 'message_attachment';
   creator: {
     id: number;
     username: string;
@@ -44,6 +44,13 @@ interface ActivityUpdate {
     requireNda?: boolean;
     ndaSigned?: boolean;
     ndaPending?: boolean;
+  };
+  // Present for message_attachment events (a creator shared a file with you).
+  attachment?: {
+    fileName: string;
+    count: number;
+    conversationId?: number;
+    pitchId?: number;
   };
   createdAt: string;
 }
@@ -76,6 +83,31 @@ const mapPitchesToActivities = (pitches: any[]): ActivityUpdate[] =>
 // Map a unified activity_feed item (from /api/activity/feed) into an activity item.
 const mapFeedItem = (item: any): ActivityUpdate | null => {
   if (!item || !item.actor) return null;
+
+  // Messaged attachment — a creator shared a file with you (recipient-only event).
+  if (item.action === 'message_attachment') {
+    const md = item.metadata || {};
+    const count = Number(md.attachmentCount) || 1;
+    return {
+      id: item.id,
+      type: 'message_attachment',
+      creator: {
+        id: item.actor.id,
+        username: item.actor.name || item.actor.username || 'Someone',
+        profileImage: item.actor.profileImage,
+        userType: item.actor.userType || 'creator',
+      },
+      action: count > 1 ? `shared ${count} files with you` : 'shared a document with you',
+      attachment: {
+        fileName: md.fileName || 'a file',
+        count,
+        conversationId: md.conversationId,
+        pitchId: md.pitchId,
+      },
+      createdAt: item.createdAt || '',
+    };
+  }
+
   const isUpdate = item.action === 'pitch_updated';
   return {
     id: item.id,
@@ -381,6 +413,27 @@ const Following: React.FC = () => {
                               </span>
                             )
                           )}
+                        </div>
+                      </div>
+                    )}
+
+                    {update.attachment && (
+                      <div
+                        className="cursor-pointer group flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100 hover:border-blue-200"
+                        onClick={() => navigate(
+                          update.attachment!.conversationId
+                            ? `/messages?conversation=${update.attachment!.conversationId}`
+                            : '/messages'
+                        )}
+                      >
+                        <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <FileText className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900 group-hover:text-blue-600 truncate">
+                            {update.attachment.fileName}
+                          </p>
+                          <p className="text-xs text-gray-500">View in Messages →</p>
                         </div>
                       </div>
                     )}

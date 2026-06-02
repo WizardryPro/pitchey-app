@@ -308,6 +308,30 @@ describe('Following', () => {
     })
   })
 
+  it('renders a messaged-attachment event in the feed', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({
+        success: true,
+        data: {
+          items: [{
+            id: 77,
+            action: 'message_attachment',
+            createdAt: '2025-03-01T00:00:00Z',
+            actor: { id: 9, name: 'Sam Writer', username: 'sam', userType: 'creator', profileImage: null },
+            metadata: { conversationId: 4, attachmentCount: 1, fileName: 'pitch-deck.pdf' },
+          }],
+        },
+      }),
+    })
+
+    renderComponent(['/following?tab=activity'])
+    await waitFor(() => {
+      expect(screen.getByText('pitch-deck.pdf')).toBeInTheDocument()
+      expect(screen.getByText('shared a document with you')).toBeInTheDocument()
+    })
+  })
+
   it('renders the Saved tab', async () => {
     renderComponent()
     await waitFor(() => {
