@@ -161,6 +161,7 @@ const PublicSlate = lazyRetry(() => import('./pages/PublicSlate'));
 const HowItWorks = lazyRetry(() => import('./pages/HowItWorks'));
 const About = lazyRetry(() => import('./pages/About'));
 const Contact = lazyRetry(() => import('./pages/Contact'));
+const Pricing = lazyRetry(() => import('./pages/Pricing'));
 const Terms = lazyRetry(() => import('./pages/Terms'));
 const Privacy = lazyRetry(() => import('./pages/Privacy'));
 const StandardNDA = lazyRetry(() => import('./pages/StandardNDA'));
@@ -437,6 +438,7 @@ function App() {
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/pricing" element={<Pricing />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/legal/standard-nda" element={<StandardNDA />} />
