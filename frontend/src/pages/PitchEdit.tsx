@@ -221,7 +221,21 @@ export default function PitchEdit() {
         image: null,
         pdf: null,
         video: null,
-        documents: [],
+        // Load the pitch's existing documents so they're visible (and not lost)
+        // on the edit/manage screen. They're marked completed with a url and no
+        // File, so the save loop's `d.file && !d.url` filter skips re-uploading
+        // them. (Previously hardcoded to [] → uploaded docs vanished from edit.)
+        documents: (Array.isArray((pitch as any).documents) ? (pitch as any).documents : []).map(
+          (d: any, i: number): DocumentFile => ({
+            id: String(d.id ?? d.fileKey ?? d.file_key ?? `existing-${i}`),
+            type: (d.documentType ?? d.document_type ?? d.type ?? 'supporting_materials') as DocumentFile['type'],
+            title: d.fileName ?? d.file_name ?? d.originalFileName ?? d.original_file_name ?? d.title ?? 'Document',
+            url: d.fileUrl ?? d.file_url ?? d.url,
+            uploadStatus: 'completed',
+            uploadProgress: 100,
+            file: undefined as unknown as File,
+          })
+        ),
         ndaConfig: {
           requireNDA: pitch.requireNDA || false,
           ndaType: pitch.requireNDA ? 'platform' : 'none',

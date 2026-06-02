@@ -23,6 +23,8 @@ vi.mock('react-router-dom', async () => {
 vi.mock('@features/pitches/services/pitch.service', () => ({
   pitchService: {
     getById: mockGetById,
+    // PitchEdit fetches via getByIdAuthenticated (owner endpoint — works for drafts).
+    getByIdAuthenticated: mockGetById,
     update: mockUpdate,
   },
 }))
@@ -85,6 +87,9 @@ const mockPitch = {
   requireNDA: false,
   characters: [],
   titleImage: 'https://example.com/image.jpg',
+  documents: [
+    { id: 7, file_name: 'script.pdf', file_url: 'https://cdn.example.com/script.pdf', document_type: 'script', file_size: 2048 },
+  ],
 }
 
 describe('PitchEdit', () => {
@@ -118,6 +123,20 @@ describe('PitchEdit', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Edit Pitch')).toBeInTheDocument()
+    })
+  })
+
+  it('loads the pitch\'s existing documents into the upload section', async () => {
+    // Regression: PitchEdit hardcoded documents: [] so uploaded docs vanished
+    // from the edit/manage screen. They must now be loaded from pitch.documents.
+    render(
+      <MemoryRouter>
+        <PitchEdit />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('document-upload')).toHaveTextContent('1 files')
     })
   })
 
