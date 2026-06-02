@@ -52,7 +52,9 @@ const UI_CREDIT_PACKAGES = CREDIT_PACKAGES.map((pkg, index) => {
     credits: pkg.credits,
     price: pkg.price,
     symbol,
-    value: `${symbol}${(pkg.price / pkg.credits).toFixed(3)} per credit`,
+    // Per-credit cost over the EFFECTIVE credits (incl. bonus), to 2 decimals —
+    // 3 decimals read as "a fraction of a pence" and were incomprehensible.
+    value: `${symbol}${(pkg.price / (pkg.credits + (pkg.bonus ?? 0))).toFixed(2)} per credit`,
     icon: icons[index] || Coins,
     description: pkg.description || descriptions[index] || 'Credit package',
     popular: index === 1, // Make second package popular
