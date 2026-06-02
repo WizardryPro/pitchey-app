@@ -1,31 +1,39 @@
 import { safeNumber as defensiveSafeNumber, isValidDate, safeDate } from './defensive';
+import { getActiveCurrency } from '../../config/currency';
 
 // Safe number formatting utilities to prevent $NaN values
 export const safeNumber = defensiveSafeNumber;
 
+// Currency display is locale-aware: it follows the user's active/selected
+// currency (getActiveCurrency) rather than a fixed symbol. Pass an explicit
+// `currency` to override. NOTE: presentation only — amounts are NOT FX-converted
+// (exact for pricing where we hold per-currency prices; symbol-only for stored
+// EUR figures). Default base is EUR.
 export const formatCurrency = (value: unknown, options?: {
   minimumFractionDigits?: number;
   maximumFractionDigits?: number;
+  currency?: string;
 }): string => {
   const safeValue = safeNumber(value, 0);
-  
+
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'EUR', // platform base currency (was USD — wrong symbol on every figure)
+    currency: options?.currency ?? getActiveCurrency(),
     minimumFractionDigits: options?.minimumFractionDigits ?? 0,
     maximumFractionDigits: options?.maximumFractionDigits ?? 0,
   }).format(safeValue);
 };
 
 /**
- * Compact budget display using Intl compact notation: $12M, $500K, $1.5B
+ * Compact budget display using Intl compact notation: €12M, £500K, $1.5B
+ * (symbol follows the active currency; amounts are not FX-converted).
  */
-export const formatBudgetCompact = (value: unknown): string => {
+export const formatBudgetCompact = (value: unknown, currency?: string): string => {
   const n = safeNumber(value, 0);
   if (n === 0) return '';
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'EUR', // platform base currency (was USD — wrong symbol on every figure)
+    currency: currency ?? getActiveCurrency(),
     notation: 'compact',
     compactDisplay: 'short',
     minimumFractionDigits: 0,
