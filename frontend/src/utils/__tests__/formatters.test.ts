@@ -12,20 +12,22 @@ import {
 // formatCurrency
 // ============================================================================
 describe('formatCurrency', () => {
+  // Default display currency is EUR (platform base) when multi-currency is off —
+  // see getActiveCurrency(). Pass { currency } to override.
   it('formats positive integer', () => {
-    expect(formatCurrency(1000)).toBe('$1,000');
+    expect(formatCurrency(1000)).toBe('€1,000');
   });
 
   it('formats zero', () => {
-    expect(formatCurrency(0)).toBe('$0');
+    expect(formatCurrency(0)).toBe('€0');
   });
 
   it('formats negative number', () => {
-    expect(formatCurrency(-500)).toBe('-$500');
+    expect(formatCurrency(-500)).toBe('-€500');
   });
 
   it('formats large number', () => {
-    expect(formatCurrency(1000000)).toBe('$1,000,000');
+    expect(formatCurrency(1000000)).toBe('€1,000,000');
   });
 
   it('formats with custom fraction digits', () => {
@@ -33,23 +35,27 @@ describe('formatCurrency', () => {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
-    expect(result).toBe('$1,234.57');
+    expect(result).toBe('€1,234.57');
   });
 
-  it('formats null as $0', () => {
-    expect(formatCurrency(null)).toBe('$0');
+  it('formats null as €0', () => {
+    expect(formatCurrency(null)).toBe('€0');
   });
 
-  it('formats undefined as $0', () => {
-    expect(formatCurrency(undefined)).toBe('$0');
+  it('formats undefined as €0', () => {
+    expect(formatCurrency(undefined)).toBe('€0');
   });
 
-  it('formats NaN as $0', () => {
-    expect(formatCurrency(NaN)).toBe('$0');
+  it('formats NaN as €0', () => {
+    expect(formatCurrency(NaN)).toBe('€0');
   });
 
   it('formats string number', () => {
-    expect(formatCurrency('2500')).toBe('$2,500');
+    expect(formatCurrency('2500')).toBe('€2,500');
+  });
+
+  it('honours an explicit currency override', () => {
+    expect(formatCurrency(1000, { currency: 'GBP' })).toBe('£1,000');
   });
 });
 

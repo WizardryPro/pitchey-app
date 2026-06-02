@@ -53,6 +53,29 @@ async function fetchLocale(): Promise<LocaleInfo> {
   return inFlight;
 }
 
+// Warm the locale cache at module load so the synchronous getActiveCurrency()
+// below works app-wide even on pages with no useCurrency() consumer mounted.
+void fetchLocale();
+
+/**
+ * Synchronous "what currency should we DISPLAY in right now" for non-React
+ * formatters. Only honours a non-EUR currency when /api/locale confirms
+ * multi-currency is enabled AND it's supported; otherwise EUR.
+ *
+ * IMPORTANT: this is a presentation/symbol choice — amounts are NOT FX-converted.
+ * It is exact for subscription/credit pricing (we hold real per-currency prices),
+ * but for stored EUR data figures (budgets, portfolio, ROI) it only swaps the
+ * symbol. Wire an FX-rate source if true converted amounts are ever needed.
+ */
+export function getActiveCurrency(): string {
+  if (!cached?.multiCurrencyEnabled) return 'EUR';
+  try {
+    const override = localStorage.getItem(STORAGE_KEY);
+    if (override && cached.supportedCurrencies.includes(override)) return override;
+  } catch { /* no localStorage */ }
+  return cached.currency || 'EUR';
+}
+
 /**
  * Returns the active display/charge currency, the supported set, and a setter.
  * Default = geo-detected currency from /api/locale; a user override is persisted
