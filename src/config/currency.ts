@@ -7,7 +7,7 @@
  * While false, every path behaves exactly as the EUR-only system did — the
  * currency param is ignored and EUR is charged/displayed throughout.
  */
-export const MULTI_CURRENCY_ENABLED = false;
+export const MULTI_CURRENCY_ENABLED = true;
 
 /** Base currency. Always supported, always the fallback. */
 export const BASE_CURRENCY = 'EUR';
