@@ -6,6 +6,7 @@
 import { createAuthAdapter } from '../auth/auth-adapter';
 import { neon } from '@neondatabase/serverless';
 import { getCorsHeaders } from '../utils/response';
+import { mutateOrThrow } from '../db/safe-query';
 import * as bcrypt from 'bcryptjs';
 
 export interface UserProfileUpdate {
@@ -238,7 +239,13 @@ export class UserProfileRoutes {
           updated_at as "updatedAt"
       `;
 
-      const [updatedUser] = (await this.sql.query(updateQuery, values)) as any[];
+      // Guard the 0-rows blind spot: if the UPDATE matched nothing (row gone,
+      // wrong id), this throws → 500 instead of returning a phantom
+      // `success: true, user: undefined` that looks like a save that didn't stick.
+      const updatedUser = mutateOrThrow(
+        await this.sql.query(updateQuery, values),
+        'user-profile.update',
+      );
 
       return new Response(JSON.stringify({
         success: true,

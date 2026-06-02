@@ -12,40 +12,39 @@ export async function profileHandler(request: Request, env: Env): Promise<Respon
   const origin = request.headers.get('Origin');
   const corsHeaders = getCorsHeaders(origin);
 
+  // Per-user authenticated data: never let a browser or shared cache hold it.
+  // This endpoint previously shipped `Cache-Control: public, max-age=300`,
+  // which made profile edits look like they didn't persist — a reload within
+  // 5 minutes served the stale pre-edit body from cache (and risked one user's
+  // PII being served to another via a shared cache).
+  const noStore = 'private, no-store';
+
   // Get user ID from authentication
   const userId = await getUserId(request, env) || '1';
-  
-  // Return demo user if DB fails
-  const demoUser = {
-    id: userId,
-    email: 'alex.creator@demo.com',
-    username: 'alexcreator',
-    name: 'Alex Creator',
-    userType: 'creator',
-    firstName: 'Alex',
-    lastName: 'Creator',
-    companyName: 'Creative Studios',
-    profileImage: null,
-    subscriptionTier: 'pro',
-    createdAt: new Date().toISOString(),
-    bio: 'Demo user profile',
-    verified: false
-  };
-  
+
+  // Env-level fallback: no DB binding (misconfiguration), not a per-user error.
   if (!sql) {
-    return new Response(JSON.stringify({
-      success: true,
-      data: demoUser
-    }), {
+    const demoUser = {
+      id: userId,
+      email: 'alex.creator@demo.com',
+      username: 'alexcreator',
+      name: 'Alex Creator',
+      userType: 'creator',
+      firstName: 'Alex',
+      lastName: 'Creator',
+      companyName: 'Creative Studios',
+      profileImage: null,
+      subscriptionTier: 'pro',
+      createdAt: new Date().toISOString(),
+      bio: 'Demo user profile',
+      verified: false
+    };
+    return new Response(JSON.stringify({ success: true, data: demoUser }), {
       status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300', // Cache for 5 minutes
-        ...corsHeaders
-      }
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': noStore, ...corsHeaders }
     });
   }
-  
+
   try {
     const result = await sql`
       SELECT
@@ -64,46 +63,39 @@ export async function profileHandler(request: Request, env: Env): Promise<Respon
       WHERE id = ${userId}
       LIMIT 1
     `;
-    
+
     if (result && result[0]) {
       return new Response(JSON.stringify({
         success: true,
         data: result[0]
       }), {
         status: 200,
-        headers: { 
-          'Content-Type': 'application/json',
-          'Cache-Control': 'public, max-age=300',
-          ...corsHeaders
-        }
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': noStore, ...corsHeaders }
       });
     }
-    
-    // Return demo user if not found
+
+    // Genuinely not found — surface it instead of masking with demo data
+    // (returning a hardcoded user here made wrong/stale data look like the
+    // logged-in user's own profile). The frontend falls back to the auth-store
+    // user on a non-2xx, which is the real session user.
     return new Response(JSON.stringify({
-      success: true,
-      data: demoUser
+      success: false,
+      error: { message: 'Profile not found' }
     }), {
-      status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300',
-        ...corsHeaders
-      }
+      status: 404,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': noStore, ...corsHeaders }
     });
-    
+
   } catch (error) {
     console.error('Profile query error:', error);
+    // Surface DB errors rather than returning a 200 demo user that masks the
+    // failure (this masking hid the persistence-class bugs for weeks).
     return new Response(JSON.stringify({
-      success: true,
-      data: demoUser
+      success: false,
+      error: { message: 'Failed to load profile' }
     }), {
-      status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300',
-        ...corsHeaders
-      }
+      status: 500,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': noStore, ...corsHeaders }
     });
   }
 }
