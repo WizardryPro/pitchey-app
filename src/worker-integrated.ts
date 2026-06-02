@@ -6040,6 +6040,22 @@ pitchey_analytics_datapoints_per_minute 1250
         return hit ? (hit.file_url as string) : undefined;
       };
 
+      // Does this pitch actually have NDA-gated content to reveal? The frontend
+      // uses this (with requireNDA) to decide whether to show the "Enhanced
+      // Information"/Request-NDA section at all — it previously advertised
+      // protected content on every pitch even when there was none, dead-ending
+      // NDA-signers at "Enhanced Information Unavailable".
+      const _isNonEmpty = (v: unknown): boolean => {
+        if (v == null) return false;
+        const s = typeof v === 'string' ? v.trim() : JSON.stringify(v);
+        return s !== '' && s !== '{}' && s !== '[]' && s !== 'null' && s !== '""';
+      };
+      const hasProtectedContent = [
+        pitch.private_attachments, pitch.budget_breakdown, pitch.production_timeline,
+        pitch.attached_talent, pitch.financial_projections, pitch.distribution_plan,
+        pitch.marketing_strategy, pitch.contact_details, pitch.revenue_model,
+      ].some(_isNonEmpty) || documents.some((d: any) => d.requires_nda === true);
+
       // Combine the data with proper creator object
       // Use pitches.view_count directly (accurate, maintained by view tracking)
       //
@@ -6068,6 +6084,7 @@ pitchey_analytics_datapoints_per_minute 1250
         isOwner,
         hasSignedNDA: hasNDAAccess,
         hasNDA: hasNDAAccess,
+        hasProtectedContent,
         view_count: parseInt(String(pitch.view_count || '0')),
         investment_count: investmentCount,
         creator: {

@@ -616,8 +616,12 @@ export default function PitchDetail() {
               </div>
             </div>
 
-            {/* Enhanced Information - NDA Protected */}
-            {!hasSignedNDA && !isOwner ? (
+            {/* Enhanced Information — only render when the pitch actually has
+                NDA-gated content (require_nda set or protected content present).
+                Previously this advertised protected content + an NDA on every
+                pitch, dead-ending signers at "Enhanced Information Unavailable". */}
+            {(pitch.requireNDA || (pitch as any).require_nda || (pitch as any).hasProtectedContent || pitch?.protectedContent) && (
+              !hasSignedNDA && !isOwner ? (
               <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl shadow-sm p-6 border-2 border-blue-200">
                 <div className="flex items-start space-x-3">
                   <Lock className="w-6 h-6 text-blue-600 mt-1" />
@@ -873,7 +877,7 @@ export default function PitchDetail() {
                   </div>
                 </div>
               ) : null
-            )}
+            ))}
 
             {/* Media. Cover image is a public asset (shown on marketplace +
                 public pitch pages); document downloads (script/deck/trailer/
