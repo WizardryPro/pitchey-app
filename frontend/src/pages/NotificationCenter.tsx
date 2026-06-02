@@ -469,7 +469,7 @@ export default function NotificationCenter() {
                             <div className="flex space-x-2 mt-3">
                               <button
                                 onClick={() => {
-                                  navigate('/investor/investments');
+                                  navigate('/investor/all-investments');
                                   handleMarkAsRead(notification.id);
                                 }}
                                 className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"

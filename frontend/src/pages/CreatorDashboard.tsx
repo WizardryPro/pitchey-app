@@ -203,7 +203,7 @@ function CreatorDashboard() {
             if (pitchesArray.length === 0) return 0;
             const ratingsSum = safeReduce(
               pitchesArray,
-              (sum: number, pitch: unknown) => sum + safeNumber(safeAccess(pitch, 'rating', 0)),
+              (sum: number, pitch: unknown) => sum + safeNumber(safeAccess(pitch, 'rating_average', safeAccess(pitch, 'rating', 0))),
               0
             );
             return pitchesArray.length > 0 ? ratingsSum / pitchesArray.length : 0;
@@ -816,7 +816,7 @@ function CreatorDashboard() {
               </div>
               <h3 className="font-semibold text-sm mb-1">Top Rated</h3>
               <p className="text-xs text-gray-600">
-                {avgRating >= 4.0 ? `${avgRating.toFixed(1)} ★ rating!` : `${avgRating.toFixed(1)}/4.0 ★`}
+                {avgRating >= 8.0 ? `${avgRating.toFixed(1)} ★ rating!` : `${avgRating.toFixed(1)}/10 ★`}
               </p>
             </div>
           </div>

@@ -28,11 +28,15 @@ interface FilterState {
   searchTerm: string;
 }
 
+// Must match the credit_transactions.type enum the backend actually emits
+// (purchase|usage|refund|bonus) — the old subscription/credits/deal_fee values
+// matched nothing, so every filter returned zero rows.
 const PAYMENT_TYPES = [
   { value: '', label: 'All Types' },
-  { value: 'subscription', label: 'Subscription' },
-  { value: 'credits', label: 'Credits' },
-  { value: 'deal_fee', label: 'Deal Fee' },
+  { value: 'purchase', label: 'Purchase' },
+  { value: 'usage', label: 'Usage' },
+  { value: 'refund', label: 'Refund' },
+  { value: 'bonus', label: 'Bonus' },
 ];
 
 const PAYMENT_STATUSES = [

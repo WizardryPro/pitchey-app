@@ -942,7 +942,7 @@ function InvestorDashboard() {
                   </button>
                   
                   <button 
-                    onClick={() => navigate('/investor/evaluations')}
+                    onClick={() => navigate('/investor/analytics')}
                     className="p-4 border rounded-lg hover:shadow-md transition-shadow text-left"
                   >
                     <FileText className="w-5 h-5 text-blue-600 mb-2" />
@@ -1237,7 +1237,7 @@ function InvestorDashboard() {
                 {/* Quick Actions */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <button 
-                    onClick={() => navigate('/investor/transactions')}
+                    onClick={() => navigate('/investor/transaction-history')}
                     className="p-4 border rounded-lg hover:shadow-md transition-shadow text-left"
                   >
                     <History className="w-5 h-5 text-blue-600 mb-2" />
@@ -1255,7 +1255,7 @@ function InvestorDashboard() {
                   </button>
                   
                   <button 
-                    onClick={() => navigate('/investor/tax')}
+                    onClick={() => navigate('/investor/tax-documents')}
                     className="p-4 border rounded-lg hover:shadow-md transition-shadow text-left"
                   >
                     <FileText className="w-5 h-5 text-purple-600 mb-2" />

@@ -246,9 +246,9 @@ export default function Billing() {
 
 // Overview Tab Component
 function OverviewTab({ subscription, credits, paymentHistory, onRefresh, theme }: any) {
-  const nextPayment = subscription?.subscription?.currentPeriodEnd
-    ? new Date(subscription.subscription.currentPeriodEnd)
-    : null;
+  // Flat shape from /api/payments/subscription-status (nested read was always undefined).
+  const _nextPayment = subscription?.currentPeriodEnd ?? subscription?.subscription?.currentPeriodEnd ?? subscription?.renewalDate;
+  const nextPayment = _nextPayment ? new Date(_nextPayment) : null;
 
   const recentPayments = paymentHistory?.slice(0, 3) || [];
 
@@ -374,7 +374,9 @@ function InvoicesTab({ invoices, onRefresh, theme }: any) {
                     {new Date(invoice.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${(parseFloat(invoice.amount) / 100).toFixed(2)}
+                    {/* invoice.amount is a CREDIT COUNT, not money/cents — showing
+                        it as $(amount/100) was wrong unit + wrong currency. */}
+                    {Number(invoice.amount)} credit{Number(invoice.amount) === 1 ? '' : 's'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
