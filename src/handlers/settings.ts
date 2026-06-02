@@ -3,7 +3,11 @@
  */
 
 import type { Env } from '../db/connection';
-import { createDatabase } from '../db/raw-sql-connection';
+// NOTE: the query helpers below (upsertUserSettings, logAccountAction, …) call
+// their arg as a tagged template (`sql`…``). neon() returns exactly that.
+// createDatabase() returned a RawSQLDatabase *class instance* (not callable) →
+// every settings write/2FA handler 500'd. Use neon() directly.
+import { neon } from '@neondatabase/serverless';
 import { verifyAuth } from '../utils/auth';
 import {
   getUserSettings,
@@ -31,7 +35,7 @@ export async function getUserSettingsHandler(request: Request, env: Env): Promis
       });
     }
 
-    const db = createDatabase(env.DATABASE_URL);
+    const db = neon(env.DATABASE_URL);
     const settings = await getUserSettings(db as any, authResult.user.id.toString());
 
     // If no settings exist yet, create default settings
@@ -159,7 +163,7 @@ export async function updateUserSettingsHandler(request: Request, env: Env): Pro
       });
     }
 
-    const db = createDatabase(env.DATABASE_URL);
+    const db = neon(env.DATABASE_URL);
     const updatedSettings = await upsertUserSettings(db as any, authResult.user.id.toString(), settingsUpdate);
 
     // Log the action
@@ -222,7 +226,7 @@ export async function getUserSessionsHandler(request: Request, env: Env): Promis
       });
     }
 
-    const db = createDatabase(env.DATABASE_URL);
+    const db = neon(env.DATABASE_URL);
     const sessions = await getUserSessions(db as any, authResult.user.id.toString());
 
     return new Response(JSON.stringify({ sessions }), {
@@ -252,7 +256,7 @@ export async function getAccountActivityHandler(request: Request, env: Env): Pro
       });
     }
 
-    const db = createDatabase(env.DATABASE_URL);
+    const db = neon(env.DATABASE_URL);
     const activities = await getAccountActions(db as any, authResult.user.id.toString());
 
     return new Response(JSON.stringify({ activities }), {
@@ -292,7 +296,7 @@ export async function enableTwoFactorHandler(request: Request, env: Env): Promis
       });
     }
 
-    const db = createDatabase(env.DATABASE_URL);
+    const db = neon(env.DATABASE_URL);
     const success = await enableTwoFactor(db as any, authResult.user.id.toString(), secret as string);
 
     if (success) {
@@ -337,7 +341,7 @@ export async function disableTwoFactorHandler(request: Request, env: Env): Promi
       });
     }
 
-    const db = createDatabase(env.DATABASE_URL);
+    const db = neon(env.DATABASE_URL);
     const success = await disableTwoFactor(db as any, authResult.user.id.toString());
 
     if (success) {
@@ -393,7 +397,7 @@ export async function deleteAccountHandler(request: Request, env: Env): Promise<
       });
     }
 
-    const db = createDatabase(env.DATABASE_URL);
+    const db = neon(env.DATABASE_URL);
 
     // Log the action before deletion
     await logAccountAction(db as any, {
@@ -439,7 +443,7 @@ export async function logSessionHandler(request: Request, env: Env): Promise<Res
       });
     }
 
-    const db = createDatabase(env.DATABASE_URL);
+    const db = neon(env.DATABASE_URL);
 
     // Extract session info
     const session = await logUserSession(db as any, {

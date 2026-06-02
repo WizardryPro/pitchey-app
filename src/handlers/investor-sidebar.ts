@@ -803,7 +803,7 @@ export async function investorWalletHandler(request: Request, env: Env): Promise
   const userId = await getUserId(request, env);
   if (!userId) return authError(origin);
 
-  const emptyData = { balance: 0, currency: 'USD', transactions: [] as any[] };
+  const emptyData = { balance: 0, currency: 'EUR', transactions: [] as any[] };
 
   const sql = getDb(env);
   if (!sql) return jsonResponse(emptyData, origin);
@@ -837,7 +837,7 @@ export async function investorWalletHandler(request: Request, env: Env): Promise
       // transactions table may not exist
     }
 
-    return jsonResponse({ balance, currency: 'USD', transactions }, origin);
+    return jsonResponse({ balance, currency: 'EUR', transactions }, origin);
   } catch (error) {
     console.error('[investorWalletHandler] Query error:', error);
     return jsonResponse(emptyData, origin);

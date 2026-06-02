@@ -11,7 +11,7 @@ export const formatCurrency = (value: unknown, options?: {
   
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'EUR', // platform base currency (was USD — wrong symbol on every figure)
     minimumFractionDigits: options?.minimumFractionDigits ?? 0,
     maximumFractionDigits: options?.maximumFractionDigits ?? 0,
   }).format(safeValue);
@@ -25,7 +25,7 @@ export const formatBudgetCompact = (value: unknown): string => {
   if (n === 0) return '';
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'EUR', // platform base currency (was USD — wrong symbol on every figure)
     notation: 'compact',
     compactDisplay: 'short',
     minimumFractionDigits: 0,

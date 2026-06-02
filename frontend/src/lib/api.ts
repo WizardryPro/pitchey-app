@@ -522,7 +522,9 @@ export const pitchAPI = {
   },
 
   async requestNDA(pitchId: number, message?: string, requestType?: string) {
-    const response = await api.post(`/api/pitches/${pitchId}/request-nda`, { message, requestType });
+    // Live endpoint is POST /api/ndas/request with { pitchId, reason }. The old
+    // /api/pitches/:id/request-nda path was never registered (404'd silently).
+    const response = await api.post('/api/ndas/request', { pitchId, reason: message, requestType });
     return response.data;
   },
 };
@@ -530,9 +532,8 @@ export const pitchAPI = {
 // NDA API
 export const ndaAPI = {
   async requestNDA(pitchId: number, customTerms?: string) {
-    const response = await api.post<NDA>(`/api/pitches/${pitchId}/nda/request`, {
-      customTerms
-    });
+    // Live endpoint is POST /api/ndas/request (was /api/pitches/:id/nda/request → 404).
+    const response = await api.post<NDA>('/api/ndas/request', { pitchId, reason: customTerms });
     return response.data;
   },
 

@@ -152,7 +152,8 @@ export class NotificationsService {
    */
   static async updatePreferences(preferences: Partial<NotificationPreferences>): Promise<boolean> {
     try {
-      const response = await apiClient.put('/api/notifications/preferences', preferences);
+      // Registered verb is POST, not PUT (PUT 404'd).
+      const response = await apiClient.post('/api/notifications/preferences', preferences);
       return response.success;
     } catch (error) {
       console.error('Failed to update notification preferences:', error);
