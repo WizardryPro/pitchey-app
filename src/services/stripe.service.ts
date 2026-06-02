@@ -35,12 +35,16 @@ export class StripeService {
     tier: string;
     successUrl: string;
     cancelUrl: string;
+    // Lowercase ISO currency (e.g. 'gbp'). Only set for non-base currencies;
+    // requires the price to carry that currency via `currency_options`. When
+    // omitted, Stripe uses the price's base currency (EUR) exactly as before.
+    currency?: string;
   }): Promise<{ id: string; url: string }> {
     // `tier` is stamped into metadata so the webhook can look up the plan
     // (creator / production / exec) without having to reverse-engineer it
     // from the Stripe price ID. Critical for the watcher→creator upgrade
     // flow: the webhook needs the tier to know whether to flip user_type.
-    return this.request('POST', '/checkout/sessions', {
+    const sessionParams: Record<string, string> = {
       mode: 'subscription',
       'payment_method_types[0]': 'card',
       customer_email: params.email,
@@ -58,7 +62,9 @@ export class StripeService {
       'metadata[tier]': params.tier,
       'subscription_data[metadata][userId]': String(params.userId),
       'subscription_data[metadata][tier]': params.tier,
-    });
+    };
+    if (params.currency) sessionParams.currency = params.currency;
+    return this.request('POST', '/checkout/sessions', sessionParams);
   }
 
   async createCreditPurchaseCheckout(params: {
@@ -69,12 +75,16 @@ export class StripeService {
     packageId: string;
     successUrl: string;
     cancelUrl: string;
+    // Lowercase ISO currency for the dynamic price_data. Defaults to 'eur'.
+    // Same numeric amount across currencies (owner decision), so priceInCents
+    // is reused as-is.
+    currency?: string;
   }): Promise<{ id: string; url: string }> {
     return this.request('POST', '/checkout/sessions', {
       mode: 'payment',
       'payment_method_types[0]': 'card',
       customer_email: params.email,
-      'line_items[0][price_data][currency]': 'eur',
+      'line_items[0][price_data][currency]': params.currency || 'eur',
       'line_items[0][price_data][product_data][name]': `${params.credits} Pitchey Credits`,
       'line_items[0][price_data][unit_amount]': String(params.priceInCents),
       'line_items[0][quantity]': '1',

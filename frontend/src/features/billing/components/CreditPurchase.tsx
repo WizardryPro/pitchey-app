@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { paymentsAPI } from '@/lib/apiServices';
 import { CREDIT_PACKAGES, CREDIT_COSTS } from '@config/subscription-plans';
+import { useCurrency } from '@config/currency';
 
 interface CreditPurchaseProps {
   credits: any;
@@ -92,6 +93,11 @@ export default function CreditPurchase({ credits, onRefresh }: CreditPurchasePro
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
+  // Same numeric amount across currencies (owner decision) — only the symbol
+  // changes by selected currency. EUR while multi-currency is disabled.
+  const { symbol: displaySymbol, currency } = useCurrency();
+  const perCredit = (pkg: { price: number; credits: number; bonus: number }) =>
+    `${displaySymbol}${(pkg.price / (pkg.credits + (pkg.bonus ?? 0))).toFixed(2)} per credit`;
 
   const handlePurchase = async (packageId: string) => {
     try {
@@ -99,7 +105,7 @@ export default function CreditPurchase({ credits, onRefresh }: CreditPurchasePro
       setError(null);
       setSelectedPackage(packageId);
 
-      const result = await paymentsAPI.purchaseCredits(packageId) as any;
+      const result = await paymentsAPI.purchaseCredits(packageId, currency) as any;
 
       if (result && result.url) {
         // Redirect to Stripe checkout
@@ -235,9 +241,9 @@ export default function CreditPurchase({ credits, onRefresh }: CreditPurchasePro
                 <div className="space-y-3 mb-6">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-purple-600">
-                      {pkg.symbol}{pkg.price}
+                      {displaySymbol}{pkg.price}
                     </div>
-                    <div className="text-sm text-gray-500">{pkg.value}</div>
+                    <div className="text-sm text-gray-500">{perCredit(pkg)}</div>
                   </div>
                   
                   {totalCredits > pkg.credits && (

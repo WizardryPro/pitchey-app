@@ -28,6 +28,7 @@ import { createJWT, verifyJWT, extractJWT } from './utils/worker-jwt';
 import { hashPassword, verifyPassword, isHashedPassword } from './utils/worker-password';
 import { StripeService } from './services/stripe.service';
 import { CREDIT_PACKAGES } from './config/subscription-plans';
+import { currencyForCountry, normalizeCurrency, MULTI_CURRENCY_ENABLED, SUPPORTED_CURRENCIES, BASE_CURRENCY } from './config/currency';
 import { createSessionStore, type SessionStore, type SessionStoreEnv } from './auth/session-store';
 import { PortalAccessController, createPortalAccessMiddleware } from './middleware/portal-access-control';
 import { CreatorInvestorWorkflow } from './workflows/creator-investor-workflow';
@@ -3295,6 +3296,23 @@ class RouteRegistry {
       return publicPortfolioByTokenHandler(req, this.env);
     });
 
+    // Locale/currency hint (public). Frontend uses this to pick the default
+    // display currency + whether to show the currency selector. Charges still
+    // happen server-side per the validated currency at checkout.
+    this.register('GET', '/api/locale', async (req) => {
+      const corsHeaders = getCorsHeaders(req.headers.get('Origin'));
+      const country = (req as unknown as { cf?: { country?: string } }).cf?.country;
+      return new Response(JSON.stringify({
+        success: true,
+        data: {
+          country: country ?? null,
+          currency: currencyForCountry(country),
+          multiCurrencyEnabled: MULTI_CURRENCY_ENABLED,
+          supportedCurrencies: MULTI_CURRENCY_ENABLED ? SUPPORTED_CURRENCIES : [BASE_CURRENCY],
+        },
+      }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store', ...corsHeaders } });
+    });
+
     // Public contact form — emails info@pitchey.com via Resend (no auth)
     this.register('POST', '/api/contact', async (req) => {
       const corsHeaders = getCorsHeaders(req.headers.get('Origin'));
@@ -3937,6 +3955,7 @@ class RouteRegistry {
       '/api/auth/reset-password',
       '/api/ndas/standard',
       '/api/contact',
+      '/api/locale',
       '/api/search',
       '/api/search/autocomplete',
       '/api/search/trending',
@@ -9897,6 +9916,10 @@ pitchey_analytics_datapoints_per_minute 1250
       }
 
       const totalCredits = pkg.credits + (pkg.bonus || 0);
+      // EUR unless multi-currency is enabled AND the client sent a supported one.
+      // Credits use dynamic price_data, so the currency applies directly (same
+      // numeric amount per owner decision).
+      const currency = normalizeCurrency(body.currency);
       const stripeKey = (this.env as any).STRIPE_SECRET_KEY;
 
       // If Stripe is configured, create a Checkout Session
@@ -9911,6 +9934,7 @@ pitchey_analytics_datapoints_per_minute 1250
           packageId: `package_${packageIndex}`,
           successUrl: `${frontendUrl}/billing?purchase=success`,
           cancelUrl: `${frontendUrl}/billing?purchase=cancelled`,
+          currency: currency.toLowerCase(),
         });
 
         return new ApiResponseBuilder(request).success({
@@ -10289,6 +10313,8 @@ pitchey_analytics_datapoints_per_minute 1250
     try {
       const body = await request.json() as any;
       const { tier, billingInterval = 'monthly' } = body;
+      // EUR unless multi-currency is enabled AND the client sent a supported one.
+      const currency = normalizeCurrency(body.currency);
       const stripeKey = (this.env as any).STRIPE_SECRET_KEY;
 
       if (!stripeKey) {
@@ -10325,6 +10351,9 @@ pitchey_analytics_datapoints_per_minute 1250
         tier,
         successUrl: `${frontendUrl}/billing?subscription=success&tier=${encodeURIComponent(tier)}`,
         cancelUrl: `${frontendUrl}/billing?subscription=cancelled`,
+        // Only pass currency for non-base; EUR omits it → byte-identical to the
+        // pre-multi-currency session. Requires the price to carry currency_options.
+        currency: currency !== BASE_CURRENCY ? currency.toLowerCase() : undefined,
       });
 
       return new ApiResponseBuilder(request).success({
