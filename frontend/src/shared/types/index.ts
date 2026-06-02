@@ -41,6 +41,7 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   password?: string; // Only included in auth responses
+  permissions?: string[]; // RBAC permission set from the session payload (backend authority); usePermissions falls back to its local map when absent
 }
 
 // ========== PITCH TYPES ==========

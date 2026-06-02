@@ -410,3 +410,15 @@ export class RBACService {
 
 // Export for use in middleware
 export const rbac = RBACService;
+
+/**
+ * Single source for "what can a user of this type do" — maps a DB user_type to
+ * its role and returns that role's permission set (as plain strings). Served in
+ * the session/login payload so the frontend can consume the backend's authority
+ * instead of maintaining its own drift-prone copy (its local map is kept only
+ * as a first-paint/offline fallback). 'watcher'/'viewer' both resolve to VIEWER.
+ */
+export function getPermissionsForUserType(userType?: string): string[] {
+  const role = RBACService.getRoleFromUserType(userType);
+  return [...(rolePermissions[role] || rolePermissions[UserRole.VIEWER])];
+}
