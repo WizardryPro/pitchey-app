@@ -165,3 +165,38 @@ export async function observedSwallowReturning<T, F>(
     return fallback;
   }
 }
+
+/**
+ * mutateOrThrow — write-side guard. A write that affects zero rows is almost
+ * never success: the WHERE matched nothing (wrong id, row vanished, ownership
+ * mismatch) or a RETURNING came back empty. The historical bug shape here is a
+ * handler doing `const [row] = await sql\`...RETURNING...\`` then returning
+ * `{ success: true }` even when `row` is undefined — the UI shows a save that
+ * never landed (the class of "writes that don't persist on read-back" bugs).
+ *
+ * Pass the result of a write that uses RETURNING (or otherwise returns the
+ * affected rows). Asserts a non-empty result, reports to Sentry, and THROWS so
+ * the caller's catch surfaces a real error instead of fake success. Returns the
+ * first row on success.
+ *
+ *   const user = mutateOrThrow(
+ *     await sql.query(updateQuery, values),
+ *     'user-profile.update',
+ *   );
+ */
+export function mutateOrThrow<T>(rows: T[] | unknown, context: string): T {
+  const arr = Array.isArray(rows) ? rows : [];
+  if (arr.length === 0) {
+    const error = new Error(`Write affected 0 rows: ${context}`);
+    try {
+      Sentry.withScope((scope) => {
+        scope.setTag('mutate_or_throw.context', context);
+        Sentry.captureException(error);
+      });
+    } catch {
+      // Sentry hub not initialized (test env, standalone scripts) — swallow.
+    }
+    throw error;
+  }
+  return arr[0] as T;
+}

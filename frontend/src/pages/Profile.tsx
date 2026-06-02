@@ -362,6 +362,24 @@ export default function Profile() {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
                 <div className="space-y-4">
+                  {/* Username is editable only here; the read view is the @handle
+                      shown in the header above, so we don't repeat it in read mode. */}
+                  {isEditing && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                      <input
+                        type="text"
+                        value={editedProfile.username ?? ''}
+                        onChange={(e) => handleInputChange('username', e.target.value)}
+                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
+                        placeholder="your-username"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Letters, numbers, dots, hyphens and underscores. Min 3 characters. Must be unique.
+                      </p>
+                    </div>
+                  )}
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
                     {isEditing ? (
