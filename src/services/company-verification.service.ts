@@ -23,6 +23,9 @@ export interface AutoCheckResults {
   companies_house_exists?: CheckResult;
   companies_house_active?: CheckResult;
   companies_house_name_match?: CheckResult;
+  opencorporates_exists?: CheckResult;
+  opencorporates_active?: CheckResult;
+  opencorporates_name_match?: CheckResult;
   website_resolves?: CheckResult;
   website_responds?: CheckResult;
   website_mentions_company?: CheckResult;
@@ -123,6 +126,64 @@ export async function checkCompaniesHouse(
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
     console.error(`[CompaniesHouse] Fetch error: ${e.message}`);
+    return { exists: 'skip', active: 'skip', nameMatch: 'skip' };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// OpenCorporates Lookup (non-UK/non-USA — ~140 jurisdictions)
+// ---------------------------------------------------------------------------
+
+export async function checkOpenCorporates(
+  companyNumber: string,
+  companyName: string,
+  apiKey: string | undefined,
+): Promise<{ exists: CheckResult; active: CheckResult; nameMatch: CheckResult }> {
+  // No key → skip (every check 'skip' → no auto-approve → manual review fallback).
+  if (!apiKey) {
+    return { exists: 'skip', active: 'skip', nameMatch: 'skip' };
+  }
+
+  try {
+    // Search by the supplied company number across all jurisdictions; the
+    // submission doesn't capture a jurisdiction code, so we match on number + name.
+    const url = `https://api.opencorporates.com/v0.4/companies/search?q=${encodeURIComponent(companyNumber.trim())}&api_token=${encodeURIComponent(apiKey)}`;
+    const resp = await fetch(url, { headers: { 'User-Agent': 'Pitchey/1.0' } });
+
+    if (!resp.ok) {
+      console.error(`[OpenCorporates] API error: ${resp.status}`);
+      return { exists: 'skip', active: 'skip', nameMatch: 'skip' };
+    }
+
+    const data = await resp.json() as {
+      results?: { companies?: Array<{ company?: { name?: string; company_number?: string; current_status?: string; inactive?: boolean } }> };
+    };
+    const companies = data.results?.companies ?? [];
+    if (companies.length === 0) {
+      return { exists: 'fail', active: 'fail', nameMatch: 'fail' };
+    }
+
+    const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+    const submittedName = normalize(companyName);
+    // Prefer an exact company-number match; otherwise the top result.
+    const match = companies.find(c => (c.company?.company_number || '').trim() === companyNumber.trim()) ?? companies[0];
+    const co = match.company || {};
+
+    const exists: CheckResult = 'pass';
+    const active: CheckResult =
+      co.inactive === true || /dissolved|inactive|closed|liquidat/i.test(co.current_status || '')
+        ? 'fail'
+        : 'pass';
+    const apiName = normalize(co.name || '');
+    const nameMatch: CheckResult =
+      apiName === submittedName || apiName.includes(submittedName) || submittedName.includes(apiName)
+        ? 'pass'
+        : 'warn';
+
+    return { exists, active, nameMatch };
+  } catch (err) {
+    const e = err instanceof Error ? err : new Error(String(err));
+    console.error(`[OpenCorporates] Fetch error: ${e.message}`);
     return { exists: 'skip', active: 'skip', nameMatch: 'skip' };
   }
 }
@@ -264,6 +325,7 @@ export async function runAutoChecks(
   companiesHouseApiKey: string | undefined,
   insuranceMimeType?: string,
   insuranceFileSize?: number,
+  openCorporatesApiKey?: string,
 ): Promise<AutoCheckResults> {
   const results: AutoCheckResults = {
     checked_at: new Date().toISOString(),
@@ -284,6 +346,20 @@ export async function runAutoChecks(
     results.companies_house_exists = ch.exists;
     results.companies_house_active = ch.active;
     results.companies_house_name_match = ch.nameMatch;
+  }
+
+  // Non-UK/non-USA companies: OpenCorporates lookup across ~140 jurisdictions.
+  // Without an API key the checks come back 'skip' → no auto-approve → the
+  // submission drops to manual admin review (the existing fallback).
+  if (submission.region === 'other' && submission.hasCompanyNumber && submission.companyNumber) {
+    const oc = await checkOpenCorporates(
+      submission.companyNumber,
+      submission.companyName,
+      openCorporatesApiKey,
+    );
+    results.opencorporates_exists = oc.exists;
+    results.opencorporates_active = oc.active;
+    results.opencorporates_name_match = oc.nameMatch;
   }
 
   // Website check (all regions)
