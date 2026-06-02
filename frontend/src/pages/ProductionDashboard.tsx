@@ -9,8 +9,10 @@ import {
   X, AlertCircle, User, Trash2, CheckCircle,
   Bookmark, Filter, Search,
   Wifi, WifiOff, AlertTriangle, RefreshCw,
-  Inbox, Send, Sparkles, ArrowRight
+  Inbox, Send, Sparkles, ArrowRight, Share2, CreditCard, MessageSquare
 } from 'lucide-react';
+import QuickActionsPanel, { type QuickAction } from '../components/dashboard/QuickActionsPanel';
+import ShareLinksModal from '../components/portfolio/ShareLinksModal';
 import { toast } from 'react-hot-toast';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { usePitchStore } from '@features/pitches/store/pitchStore';
@@ -74,6 +76,16 @@ function ProductionDashboard() {
   });
   const { isConnected, connectionQuality, isReconnecting } = useWebSocket();
   const [activeTab, setActiveTab] = useState<'overview' | 'my-pitches' | 'saved' | 'following' | 'ndas'>('overview');
+  const [showShareModal, setShowShareModal] = useState(false);
+
+  const quickActions: QuickAction[] = [
+    { label: 'Create Pitch', icon: Plus, accent: 'purple', onClick: () => { void navigate('/production/pitch/new'); } },
+    { label: 'Manage Pitches', icon: Upload, accent: 'gray', onClick: () => { void navigate('/production/pitches'); } },
+    { label: 'Manage NDAs', icon: Shield, accent: 'amber', onClick: () => { void navigate('/production/ndas'); } },
+    { label: 'Messages', icon: MessageSquare, accent: 'blue', onClick: () => { void navigate('/production/messages'); } },
+    { label: 'Billing', icon: CreditCard, accent: 'green', onClick: () => { void navigate('/production/billing'); } },
+    { label: 'Share Profile', icon: Share2, accent: 'indigo', onClick: () => setShowShareModal(true) },
+  ];
   const [myPitches, setMyPitches] = useState<Pitch[]>([]);
   const [pipelineCount, setPipelineCount] = useState(0);
   const [followingPitches, setFollowingPitches] = useState<Pitch[]>([]);
@@ -896,6 +908,8 @@ function ProductionDashboard() {
         </div>
       )}
 
+      {showShareModal && <ShareLinksModal onClose={() => setShowShareModal(false)} />}
+
       {/* Tab Navigation */}
       <div className="border-b border-gray-200 mb-6">
         <nav className="flex flex-wrap gap-x-4 sm:gap-x-8 overflow-x-auto">
@@ -994,64 +1008,8 @@ function ProductionDashboard() {
               </div>
             )}
 
-            {/* Quick Actions */}
-            <div>
-              <div className="flex items-baseline justify-between mb-4 px-1">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">Quick Actions</h2>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                <button
-                  onClick={() => navigate('/marketplace')}
-                  className="group relative overflow-hidden bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-blue-200 transition-all duration-200 text-left"
-                >
-                  <div aria-hidden className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-blue-100/0 to-blue-100/0 group-hover:from-blue-100/60 group-hover:to-indigo-100/40 rounded-full blur-2xl transition-all duration-300" />
-                  <div className="relative">
-                    <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm shadow-blue-500/30 mb-4 group-hover:scale-105 group-hover:shadow-blue-500/40 transition-all duration-200">
-                      <Search className="w-5 h-5" />
-                    </div>
-                    <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-1.5">
-                      Browse Marketplace
-                      <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all duration-200" />
-                    </h3>
-                    <p className="text-sm text-gray-500 leading-relaxed">Find new projects</p>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => navigate('/search/advanced')}
-                  className="group relative overflow-hidden bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-blue-200 transition-all duration-200 text-left"
-                >
-                  <div aria-hidden className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-blue-100/0 to-blue-100/0 group-hover:from-blue-100/60 group-hover:to-indigo-100/40 rounded-full blur-2xl transition-all duration-300" />
-                  <div className="relative">
-                    <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm shadow-blue-500/30 mb-4 group-hover:scale-105 group-hover:shadow-blue-500/40 transition-all duration-200">
-                      <Filter className="w-5 h-5" />
-                    </div>
-                    <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-1.5">
-                      Advanced Search
-                      <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all duration-200" />
-                    </h3>
-                    <p className="text-sm text-gray-500 leading-relaxed">Filter by criteria</p>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => navigate('/production/ndas')}
-                  className="group relative overflow-hidden bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-blue-200 transition-all duration-200 text-left"
-                >
-                  <div aria-hidden className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-blue-100/0 to-blue-100/0 group-hover:from-blue-100/60 group-hover:to-indigo-100/40 rounded-full blur-2xl transition-all duration-300" />
-                  <div className="relative">
-                    <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm shadow-blue-500/30 mb-4 group-hover:scale-105 group-hover:shadow-blue-500/40 transition-all duration-200">
-                      <Shield className="w-5 h-5" />
-                    </div>
-                    <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-1.5">
-                      Manage NDAs
-                      <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all duration-200" />
-                    </h3>
-                    <p className="text-sm text-gray-500 leading-relaxed">View agreements</p>
-                  </div>
-                </button>
-              </div>
-            </div>
+            {/* Quick Actions — shared creator-style panel (incl. Share Profile) */}
+            <QuickActionsPanel actions={quickActions} />
 
             {/* Recent Activity */}
             <div className="bg-white rounded-xl shadow-sm p-6">

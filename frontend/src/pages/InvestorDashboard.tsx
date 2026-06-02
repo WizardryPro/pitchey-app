@@ -31,6 +31,7 @@ import {
   ArrowRight,
   Search
 } from 'lucide-react';
+import QuickActionsPanel, { type QuickAction } from '../components/dashboard/QuickActionsPanel';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import api from '../lib/api';
 // Using the enhanced Investor-specific navigation
@@ -85,6 +86,14 @@ interface NDARequest {
 
 function InvestorDashboard() {
   const navigate = useNavigate();
+  const quickActions: QuickAction[] = [
+    { label: 'Browse Pitches', icon: Search, accent: 'purple', onClick: () => { void navigate('/investor/browse'); } },
+    { label: 'Following', icon: Users, accent: 'green', onClick: () => { void navigate('/investor/following'); } },
+    { label: 'Portfolio', icon: Briefcase, accent: 'blue', onClick: () => { void navigate('/investor/portfolio'); } },
+    { label: 'Analytics', icon: BarChart3, accent: 'indigo', onClick: () => { void navigate('/investor/analytics'); } },
+    { label: 'Messages', icon: MessageSquare, accent: 'amber', onClick: () => { void navigate('/investor/messages'); } },
+    { label: 'Billing', icon: Wallet, accent: 'gray', onClick: () => { void navigate('/investor/billing'); } },
+  ];
   const { logout, user, isAuthenticated, checkSession } = useBetterAuthStore();
   const { reportError, trackEvent, trackApiError } = useSentryPortal({
     portalType: 'investor',
@@ -462,6 +471,9 @@ function InvestorDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Quick Actions */}
+        <QuickActionsPanel className="mb-8" actions={quickActions} />
 
         {/* Tab Navigation - Now visible on all screen sizes with complete navigation */}
         <div className="bg-white rounded-t-xl shadow-sm border-b border-gray-200">
