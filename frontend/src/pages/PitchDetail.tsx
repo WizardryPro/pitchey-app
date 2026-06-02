@@ -892,27 +892,36 @@ export default function PitchDetail() {
               );
               if (!pitch.titleImage && !(hasDocuments && canViewDocuments)) return null;
               return (
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Media & Assets</h3>
+                <>
+                  {/* Cover image — a public visual asset, kept in its own card. */}
                   {pitch.titleImage && (
-                    <div className="border rounded-lg p-4 mb-4 max-w-md">
-                      <h4 className="font-medium text-gray-900 mb-2">Cover Image</h4>
-                      <img
-                        src={pitch.titleImage}
-                        alt="Pitch cover"
-                        className="w-full h-48 object-cover rounded-lg"
+                    <div className="bg-white rounded-xl shadow-sm p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Cover Image</h3>
+                      <div className="border rounded-lg p-4 max-w-md">
+                        <img
+                          src={pitch.titleImage}
+                          alt="Pitch cover"
+                          className="w-full h-48 object-cover rounded-lg"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {/* Documents — downloadable files (script/deck/trailer/attachments)
+                      in their own section, no longer crammed under the cover image.
+                      Gated to owner + NDA-signed. PitchDocuments renders null when
+                      there's nothing to show, so the card only appears with content. */}
+                  {canViewDocuments && hasDocuments && (
+                    <div className="bg-white rounded-xl shadow-sm p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Documents</h3>
+                      <PitchDocuments
+                        documents={(pitch as any).documents}
+                        script={(pitch as any).script ?? pitch.scriptUrl}
+                        pitchDeck={(pitch as any).pitchDeck ?? (pitch as any).pitchDeckUrl}
+                        trailer={(pitch as any).trailer ?? pitch.trailerUrl}
                       />
                     </div>
                   )}
-                  {canViewDocuments && (
-                    <PitchDocuments
-                      documents={(pitch as any).documents}
-                      script={(pitch as any).script ?? pitch.scriptUrl}
-                      pitchDeck={(pitch as any).pitchDeck ?? (pitch as any).pitchDeckUrl}
-                      trailer={(pitch as any).trailer ?? pitch.trailerUrl}
-                    />
-                  )}
-                </div>
+                </>
               );
             })()}
 
