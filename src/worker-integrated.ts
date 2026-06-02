@@ -27,6 +27,7 @@ import { verifyTurnstileToken } from './utils/turnstile';
 import { createJWT, verifyJWT, extractJWT } from './utils/worker-jwt';
 import { hashPassword, verifyPassword, isHashedPassword } from './utils/worker-password';
 import { StripeService } from './services/stripe.service';
+import { getPermissionsForUserType } from './services/rbac.service';
 import { CREDIT_PACKAGES, SUBSCRIPTION_TIERS, CREDIT_COSTS, getCreditCost } from './config/subscription-plans';
 import { currencyForCountry, normalizeCurrency, MULTI_CURRENCY_ENABLED, SUPPORTED_CURRENCIES, BASE_CURRENCY } from './config/currency';
 import { createSessionStore, type SessionStore, type SessionStoreEnv } from './auth/session-store';
@@ -5247,7 +5248,8 @@ pitchey_analytics_datapoints_per_minute 1250
                         bio: userResult.bio,
                         companyName: userResult.company_name,
                         profileImage: userResult.profile_image,
-                        subscriptionTier: userResult.subscription_tier
+                        subscriptionTier: userResult.subscription_tier,
+                        permissions: getPermissionsForUserType(userResult.user_type)
                       },
                       success: true
                     }),
@@ -5280,7 +5282,8 @@ pitchey_analytics_datapoints_per_minute 1250
                   bio: sessionData.bio,
                   companyName: sessionData.company_name,
                   profileImage: sessionData.profile_image,
-                  subscriptionTier: sessionData.subscription_tier
+                  subscriptionTier: sessionData.subscription_tier,
+                  permissions: getPermissionsForUserType(sessionData.user_type as string | undefined)
                 },
                 success: true
               }),

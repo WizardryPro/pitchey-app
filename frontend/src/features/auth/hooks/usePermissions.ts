@@ -202,16 +202,21 @@ export interface UsePermissionsResult {
  * matching the backend RBAC service exactly.
  */
 export function usePermissions(): UsePermissionsResult {
-  const { isAuthenticated } = useBetterAuthStore();
+  const { isAuthenticated, user } = useBetterAuthStore();
 
   const userRole = useMemo(() => {
     if (!isAuthenticated) return 'viewer' as UserRole;
     return getUserRole();
   }, [isAuthenticated]);
 
+  // Prefer the backend-served permission set (single source of truth from the
+  // RBAC service via the session payload). Fall back to the local role→permission
+  // map for first paint / offline / older payloads that don't carry permissions.
   const permissions = useMemo(() => {
+    const served = isAuthenticated ? user?.permissions : undefined;
+    if (served && served.length > 0) return served as Permission[];
     return rolePermissions[userRole] || rolePermissions.viewer;
-  }, [userRole]);
+  }, [isAuthenticated, user?.permissions, userRole]);
 
   const hasPermission = useMemo(() => {
     const permSet = new Set<string>(permissions);
