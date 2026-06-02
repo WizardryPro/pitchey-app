@@ -16,7 +16,7 @@ import * as Sentry from '@sentry/cloudflare';
 import { createAxiomLogger } from './middleware/axiom-logging';
 // Per-request trace context for SQLCommenter + Axiom query correlation
 import { traceStorage } from './db/trace-context';
-import { safeQuery, observedSwallowReturning } from './db/safe-query';
+import { safeQuery, observedSwallowReturning, mutateOrThrow } from './db/safe-query';
 
 import { createDatabase } from './db/raw-sql-connection';
 import { UserProfileRoutes } from './routes/user-profile';
@@ -6374,14 +6374,6 @@ pitchey_analytics_datapoints_per_minute 1250
     const headers = { 'Content-Type': 'application/json', ...corsHeaders };
 
     try {
-      // Enforce credit cost: basic_upload = 10 credits
-      const creditResult = await this.deductCreditsInternal(
-        authResult.user.id, 10, 'File upload', 'basic_upload'
-      );
-      if (!creditResult.success) {
-        return new Response(JSON.stringify({ message: creditResult.error }), { status: 402, headers });
-      }
-
       const formData = await request.formData();
       const file = formData.get('file') as File;
       const folder = (formData.get('folder') as string) || 'uploads';
@@ -6404,6 +6396,25 @@ pitchey_analytics_datapoints_per_minute 1250
         return new Response(JSON.stringify({ message: 'File too large. Maximum size is 50MB.' }), { status: 400, headers });
       }
 
+      // Pitch documents are FREE — uploading the script/deck/budget is core to
+      // creating a pitch, not a paid extra. Only standalone/generic uploads
+      // (no pitch linkage) cost credits. This also kills the "upload twice"
+      // symptom: previously every doc cost 10 credits and the first one could
+      // 402 right after pitch creation had already spent the balance.
+      const isPitchDocument = pitchId !== null && !isNaN(pitchId);
+      let creditsUsed = 0;
+      let creditsRemaining: number | undefined;
+      if (!isPitchDocument) {
+        const creditResult = await this.deductCreditsInternal(
+          authResult.user.id, 10, 'File upload', 'basic_upload'
+        );
+        if (!creditResult.success) {
+          return new Response(JSON.stringify({ message: creditResult.error }), { status: 402, headers });
+        }
+        creditsUsed = 10;
+        creditsRemaining = creditResult.newBalance;
+      }
+
       const handler = new (await import('./handlers/media-access')).MediaAccessHandler(this.db, this.env);
 
       const timestamp = Date.now();
@@ -6415,47 +6426,48 @@ pitchey_analytics_datapoints_per_minute 1250
         return new Response(JSON.stringify({ message: uploadResult.error || 'Upload failed' }), { status: 500, headers });
       }
 
-      // Link the file to its pitch when a pitchId was supplied AND the caller
-      // owns the pitch. Owner check prevents attaching files to someone else's
-      // pitch. Best-effort: a linkage failure must not fail an upload the user
-      // already paid credits for, so we log and continue.
-      if (pitchId && !isNaN(pitchId)) {
-        try {
-          const ownerRows = await this.db.query(
-            `SELECT 1 FROM pitches WHERE id = $1 AND user_id = $2`,
-            [pitchId, authResult.user.id]
-          );
-          if (ownerRows.length > 0) {
-            await this.db.query(`
-              INSERT INTO pitch_documents (
-                pitch_id, file_name, original_file_name, file_url, file_key,
-                file_type, mime_type, file_size, document_type, is_public,
-                requires_nda, uploaded_by, uploaded_at, last_modified, download_count, metadata
-              ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
-              )
-            `, [
-              pitchId,
-              file.name,
-              file.name,
-              uploadResult.url ?? null,
-              storagePath,
-              documentType,
-              file.type,
-              file.size,
-              documentType,
-              isPublic,
-              requiresNda,
-              authResult.user.id,
-              new Date(),
-              new Date(),
-              0,
-              JSON.stringify({ uploadedAt: new Date().toISOString(), originalName: file.name }),
-            ]);
-          }
-        } catch (linkErr) {
-          console.error('pitch_documents linkage failed (upload succeeded):', linkErr);
+      // Link the file to its pitch. SURFACE failures instead of swallowing them:
+      // a file in R2 with no pitch_documents row is invisible forever (the
+      // "uploaded but not retrievable" + "upload twice" symptoms). Pitch-doc
+      // uploads are free, so failing the request is safe — the user retries
+      // without losing credits.
+      if (isPitchDocument) {
+        const ownerRows = await this.db.query(
+          `SELECT 1 FROM pitches WHERE id = $1 AND user_id = $2`,
+          [pitchId, authResult.user.id]
+        );
+        if (ownerRows.length === 0) {
+          return new Response(JSON.stringify({ message: 'You do not own this pitch' }), { status: 403, headers });
         }
+        const inserted = await this.db.query(`
+          INSERT INTO pitch_documents (
+            pitch_id, file_name, original_file_name, file_url, file_key,
+            file_type, mime_type, file_size, document_type, is_public,
+            requires_nda, uploaded_by, uploaded_at, last_modified, download_count, metadata
+          ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+          ) RETURNING id
+        `, [
+          pitchId,
+          file.name,
+          file.name,
+          uploadResult.url ?? null,
+          storagePath,
+          documentType,
+          file.type,
+          file.size,
+          documentType,
+          isPublic,
+          requiresNda,
+          authResult.user.id,
+          new Date(),
+          new Date(),
+          0,
+          JSON.stringify({ uploadedAt: new Date().toISOString(), originalName: file.name }),
+        ]);
+        // Throws (→ outer catch → 500) if the INSERT recorded nothing, so the
+        // client sees a real failure rather than a phantom success.
+        mutateOrThrow(inserted, 'handle-upload.pitch_documents-insert');
       }
 
       return new Response(JSON.stringify({
@@ -6463,8 +6475,8 @@ pitchey_analytics_datapoints_per_minute 1250
         filename: file.name,
         size: file.size,
         type: file.type,
-        creditsUsed: 10,
-        creditsRemaining: creditResult.newBalance
+        creditsUsed,
+        creditsRemaining
       }), { status: 200, headers });
     } catch (error) {
       console.error('Upload error:', error);
