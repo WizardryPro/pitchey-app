@@ -1,17 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Check, Sparkles } from 'lucide-react';
-import {
-  SUBSCRIPTION_TIERS,
-  CREDIT_PACKAGES,
-  getSubscriptionTiersByUserType,
-} from '../config/subscription-plans';
+import type { SubscriptionTier } from '../config/subscription-plans';
+import { usePlans } from '../services/plans.service';
 import { useCurrency } from '../config/currency';
 
-// Public pricing page. Sourced entirely from config/subscription-plans so it
-// can't drift from what checkout actually charges. Amounts are the same numeric
-// value across currencies (owner decision); only the symbol changes by locale,
-// driven by the worker's /api/locale (P7).
+// Public pricing page. Sourced from the backend via usePlans() (GET /api/plans,
+// single source of truth) with the bundled config as fallback — so it can't
+// drift from what checkout charges. Amounts are the same numeric value across
+// currencies (owner decision); only the symbol changes by locale (P7 /api/locale).
 
 const GROUPS: { key: string; label: string; blurb: string }[] = [
   { key: 'creator', label: 'For Creators', blurb: 'Pitch your stories and reach investors and production companies.' },
@@ -23,8 +20,9 @@ export default function Pricing() {
   const navigate = useNavigate();
   const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly');
   const { symbol: CURRENCY, currency, enabled: multiCurrency, supported, setCurrency } = useCurrency();
+  const { creditPackages, forUserType } = usePlans();
 
-  const price = (tier: typeof SUBSCRIPTION_TIERS[number]) =>
+  const price = (tier: SubscriptionTier) =>
     billing === 'monthly' ? tier.price.monthly : tier.price.annual;
 
   return (
@@ -76,7 +74,7 @@ export default function Pricing() {
         </div>
 
         {GROUPS.map((group) => {
-          const tiers = getSubscriptionTiersByUserType(group.key);
+          const tiers = forUserType(group.key);
           if (!tiers.length) return null;
           return (
             <section key={group.key} className="mb-14">
@@ -134,7 +132,7 @@ export default function Pricing() {
             <p className="text-gray-600">Prefer not to subscribe? Top up credits any time.</p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {CREDIT_PACKAGES.map((pkg) => (
+            {creditPackages.map((pkg) => (
               <div key={pkg.credits} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 text-center">
                 <p className="text-2xl font-bold text-gray-900">{pkg.credits + (pkg.bonus ?? 0)}</p>
                 <p className="text-sm text-gray-500">credits{pkg.bonus ? ` (incl. ${pkg.bonus} free)` : ''}</p>

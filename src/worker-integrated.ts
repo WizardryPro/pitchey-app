@@ -27,7 +27,7 @@ import { verifyTurnstileToken } from './utils/turnstile';
 import { createJWT, verifyJWT, extractJWT } from './utils/worker-jwt';
 import { hashPassword, verifyPassword, isHashedPassword } from './utils/worker-password';
 import { StripeService } from './services/stripe.service';
-import { CREDIT_PACKAGES } from './config/subscription-plans';
+import { CREDIT_PACKAGES, SUBSCRIPTION_TIERS, CREDIT_COSTS } from './config/subscription-plans';
 import { currencyForCountry, normalizeCurrency, MULTI_CURRENCY_ENABLED, SUPPORTED_CURRENCIES, BASE_CURRENCY } from './config/currency';
 import { createSessionStore, type SessionStore, type SessionStoreEnv } from './auth/session-store';
 import { PortalAccessController, createPortalAccessMiddleware } from './middleware/portal-access-control';
@@ -2661,6 +2661,7 @@ class RouteRegistry {
     this.register('GET', '/api/settings/billing', (req) => this.getPaymentHistory(req));
 
     // === CONFIGURATION ENDPOINTS ===
+    this.register('GET', '/api/plans', this.handleConfigPlans.bind(this));
     this.register('GET', '/api/config/all', this.handleConfigAll.bind(this));
     this.register('GET', '/api/config/genres', this.handleConfigGenres.bind(this));
     this.register('GET', '/api/config/formats', this.handleConfigFormats.bind(this));
@@ -3956,6 +3957,7 @@ class RouteRegistry {
       '/api/ndas/standard',
       '/api/contact',
       '/api/locale',
+      '/api/plans',
       '/api/search',
       '/api/search/autocomplete',
       '/api/search/trending',
@@ -13815,6 +13817,18 @@ pitchey_analytics_datapoints_per_minute 1250
   private async handleConfigAll(request: Request): Promise<Response> {
     const builder = new ApiResponseBuilder(request);
     return builder.success(RouteRegistry.CONFIG_DATA);
+  }
+
+  // Single source of truth for plans/credit pricing the frontend can consume
+  // (genres pattern). Stripe price IDs are stripped — the frontend never needs
+  // them (checkout is tier-driven server-side); keeping them server-only avoids
+  // leaking + drift. This is the authoritative copy; the bundled frontend
+  // config is only a first-paint/offline fallback.
+  private async handleConfigPlans(request: Request): Promise<Response> {
+    const builder = new ApiResponseBuilder(request);
+    const tiers = SUBSCRIPTION_TIERS.map(({ stripePriceId, ...t }) => t);
+    const creditPackages = CREDIT_PACKAGES.map(({ stripePriceId, ...p }) => p);
+    return builder.success({ tiers, creditCosts: CREDIT_COSTS, creditPackages });
   }
 
   private async handleConfigGenres(request: Request): Promise<Response> {
