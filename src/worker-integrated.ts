@@ -9765,7 +9765,10 @@ pitchey_analytics_datapoints_per_minute 1250
     return builder.success({
       balance: { credits, totalPurchased, totalUsed },
       credits,
-      currency: 'USD'
+      // Credits are priced in EUR (matching the live Stripe price IDs and the
+      // package config); reporting USD here produced the mixed $/€ display.
+      // Locale-aware currency is deferred to the P7 billing-localisation work.
+      currency: 'EUR'
     });
   }
 
