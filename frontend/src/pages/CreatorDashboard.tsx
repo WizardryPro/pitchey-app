@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useNavigate } from 'react-router-dom';
-import { TrendingUp, Eye, MessageSquare, Upload, BarChart3, Calendar, Plus, Shield, CreditCard, Wifi, WifiOff, AlertTriangle, RefreshCw, Sparkles, ArrowRight } from 'lucide-react';
+import { TrendingUp, Eye, MessageSquare, Upload, BarChart3, Calendar, Plus, Shield, CreditCard, Wifi, WifiOff, AlertTriangle, RefreshCw, Sparkles, ArrowRight, Share2 } from 'lucide-react';
+import QuickActionsPanel, { type QuickAction } from '../components/dashboard/QuickActionsPanel';
+import ShareLinksModal from '../components/portfolio/ShareLinksModal';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { paymentsAPI } from '../lib/apiServices';
 import apiClient from '../lib/api-client';
@@ -46,6 +48,17 @@ function CreatorDashboard() {
   const [avgRating, setAvgRating] = useState<number>(0);
   const [totalViews, setTotalViews] = useState<number>(0);
   const [followers, setFollowers] = useState<number>(0);
+  const [showShareModal, setShowShareModal] = useState(false);
+
+  const quickActions: QuickAction[] = [
+    { label: 'Create Pitch', icon: Plus, accent: 'purple', onClick: () => { void navigate('/creator/pitch/new'); } },
+    { label: 'Manage Pitches', icon: Upload, accent: 'gray', onClick: () => { void navigate('/creator/pitches'); } },
+    { label: 'NDAs', icon: Shield, accent: 'amber', onClick: () => { void navigate('/creator/ndas'); } },
+    { label: 'Messages', icon: MessageSquare, accent: 'blue', onClick: () => { void navigate('/creator/messages'); } },
+    { label: 'Analytics', icon: BarChart3, accent: 'green', onClick: () => { void navigate('/creator/analytics'); } },
+    { label: 'Billing', icon: CreditCard, accent: 'purple', onClick: () => { void navigate('/creator/billing'); } },
+    { label: 'Share Profile', icon: Share2, accent: 'indigo', onClick: () => setShowShareModal(true) },
+  ];
 
   // Investment tracking state
   const [fundingMetrics, setFundingMetrics] = useState<Record<string, unknown> | null>(null);
@@ -435,72 +448,9 @@ function CreatorDashboard() {
         </div>
 
         {/* Right: Quick Actions Grid */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <p className="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-4">Quick Actions</p>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => { void navigate('/creator/pitch/new'); }}
-              className="group relative overflow-hidden flex flex-col items-center gap-2 p-4 bg-white border border-gray-100 rounded-xl hover:border-purple-200 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
-            >
-              <div aria-hidden className="absolute -top-6 -right-6 w-16 h-16 bg-gradient-to-br from-purple-100/0 to-purple-100/0 group-hover:from-purple-100/60 group-hover:to-indigo-100/40 rounded-full blur-xl transition-all duration-300" />
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-sm shadow-purple-500/30 group-hover:scale-105 transition-all duration-200">
-                <Plus className="w-5 h-5" />
-              </div>
-              <span className="text-xs font-medium text-gray-700">Create Pitch</span>
-            </button>
-            <button
-              onClick={() => { void navigate('/creator/pitches'); }}
-              className="group relative overflow-hidden flex flex-col items-center gap-2 p-4 bg-white border border-gray-100 rounded-xl hover:border-purple-200 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
-            >
-              <div aria-hidden className="absolute -top-6 -right-6 w-16 h-16 bg-gradient-to-br from-purple-100/0 to-purple-100/0 group-hover:from-purple-100/60 group-hover:to-indigo-100/40 rounded-full blur-xl transition-all duration-300" />
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-gray-400 to-gray-500 text-white shadow-sm group-hover:scale-105 transition-all duration-200">
-                <Upload className="w-5 h-5" />
-              </div>
-              <span className="text-xs font-medium text-gray-700">Manage Pitches</span>
-            </button>
-            <button
-              onClick={() => { void navigate('/creator/ndas'); }}
-              className="group relative overflow-hidden flex flex-col items-center gap-2 p-4 bg-white border border-gray-100 rounded-xl hover:border-amber-200 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
-            >
-              <div aria-hidden className="absolute -top-6 -right-6 w-16 h-16 bg-gradient-to-br from-amber-100/0 to-amber-100/0 group-hover:from-amber-100/60 group-hover:to-orange-100/40 rounded-full blur-xl transition-all duration-300" />
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-sm shadow-amber-500/30 group-hover:scale-105 transition-all duration-200">
-                <Shield className="w-5 h-5" />
-              </div>
-              <span className="text-xs font-medium text-gray-700">NDAs</span>
-            </button>
-            <button
-              onClick={() => { void navigate('/creator/messages'); }}
-              className="group relative overflow-hidden flex flex-col items-center gap-2 p-4 bg-white border border-gray-100 rounded-xl hover:border-blue-200 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
-            >
-              <div aria-hidden className="absolute -top-6 -right-6 w-16 h-16 bg-gradient-to-br from-blue-100/0 to-blue-100/0 group-hover:from-blue-100/60 group-hover:to-indigo-100/40 rounded-full blur-xl transition-all duration-300" />
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm shadow-blue-500/30 group-hover:scale-105 transition-all duration-200">
-                <MessageSquare className="w-5 h-5" />
-              </div>
-              <span className="text-xs font-medium text-gray-700">Messages</span>
-            </button>
-            <button
-              onClick={() => { void navigate('/creator/analytics'); }}
-              className="group relative overflow-hidden flex flex-col items-center gap-2 p-4 bg-white border border-gray-100 rounded-xl hover:border-green-200 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
-            >
-              <div aria-hidden className="absolute -top-6 -right-6 w-16 h-16 bg-gradient-to-br from-green-100/0 to-green-100/0 group-hover:from-green-100/60 group-hover:to-emerald-100/40 rounded-full blur-xl transition-all duration-300" />
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-sm shadow-green-500/30 group-hover:scale-105 transition-all duration-200">
-                <BarChart3 className="w-5 h-5" />
-              </div>
-              <span className="text-xs font-medium text-gray-700">Analytics</span>
-            </button>
-            <button
-              onClick={() => { void navigate('/creator/billing'); }}
-              className="group relative overflow-hidden flex flex-col items-center gap-2 p-4 bg-white border border-gray-100 rounded-xl hover:border-purple-200 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
-            >
-              <div aria-hidden className="absolute -top-6 -right-6 w-16 h-16 bg-gradient-to-br from-purple-100/0 to-purple-100/0 group-hover:from-purple-100/60 group-hover:to-indigo-100/40 rounded-full blur-xl transition-all duration-300" />
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-sm shadow-purple-500/30 group-hover:scale-105 transition-all duration-200">
-                <CreditCard className="w-5 h-5" />
-              </div>
-              <span className="text-xs font-medium text-gray-700">Billing</span>
-            </button>
-          </div>
-        </div>
+        <QuickActionsPanel className="lg:col-span-2" actions={quickActions} />
       </div>
+      {showShareModal && <ShareLinksModal onClose={() => setShowShareModal(false)} />}
 
       {/* ===== MY PITCHES + NDA QUICK STATUS ===== */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">

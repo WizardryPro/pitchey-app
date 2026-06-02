@@ -308,17 +308,17 @@ describe('ProductionDashboard', () => {
       })
     })
 
-    it('renders Browse Marketplace quick action', async () => {
+    it('renders Create Pitch quick action', async () => {
       renderDashboard()
       await waitFor(() => {
-        expect(screen.getByText('Browse Marketplace')).toBeInTheDocument()
+        expect(screen.getByText('Create Pitch')).toBeInTheDocument()
       })
     })
 
-    it('renders Advanced Search quick action', async () => {
+    it('renders Share Profile quick action', async () => {
       renderDashboard()
       await waitFor(() => {
-        expect(screen.getByText('Advanced Search')).toBeInTheDocument()
+        expect(screen.getByText('Share Profile')).toBeInTheDocument()
       })
     })
 
@@ -403,13 +403,13 @@ describe('ProductionDashboard', () => {
 
   // ─── Navigation ─────────────────────────────────────────────────
   describe('Navigation', () => {
-    it('navigates to marketplace when Browse Marketplace clicked', async () => {
+    it('navigates to manage pitches when Manage Pitches quick action clicked', async () => {
       const { getByText } = renderDashboard()
       await waitFor(() => {
-        expect(getByText('Browse Marketplace')).toBeInTheDocument()
+        expect(getByText('Manage Pitches')).toBeInTheDocument()
       })
-      getByText('Browse Marketplace').closest('button')?.click()
-      expect(mockNavigate).toHaveBeenCalledWith('/marketplace')
+      getByText('Manage Pitches').closest('button')?.click()
+      expect(mockNavigate).toHaveBeenCalledWith('/production/pitches')
     })
 
     it('navigates to create pitch when Create New Pitch clicked', async () => {
