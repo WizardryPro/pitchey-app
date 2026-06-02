@@ -114,6 +114,9 @@ export async function submitVerificationHandler(
   const autoChecks = await runAutoChecks(
     submission,
     env.COMPANIES_HOUSE_API_KEY as string | undefined,
+    undefined,
+    undefined,
+    (env as unknown as { OPENCORPORATES_API_KEY?: string }).OPENCORPORATES_API_KEY,
   );
 
   const autoApproved = shouldAutoApprove(autoChecks, hasCompanyNumber);

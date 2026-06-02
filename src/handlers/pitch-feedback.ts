@@ -449,7 +449,15 @@ export async function getPitchFeedbackPublic(request: Request, env: Env): Promis
         pf.id, pf.reviewer_type, pf.rating, pf.strengths, pf.weaknesses,
         pf.suggestions, pf.overall_feedback, pf.is_interested, pf.is_anonymous, pf.created_at,
         CASE WHEN pf.is_anonymous THEN NULL ELSE u.id END as reviewer_id,
-        CASE WHEN pf.is_anonymous THEN 'Anonymous' ELSE COALESCE(u.name, u.username, 'User') END as reviewer_name,
+        -- Names are public to all viewers now (P5). If a user's display name is
+        -- actually an email (no real name set), show only the local part so we
+        -- don't leak their full email address to anonymous callers.
+        CASE
+          WHEN pf.is_anonymous THEN 'Anonymous'
+          WHEN COALESCE(u.name, u.username, 'User') LIKE '%@%.%'
+            THEN split_part(COALESCE(u.name, u.username, 'User'), '@', 1)
+          ELSE COALESCE(u.name, u.username, 'User')
+        END as reviewer_name,
         CASE WHEN pf.is_anonymous THEN NULL ELSE u.company_name END as reviewer_company
       FROM pitch_feedback pf
       LEFT JOIN users u ON u.id = pf.reviewer_id
