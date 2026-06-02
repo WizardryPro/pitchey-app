@@ -6,12 +6,12 @@ import {
   CREDIT_PACKAGES,
   getSubscriptionTiersByUserType,
 } from '../config/subscription-plans';
+import { useCurrency } from '../config/currency';
 
 // Public pricing page. Sourced entirely from config/subscription-plans so it
-// can't drift from what checkout actually charges. Prices are EUR today; this
-// will need to respect locale pricing once Stripe price-localisation lands
-// (Priority 7) — read it from the same config so both stay in sync.
-const CURRENCY = '€';
+// can't drift from what checkout actually charges. Amounts are the same numeric
+// value across currencies (owner decision); only the symbol changes by locale,
+// driven by the worker's /api/locale (P7).
 
 const GROUPS: { key: string; label: string; blurb: string }[] = [
   { key: 'creator', label: 'For Creators', blurb: 'Pitch your stories and reach investors and production companies.' },
@@ -22,6 +22,7 @@ const GROUPS: { key: string; label: string; blurb: string }[] = [
 export default function Pricing() {
   const navigate = useNavigate();
   const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly');
+  const { symbol: CURRENCY, currency, enabled: multiCurrency, supported, setCurrency } = useCurrency();
 
   const price = (tier: typeof SUBSCRIPTION_TIERS[number]) =>
     billing === 'monthly' ? tier.price.monthly : tier.price.annual;
@@ -58,6 +59,20 @@ export default function Pricing() {
               Annual
             </button>
           </div>
+
+          {multiCurrency && supported.length > 1 && (
+            <div className="mt-4">
+              <label className="sr-only" htmlFor="pricing-currency">Currency</label>
+              <select
+                id="pricing-currency"
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white text-gray-700"
+              >
+                {supported.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          )}
         </div>
 
         {GROUPS.map((group) => {
@@ -130,7 +145,7 @@ export default function Pricing() {
         </section>
 
         <p className="text-center text-sm text-gray-500">
-          Prices shown in EUR. Questions? <button onClick={() => navigate('/contact')} className="text-purple-600 hover:underline">Contact us</button>.
+          Prices shown in {currency}. Questions? <button onClick={() => navigate('/contact')} className="text-purple-600 hover:underline">Contact us</button>.
         </p>
       </div>
     </div>

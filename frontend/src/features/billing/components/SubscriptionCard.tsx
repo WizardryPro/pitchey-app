@@ -13,6 +13,7 @@ import {
   getSubscriptionTier,
   type SubscriptionTier,
 } from '@/config/subscription-plans';
+import { useCurrency } from '@/config/currency';
 
 interface SubscriptionCardProps {
   subscription: any;
@@ -27,6 +28,7 @@ const POPULAR_TIER_BY_PORTAL: Record<string, string> = {
 };
 
 export default function SubscriptionCard({ subscription, onRefresh }: SubscriptionCardProps) {
+  const { symbol: currencySymbol, currency } = useCurrency();
   const { user } = useBetterAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +63,7 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
       setLoading(true);
       setError(null);
 
-      const result = await paymentsAPI.subscribe(planKey, selectedBilling) as any;
+      const result = await paymentsAPI.subscribe(planKey, selectedBilling, currency) as any;
 
       if (result && result.url) {
         window.location.href = result.url;
@@ -261,7 +263,7 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
                   ) : (
                     <>
                       <span className="text-3xl font-bold text-gray-900">
-                        €{formatPrice(displayedPrice)}
+                        {currencySymbol}{formatPrice(displayedPrice)}
                       </span>
                       <span className="text-gray-500">
                         /{selectedBilling === 'annual' ? 'year' : 'month'}
@@ -272,7 +274,7 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
 
                 {selectedBilling === 'annual' && annualSavings > 0 && (
                   <div className="text-sm text-green-600">
-                    Save €{formatPrice(annualSavings)}/year
+                    Save {currencySymbol}{formatPrice(annualSavings)}/year
                   </div>
                 )}
               </div>

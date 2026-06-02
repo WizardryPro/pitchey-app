@@ -504,8 +504,9 @@ export const paymentsAPI = {
   },
 
   // Subscribe to a plan. Backend expects 'monthly' | 'annual' (not 'yearly').
-  async subscribe(tier: string, billingInterval?: 'monthly' | 'annual') {
-    const response = await apiClient.post<any>('/api/payments/subscribe', { tier, billingInterval });
+  // currency is normalized server-side (EUR unless multi-currency is enabled).
+  async subscribe(tier: string, billingInterval?: 'monthly' | 'annual', currency?: string) {
+    const response = await apiClient.post<any>('/api/payments/subscribe', { tier, billingInterval, currency });
     if (response.success) {
       return { success: true, ...(response.data as object || {}) };
     }
@@ -548,8 +549,8 @@ export const paymentsAPI = {
   },
 
   // Purchase credits
-  async purchaseCredits(creditPackage: string) {
-    const response = await apiClient.post<any>('/api/payments/credits/purchase', { creditPackage });
+  async purchaseCredits(creditPackage: string, currency?: string) {
+    const response = await apiClient.post<any>('/api/payments/credits/purchase', { creditPackage, currency });
     if (response.success) {
       return { success: true, ...(response.data as object || {}) };
     }
