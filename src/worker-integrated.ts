@@ -27,7 +27,7 @@ import { verifyTurnstileToken } from './utils/turnstile';
 import { createJWT, verifyJWT, extractJWT } from './utils/worker-jwt';
 import { hashPassword, verifyPassword, isHashedPassword } from './utils/worker-password';
 import { StripeService } from './services/stripe.service';
-import { CREDIT_PACKAGES, SUBSCRIPTION_TIERS, CREDIT_COSTS } from './config/subscription-plans';
+import { CREDIT_PACKAGES, SUBSCRIPTION_TIERS, CREDIT_COSTS, getCreditCost } from './config/subscription-plans';
 import { currencyForCountry, normalizeCurrency, MULTI_CURRENCY_ENABLED, SUPPORTED_CURRENCIES, BASE_CURRENCY } from './config/currency';
 import { createSessionStore, type SessionStore, type SessionStoreEnv } from './auth/session-store';
 import { PortalAccessController, createPortalAccessMiddleware } from './middleware/portal-access-control';
@@ -6487,13 +6487,14 @@ pitchey_analytics_datapoints_per_minute 1250
       let creditsUsed = 0;
       let creditsRemaining: number | undefined;
       if (!isPitchDocument) {
+        const uploadCost = getCreditCost('basic_upload');
         const creditResult = await this.deductCreditsInternal(
-          authResult.user.id, 10, 'File upload', 'basic_upload'
+          authResult.user.id, uploadCost, 'File upload', 'basic_upload'
         );
         if (!creditResult.success) {
           return new Response(JSON.stringify({ message: creditResult.error }), { status: 402, headers });
         }
-        creditsUsed = 10;
+        creditsUsed = uploadCost;
         creditsRemaining = creditResult.newBalance;
       }
 
@@ -6639,8 +6640,8 @@ pitchey_analytics_datapoints_per_minute 1250
       }
 
       const isImage = file.type.startsWith('image/');
-      const creditCost = isImage ? 5 : 3;
       const usageType = isImage ? 'picture_doc' : 'word_doc';
+      const creditCost = getCreditCost(usageType);
 
       const creditResult = await this.deductCreditsInternal(
         authResult.user.id, creditCost, `Document upload: ${file.name}`, usageType
@@ -6796,7 +6797,7 @@ pitchey_analytics_datapoints_per_minute 1250
       const isVideo = file.type.startsWith('video/');
       const usageType = isVideo ? 'video_link' : 'extra_image';
       const creditResult = await this.deductCreditsInternal(
-        authResult.user.id, 1, `Media upload: ${file.name}`, usageType
+        authResult.user.id, getCreditCost(usageType), `Media upload: ${file.name}`, usageType
       );
       if (!creditResult.success) {
         return builder.error(ErrorCode.BAD_REQUEST, creditResult.error);
@@ -19700,7 +19701,7 @@ Signatures: [To be completed upon signing]
       const userType = authCheck.user.user_type || authCheck.user.userType || '';
       if (userType !== 'investor') {
         const creditResult = await this.deductCreditsInternal(
-          authCheck.user.id, 2, 'Send message', 'send_message'
+          authCheck.user.id, getCreditCost('send_message'), 'Send message', 'send_message'
         );
         if (!creditResult.success) {
           const origin = request.headers.get('Origin');
@@ -19907,6 +19908,8 @@ Signatures: [To be completed upon signing]
             headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) }, status: 403
           });
         }
+        // 'contact_recipient' is intentionally NOT in CREDIT_COSTS (getCreditCost
+        // would return 0 → free), so this cost stays hardcoded.
         const charge = await this.deductCreditsInternal(authCheck.user.id, 1, 'Start conversation', 'contact_recipient', pitchId);
         if (!charge.success) {
           return new Response(JSON.stringify({ success: false, error: charge.error }), {
