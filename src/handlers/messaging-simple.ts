@@ -155,9 +155,11 @@ export class SimpleMessagingHandler {
       // PRIVATE event — recipient-scoped only, never fanned out to followers, since
       // message attachments are not NDA-gated. Non-blocking.
       if (hasAttachments && convId && message[0]) {
+        // recordMessageAttachmentActivity wraps its whole body in try/catch and
+        // logs on failure, returning void — no outer swallow needed here.
         await this.recordMessageAttachmentActivity(
           userId, convId, Number(message[0].id), attachments, recipient_id
-        ).catch(() => {});
+        );
       }
 
       return { success: true, data: { message: message[0] } };
