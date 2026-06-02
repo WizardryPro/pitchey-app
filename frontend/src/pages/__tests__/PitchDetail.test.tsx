@@ -407,8 +407,10 @@ describe('PitchDetail', () => {
 
     it('opens NDA modal when Request Access clicked', async () => {
       const u = userEvent.setup()
+      // Pitch must actually require an NDA for the Enhanced Information /
+      // Request Access teaser to render (it's now gated on real NDA/content).
       mockPitchService.getByIdAuthenticated.mockResolvedValue(
-        createMockPitch({ hasSignedNDA: false })
+        createMockPitch({ hasSignedNDA: false, requireNDA: true })
       )
 
       renderPitchDetail()
