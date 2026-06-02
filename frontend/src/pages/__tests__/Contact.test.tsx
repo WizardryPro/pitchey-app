@@ -26,6 +26,11 @@ beforeAll(async () => {
 describe('Contact', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Contact submission now POSTs to /api/contact; mock a successful send.
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true }),
+    }) as unknown as typeof fetch
   })
 
   const renderComponent = () =>

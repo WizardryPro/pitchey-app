@@ -3295,6 +3295,49 @@ class RouteRegistry {
       return publicPortfolioByTokenHandler(req, this.env);
     });
 
+    // Public contact form — emails info@pitchey.com via Resend (no auth)
+    this.register('POST', '/api/contact', async (req) => {
+      const corsHeaders = getCorsHeaders(req.headers.get('Origin'));
+      const headers = { 'Content-Type': 'application/json', ...corsHeaders };
+      try {
+        const body = (await req.json().catch(() => ({}))) as { type?: string; email?: string; subject?: string; message?: string };
+        const email = (body.email || '').trim();
+        const message = (body.message || '').trim();
+        const subject = (body.subject || '').trim();
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || message.length < 5) {
+          return new Response(JSON.stringify({ success: false, error: 'A valid email and a message (5+ chars) are required.' }), { status: 400, headers });
+        }
+        if (!this.emailService) {
+          return new Response(JSON.stringify({ success: false, error: 'Email service unavailable' }), { status: 503, headers });
+        }
+        // Strip angle brackets to avoid HTML injection into the notification email.
+        const safe = (s: string) => s.replace(/[<>]/g, '').slice(0, 5000);
+        const typeLabel = safe(body.type || 'General Enquiry') || 'General Enquiry';
+        const html = `
+          <h2>New contact form submission</h2>
+          <p><strong>Type:</strong> ${typeLabel}</p>
+          <p><strong>From:</strong> ${safe(email)}</p>
+          <p><strong>Subject:</strong> ${safe(subject) || '(none)'}</p>
+          <p><strong>Message:</strong></p>
+          <p>${safe(message).replace(/\n/g, '<br>')}</p>
+        `;
+        const sent = await this.emailService.send({
+          to: 'info@pitchey.com',
+          subject: `[Contact] ${typeLabel}${subject ? ' — ' + safe(subject) : ''}`,
+          html,
+          replyTo: email,
+        }, { templateType: 'contact_form' });
+        if (!sent.success) {
+          return new Response(JSON.stringify({ success: false, error: 'Failed to send message' }), { status: 502, headers });
+        }
+        return new Response(JSON.stringify({ success: true }), { status: 200, headers });
+      } catch (e) {
+        const err = e instanceof Error ? e : new Error(String(e));
+        console.error('Contact form error:', err.message);
+        return new Response(JSON.stringify({ success: false, error: 'Failed to send message' }), { status: 500, headers });
+      }
+    });
+
     // Slates — curated pitch collections
     this.register('POST', '/api/slates', async (req) => {
       const { createSlateHandler } = await import('./handlers/slates');
@@ -3893,6 +3936,7 @@ class RouteRegistry {
       '/api/auth/request-reset',
       '/api/auth/reset-password',
       '/api/ndas/standard',
+      '/api/contact',
       '/api/search',
       '/api/search/autocomplete',
       '/api/search/trending',

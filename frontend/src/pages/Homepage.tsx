@@ -642,21 +642,20 @@ export default function Homepage() {
                 <img src="/pitchey-logotype.png" alt="Pitchey" className="h-7 w-auto" />
               </div>
               <p className="text-metadata">
-                Connecting stories with opportunities since 2025.
+                Connecting stories since 2026.
               </p>
             </div>
             <div>
               <h3 className="text-card-title mb-4">For Creators</h3>
               <ul className="space-y-2">
                 <li><button onClick={() => navigate('/portals')} className="text-metadata hover:text-purple-600 transition">Submit Pitch</button></li>
-                <li><button onClick={() => navigate('/billing')} className="text-metadata hover:text-purple-600 transition">Pricing</button></li>
+                <li><button onClick={() => navigate('/pricing')} className="text-metadata hover:text-purple-600 transition">Pricing</button></li>
               </ul>
             </div>
             <div>
               <h3 className="text-card-title mb-4">Browse</h3>
               <ul className="space-y-2">
                 <li><button onClick={() => navigate('/marketplace')} className="text-metadata hover:text-purple-600 transition">Browse Pitches</button></li>
-                <li><button className="text-metadata hover:text-purple-600 transition">Format</button></li>
               </ul>
             </div>
             <div>
