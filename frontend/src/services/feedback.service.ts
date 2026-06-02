@@ -76,6 +76,17 @@ export interface ConsumptionStatus {
   threshold: number;
 }
 
+/** "Progress from feedback" — has the pitch changed since the viewer's feedback. */
+export interface FeedbackProgress {
+  hasFeedback: boolean;
+  feedbackAt: string | null;
+  editedSinceFeedback: boolean;
+  editCount: number;
+  scoreAtFeedback: number | null;
+  scoreNow: number | null;
+  scoreDelta: number | null;
+}
+
 export class FeedbackService {
   // Note: apiClient.get returns { success, data } where `data` is ALREADY the
   // server's `.data` field unwrapped (see api-client.ts makeRequest). Consumers
@@ -104,6 +115,15 @@ export class FeedbackService {
     try {
       const res = await apiClient.get<FeedbackEntry | null>(`/api/pitches/${pitchId}/feedback/mine`);
       return res.data ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  static async getFeedbackProgress(pitchId: number): Promise<FeedbackProgress | null> {
+    try {
+      const res = await apiClient.get<{ progress: FeedbackProgress }>(`/api/pitches/${pitchId}/feedback-progress`);
+      return res.data?.progress ?? null;
     } catch {
       return null;
     }

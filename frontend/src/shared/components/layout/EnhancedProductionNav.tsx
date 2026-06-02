@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Home, Activity, Film, FolderOpen, Upload,
+  Home, Activity, Film, Upload,
   Bookmark, Users, GitBranch,
   MessageSquare, Settings, UserPlus, Shield, FileText
 } from 'lucide-react';
@@ -36,9 +36,11 @@ export const productionNavigationSections: NavigationSection[] = [
     ],
   },
   {
-    title: 'Submissions',
+    // "Submissions" review pipeline retired 2026-06-01 (activity-feed pivot, Phase 3) —
+    // pages/routes parked, not deleted. Activity now lives in the Activity + Following
+    // feeds. Acquisition loop ("Invite Creators") stays.
+    title: 'Creators',
     items: [
-      { label: 'Submissions', path: PRODUCTION_ROUTES.submissions, icon: FolderOpen },
       { label: 'Invite Creators', path: PRODUCTION_ROUTES.invites, icon: UserPlus },
     ],
   },

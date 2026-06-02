@@ -409,11 +409,11 @@ const SubmissionProcessStep: React.FC<{
         <Button 
           className="flex-1" 
           onClick={() => {
-            navigate(PRODUCTION_ROUTES.submissions);
+            navigate(PRODUCTION_ROUTES.activity);
             onComplete();
           }}
         >
-          View Submissions
+          View Activity
         </Button>
         <Button variant="outline" onClick={onStartTour}>
           Take Tour First

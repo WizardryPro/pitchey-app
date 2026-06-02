@@ -99,6 +99,11 @@ import {
   pitchArchiveHandler
 } from './handlers/pitch-interactions';
 
+// Activity feed (Following/Saved pivot, Phase 2) — actor/action event source.
+import { recordActivity, getActivityFeed } from './db/activity-feed';
+// Progress-from-feedback (Phase 4B / WS-5).
+import { getFeedbackProgress } from './db/pitch-progress';
+
 // Import rating + comment handlers
 import {
   submitAnonymousRating,
@@ -2240,6 +2245,8 @@ class RouteRegistry {
     this.register('GET', '/api/pitches/:id/comments', (req) => getPitchComments(req, this.env));
     this.register('POST', '/api/pitches/:id/comments', (req) => submitPitchComment(req, this.env));
     this.register('GET', '/api/pitches/:id/engagement', (req) => getPitchEngagementHandler(req, this.env));
+    // Progress-from-feedback (Phase 4B / WS-5) — did the pitch improve since my feedback?
+    this.register('GET', '/api/pitches/:id/feedback-progress', this.getFeedbackProgressRoute.bind(this));
     this.register('GET', '/api/pitches/:id/heat', async (req) => {
       const { pitchHeatBreakdownHandler } = await import('./handlers/heat-score');
       return pitchHeatBreakdownHandler(req, this.env);
@@ -2597,6 +2604,16 @@ class RouteRegistry {
                   data: { pitchId: pitch.id, title: pitch.title, creatorId: userId, creatorName }
                 });
               }
+
+              // Persist to the activity feed (one actor row; fanned out at read time).
+              // recordActivity never throws — safe to await inline.
+              await recordActivity(this.env, {
+                actorId: Number(userId),
+                action: 'pitch_published',
+                objectType: 'pitch',
+                objectId: Number(pitch.id),
+                metadata: { title: pitch.title, creatorName },
+              });
             }
           }
         } catch (e) {
@@ -2741,6 +2758,10 @@ class RouteRegistry {
     this.register('GET', '/api/follows', (req) => followsHandler(req, this.env));
     this.register('GET', '/api/follows/followers', (req) => followersHandler(req, this.env));
     this.register('GET', '/api/follows/following', (req) => followingHandler(req, this.env));
+
+    // Unified activity feed (Following/Saved pivot, Phase 2) — events from
+    // followed creators + saved pitches. Returns [] gracefully pre-migration.
+    this.register('GET', '/api/activity/feed', this.getActivityFeedRoute.bind(this));
 
     // Enhanced follows endpoints
     this.register('POST', '/api/follows/action', (req) => followActionHandler(req, this.env));
@@ -6274,6 +6295,41 @@ pitchey_analytics_datapoints_per_minute 1250
 
       // Invalidate browse cache (updated pitch data should reflect in listings)
       try { await this.invalidateBrowseCache(); } catch (_) { /* non-blocking */ }
+
+      // Snapshot the post-edit content + score for "progress from feedback"
+      // (Phase 4B / WS-5). Append-only; non-blocking — never fail the update.
+      if (updated) {
+        try {
+          const u = updated as {
+            id: number;
+            title?: string | null;
+            logline?: string | null;
+            short_synopsis?: string | null;
+            long_synopsis?: string | null;
+            rating_average?: number | null;
+            rating_count?: number | null;
+            pitchey_score_avg?: number | null;
+          };
+          await this.db.query(
+            `INSERT INTO pitch_versions
+               (pitch_id, title, logline, short_synopsis, long_synopsis,
+                rating_average, rating_count, pitchey_score_avg)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [
+              u.id,
+              u.title ?? null,
+              u.logline ?? null,
+              u.short_synopsis ?? null,
+              u.long_synopsis ?? null,
+              u.rating_average ?? null,
+              u.rating_count ?? null,
+              u.pitchey_score_avg ?? null,
+            ]
+          );
+        } catch (snapErr) {
+          console.error('pitch_versions snapshot failed:', snapErr instanceof Error ? snapErr.message : String(snapErr));
+        }
+      }
 
       return builder.success({ pitch: updated });
     } catch (error) {
@@ -13110,6 +13166,41 @@ pitchey_analytics_datapoints_per_minute 1250
   }
 
   // Missing endpoint implementations
+  // Unified Following/Saved activity feed — events emitted by followed creators
+  // (pitch_published, …) plus events on saved pitches. Backed by the activity_feed
+  // table (migration 094). getActivityFeed() returns [] on any error, so this is
+  // safe to call before the migration is applied (feed just shows empty).
+  private async getActivityFeedRoute(request: Request): Promise<Response> {
+    const authResult = await this.requireAuth(request);
+    if (!authResult.authorized) return authResult.response!;
+
+    const builder = new ApiResponseBuilder(request);
+    const url = new URL(request.url);
+    const limit = parseInt(url.searchParams.get('limit') || '30');
+    const offset = parseInt(url.searchParams.get('offset') || '0');
+
+    const items = await getActivityFeed(this.env, Number(authResult.user.id), { limit, offset });
+    return builder.success({ items });
+  }
+
+  // GET /api/pitches/:id/feedback-progress — for the authenticated reviewer, has
+  // the pitch been edited since their feedback and how has its score moved.
+  // Returns hasFeedback:false (not an error) when the viewer hasn't reviewed it.
+  private async getFeedbackProgressRoute(request: Request): Promise<Response> {
+    const authResult = await this.requireAuth(request);
+    if (!authResult.authorized) return authResult.response!;
+
+    const builder = new ApiResponseBuilder(request);
+    const params = (request as any).params;
+    const pitchId = parseInt(params.id);
+    if (!pitchId || Number.isNaN(pitchId)) {
+      return builder.error(ErrorCode.VALIDATION_ERROR, 'Invalid pitch id');
+    }
+
+    const progress = await getFeedbackProgress(this.env, pitchId, Number(authResult.user.id));
+    return builder.success({ progress });
+  }
+
   private async getPitchesFollowing(request: Request): Promise<Response> {
     const authResult = await this.requireAuth(request);
     if (!authResult.authorized) return authResult.response!;

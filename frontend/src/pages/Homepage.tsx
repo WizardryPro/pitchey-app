@@ -10,7 +10,7 @@ import FormatDisplay from '../components/FormatDisplay';
 import GenrePlaceholder from '@shared/components/GenrePlaceholder';
 import HeatBadge, { getHeatScore, getPitcheyScore } from '../components/HeatBadge';
 import PitcheyRating from '../components/PitcheyRating';
-import { getPortalPath } from '@/utils/navigation';
+import { getPortalPath, getDashboardRoute } from '@/utils/navigation';
 import { getPortalTheme } from '@shared/hooks/usePortalTheme';
 
 
@@ -29,6 +29,26 @@ export default function Homepage() {
   // likedPitches state removed — replaced by Pitchey Score
 
   // Like handler removed — replaced by Pitchey Score rating system
+
+  // "Create Your First Pitch" CTA: signed-in creators/production go straight to
+  // the create flow; investors/watchers (can't create) land on their dashboard;
+  // signed-out visitors go to portal select to sign in/up.
+  const handleCreatePitch = () => {
+    if (!isAuthenticated) {
+      navigate('/portals');
+      return;
+    }
+    switch (userType) {
+      case 'creator':
+        navigate('/creator/pitch/new');
+        break;
+      case 'production':
+        navigate('/production/pitch/new');
+        break;
+      default:
+        navigate(getDashboardRoute(userType));
+    }
+  };
 
   useEffect(() => {
     // Add delay to prevent rate limiting on initial page load
@@ -556,7 +576,7 @@ export default function Homepage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={() => navigate('/portals')}
+              onClick={handleCreatePitch}
               className="text-button px-8 py-4 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition"
             >
               Create Your First Pitch

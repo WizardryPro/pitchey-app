@@ -35,6 +35,12 @@ vi.mock('../../config', () => ({
   },
 }))
 
+// ─── saved-pitches service (Saved tab) ──────────────────────────────
+vi.mock('@features/pitches/services/saved-pitches.service', () => ({
+  SavedPitchesService: { getSavedPitches: vi.fn() },
+}))
+import { SavedPitchesService } from '@features/pitches/services/saved-pitches.service'
+
 // ─── Dynamic import ─────────────────────────────────────────────────
 let Following: React.ComponentType
 beforeAll(async () => {
@@ -64,6 +70,7 @@ describe('Following', () => {
       activities: [],
       summary: { newPitches: 0, activeCreators: 0, engagementRate: 0 }
     }))
+    ;(SavedPitchesService.getSavedPitches as any).mockResolvedValue({ savedPitches: [], total: 0 })
   })
 
   afterEach(() => {
@@ -257,6 +264,99 @@ describe('Following', () => {
         return element?.tagName === 'SPAN' && content.includes('active creators')
       })
       expect(span).toBeInTheDocument()
+    })
+  })
+
+  // ─── Phase 2: unified activity feed + Saved tab ───────────────────
+
+  it('renders activity items from the unified activity_feed', async () => {
+    // First fetch (/api/activity/feed) returns events → no fallback needed.
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({
+        success: true,
+        data: {
+          items: [{
+            id: 99,
+            action: 'pitch_published',
+            createdAt: '2025-02-01T00:00:00Z',
+            actor: { id: 7, name: 'Jane Director', username: 'jane', userType: 'creator', profileImage: null },
+            pitch: { id: 42, title: 'Neon Skies', genre: 'Sci-Fi', logline: 'The grid awakens', requireNda: false },
+          }],
+        },
+      }),
+    })
+
+    renderComponent(['/following?tab=activity'])
+    await waitFor(() => {
+      expect(screen.getByText('Neon Skies')).toBeInTheDocument()
+      expect(screen.getByText('Jane Director')).toBeInTheDocument()
+    })
+  })
+
+  it('falls back to followed-creator pitches when the feed is empty', async () => {
+    // Feed empty (no items) → component fetches /api/pitches/following.
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: { items: [] } }) })
+      .mockResolvedValueOnce(makeSuccessResponse({
+        pitches: [{ id: 5, title: 'Fallback Film', genre: 'Action', logline: 'A hero rises', user_id: 10, creator_name: 'creator1' }],
+      }))
+
+    renderComponent(['/following?tab=activity'])
+    await waitFor(() => {
+      expect(screen.getByText('Fallback Film')).toBeInTheDocument()
+    })
+  })
+
+  it('renders a messaged-attachment event in the feed', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({
+        success: true,
+        data: {
+          items: [{
+            id: 77,
+            action: 'message_attachment',
+            createdAt: '2025-03-01T00:00:00Z',
+            actor: { id: 9, name: 'Sam Writer', username: 'sam', userType: 'creator', profileImage: null },
+            metadata: { conversationId: 4, attachmentCount: 1, fileName: 'pitch-deck.pdf' },
+          }],
+        },
+      }),
+    })
+
+    renderComponent(['/following?tab=activity'])
+    await waitFor(() => {
+      expect(screen.getByText('pitch-deck.pdf')).toBeInTheDocument()
+      expect(screen.getByText('shared a document with you')).toBeInTheDocument()
+    })
+  })
+
+  it('renders the Saved tab', async () => {
+    renderComponent()
+    await waitFor(() => {
+      expect(screen.getByText('Saved')).toBeInTheDocument()
+    })
+  })
+
+  it('renders saved pitches in the Saved tab', async () => {
+    ;(SavedPitchesService.getSavedPitches as any).mockResolvedValue({
+      savedPitches: [{ id: 1, pitchId: 42, savedAt: '2025-01-01T00:00:00Z', pitch: { id: 42, title: 'Saved Film', genre: 'Drama', logline: 'A quiet story' } }],
+      total: 1,
+    })
+
+    renderComponent(['/following?tab=saved'])
+    await waitFor(() => {
+      expect(screen.getByText('Saved Film')).toBeInTheDocument()
+    })
+  })
+
+  it('shows empty saved state when nothing is saved', async () => {
+    ;(SavedPitchesService.getSavedPitches as any).mockResolvedValue({ savedPitches: [], total: 0 })
+
+    renderComponent(['/following?tab=saved'])
+    await waitFor(() => {
+      expect(screen.getByText("You haven't saved any pitches yet")).toBeInTheDocument()
     })
   })
 })

@@ -120,7 +120,10 @@ export const PRODUCTION_ROUTES = {
   projectsCompleted: '/production/projects/completed',
   pipeline: '/production/pipeline',
   
-  // Submissions
+  // Submissions — PARKED 2026-06-01 (activity-feed pivot, Phase 3). The review
+  // pipeline (shortlist/accept/reject) is retired from nav but kept reachable by
+  // direct URL so the code can be revived. Do not delete; see issue #158.
+  // Routes + ProductionSubmissions* pages + productionSubmissionsHandler stay live.
   submissions: '/production/submissions',
   submissionsNew: '/production/submissions/new',
   submissionsReview: '/production/submissions/review',

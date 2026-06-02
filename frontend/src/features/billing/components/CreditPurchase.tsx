@@ -1,40 +1,58 @@
 import { useState } from 'react';
-import { 
-  Coins, 
-  Zap, 
-  Star, 
-  Crown, 
+import {
+  Coins,
+  Zap,
+  Star,
+  Crown,
   TrendingUp,
   Upload,
   MessageSquare,
   Eye,
-  BarChart3,
-  ExternalLink
+  FileText,
+  Image,
+  Film,
+  Lock
 } from 'lucide-react';
 import { paymentsAPI } from '@/lib/apiServices';
-import { CREDIT_PACKAGES } from '@config/subscription-plans';
+import { CREDIT_PACKAGES, CREDIT_COSTS } from '@config/subscription-plans';
 
 interface CreditPurchaseProps {
   credits: any;
   onRefresh: () => void;
 }
 
+// Map an ISO currency code to its display symbol. Packages are priced in EUR
+// (matching the live Stripe price IDs), so the symbol is derived from each
+// package's `currency` field rather than hardcoded — keeps the displayed
+// symbol in lockstep with what Stripe actually charges.
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  EUR: '€',
+  USD: '$',
+  GBP: '£',
+};
+
+const currencySymbol = (currency?: string) =>
+  CURRENCY_SYMBOLS[(currency || 'EUR').toUpperCase()] ?? (currency || 'EUR');
+
 // Adapt centralized credit packages for UI display
 const UI_CREDIT_PACKAGES = CREDIT_PACKAGES.map((pkg, index) => {
   const icons = [Zap, TrendingUp, Star, Crown];
   const descriptions = [
     'Perfect for getting started',
-    'Great for growing creators', 
+    'Great for growing creators',
     'Best value for professionals',
     'Maximum value for power users'
   ];
-  
+
+  const symbol = currencySymbol(pkg.currency);
+
   return {
     id: `package_${index}`,
     name: `${pkg.credits} Credit${pkg.credits === 1 ? '' : 's'}${pkg.bonus ? ` + ${pkg.bonus} Bonus` : ''}`,
     credits: pkg.credits,
     price: pkg.price,
-    value: `€${(pkg.price / pkg.credits).toFixed(3)} per credit`,
+    symbol,
+    value: `${symbol}${(pkg.price / pkg.credits).toFixed(3)} per credit`,
     icon: icons[index] || Coins,
     description: pkg.description || descriptions[index] || 'Credit package',
     popular: index === 1, // Make second package popular
@@ -42,32 +60,31 @@ const UI_CREDIT_PACKAGES = CREDIT_PACKAGES.map((pkg, index) => {
   };
 });
 
-const CREDIT_USAGE = [
-  {
-    action: 'Upload Content',
-    cost: 5,
-    icon: Upload,
-    description: 'Upload pitch materials, trailers, or documents'
-  },
-  {
-    action: 'Send Message',
-    cost: 1,
-    icon: MessageSquare,
-    description: 'Send messages to potential investors or collaborators'
-  },
-  {
-    action: 'Premium Analytics',
-    cost: 10,
-    icon: BarChart3,
-    description: 'Access detailed analytics and insights'
-  },
-  {
-    action: 'Email Support',
-    cost: 20,
-    icon: Star,
-    description: 'Get email customer support'
-  }
-];
+// Derived from the backend's single source of truth (CREDIT_COSTS in
+// subscription-plans.ts) so the "How Credits Work" guide can never drift from
+// what users are actually charged. Presentation-only metadata (icon + label)
+// is mapped per action; cost/description come from config.
+const CREDIT_ACTION_META: Record<string, { label: string; icon: typeof Coins }> = {
+  basic_upload: { label: 'New Pitch Upload', icon: Upload },
+  word_doc: { label: 'Document (script, budget, treatment)', icon: FileText },
+  picture_doc: { label: 'Picture Document (lookbook, mood board)', icon: Image },
+  extra_image: { label: 'Extra Image', icon: Image },
+  video_link: { label: 'Video Link', icon: Film },
+  promoted_pitch: { label: 'Promoted Pitch', icon: TrendingUp },
+  view_pitch: { label: 'View a Pitch', icon: Eye },
+  send_message: { label: 'Send Message', icon: MessageSquare },
+  nda_request: { label: 'NDA Access Request', icon: Lock },
+};
+
+const CREDIT_USAGE = CREDIT_COSTS.map((c) => {
+  const meta = CREDIT_ACTION_META[c.action];
+  return {
+    action: meta?.label ?? c.action,
+    cost: c.credits,
+    icon: meta?.icon ?? Coins,
+    description: c.description,
+  };
+});
 
 export default function CreditPurchase({ credits, onRefresh }: CreditPurchaseProps) {
   const [loading, setLoading] = useState(false);
@@ -216,7 +233,7 @@ export default function CreditPurchase({ credits, onRefresh }: CreditPurchasePro
                 <div className="space-y-3 mb-6">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-purple-600">
-                      ${pkg.price}
+                      {pkg.symbol}{pkg.price}
                     </div>
                     <div className="text-sm text-gray-500">{pkg.value}</div>
                   </div>

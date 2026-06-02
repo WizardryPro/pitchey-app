@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, TrendingUp, Users, Film, Calendar, MapPin, Eye, Heart, AlertCircle, Search } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Users, Film, Calendar, MapPin, Eye, Heart, AlertCircle, Search, Bookmark, FileText } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { API_URL } from '../config';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { SocialService } from '@features/browse/services/social.service';
+import { SavedPitchesService, type SavedPitch } from '@features/pitches/services/saved-pitches.service';
 import { getPortalPath } from '@/utils/navigation';
 
 interface Creator {
@@ -26,7 +27,7 @@ interface Creator {
 
 interface ActivityUpdate {
   id: number;
-  type: 'pitch_created' | 'pitch_updated' | 'new_follower';
+  type: 'pitch_created' | 'pitch_updated' | 'new_follower' | 'message_attachment';
   creator: {
     id: number;
     username: string;
@@ -44,16 +45,102 @@ interface ActivityUpdate {
     ndaSigned?: boolean;
     ndaPending?: boolean;
   };
+  // Present for message_attachment events (a creator shared a file with you).
+  attachment?: {
+    fileName: string;
+    count: number;
+    conversationId?: number;
+    pitchId?: number;
+  };
   createdAt: string;
 }
 
+// Map a followed-creator pitch row (from /api/pitches/following) into an activity item.
+// Used as the fallback when the unified activity_feed is empty (e.g. pre-migration).
+const mapPitchesToActivities = (pitches: any[]): ActivityUpdate[] =>
+  pitches.map((p: any) => ({
+    id: p.id,
+    type: 'pitch_created' as const,
+    creator: {
+      id: p.user_id || p.userId,
+      username: p.creator_name || p.creator_email?.split('@')[0] || 'Creator',
+      profileImage: p.creator_profile_image || p.profile_image,
+      userType: 'creator',
+    },
+    action: 'published a pitch',
+    pitch: {
+      id: p.id,
+      title: p.title,
+      genre: p.genre || '',
+      logline: p.logline || p.short_synopsis || '',
+      requireNda: Boolean(p.requireNda ?? p.require_nda),
+      ndaSigned: Boolean(p.ndaSigned ?? p.nda_signed),
+      ndaPending: Boolean(p.ndaPending ?? p.nda_pending),
+    },
+    createdAt: p.created_at || p.createdAt || '',
+  }));
+
+// Map a unified activity_feed item (from /api/activity/feed) into an activity item.
+const mapFeedItem = (item: any): ActivityUpdate | null => {
+  if (!item || !item.actor) return null;
+
+  // Messaged attachment — a creator shared a file with you (recipient-only event).
+  if (item.action === 'message_attachment') {
+    const md = item.metadata || {};
+    const count = Number(md.attachmentCount) || 1;
+    return {
+      id: item.id,
+      type: 'message_attachment',
+      creator: {
+        id: item.actor.id,
+        username: item.actor.name || item.actor.username || 'Someone',
+        profileImage: item.actor.profileImage,
+        userType: item.actor.userType || 'creator',
+      },
+      action: count > 1 ? `shared ${count} files with you` : 'shared a document with you',
+      attachment: {
+        fileName: md.fileName || 'a file',
+        count,
+        conversationId: md.conversationId,
+        pitchId: md.pitchId,
+      },
+      createdAt: item.createdAt || '',
+    };
+  }
+
+  const isUpdate = item.action === 'pitch_updated';
+  return {
+    id: item.id,
+    type: isUpdate ? 'pitch_updated' : 'pitch_created',
+    creator: {
+      id: item.actor.id,
+      username: item.actor.name || item.actor.username || 'Creator',
+      profileImage: item.actor.profileImage,
+      userType: item.actor.userType || 'creator',
+    },
+    action: isUpdate ? 'updated a pitch' : 'published a pitch',
+    pitch: item.pitch
+      ? {
+          id: item.pitch.id,
+          title: item.pitch.title,
+          genre: item.pitch.genre || '',
+          logline: item.pitch.logline || '',
+          requireNda: Boolean(item.pitch.requireNda),
+        }
+      : undefined,
+    createdAt: item.createdAt || '',
+  };
+};
+
 const Following: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const initialTab = (['activity', 'followers', 'following'] as const).includes(searchParams.get('tab') as any)
-    ? (searchParams.get('tab') as 'activity' | 'followers' | 'following')
+  type TabKey = 'activity' | 'followers' | 'following' | 'saved';
+  const initialTab = (['activity', 'followers', 'following', 'saved'] as const).includes(searchParams.get('tab') as any)
+    ? (searchParams.get('tab') as TabKey)
     : 'followers';
-  const [activeTab, setActiveTab] = useState<'activity' | 'followers' | 'following'>(initialTab);
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
   const [data, setData] = useState<(Creator[] | ActivityUpdate[])>([]);
+  const [savedPitches, setSavedPitches] = useState<SavedPitch[]>([]);
   const [summary, setSummary] = useState({
     newPitches: 0,
     activeCreators: 0,
@@ -76,65 +163,75 @@ const Following: React.FC = () => {
     setLoading(true);
     setError(null);
     setData([]);
+    setSavedPitches([]);
 
     try {
-      // Note: Better Auth uses cookies, not localStorage tokens
-      // The route protection in App.tsx handles unauthenticated users
-
-      let endpoint: string;
-      
-      // Use different endpoints based on the active tab
-      if (activeTab === 'activity') {
-        endpoint = '/api/pitches/following';
-      } else if (activeTab === 'followers') {
-        endpoint = '/api/follows/followers';
-      } else if (activeTab === 'following') {
-        endpoint = '/api/follows/following';
-      } else {
-        endpoint = '/api/follows/following'; // default
+      // Saved tab — reuse the saved-pitches service (its own data shape).
+      if (activeTab === 'saved') {
+        const res = await SavedPitchesService.getSavedPitches({ limit: 50 });
+        setSavedPitches(res.savedPitches || []);
+        return;
       }
-      
-    const separator = endpoint.includes('?') ? '&' : '?';
-    const url = timeframe && timeframe !== 'all' ? `${API_URL}${endpoint}${separator}timeframe=${timeframe}` : `${API_URL}${endpoint}`;
-    const response = await fetch(url, {
-      method: 'GET',
-      credentials: 'include' // Send cookies for Better Auth session
-    });
+
+      // Activity tab — prefer the unified activity_feed; fall back to
+      // followed-creator pitches when the feed is empty (e.g. pre-migration,
+      // or no events emitted yet).
+      if (activeTab === 'activity') {
+        let activities: ActivityUpdate[] = [];
+        let summaryFromApi: typeof summary | null = null;
+        try {
+          const feedRes = await fetch(`${API_URL}/api/activity/feed?limit=30`, {
+            method: 'GET',
+            credentials: 'include',
+          });
+          if (feedRes.ok) {
+            const fr = await feedRes.json();
+            if (fr?.summary) summaryFromApi = fr.summary;
+            const items = fr?.data?.items || fr?.items || [];
+            activities = items.map(mapFeedItem).filter(Boolean) as ActivityUpdate[];
+          }
+        } catch {
+          // ignore — fall through to the pitches-following fallback
+        }
+        if (activities.length === 0) {
+          const tf = timeframe && timeframe !== 'all' ? `?timeframe=${timeframe}` : '';
+          const fb = await fetch(`${API_URL}/api/pitches/following${tf}`, {
+            method: 'GET',
+            credentials: 'include',
+          });
+          if (!fb.ok) {
+            throw new Error('Failed to fetch following data');
+          }
+          const result = await fb.json();
+          if (result.success) {
+            if (result.summary) summaryFromApi = result.summary;
+            const pitches = result.data?.pitches || result.pitches || result.data || [];
+            activities = mapPitchesToActivities(pitches);
+          }
+        }
+        setData(activities);
+        if (summaryFromApi) setSummary(summaryFromApi);
+        return;
+      }
+
+      // Followers / Following lists.
+      const endpoint = activeTab === 'followers' ? '/api/follows/followers' : '/api/follows/following';
+      const separator = endpoint.includes('?') ? '&' : '?';
+      const url = timeframe && timeframe !== 'all' ? `${API_URL}${endpoint}${separator}timeframe=${timeframe}` : `${API_URL}${endpoint}`;
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'include' // Send cookies for session
+      });
 
       if (!response.ok) {
         throw new Error('Failed to fetch following data');
       }
 
       const result = await response.json();
-      
+
       if (result.success) {
         // Handle different response formats based on the tab
-        if (activeTab === 'activity') {
-          // Transform pitches from followed creators into activity items
-          const pitches = result.data?.pitches || result.pitches || result.data || [];
-          const activities = pitches.map((p: any) => ({
-            id: p.id,
-            type: 'pitch_created' as const,
-            creator: {
-              id: p.user_id || p.userId,
-              username: p.creator_name || p.creator_email?.split('@')[0] || 'Creator',
-              profileImage: p.creator_profile_image || p.profile_image,
-              userType: 'creator',
-            },
-            action: 'published a pitch',
-            pitch: {
-              id: p.id,
-              title: p.title,
-              genre: p.genre || '',
-              logline: p.logline || p.short_synopsis || '',
-              requireNda: Boolean(p.requireNda ?? p.require_nda),
-              ndaSigned: Boolean(p.ndaSigned ?? p.nda_signed),
-              ndaPending: Boolean(p.ndaPending ?? p.nda_pending),
-            },
-            createdAt: p.created_at || p.createdAt || '',
-          }));
-          setData(activities);
-        } else if (activeTab === 'followers') {
+        if (activeTab === 'followers') {
           const raw = result.data?.followers || result.data?.users || result.followers || result.data || [];
           setData(raw.map((f: any) => ({
             ...f,
@@ -316,6 +413,27 @@ const Following: React.FC = () => {
                               </span>
                             )
                           )}
+                        </div>
+                      </div>
+                    )}
+
+                    {update.attachment && (
+                      <div
+                        className="cursor-pointer group flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100 hover:border-blue-200"
+                        onClick={() => navigate(
+                          update.attachment!.conversationId
+                            ? `/messages?conversation=${update.attachment!.conversationId}`
+                            : '/messages'
+                        )}
+                      >
+                        <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <FileText className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900 group-hover:text-blue-600 truncate">
+                            {update.attachment.fileName}
+                          </p>
+                          <p className="text-xs text-gray-500">View in Messages →</p>
                         </div>
                       </div>
                     )}
@@ -565,6 +683,69 @@ const Following: React.FC = () => {
     );
   };
 
+  const renderSavedTab = () => {
+    return (
+      <div className="space-y-4">
+        {savedPitches.length === 0 ? (
+          <div className="bg-white p-8 rounded-lg shadow-sm border text-center">
+            <Bookmark className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+            <p className="text-gray-500 mb-4">You haven't saved any pitches yet</p>
+            <button
+              onClick={() => navigate('/marketplace')}
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+            >
+              Browse Marketplace
+            </button>
+          </div>
+        ) : (
+          savedPitches.filter(sp => sp && (sp.pitch || sp.pitchId)).map((sp) => {
+            const p: any = sp.pitch || {};
+            const pitchId = sp.pitchId || p.id;
+            return (
+              <div
+                key={sp.id || pitchId}
+                className="bg-white p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => navigate(`/pitch/${pitchId}`)}
+              >
+                <div className="flex items-start space-x-4">
+                  <div className="flex-shrink-0">
+                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Film className="w-6 h-6 text-blue-600" />
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-semibold text-gray-900 hover:text-blue-600">
+                        {p.title || 'Untitled pitch'}
+                      </h4>
+                      <Bookmark className="w-4 h-4 text-blue-600 fill-current" />
+                    </div>
+                    {(p.logline || p.shortSynopsis) && (
+                      <p className="text-gray-600 text-sm mb-2 line-clamp-2">
+                        {p.logline || p.shortSynopsis}
+                      </p>
+                    )}
+                    <div className="flex items-center flex-wrap gap-2 text-sm text-gray-500">
+                      {p.genre && (
+                        <span className="px-2 py-1 bg-gray-100 rounded-full">{p.genre}</span>
+                      )}
+                      {sp.savedAt && (
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          Saved {formatDate(sp.savedAt)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    );
+  };
+
 
   if (loading) {
     return (
@@ -666,6 +847,19 @@ const Following: React.FC = () => {
                 Following
               </div>
             </button>
+            <button
+              onClick={() => setActiveTab('saved')}
+              className={`flex-1 py-4 px-6 text-center font-medium transition ${
+                activeTab === 'saved'
+                  ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <Bookmark className="w-4 h-4" />
+                Saved
+              </div>
+            </button>
           </div>
         </div>
 
@@ -673,6 +867,7 @@ const Following: React.FC = () => {
         {activeTab === 'activity' && renderActivityTab()}
         {activeTab === 'followers' && renderFollowersTab()}
         {activeTab === 'following' && renderFollowingTab()}
+        {activeTab === 'saved' && renderSavedTab()}
       </div>
     </div>
   );
