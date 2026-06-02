@@ -376,8 +376,10 @@ export default function PublicPitchView() {
                   </div>
                 </div>
               </div>
-            ) : (
-              // Show NDA required message or access restrictions
+            ) : ((pitch as any).requiresNDA ?? pitch.requireNDA) ? (
+              // NDA teaser / request — only when the pitch actually requires an
+              // NDA. Previously shown on every pitch, advertising protected
+              // content + an NDA on pitches that have neither.
               <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl shadow-sm p-6 border-2 border-purple-200">
                 <div className="flex items-start space-x-3">
                   <Lock className="w-6 h-6 text-purple-600 mt-1" />
@@ -544,7 +546,7 @@ export default function PublicPitchView() {
                   </div>
                 </div>
               </div>
-            )}
+            ) : null}
 
             {/* Feedback & Ratings — shown to everyone (incl. anonymous). The
                 section self-gates internally: the written-feedback form only

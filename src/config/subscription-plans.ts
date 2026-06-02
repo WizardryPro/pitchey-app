@@ -59,16 +59,9 @@ export const CREDIT_COSTS: CreditCost[] = [
     credits: 1,
     description: 'Video link'
   },
-  {
-    action: 'promoted_pitch',
-    credits: 10,
-    description: 'Promoted pitch (top of search for 3 months)'
-  },
-  {
-    action: 'view_pitch',
-    credits: 10,
-    description: 'View a pitch (refunded if license not agreed)'
-  },
+  // 'promoted_pitch' and 'view_pitch' removed: both advertised mechanisms that
+  // don't exist in the backend (no search-promotion purchase, no view-charge or
+  // license-refund flow). Re-add only when actually implemented + charged.
   {
     action: 'send_message',
     credits: 2,
@@ -132,7 +125,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     features: [
       '30 Creator Credits per month',
       'Enhanced Analytics',
-      'Who viewed, time spent, location/device',
+      'Who viewed, time spent, device',
     ],
     userType: 'creator'
   },
@@ -145,7 +138,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     analytics: 'customizable',
     features: [
       'Unlimited Creator Credits per month',
-      'Enhanced & Customizable Analytics',
+      'Enhanced Analytics',
     ],
     userType: 'creator'
   },
@@ -176,7 +169,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     features: [
       '40 Credits per month',
       'Enhanced Analytics',
-      'Who viewed, time spent, location/device',
+      'Who viewed, time spent, device',
       'Company verification required'
     ],
     userType: 'production'
@@ -190,8 +183,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     analytics: 'customizable',
     features: [
       'Unlimited Credits per month',
-      'Enhanced & Customizable Analytics',
-      'Choose what to track, export, or monitor in real time',
+      'Enhanced Analytics',
       'Company verification required'
     ],
     userType: 'production'
@@ -221,8 +213,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     analytics: 'customizable',
     features: [
       'Unlimited Credits per month',
-      'Enhanced & Customizable Analytics',
-      'Choose what to track, export, or monitor in real time',
+      'Enhanced Analytics',
     ],
     userType: 'exec'
   }
