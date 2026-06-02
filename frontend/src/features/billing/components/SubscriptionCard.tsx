@@ -40,10 +40,12 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
   const currentTierId = rawTier === 'free' ? 'watcher' : rawTier;
   const subscriptionStatus = subscription?.status || 'inactive';
   const isActive = subscriptionStatus === 'active';
-  const cancelAtPeriodEnd = subscription?.subscription?.cancelAtPeriodEnd;
-  const currentPeriodEnd = subscription?.subscription?.currentPeriodEnd
-    ? new Date(subscription.subscription.currentPeriodEnd)
-    : null;
+  // /api/payments/subscription-status returns these FLAT (not under .subscription),
+  // so the nested read was always undefined → next-payment date + cancel warning
+  // never rendered. Read flat first, fall back to legacy nested / renewalDate.
+  const cancelAtPeriodEnd = subscription?.cancelAtPeriodEnd ?? subscription?.subscription?.cancelAtPeriodEnd;
+  const _periodEnd = subscription?.currentPeriodEnd ?? subscription?.subscription?.currentPeriodEnd ?? subscription?.renewalDate;
+  const currentPeriodEnd = _periodEnd ? new Date(_periodEnd) : null;
 
   const userType = (user?.userType || 'creator') as 'creator' | 'investor' | 'production' | 'watcher' | 'viewer';
   // Watchers are audience-only — no subscription paths shown.

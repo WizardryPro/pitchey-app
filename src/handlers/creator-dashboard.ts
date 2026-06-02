@@ -85,7 +85,7 @@ export async function creatorDashboardHandler(request: Request, env: Env): Promi
                title_image as thumbnail, created_at, updated_at,
                COALESCE((SELECT COUNT(*) FROM nda_requests nr WHERE nr.pitch_id = pitches.id), 0)::int +
                COALESCE((SELECT COUNT(*) FROM ndas n WHERE n.pitch_id = pitches.id), 0)::int as "ndaRequests",
-               rating
+               rating, rating_average
         FROM pitches
         WHERE creator_id::text = ${userId} OR user_id::text = ${userId}
         ORDER BY updated_at DESC

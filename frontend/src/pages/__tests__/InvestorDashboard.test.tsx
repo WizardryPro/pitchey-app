@@ -180,7 +180,7 @@ describe('InvestorDashboard', () => {
     it('displays portfolio values', async () => {
       renderDashboard()
       await waitFor(() => {
-        expect(screen.getByText('$500,000')).toBeInTheDocument()
+        expect(screen.getByText('€500,000')).toBeInTheDocument()
         expect(screen.getByText('12.5%')).toBeInTheDocument()
         expect(screen.getByText('Digital Dreams')).toBeInTheDocument()
       })
