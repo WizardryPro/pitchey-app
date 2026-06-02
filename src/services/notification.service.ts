@@ -75,17 +75,14 @@ export interface NotificationPreferences {
   pushNotifications: boolean;
   smsNotifications: boolean;
   marketingEmails: boolean;
-  digestFrequency: 'instant' | 'hourly' | 'daily' | 'weekly' | 'never';
-  quietHoursEnabled: boolean;
-  quietHoursStart?: string; // HH:mm format
-  quietHoursEnd?: string;   // HH:mm format
-  timezone?: string;
+  weeklyDigest: boolean;
 
-  // Category-specific preferences
-  ndaNotifications: boolean;
-  investmentNotifications: boolean;
+  // Category-specific preferences (match the actual table columns)
+  investmentAlerts: boolean;
+  commentNotifications: boolean;
+  likeNotifications: boolean;
+  followNotifications: boolean;
   messageNotifications: boolean;
-  pitchUpdateNotifications: boolean;
   systemNotifications: boolean;
 
   createdAt: Date;
@@ -174,15 +171,12 @@ interface PreferencesRow {
   push_notifications: boolean;
   sms_notifications: boolean;
   marketing_emails: boolean;
-  digest_frequency: string;
-  quiet_hours_enabled: boolean;
-  quiet_hours_start: string | null;
-  quiet_hours_end: string | null;
-  timezone: string | null;
-  nda_notifications: boolean;
-  investment_notifications: boolean;
+  weekly_digest: boolean;
+  investment_alerts: boolean;
+  comment_notifications: boolean;
+  like_notifications: boolean;
+  follow_notifications: boolean;
   message_notifications: boolean;
-  pitch_update_notifications: boolean;
   system_notifications: boolean;
   created_at: Date;
   updated_at: Date;
@@ -435,26 +429,29 @@ export class NotificationService {
       if (!preferences[0]) {
         // Create default preferences
         const defaultPrefs = await this.db.query<PreferencesRow>(
+          // Columns match the ACTUAL prod notification_preferences schema
+          // (boolean flags; the service previously wrote digest_frequency /
+          // quiet_hours / nda_notifications / etc. which don't exist → 500).
           `INSERT INTO notification_preferences (
             user_id, email_notifications, push_notifications, sms_notifications,
-            marketing_emails, digest_frequency, quiet_hours_enabled,
-            nda_notifications, investment_notifications, message_notifications,
-            pitch_update_notifications, system_notifications, created_at, updated_at
+            marketing_emails, weekly_digest, investment_alerts, comment_notifications,
+            like_notifications, follow_notifications, message_notifications,
+            system_notifications, created_at, updated_at
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
           RETURNING *`,
           [
             userId,
-            true,  // emailNotifications
-            true,  // pushNotifications
-            false, // smsNotifications
-            false, // marketingEmails
-            'instant', // digestFrequency
-            false, // quietHoursEnabled
-            true,  // ndaNotifications
-            true,  // investmentNotifications
-            true,  // messageNotifications
-            true,  // pitchUpdateNotifications
-            true,  // systemNotifications
+            true,  // email_notifications
+            true,  // push_notifications
+            false, // sms_notifications
+            false, // marketing_emails
+            true,  // weekly_digest
+            true,  // investment_alerts
+            true,  // comment_notifications
+            true,  // like_notifications
+            true,  // follow_notifications
+            true,  // message_notifications
+            true,  // system_notifications
             new Date(),
             new Date()
           ]
@@ -480,15 +477,12 @@ export class NotificationService {
       pushNotifications: row.push_notifications,
       smsNotifications: row.sms_notifications,
       marketingEmails: row.marketing_emails,
-      digestFrequency: row.digest_frequency as NotificationPreferences['digestFrequency'],
-      quietHoursEnabled: row.quiet_hours_enabled,
-      quietHoursStart: row.quiet_hours_start ?? undefined,
-      quietHoursEnd: row.quiet_hours_end ?? undefined,
-      timezone: row.timezone ?? undefined,
-      ndaNotifications: row.nda_notifications,
-      investmentNotifications: row.investment_notifications,
+      weeklyDigest: row.weekly_digest,
+      investmentAlerts: row.investment_alerts,
+      commentNotifications: row.comment_notifications,
+      likeNotifications: row.like_notifications,
+      followNotifications: row.follow_notifications,
       messageNotifications: row.message_notifications,
-      pitchUpdateNotifications: row.pitch_update_notifications,
       systemNotifications: row.system_notifications,
       createdAt: row.created_at,
       updatedAt: row.updated_at
@@ -521,41 +515,29 @@ export class NotificationService {
         setClauses.push(`marketing_emails = $${paramIndex++}`);
         values.push(updates.marketingEmails);
       }
-      if (updates.digestFrequency !== undefined) {
-        setClauses.push(`digest_frequency = $${paramIndex++}`);
-        values.push(updates.digestFrequency);
+      if (updates.weeklyDigest !== undefined) {
+        setClauses.push(`weekly_digest = $${paramIndex++}`);
+        values.push(updates.weeklyDigest);
       }
-      if (updates.quietHoursEnabled !== undefined) {
-        setClauses.push(`quiet_hours_enabled = $${paramIndex++}`);
-        values.push(updates.quietHoursEnabled);
+      if (updates.investmentAlerts !== undefined) {
+        setClauses.push(`investment_alerts = $${paramIndex++}`);
+        values.push(updates.investmentAlerts);
       }
-      if (updates.quietHoursStart !== undefined) {
-        setClauses.push(`quiet_hours_start = $${paramIndex++}`);
-        values.push(updates.quietHoursStart);
+      if (updates.commentNotifications !== undefined) {
+        setClauses.push(`comment_notifications = $${paramIndex++}`);
+        values.push(updates.commentNotifications);
       }
-      if (updates.quietHoursEnd !== undefined) {
-        setClauses.push(`quiet_hours_end = $${paramIndex++}`);
-        values.push(updates.quietHoursEnd);
+      if (updates.likeNotifications !== undefined) {
+        setClauses.push(`like_notifications = $${paramIndex++}`);
+        values.push(updates.likeNotifications);
       }
-      if (updates.timezone !== undefined) {
-        setClauses.push(`timezone = $${paramIndex++}`);
-        values.push(updates.timezone);
-      }
-      if (updates.ndaNotifications !== undefined) {
-        setClauses.push(`nda_notifications = $${paramIndex++}`);
-        values.push(updates.ndaNotifications);
-      }
-      if (updates.investmentNotifications !== undefined) {
-        setClauses.push(`investment_notifications = $${paramIndex++}`);
-        values.push(updates.investmentNotifications);
+      if (updates.followNotifications !== undefined) {
+        setClauses.push(`follow_notifications = $${paramIndex++}`);
+        values.push(updates.followNotifications);
       }
       if (updates.messageNotifications !== undefined) {
         setClauses.push(`message_notifications = $${paramIndex++}`);
         values.push(updates.messageNotifications);
-      }
-      if (updates.pitchUpdateNotifications !== undefined) {
-        setClauses.push(`pitch_update_notifications = $${paramIndex++}`);
-        values.push(updates.pitchUpdateNotifications);
       }
       if (updates.systemNotifications !== undefined) {
         setClauses.push(`system_notifications = $${paramIndex++}`);
