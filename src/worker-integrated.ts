@@ -1547,7 +1547,8 @@ class RouteRegistry {
             lastName: result.last_name,
             bio: result.bio,
             companyName: result.company_name,
-            profileImage: result.profile_image
+            profileImage: result.profile_image,
+            permissions: getPermissionsForUserType(result.user_type)
           }
         }
       }), {
@@ -4576,7 +4577,8 @@ class RouteRegistry {
               bio: user.bio,
               companyName: user.company_name,
               profileImage: user.profile_image,
-              subscriptionTier: user.subscription_tier
+              subscriptionTier: user.subscription_tier,
+              permissions: getPermissionsForUserType(portal)
             },
             session: {
               id: sessionId,
