@@ -74,7 +74,7 @@ export default function InvestorStats() {
         followOnRate: data.followOnRate ?? 0
       });
 
-      const fmtM = (n: number) => n >= 1000000 ? `$${(n / 1000000).toFixed(2)}M` : n >= 1000 ? `$${(n / 1000).toFixed(0)}K` : `$${n}`;
+      const fmtM = (n: number) => n >= 1000000 ? `€${(n / 1000000).toFixed(2)}M` : n >= 1000 ? `€${(n / 1000).toFixed(0)}K` : `€${n}`;
 
       setStats([
         {
@@ -240,7 +240,7 @@ export default function InvestorStats() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'EUR',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(amount);

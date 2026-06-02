@@ -266,16 +266,16 @@ describe('UserService', () => {
 
       const result = await UserService.getNotificationPreferences()
 
-      expect(mockApiClient.get).toHaveBeenCalledWith('/api/user/notification-preferences')
+      expect(mockApiClient.get).toHaveBeenCalledWith('/api/notifications/preferences')
       expect(result.emailEnabled).toBe(true)
     })
   })
 
   describe('updateNotificationPreferences', () => {
     it('updates notification preferences', async () => {
-      mockApiClient.put.mockResolvedValue({ success: true })
+      mockApiClient.post.mockResolvedValue({ success: true })
       await expect(UserService.updateNotificationPreferences({ emailEnabled: false })).resolves.toBeUndefined()
-      expect(mockApiClient.put).toHaveBeenCalledWith('/api/user/notification-preferences', { emailEnabled: false })
+      expect(mockApiClient.post).toHaveBeenCalledWith('/api/notifications/preferences', { emailEnabled: false })
     })
   })
 

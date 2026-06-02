@@ -353,10 +353,11 @@ export class UserService {
     }
   }
 
-  // Get notifications preferences
+  // Get notifications preferences. Registered route is /api/notifications/preferences
+  // (the /api/user/notification-preferences path was never registered → 404).
   static async getNotificationPreferences(): Promise<any> {
     const response = await apiClient.get<{ success: boolean; preferences: any }>(
-      '/api/user/notification-preferences'
+      '/api/notifications/preferences'
     );
 
     if (!response.success) {
@@ -366,10 +367,11 @@ export class UserService {
     return response.data?.preferences;
   }
 
-  // Update notification preferences
+  // Update notification preferences. Registered verb is POST (not PUT) on
+  // /api/notifications/preferences.
   static async updateNotificationPreferences(preferences: any): Promise<void> {
-    const response = await apiClient.put<{ success: boolean }>(
-      '/api/user/notification-preferences',
+    const response = await apiClient.post<{ success: boolean }>(
+      '/api/notifications/preferences',
       preferences
     );
 

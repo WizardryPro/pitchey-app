@@ -61,7 +61,7 @@ export default function EmailAlerts({
 
   const checkEmailPreferences = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/user/notification-preferences`, {
+      const response = await fetch(`${API_URL}/api/notifications/preferences`, {
         method: 'GET',
         credentials: 'include'
       });
