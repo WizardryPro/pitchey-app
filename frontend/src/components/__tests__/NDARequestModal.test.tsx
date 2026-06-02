@@ -60,6 +60,14 @@ describe('NDAModal', () => {
     authStore.user = mockInvestorUser as any
     authStore.isAuthenticated = true
 
+    // NDAModal fires a best-effort fetch for the platform Standard NDA preview on
+    // mount; give global.fetch a benign default so it doesn't reject (clearAllMocks
+    // resets the setup.ts vi.fn() to return undefined).
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: false }),
+    } as Response)
+
     // Setup default service mocks
     vi.mocked(ndaService.canRequestNDA).mockResolvedValue({ canRequest: true } as any)
     vi.mocked(ndaService.requestNDA).mockResolvedValue({ success: true, ndaId: '123' } as any)

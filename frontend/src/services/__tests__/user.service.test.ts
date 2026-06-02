@@ -10,6 +10,14 @@ vi.mock('../../lib/api-client', () => ({
   },
 }))
 
+// prepareImageForUpload wraps browser-image-compression (canvas/Image) which never
+// resolves in jsdom; stub it to pass the file through so the upload-fetch logic is
+// what's under test, not the compression.
+vi.mock('../../utils/imageUpload', () => ({
+  prepareImageForUpload: vi.fn(async (file: File) => file),
+  PRE_COMPRESSION_MAX_BYTES: 30 * 1024 * 1024,
+}))
+
 import { apiClient } from '../../lib/api-client'
 import { UserService } from '../user.service'
 
@@ -151,7 +159,7 @@ describe('UserService', () => {
       mockApiClient.post.mockResolvedValue({ success: true })
       await expect(UserService.changePassword({ currentPassword: 'old', newPassword: 'new', confirmPassword: 'new' }))
         .resolves.toBeUndefined()
-      expect(mockApiClient.post).toHaveBeenCalledWith('/api/user/change-password', expect.any(Object))
+      expect(mockApiClient.post).toHaveBeenCalledWith('/api/auth/change-password', expect.any(Object))
     })
 
     it('throws on failure', async () => {

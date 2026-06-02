@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Upload, FileText, Shield, AlertCircle, CheckCircle, Loader2, ExternalLink } from 'lucide-react';
 import { ndaService } from '../services/nda.service';
+import { API_URL } from '@/config';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 // eslint-disable-next-line import/no-restricted-paths -- intentional: cross-feature component dependency
 import FileUpload from '@features/uploads/components/FileUpload';
@@ -39,7 +40,7 @@ export default function NDAModal({
   // Fetch the auto-filled platform Standard NDA (project + creator pre-filled from the pitch)
   useEffect(() => {
     if (!isOpen || formData.ndaType !== 'standard') return;
-    fetch(`${import.meta.env.VITE_API_URL}/api/ndas/standard?pitchId=${pitchId}`, { credentials: 'include' })
+    fetch(`${API_URL}/api/ndas/standard?pitchId=${pitchId}`, { credentials: 'include' })
       .then((r) => r.json())
       .then((d) => { if (d?.success && d.data?.content) setStandardNda(d.data.content); })
       .catch(() => { /* preview is best-effort */ });
