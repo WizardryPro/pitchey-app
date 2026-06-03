@@ -87,7 +87,6 @@ function ProductionDashboard() {
     { label: 'Share Profile', icon: Share2, accent: 'indigo', onClick: () => setShowShareModal(true) },
   ];
   const [myPitches, setMyPitches] = useState<Pitch[]>([]);
-  const [pipelineCount, setPipelineCount] = useState(0);
   const [followingPitches, setFollowingPitches] = useState<Pitch[]>([]);
   const [followingCreators, setFollowingCreators] = useState<any[]>([]);
   const [followingSortBy, setFollowingSortBy] = useState('recent');
@@ -319,12 +318,9 @@ function ProductionDashboard() {
         }
       }
 
-      // Fetch user's own pitches and pipeline projects in parallel
+      // Fetch the user's own pitches
       try {
-        const [pitchesResponse, pipelineResponse] = await Promise.all([
-          apiClient.get<any>(`/api/pitches?status=all&userId=${user?.id}&limit=100`),
-          apiClient.get<any>('/api/production/projects'),
-        ]);
+        const pitchesResponse = await apiClient.get<any>(`/api/pitches?status=all&userId=${user?.id}&limit=100`);
 
         if (pitchesResponse.success) {
           const userPitches = safeArray(pitchesResponse.data?.pitches || pitchesResponse.data || []);
@@ -344,11 +340,6 @@ function ProductionDashboard() {
             }
           }));
           setMyPitches(dashboardPitches);
-        }
-
-        if (pipelineResponse.success) {
-          const projects = safeArray(pipelineResponse.data?.projects || []);
-          setPipelineCount(projects.filter((p: any) => p.status === 'active').length);
         }
       } catch (err) {
         const e = err instanceof Error ? err : new Error(String(err));
