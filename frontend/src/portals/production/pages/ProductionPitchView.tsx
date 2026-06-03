@@ -126,6 +126,7 @@ const ProductionPitchView: React.FC = () => {
   const [isLiked, setIsLiked] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [autoFillLoading, setAutoFillLoading] = useState(false);
+  const [ndaRequested, setNdaRequested] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -619,7 +620,7 @@ const ProductionPitchView: React.FC = () => {
           {/* Left Column - Pitch Details */}
           <div className="lg:col-span-2">
             {/* Tabs */}
-            <div className="bg-white rounded-xl shadow-lg mb-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6">
               <div className="flex border-b">
                 {['overview', 'production', 'team', 'notes'].map((tab) => {
                   const ndaRequired = tab === 'team' || tab === 'notes';
@@ -649,7 +650,7 @@ const ProductionPitchView: React.FC = () => {
             {/* Tab Content */}
             {activeTab === 'overview' && (
               <div className="space-y-6">
-              <div className="bg-white rounded-xl shadow-lg p-8">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 {pitch.thumbnail && (
                   <img 
                     src={pitch.thumbnail} 
@@ -778,7 +779,7 @@ const ProductionPitchView: React.FC = () => {
             {activeTab === 'production' && completeness && (
               <div className="space-y-6">
                 {/* Pitch Completeness */}
-                <div className="bg-white rounded-xl shadow-lg p-8">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                   <h2 className="text-2xl font-bold text-gray-900 mb-1">Pitch Package Assessment</h2>
                   <p className="text-sm text-gray-500 mb-6">What the creator has provided — gaps indicate areas to request more information</p>
 
@@ -829,7 +830,7 @@ const ProductionPitchView: React.FC = () => {
                 </div>
 
                 {/* Production Readiness */}
-                <div className="bg-white rounded-xl shadow-lg p-8">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                   <div className="flex items-center justify-between mb-2">
                     <h2 className="text-lg font-bold text-gray-900">Production Readiness</h2>
                     <span className={`text-lg font-bold ${getScoreColor(completeness.productionReadiness)}`}>
@@ -882,7 +883,7 @@ const ProductionPitchView: React.FC = () => {
             )}
 
             {activeTab === 'team' && (isOwner || pitch?.hasSignedNDA) && (
-              <div className="bg-white rounded-xl shadow-lg p-8">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900">Team Assembly</h2>
@@ -945,7 +946,7 @@ const ProductionPitchView: React.FC = () => {
             )}
 
             {activeTab === 'notes' && (isOwner || pitch?.hasSignedNDA) && (
-              <div className="bg-white rounded-xl shadow-lg p-8">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Production Notes</h2>
                 
                 {/* Add Note Form */}
@@ -1028,26 +1029,24 @@ const ProductionPitchView: React.FC = () => {
 
           {/* Right Column - Sidebar */}
           <div className="space-y-6">
-            {/* Production Actions — only for pitches by other users */}
+            {/* Access — the NDA is the single gate that unlocks the full script,
+                pitch deck, and all production materials (no separate "request script"). */}
             {!isOwner && (
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Production Actions</h3>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => {
-                      if (!pitch?.userId) {
-                        toast.error('Cannot send message: creator information unavailable');
-                        return;
-                      }
-                      const greeting = pitch.creatorName || pitch.creatorCompany || 'Creator';
-                      navigate(`/production/messages?recipient=${pitch.userId}&pitch=${id}&subject=${encodeURIComponent(`Script Request: ${pitch?.title}`)}&body=${encodeURIComponent(`Hi ${greeting},\n\nI'm interested in your pitch "${pitch?.title}" and would like to request the full script for review.\n\nLooking forward to discussing this further.`)}`);
-                    }}
-                    className="w-full flex items-center justify-between px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-                  >
-                    <span>Request Full Script</span>
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                  {!pitch?.hasSignedNDA && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <h3 className="text-lg font-semibold text-gray-900">Access</h3>
+                {pitch?.hasSignedNDA ? (
+                  <div className="mt-3 flex items-start gap-2.5 rounded-lg bg-emerald-50 px-3.5 py-3 text-emerald-800">
+                    <CheckCircle className="h-5 w-5 shrink-0 text-emerald-600" />
+                    <p className="text-sm font-medium leading-snug">NDA signed — the full script &amp; production materials are unlocked below.</p>
+                  </div>
+                ) : ndaRequested ? (
+                  <div className="mt-3 flex items-start gap-2.5 rounded-lg bg-amber-50 px-3.5 py-3 text-amber-800">
+                    <Clock className="h-5 w-5 shrink-0 text-amber-600" />
+                    <p className="text-sm font-medium leading-snug">NDA request pending — you'll get access once the creator approves it.</p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="mt-1 mb-4 text-sm leading-relaxed text-gray-500">Sign an NDA to unlock the full script, pitch deck, and production materials.</p>
                     <button
                       onClick={async () => {
                         if (!id) return;
@@ -1055,6 +1054,7 @@ const ProductionPitchView: React.FC = () => {
                         try {
                           const res = await apiClient.post('/api/ndas/request', { pitchId: id });
                           if (res.success) {
+                            setNdaRequested(true);
                             toast.success('NDA request sent');
                           } else {
                             toast.error((res.error as any)?.message || 'Failed to request NDA');
@@ -1064,18 +1064,19 @@ const ProductionPitchView: React.FC = () => {
                           toast.error(e.message);
                         }
                       }}
-                      className="w-full flex items-center justify-between px-4 py-2 bg-white border border-indigo-200 text-indigo-700 rounded-lg hover:bg-indigo-50 transition-colors"
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 font-medium text-white shadow-sm transition hover:bg-indigo-700"
                     >
-                      <span>Request NDA ({getCreditCost('nda_request')} credits)</span>
                       <Shield className="h-4 w-4" />
+                      Request NDA Access · {getCreditCost('nda_request')} credits
                     </button>
-                  )}
-                </div>
+                    <p className="mt-3 text-center text-xs text-gray-400">Questions for the creator? Use Contact above.</p>
+                  </>
+                )}
               </div>
             )}
 
             {/* Production Requirements */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Production Requirements</h3>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -1117,7 +1118,7 @@ const ProductionPitchView: React.FC = () => {
             {/* AI Assessment — owner only. Removed when viewing someone else's pitch
                 (a production user assessing another creator's pitch shouldn't see the
                 owner-side auto-fill toolkit). */}
-            {isOwner && <div className="bg-white rounded-xl shadow-lg p-6">
+            {isOwner && <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">AI Assessment</h3>
               <p className="text-sm text-gray-500 mb-4">
                 Upload a script, treatment, or pitch deck to auto-fill the feasibility checklist, team priorities, and production notes.
@@ -1153,7 +1154,7 @@ const ProductionPitchView: React.FC = () => {
             </div>}
 
             {/* Documents — show full links post-NDA, attachment status pre-NDA */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Production Materials</h3>
               {(isOwner || pitch.hasSignedNDA) ? (
                 ((pitch as any).documents?.length || pitch.script || pitch.pitchDeck || pitch.trailer) ? (
