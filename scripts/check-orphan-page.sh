@@ -49,12 +49,22 @@ app_tsx="$REPO_ROOT/frontend/src/App.tsx"
 
 imported=false
 routed=false
-# Import: `import ... from '...basename'` OR `import('...basename')`. Allow .tsx? extension.
-if grep -qE "import[^;]*['\"][^'\"]*\\b${basename}(\\.tsx?)?['\"]" "$app_tsx"; then
+# Resolve the LOCAL BINDING the page is imported as, since pages are commonly aliased —
+# e.g. `const Marketplace = lazyRetry(() => import('./pages/MarketplaceEnhanced'))` routes
+# as `<Marketplace />`, not `<MarketplaceEnhanced />`. Without this, every aliased page
+# import false-positives as "imported but no <Route> uses it".
+import_line="$(grep -E "import[^;]*['\"][^'\"]*\\b${basename}(\\.tsx?)?['\"]" "$app_tsx" | head -1)"
+binding="$basename"
+if [[ -n "$import_line" ]]; then
   imported=true
+  if [[ "$import_line" =~ const[[:space:]]+([A-Za-z0-9_]+)[[:space:]]*= ]]; then
+    binding="${BASH_REMATCH[1]}"          # const Alias = lazy(() => import('…'))
+  elif [[ "$import_line" =~ import[[:space:]]+([A-Za-z0-9_]+)[[:space:]]+from ]]; then
+    binding="${BASH_REMATCH[1]}"          # import Alias from '…'
+  fi
 fi
-# Routed: `<Basename` followed by space, `/`, or `>` — guards against partial-name false-positives.
-if grep -qE "<${basename}[[:space:]/>]" "$app_tsx"; then
+# Routed: `<Binding` followed by space, `/`, or `>` — guards against partial-name false-positives.
+if grep -qE "<${binding}[[:space:]/>]" "$app_tsx"; then
   routed=true
 fi
 

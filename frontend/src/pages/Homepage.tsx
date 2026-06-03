@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Film, TrendingUp, Search, Play, Star, Eye, Heart, Calendar, ArrowRight, Sparkles, User, Building2, Wallet, LogOut, Flame } from 'lucide-react';
+import { Film, TrendingUp, Search, Play, Star, Eye, Heart, Calendar, ArrowRight, Sparkles, User, Building2, Wallet, LogOut, Flame, Menu, X } from 'lucide-react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { pitchService } from '@features/pitches/services/pitch.service';
 import { pitchAPI } from '../lib/api';
@@ -30,6 +30,7 @@ export default function Homepage() {
   // PAST the hero into the bright content (so it stays readable on light backgrounds).
   const heroRef = useRef<HTMLElement>(null);
   const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   useEffect(() => {
     const onScroll = () => {
       const heroBottom = heroRef.current?.getBoundingClientRect().bottom ?? 0;
@@ -145,7 +146,7 @@ export default function Homepage() {
                 </button>
               </nav>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-4">
               {isAuthenticated && user ? (
                 <>
                   {/* User Status Badge — tint comes from the portal theme so the
@@ -211,8 +212,72 @@ export default function Homepage() {
                 </>
               )}
             </div>
+
+            {/* Mobile hamburger — the desktop nav links are hidden < md, so narrow viewports
+                need a way to reach Browse / How It Works / About + the auth actions. */}
+            <button
+              onClick={() => setMobileMenuOpen((o) => !o)}
+              aria-label="Toggle navigation menu"
+              aria-expanded={mobileMenuOpen}
+              className={`md:hidden inline-flex items-center justify-center p-2 rounded-lg transition ${scrolled ? 'text-gray-700 hover:bg-gray-100' : 'text-white hover:bg-white/10'}`}
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile dropdown menu */}
+        {mobileMenuOpen && (
+          <div className={`md:hidden border-t ${scrolled ? 'bg-white border-gray-200' : 'bg-[#0a0a12]/95 backdrop-blur border-white/10'}`}>
+            <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
+              {[
+                { label: 'Browse Pitches', to: '/marketplace' },
+                { label: 'How It Works', to: '/how-it-works' },
+                { label: 'About', to: '/about' },
+              ].map((item) => (
+                <button
+                  key={item.to}
+                  onClick={() => { setMobileMenuOpen(false); navigate(item.to); }}
+                  className={`text-left px-3 py-2.5 rounded-lg text-sm font-medium transition ${scrolled ? 'text-gray-700 hover:bg-gray-100' : 'text-white/90 hover:bg-white/10'}`}
+                >
+                  {item.label}
+                </button>
+              ))}
+              <div className={`my-2 border-t ${scrolled ? 'border-gray-200' : 'border-white/10'}`} />
+              {isAuthenticated && user ? (
+                <>
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); navigate(userType ? `/${getPortalPath(userType)}/dashboard` : '/login'); }}
+                    className="px-3 py-2.5 rounded-lg bg-purple-600 text-white text-sm font-semibold text-center hover:bg-purple-700 transition"
+                  >
+                    Dashboard
+                  </button>
+                  <button
+                    onClick={async () => { setMobileMenuOpen(false); await logout(); navigate('/'); }}
+                    className={`text-left px-3 py-2.5 rounded-lg text-sm font-medium transition ${scrolled ? 'text-gray-600 hover:bg-gray-100' : 'text-white/80 hover:bg-white/10'}`}
+                  >
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}
+                    className={`text-left px-3 py-2.5 rounded-lg text-sm font-medium transition ${scrolled ? 'text-purple-600 hover:bg-purple-50' : 'text-white hover:bg-white/10'}`}
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); navigate('/register'); }}
+                    className="px-3 py-2.5 rounded-lg bg-purple-600 text-white text-sm font-semibold text-center hover:bg-purple-700 transition"
+                  >
+                    Get Started
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Hero — "Premiere Night": dark, cinematic, editorial display type. The bright content

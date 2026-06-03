@@ -41,8 +41,19 @@ for page in "${pages[@]}"; do
   basename="$(basename "$page" .tsx)"
   imported=false
   routed=false
-  grep -qE "import[^;]*['\"][^'\"]*\\b${basename}(\\.tsx?)?['\"]" "$app_tsx" && imported=true
-  grep -qE "<${basename}[[:space:]/>]" "$app_tsx" && routed=true
+  # Resolve the local binding (pages are commonly aliased, e.g.
+  # `const Marketplace = lazyRetry(() => import('./pages/MarketplaceEnhanced'))` -> `<Marketplace />`).
+  import_line="$(grep -E "import[^;]*['\"][^'\"]*\\b${basename}(\\.tsx?)?['\"]" "$app_tsx" | head -1)"
+  binding="$basename"
+  if [[ -n "$import_line" ]]; then
+    imported=true
+    if [[ "$import_line" =~ const[[:space:]]+([A-Za-z0-9_]+)[[:space:]]*= ]]; then
+      binding="${BASH_REMATCH[1]}"
+    elif [[ "$import_line" =~ import[[:space:]]+([A-Za-z0-9_]+)[[:space:]]+from ]]; then
+      binding="${BASH_REMATCH[1]}"
+    fi
+  fi
+  grep -qE "<${binding}[[:space:]/>]" "$app_tsx" && routed=true
   if ! $imported || ! $routed; then
     orphans+=("$basename")
   fi
