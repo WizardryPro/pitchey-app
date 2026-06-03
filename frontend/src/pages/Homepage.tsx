@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Film, TrendingUp, Search, Play, Star, Eye, Heart, Calendar, ArrowRight, Sparkles, User, Building2, Wallet, LogOut, Flame } from 'lucide-react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
@@ -26,6 +26,19 @@ export default function Homepage() {
   const [newReleases, setNewReleases] = useState<Pitch[]>([]);
   const [hotPitches, setHotPitches] = useState<Pitch[]>([]);
   const [loading, setLoading] = useState(true);
+  // Header blends with the dark hero at the top, then turns solid-white once the user scrolls
+  // PAST the hero into the bright content (so it stays readable on light backgrounds).
+  const heroRef = useRef<HTMLElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => {
+      const heroBottom = heroRef.current?.getBoundingClientRect().bottom ?? 0;
+      setScrolled(heroBottom <= 64); // 64 = header height; switch when the hero clears the nav
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
   // likedPitches state removed — replaced by Pitchey Score
 
   // Like handler removed — replaced by Pitchey Score rating system
@@ -104,29 +117,29 @@ export default function Homepage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 via-purple-50 to-white">
       {/* Navigation Header */}
-      <header className="sticky top-0 z-50 bg-[#0a0a12]/70 backdrop-blur-md border-b border-white/5">
+      <header className={`sticky top-0 z-50 transition-colors duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm' : 'bg-transparent'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-8">
               <a href="/" className="flex items-center">
-                <img src="/pitchey-logotype-white.png" alt="Pitchey" className="h-8 w-auto" />
+                <img src={scrolled ? '/pitchey-logotype.png' : '/pitchey-logotype-white.png'} alt="Pitchey" className="h-8 w-auto" />
               </a>
               <nav className="hidden md:flex items-center gap-6">
                 <button
                   onClick={() => navigate('/marketplace')}
-                  className="text-nav-link transition text-white/90 hover:text-white"
+                  className={`text-nav-link transition ${scrolled ? 'hover:text-purple-600' : 'text-white/90 hover:text-white'}`}
                 >
                   Browse Pitches
                 </button>
                 <button
                   onClick={() => navigate('/how-it-works')}
-                  className="text-nav-link transition text-white/90 hover:text-white"
+                  className={`text-nav-link transition ${scrolled ? 'hover:text-purple-600' : 'text-white/90 hover:text-white'}`}
                 >
                   How It Works
                 </button>
                 <button
                   onClick={() => navigate('/about')}
-                  className="text-nav-link transition text-white/90 hover:text-white"
+                  className={`text-nav-link transition ${scrolled ? 'hover:text-purple-600' : 'text-white/90 hover:text-white'}`}
                 >
                   About
                 </button>
@@ -175,7 +188,7 @@ export default function Homepage() {
                   {/* Sign Out Button */}
                   <button
                     onClick={async () => { await logout(); navigate('/'); }}
-                    className="text-button px-3 py-2 transition text-white/70 hover:text-white"
+                    className={`text-button px-3 py-2 transition ${scrolled ? 'text-gray-500 hover:text-red-600' : 'text-white/70 hover:text-white'}`}
                     title="Sign Out"
                   >
                     <LogOut className="w-4 h-4" />
@@ -185,7 +198,7 @@ export default function Homepage() {
                 <>
                   <button
                     onClick={() => navigate('/login')}
-                    className="text-button px-4 py-2 transition text-white hover:text-white/80"
+                    className={`text-button px-4 py-2 transition ${scrolled ? 'text-purple-600 hover:text-purple-700' : 'text-white hover:text-white/80'}`}
                   >
                     Sign In
                   </button>
@@ -206,7 +219,7 @@ export default function Homepage() {
           rails below it intentionally read as the marquee turning the lights up.
           -mt-16 pulls the hero up behind the sticky nav so the nav's backdrop is the hero
           itself (not the light page background). */}
-      <section className="relative -mt-16 overflow-hidden bg-[#0a0a12] text-white">
+      <section ref={heroRef} className="relative -mt-16 overflow-hidden bg-[#0a0a12] text-white">
         {/* Spotlight glows */}
         <div aria-hidden className="absolute -top-48 left-1/2 -translate-x-1/2 w-[64rem] h-[44rem] rounded-full blur-[80px] bg-[radial-gradient(ellipse_at_center,rgba(132,45,168,0.45),transparent_62%)]" />
         <div aria-hidden className="absolute top-1/4 -right-24 w-[34rem] h-[34rem] rounded-full blur-[90px] bg-[radial-gradient(circle,rgba(245,158,11,0.20),transparent_60%)]" />
