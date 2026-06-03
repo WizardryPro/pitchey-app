@@ -215,6 +215,15 @@ export class WorkerDatabase implements DatabaseService {
       /ECONNRESET/,
       /ECONNREFUSED/,
       /ENOTFOUND/,
+      // Neon serverless cold-start race: when the compute endpoint is suspended,
+      // the first query can return a transient Cloudflare gateway/origin error
+      // (e.g. "NeonDbError: Server error (HTTP status 530): error code: 1016" —
+      // 1016 is "Origin DNS error"). These are infra-level and resolve on retry
+      // once the endpoint wakes; genuine SQL errors come back as HTTP 4xx with a
+      // pg message and are caught by the non-retryable patterns above.
+      /HTTP status 5\d\d/i,
+      /error code: 1016/,
+      /fetch failed/i,
     ];
 
     // SQL syntax/logic errors - not retryable

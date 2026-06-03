@@ -1,4 +1,5 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
+import { AlertCircle } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -15,7 +16,8 @@ interface TurnstileOptions {
   sitekey: string;
   callback: (token: string) => void;
   'expired-callback'?: () => void;
-  'error-callback'?: () => void;
+  // Cloudflare passes an error code string (e.g. "600010" = hostname not allowed).
+  'error-callback'?: (errorCode?: string) => void;
   theme?: 'light' | 'dark' | 'auto';
   size?: 'normal' | 'compact' | 'invisible';
 }
@@ -23,6 +25,9 @@ interface TurnstileOptions {
 interface TurnstileProps {
   onVerify: (token: string) => void;
   onExpire?: () => void;
+  // Called when the widget fails to issue a token (network/config error). Receives
+  // Cloudflare's error code when available.
+  onError?: (errorCode?: string) => void;
   theme?: 'light' | 'dark' | 'auto';
   size?: 'normal' | 'compact';
   className?: string;
@@ -53,14 +58,19 @@ function loadScript(): Promise<void> {
   });
 }
 
-export default function Turnstile({ onVerify, onExpire, theme = 'auto', size = 'normal', className }: TurnstileProps) {
+export default function Turnstile({ onVerify, onExpire, onError, theme = 'auto', size = 'normal', className }: TurnstileProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
   const onVerifyRef = useRef(onVerify);
   const onExpireRef = useRef(onExpire);
+  const onErrorRef = useRef(onError);
+  // Holds Cloudflare's error code when the widget fails so we can show the user a
+  // visible, diagnosable message instead of a silently-disabled Sign in button.
+  const [errorCode, setErrorCode] = useState<string | null>(null);
 
   onVerifyRef.current = onVerify;
   onExpireRef.current = onExpire;
+  onErrorRef.current = onError;
 
   useEffect(() => {
     if (!SITE_KEY || !containerRef.current) return;
@@ -77,9 +87,17 @@ export default function Turnstile({ onVerify, onExpire, theme = 'auto', size = '
 
       widgetIdRef.current = window.turnstile.render(containerRef.current, {
         sitekey: SITE_KEY,
-        callback: (token: string) => onVerifyRef.current(token),
+        callback: (token: string) => {
+          setErrorCode(null);
+          onVerifyRef.current(token);
+        },
         'expired-callback': () => onExpireRef.current?.(),
-        'error-callback': () => onExpireRef.current?.(),
+        'error-callback': (code?: string) => {
+          setErrorCode(code || 'unknown');
+          onErrorRef.current?.(code);
+          // Keep the token cleared so the gated Sign in button stays disabled.
+          onExpireRef.current?.();
+        },
         theme,
         size,
       });
@@ -96,7 +114,20 @@ export default function Turnstile({ onVerify, onExpire, theme = 'auto', size = '
 
   if (!SITE_KEY) return null;
 
-  return <div ref={containerRef} className={className} />;
+  return (
+    <div className={className}>
+      <div ref={containerRef} />
+      {errorCode && (
+        <div role="alert" className="mt-2 flex items-start gap-2 text-sm text-red-600">
+          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <span>
+            Security check failed (error {errorCode}). Refresh the page and try again — if it
+            keeps happening, contact support with this code.
+          </span>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function useTurnstileReset() {
