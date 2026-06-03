@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Home, Activity, Film, Upload,
+  Home, Activity, Upload,
   Bookmark, Users, GitBranch,
   MessageSquare, Settings, UserPlus, Shield, FileText
 } from 'lucide-react';
@@ -28,13 +28,11 @@ export const productionNavigationSections: NavigationSection[] = [
       { label: 'Verification', path: PRODUCTION_ROUTES.verification, icon: Shield },
     ],
   },
-  {
-    title: 'Projects',
-    items: [
-      { label: 'All Projects', path: PRODUCTION_ROUTES.projects, icon: Film },
-      { label: 'Pipeline', path: PRODUCTION_ROUTES.pipeline, icon: GitBranch },
-    ],
-  },
+  // "Projects" + "Pipeline" retired from nav 2026-06-03 (activity-feed pivot follow-up) —
+  // pages/routes parked, not deleted (still reachable by direct URL via PRODUCTION_ROUTES.projects
+  // / .pipeline). Production project-management surface is on hold; revive by restoring a
+  // { title: 'Projects', items: [All Projects, Pipeline] } section here. Same park-don't-delete
+  // treatment as the "Submissions" review pipeline below.
   {
     // "Submissions" review pipeline retired 2026-06-01 (activity-feed pivot, Phase 3) —
     // pages/routes parked, not deleted. Activity now lives in the Activity + Following
