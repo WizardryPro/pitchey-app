@@ -73,6 +73,7 @@ class ApiClient {
   private maxRetries: number = 2; // Reduced to prevent excessive retries
   private retryDelay: number = 1000; // 1 second
   private _handlingAuth401 = false; // Prevents multiple 401 redirects firing at once
+  private inFlightGets = new Map<string, Promise<TypedApiResponse<unknown>>>(); // single-flight de-dupe for concurrent identical GETs
 
   constructor(baseURL?: string) {
     // Lazy initialization to avoid temporal dead zone issues
@@ -326,7 +327,18 @@ class ApiClient {
 
   // HTTP Methods with proper typing
   async get<T>(endpoint: string): Promise<TypedApiResponse<T>> {
-    return this.makeRequest<T>(endpoint, { method: 'GET' });
+    // Single-flight: collapse identical GETs that are in flight at the same time
+    // into one network request. Dashboards mount their data-load effect twice on
+    // load (auth settle re-runs the effect), firing every endpoint 2-4×; without
+    // this each duplicate hit the network. Sequential GETs (after the first
+    // settles) are unaffected, so there's no caching/staleness — pure de-dupe.
+    const existing = this.inFlightGets.get(endpoint);
+    if (existing) return existing as Promise<TypedApiResponse<T>>;
+
+    const promise = this.makeRequest<T>(endpoint, { method: 'GET' })
+      .finally(() => { this.inFlightGets.delete(endpoint); });
+    this.inFlightGets.set(endpoint, promise as Promise<TypedApiResponse<unknown>>);
+    return promise;
   }
 
   async post<T, D = unknown>(endpoint: string, data?: D): Promise<TypedApiResponse<T>> {
