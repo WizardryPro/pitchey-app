@@ -188,7 +188,7 @@ const UserPortfolio: React.FC = () => {
           </div>
           <ErrorState
             error="Please log in to view your portfolio"
-            onRetry={() => navigate('/portals')}
+            onRetry={() => navigate('/login')}
             onGoBack={() => navigate(-1)}
           />
         </div>

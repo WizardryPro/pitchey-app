@@ -28,7 +28,7 @@ export default function PitchDetail() {
   const isInsidePortal = /^\/(watcher|creator|investor|production|admin)\//.test(location.pathname);
   const { id } = useParams<{ id: string }>();
   const { isAuthenticated, user } = useBetterAuthStore();
-  const goToLogin = () => navigate('/portals', { state: { from: location.pathname + location.search } });
+  const goToLogin = () => navigate('/login', { state: { from: location.pathname + location.search } });
   const [pitch, setPitch] = useState<Pitch | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

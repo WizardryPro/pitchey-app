@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useBetterAuthStore, MFARequiredError } from '../store/betterAuthStore';
-import { Film, Briefcase, DollarSign, LogIn, Mail, AlertCircle, CheckCircle } from 'lucide-react';
+import { Film, Briefcase, DollarSign, Eye, LogIn, Mail, AlertCircle, CheckCircle, ChevronRight, Shield } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import PasswordInput from '../components/PasswordInput';
 import Turnstile, { TURNSTILE_ENABLED } from '../components/Turnstile';
 import { isSafeReturnPath, resolvePostLoginRedirect } from '@/utils/postLoginRedirect';
@@ -70,27 +71,55 @@ export default function Login() {
     setFormData({ email: demo.email, password: demo.password });
   };
 
-  const portals = [
+  // Accent classes are full literal strings per portal. The old code interpolated
+  // `bg-${portal.color}-500` etc., which Tailwind's JIT can't see — and the investor accent
+  // had drifted to green; the brand investor color is indigo. Sourced from the brand.portal-*
+  // tokens so the chooser matches each portal's identity.
+  // Creator/Investor/Production open the inline login form on this page. Watcher has no inline
+  // handler here, so its card routes to the dedicated /login/watcher page (forwarding any
+  // return-path). `route` distinguishes the two behaviours.
+  type PortalOption = {
+    id: 'creator' | 'investor' | 'production' | 'watcher';
+    title: string;
+    icon: LucideIcon;
+    description: string;
+    chip: string;
+    hoverBorder: string;
+    route?: string;
+  };
+  const portals: PortalOption[] = [
     {
       id: 'creator',
       title: 'Creator Portal',
       icon: Film,
       description: 'For filmmakers and content creators',
-      color: 'purple',
+      chip: 'bg-brand-portal-creator/20 text-brand-portal-creator',
+      hoverBorder: 'hover:border-brand-portal-creator/70',
     },
     {
       id: 'investor',
       title: 'Investor Portal',
       icon: DollarSign,
       description: 'For accredited investors',
-      color: 'green',
+      chip: 'bg-brand-portal-investor/20 text-brand-portal-investor',
+      hoverBorder: 'hover:border-brand-portal-investor/70',
     },
     {
       id: 'production',
       title: 'Production Portal',
       icon: Briefcase,
       description: 'For production companies',
-      color: 'blue',
+      chip: 'bg-brand-portal-production/20 text-brand-portal-production',
+      hoverBorder: 'hover:border-brand-portal-production/70',
+    },
+    {
+      id: 'watcher',
+      title: 'Watcher Portal',
+      icon: Eye,
+      description: 'Browse, save, and draft pitches for free',
+      chip: 'bg-brand-portal-watcher/20 text-brand-portal-watcher',
+      hoverBorder: 'hover:border-brand-portal-watcher/70',
+      route: '/login/watcher',
     },
   ];
 
@@ -137,17 +166,24 @@ export default function Login() {
                 return (
                   <button
                     key={portal.id}
-                    onClick={() => setSelectedPortal(portal.id as 'creator' | 'investor' | 'production')}
-                    className={`w-full p-4 rounded-lg border-2 transition-all duration-200 hover:scale-[1.02] bg-gray-700/50 border-gray-600 hover:border-${portal.color}-500 hover:bg-gray-700`}
+                    onClick={() => {
+                      if (portal.route) {
+                        navigate(portal.route, isSafeReturnPath(rawFrom) ? { state: { from: rawFrom } } : undefined);
+                      } else {
+                        setSelectedPortal(portal.id as 'creator' | 'investor' | 'production');
+                      }
+                    }}
+                    className={`group w-full p-4 rounded-xl border border-gray-700 bg-gray-700/40 transition-all duration-200 hover:-translate-y-0.5 hover:bg-gray-700/70 ${portal.hoverBorder}`}
                   >
-                    <div className="flex items-center space-x-4">
-                      <div className={`p-3 rounded-lg bg-${portal.color}-500/20`}>
-                        <Icon className={`h-6 w-6 text-${portal.color}-400`} />
+                    <div className="flex items-center gap-4">
+                      <div className={`flex-shrink-0 inline-flex h-12 w-12 items-center justify-center rounded-xl ${portal.chip} transition-transform duration-200 group-hover:scale-105`}>
+                        <Icon className="h-6 w-6" />
                       </div>
                       <div className="text-left flex-1">
                         <h3 className="text-white font-semibold">{portal.title}</h3>
                         <p className="text-gray-400 text-sm">{portal.description}</p>
                       </div>
+                      <ChevronRight className="h-5 w-5 text-gray-500 transition-all group-hover:translate-x-0.5 group-hover:text-gray-300" />
                     </div>
                   </button>
                 );
@@ -268,42 +304,18 @@ export default function Login() {
               </div>
             </form>
           )}
-
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-600" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-gray-800 text-gray-400">
-                  Direct portal links
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-3 gap-3">
-              <Link
-                to="/login/creator"
-                className="inline-flex justify-center py-2 px-4 border border-gray-600 rounded-md shadow-sm bg-gray-700 text-sm font-medium text-gray-300 hover:bg-gray-600"
-              >
-                Creator
-              </Link>
-              <Link
-                to="/login/investor"
-                className="inline-flex justify-center py-2 px-4 border border-gray-600 rounded-md shadow-sm bg-gray-700 text-sm font-medium text-gray-300 hover:bg-gray-600"
-              >
-                Investor
-              </Link>
-              <Link
-                to="/login/production"
-                className="inline-flex justify-center py-2 px-4 border border-gray-600 rounded-md shadow-sm bg-gray-700 text-sm font-medium text-gray-300 hover:bg-gray-600"
-              >
-                Production
-              </Link>
-            </div>
-          </div>
         </div>
       </div>
+
+      {/* Discreet admin entrance — bottom-right shield routes to the admin login. */}
+      <Link
+        to="/login/admin"
+        aria-label="Admin sign in"
+        title="Admin"
+        className="fixed bottom-4 right-4 inline-flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-gray-800/60 hover:text-gray-300"
+      >
+        <Shield className="h-5 w-5" />
+      </Link>
     </div>
   );
 }

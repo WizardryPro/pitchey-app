@@ -183,7 +183,7 @@ describe('About', () => {
       expect(screen.getByRole('button', { name: 'Get Started' })).toBeInTheDocument()
     })
     screen.getByRole('button', { name: 'Get Started' }).click()
-    expect(mockNavigate).toHaveBeenCalledWith('/portals')
+    expect(mockNavigate).toHaveBeenCalledWith('/login')
   })
 
   it('navigates to how-it-works when How It Works is clicked', async () => {

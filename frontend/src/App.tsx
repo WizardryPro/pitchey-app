@@ -96,7 +96,7 @@ const Dashboard = lazyRetry(() => import('./pages/Dashboard'));
 const OnboardingSettings = lazyRetry(() => import('./components/Onboarding/OnboardingSettings'));
 
 // Multi-Portal Pages
-const PortalSelect = lazyRetry(() => import('./pages/PortalSelect'));
+// PortalSelect (/portals) retired 2026-06-03 — Login.tsx (/login) is the canonical chooser.
 const CreatorLogin = lazyRetry(() => import('./pages/CreatorLogin'));
 const InvestorLogin = lazyRetry(() => import('./pages/InvestorLogin'));
 const ProductionLogin = lazyRetry(() => import('./pages/ProductionLogin'));
@@ -449,27 +449,27 @@ function App() {
           {/* Test Pages — dev only */}
           {import.meta.env.DEV && <Route path="/test/navigation" element={<TestNavigation />} />}
           
-          {/* Portal Selection */}
-          <Route path="/portals" element={<PortalSelect />} />
+          {/* Portal Selection — /portals retired; redirect bookmarked/external links to /login */}
+          <Route path="/portals" element={<Navigate to="/login" replace />} />
           
           {/* Multi-Portal Login Routes */}
           <Route path="/login/creator" element={
             !isAuthenticated ? <CreatorLogin /> :
             userType === 'creator' ? <Navigate to="/creator/dashboard" replace /> :
             userType ? <Navigate to={`/${getPortalPath(userType)}/dashboard`} replace /> :
-            <Navigate to="/portals" replace />
+            <Navigate to="/login" replace />
           } />
           <Route path="/login/investor" element={
             !isAuthenticated ? <InvestorLogin /> :
             userType === 'investor' ? <Navigate to="/investor/dashboard" replace /> :
             userType ? <Navigate to={`/${getPortalPath(userType)}/dashboard`} replace /> :
-            <Navigate to="/portals" replace />
+            <Navigate to="/login" replace />
           } />
           <Route path="/login/production" element={
             !isAuthenticated ? <ProductionLogin /> :
             userType === 'production' ? <Navigate to="/production/dashboard" replace /> :
             userType ? <Navigate to={`/${getPortalPath(userType)}/dashboard`} replace /> :
-            <Navigate to="/portals" replace />
+            <Navigate to="/login" replace />
           } />
           
           {/* Portal-specific login redirects */}
@@ -625,67 +625,67 @@ function App() {
           }>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={
-              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/login">
                 <AdminDashboard />
               </PermissionRoute>
             } />
             <Route path="users" element={
-              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/login">
                 <UserManagement />
               </PermissionRoute>
             } />
             <Route path="content" element={
-              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/login">
                 <ContentModeration />
               </PermissionRoute>
             } />
             <Route path="transactions" element={
-              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/login">
                 <Transactions />
               </PermissionRoute>
             } />
             <Route path="analytics" element={
-              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/login">
                 <AdminAnalytics />
               </PermissionRoute>
             } />
             <Route path="system-health" element={
-              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/login">
                 <AdminSystemHealth />
               </PermissionRoute>
             } />
             <Route path="audit-log" element={
-              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/login">
                 <AdminAuditLog />
               </PermissionRoute>
             } />
             <Route path="gdpr" element={
-              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/login">
                 <AdminGDPR />
               </PermissionRoute>
             } />
             <Route path="moderation-log" element={
-              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/login">
                 <AdminModerationLog />
               </PermissionRoute>
             } />
             <Route path="reports" element={
-              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/login">
                 <AdminReports />
               </PermissionRoute>
             } />
             <Route path="settings" element={
-              <PermissionRoute requiresAll={[Permission.ADMIN_ACCESS, Permission.ADMIN_SETTINGS]} redirectTo="/portals">
+              <PermissionRoute requiresAll={[Permission.ADMIN_ACCESS, Permission.ADMIN_SETTINGS]} redirectTo="/login">
                 <SystemSettings />
               </PermissionRoute>
             } />
             <Route path="verifications" element={
-              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/login">
                 <AdminVerifications />
               </PermissionRoute>
             } />
             <Route path="promo-codes" element={
-              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/portals">
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/login">
                 <AdminPromoCodes />
               </PermissionRoute>
             } />
@@ -723,15 +723,15 @@ function App() {
           <Route path="/user/:userId" element={<UserPortfolio />} />
           
           {/* Common Protected Routes - Available to all user types */}
-          <Route path="/profile" element={isAuthenticated ? <Profile /> : <Navigate to="/portals" />} />
-          <Route path="/settings" element={isAuthenticated ? <Settings /> : <Navigate to="/portals" />} />
-          <Route path="/settings/onboarding" element={isAuthenticated ? <OnboardingSettings /> : <Navigate to="/portals" />} />
-          <Route path="/notifications" element={isAuthenticated ? <NotificationCenter /> : <Navigate to="/portals" />} />
+          <Route path="/profile" element={isAuthenticated ? <Profile /> : <Navigate to="/login" />} />
+          <Route path="/settings" element={isAuthenticated ? <Settings /> : <Navigate to="/login" />} />
+          <Route path="/settings/onboarding" element={isAuthenticated ? <OnboardingSettings /> : <Navigate to="/login" />} />
+          <Route path="/notifications" element={isAuthenticated ? <NotificationCenter /> : <Navigate to="/login" />} />
           
           {/* /billing redirects to the portal-specific billing so MinimalHeader renders; portal-specific billing lives inside each portal's PortalLayout */}
           <Route path="/billing" element={
             isAuthenticated && userType ? <Navigate to={`/${getPortalPath(userType)}/billing`} replace /> :
-            <Navigate to="/portals" />
+            <Navigate to="/login" />
           } />
           
           {/* Legacy Protected routes */}
@@ -739,10 +739,10 @@ function App() {
             <Route path="/dashboard" element={
               isAuthenticated && userType ? <Navigate to={`/${getPortalPath(userType)}/dashboard`} replace /> :
               isAuthenticated ? <Dashboard /> :
-              <Navigate to="/portals" />
+              <Navigate to="/login" />
             } />
             <Route path="/pitch/new" element={
-              <PermissionRoute requires={Permission.PITCH_CREATE} redirectTo="/portals">
+              <PermissionRoute requires={Permission.PITCH_CREATE} redirectTo="/login">
                 <CreatePitch />
               </PermissionRoute>
             } />
@@ -754,27 +754,27 @@ function App() {
           {/* Browse Routes - Public access */}
           <Route path="/browse/genres" element={<BrowseGenres />} />
           <Route path="/browse/top-rated" element={<BrowseTopRated />} />
-          <Route path="/search" element={isAuthenticated ? <SearchPage /> : <Navigate to="/portals" />} />
+          <Route path="/search" element={isAuthenticated ? <SearchPage /> : <Navigate to="/login" />} />
           <Route path="/search/advanced" element={<Navigate to="/marketplace" replace />} />
-          <Route path="/search/genre" element={isAuthenticated ? <SearchPage /> : <Navigate to="/portals" />} />
-          <Route path="/search/budget" element={isAuthenticated ? <SearchPage /> : <Navigate to="/portals" />} />
-          <Route path="/search/creators" element={isAuthenticated ? <SearchPage /> : <Navigate to="/portals" />} />
-          <Route path="/search/companies" element={isAuthenticated ? <SearchPage /> : <Navigate to="/portals" />} />
-          <Route path="/settings/profile" element={isAuthenticated ? <SettingsProfile /> : <Navigate to="/portals" />} />
-          <Route path="/settings/account" element={isAuthenticated ? <SettingsProfile /> : <Navigate to="/portals" />} />
-          <Route path="/settings/privacy" element={isAuthenticated ? <PrivacySettings /> : <Navigate to="/portals" />} />
-          <Route path="/settings/notifications" element={isAuthenticated ? <NotificationSettings /> : <Navigate to="/portals" />} />
-          <Route path="/settings/billing" element={isAuthenticated ? <Billing /> : <Navigate to="/portals" />} />
-          <Route path="/settings/api" element={isAuthenticated ? <SettingsProfile /> : <Navigate to="/portals" />} />
-          <Route path="/messages" element={isAuthenticated ? <Messages /> : <Navigate to="/portals" />} />
+          <Route path="/search/genre" element={isAuthenticated ? <SearchPage /> : <Navigate to="/login" />} />
+          <Route path="/search/budget" element={isAuthenticated ? <SearchPage /> : <Navigate to="/login" />} />
+          <Route path="/search/creators" element={isAuthenticated ? <SearchPage /> : <Navigate to="/login" />} />
+          <Route path="/search/companies" element={isAuthenticated ? <SearchPage /> : <Navigate to="/login" />} />
+          <Route path="/settings/profile" element={isAuthenticated ? <SettingsProfile /> : <Navigate to="/login" />} />
+          <Route path="/settings/account" element={isAuthenticated ? <SettingsProfile /> : <Navigate to="/login" />} />
+          <Route path="/settings/privacy" element={isAuthenticated ? <PrivacySettings /> : <Navigate to="/login" />} />
+          <Route path="/settings/notifications" element={isAuthenticated ? <NotificationSettings /> : <Navigate to="/login" />} />
+          <Route path="/settings/billing" element={isAuthenticated ? <Billing /> : <Navigate to="/login" />} />
+          <Route path="/settings/api" element={isAuthenticated ? <SettingsProfile /> : <Navigate to="/login" />} />
+          <Route path="/messages" element={isAuthenticated ? <Messages /> : <Navigate to="/login" />} />
           
           {/* Generic Team Routes - Available to all authenticated users */}
-          <Route path="/team" element={isAuthenticated ? <TeamManagement /> : <Navigate to="/portals" />} />
+          <Route path="/team" element={isAuthenticated ? <TeamManagement /> : <Navigate to="/login" />} />
           <Route path="/team/members" element={<Navigate to="/team" replace />} />
           <Route path="/team/invite" element={<Navigate to="/team" replace />} />
           
           {/* Legal Document Automation Routes - Available to all authenticated users, wrapped in PortalLayout */}
-          <Route path="/legal" element={isAuthenticated ? <LegalLayoutWrapper /> : <Navigate to="/portals" />}>
+          <Route path="/legal" element={isAuthenticated ? <LegalLayoutWrapper /> : <Navigate to="/login" />}>
             <Route index element={<LegalDocumentDashboard />} />
             <Route path="dashboard" element={<LegalDocumentDashboard />} />
             <Route path="wizard" element={<LegalDocumentWizard />} />

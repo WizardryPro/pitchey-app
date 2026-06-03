@@ -157,7 +157,7 @@ export default function AdminLogin() {
           {/* Back to portals */}
           <div className="mt-6 flex justify-center">
             <Link
-              to="/portals"
+              to="/login"
               aria-label="Back to portal selection"
               title="Back to portal selection"
               className="inline-flex text-gray-500 hover:text-gray-700 transition-colors"

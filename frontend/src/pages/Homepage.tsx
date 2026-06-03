@@ -35,7 +35,7 @@ export default function Homepage() {
   // signed-out visitors go to portal select to sign in/up.
   const handleCreatePitch = () => {
     if (!isAuthenticated) {
-      navigate('/portals');
+      navigate('/login');
       return;
     }
     switch (userType) {
@@ -166,7 +166,7 @@ export default function Homepage() {
 
                   {/* Dashboard Button */}
                   <button
-                    onClick={() => navigate(userType ? `/${getPortalPath(userType)}/dashboard` : '/portals')}
+                    onClick={() => navigate(userType ? `/${getPortalPath(userType)}/dashboard` : '/login')}
                     className="text-button px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
                   >
                     Dashboard
@@ -184,7 +184,7 @@ export default function Homepage() {
               ) : (
                 <>
                   <button
-                    onClick={() => navigate('/portals')}
+                    onClick={() => navigate('/login')}
                     className="text-button px-4 py-2 text-purple-600 hover:text-purple-700 transition"
                   >
                     Sign In
@@ -284,7 +284,7 @@ export default function Homepage() {
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button
-                onClick={() => navigate('/portals')}
+                onClick={() => navigate('/login')}
                 className="text-button px-8 py-4 bg-white/10 backdrop-blur-sm border border-white/30 text-white rounded-xl hover:bg-white/20 transition transform hover:scale-105"
               >
                 <Sparkles className="inline w-5 h-5 mr-2" />
@@ -604,21 +604,21 @@ export default function Homepage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <button
-                  onClick={() => navigate('/portals')}
+                  onClick={() => navigate('/login')}
                   className="px-8 py-4 bg-white text-purple-600 rounded-xl hover:bg-gray-100 transition transform hover:scale-105 shadow-lg font-semibold"
                 >
                   <User className="inline w-5 h-5 mr-2" />
                   Join as Creator
                 </button>
                 <button
-                  onClick={() => navigate('/portals')}
+                  onClick={() => navigate('/login')}
                   className="px-8 py-4 bg-white/20 backdrop-blur-sm border border-white/30 text-white rounded-xl hover:bg-white/30 transition transform hover:scale-105 font-semibold"
                 >
                   <Wallet className="inline w-5 h-5 mr-2" />
                   Join as Investor
                 </button>
                 <button
-                  onClick={() => navigate('/portals')}
+                  onClick={() => navigate('/login')}
                   className="px-8 py-4 bg-white/20 backdrop-blur-sm border border-white/30 text-white rounded-xl hover:bg-white/30 transition transform hover:scale-105 font-semibold"
                 >
                   <Building2 className="inline w-5 h-5 mr-2" />
@@ -648,7 +648,7 @@ export default function Homepage() {
             <div>
               <h3 className="text-card-title mb-4">For Creators</h3>
               <ul className="space-y-2">
-                <li><button onClick={() => navigate('/portals')} className="text-metadata hover:text-purple-600 transition">Submit Pitch</button></li>
+                <li><button onClick={() => navigate('/login')} className="text-metadata hover:text-purple-600 transition">Submit Pitch</button></li>
                 <li><button onClick={() => navigate('/pricing')} className="text-metadata hover:text-purple-600 transition">Pricing</button></li>
               </ul>
             </div>

@@ -120,7 +120,7 @@ describe('AdminLogin', () => {
       // Icon-only link (commit 922813f3) — identified by aria-label, not text
       const backLink = screen.getByLabelText('Back to portal selection')
       expect(backLink).toBeInTheDocument()
-      expect(backLink.closest('a')).toHaveAttribute('href', '/portals')
+      expect(backLink.closest('a')).toHaveAttribute('href', '/login')
     })
 
     it('renders the BackButton component', () => {
