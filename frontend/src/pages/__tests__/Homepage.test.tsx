@@ -113,9 +113,10 @@ describe('Homepage', () => {
     vi.useRealTimers()
   })
 
-  it('renders the Pitchey brand name', () => {
+  it('renders the Pitchey brand logo', () => {
     renderHomepage()
-    expect(screen.getAllByText('Pitchey').length).toBeGreaterThan(0)
+    // Brand is a logotype image now, not text — match its alt text.
+    expect(screen.getAllByAltText('Pitchey').length).toBeGreaterThan(0)
   })
 
   it('renders the hero headline', () => {

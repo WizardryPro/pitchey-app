@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+// custom render wraps with BrowserRouter + providers (component uses <Link>)
+import { render, screen, waitFor } from '../../test/utils'
 import userEvent from '@testing-library/user-event'
 import React from 'react'
 import MarketplaceEnhanced from '../MarketplaceEnhanced'
@@ -139,6 +140,10 @@ const createMockPitch = (id: number, overrides = {}) => ({
 describe('MarketplaceEnhanced', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Reset the URL — the shared BrowserRouter history leaks ?q=/filter params
+    // between tests (e.g. the search-typing test), which otherwise puts later
+    // tests into search mode and hides the browse results.
+    window.history.pushState({}, '', '/')
     Object.defineProperty(navigator, 'onLine', { writable: true, value: true })
 
     const defaultPitches = [createMockPitch(1), createMockPitch(2), createMockPitch(3)]
@@ -260,7 +265,9 @@ describe('MarketplaceEnhanced', () => {
       render(<MarketplaceEnhanced />)
 
       await waitFor(() => {
-        expect(screen.getByText('NDA')).toBeInTheDocument()
+        // The pitch card renders an `<Shield/> NDA` badge when hasNDA is set.
+        // getAllByText (not getByText) — "NDA" also appears as a filter label.
+        expect(screen.getAllByText('NDA').length).toBeGreaterThan(0)
       })
     })
   })

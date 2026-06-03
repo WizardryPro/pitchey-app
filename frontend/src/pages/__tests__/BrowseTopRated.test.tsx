@@ -86,7 +86,8 @@ describe('BrowseTopRated', () => {
           json: async () => ({
             stats: {
               totalRated: 50,
-              averageRating: 3.8,
+              // component reads stats.avgRating (RatingStats type), not averageRating
+              avgRating: 3.8,
               ratingDistribution: { 5: 10, 4: 15, 3: 12, 2: 8, 1: 5 },
             },
           }),
@@ -182,7 +183,7 @@ describe('BrowseTopRated', () => {
       expect(firstSignal.aborted).toBe(false)
 
       // Open filters and change sort — triggers a new fetch which aborts previous
-      fireEvent.click(screen.getByText('Filters & Sorting'))
+      fireEvent.click(screen.getByText('Advanced filters'))
       await waitFor(() => expect(screen.getByText('Most Viewed')).toBeInTheDocument())
       fireEvent.click(screen.getByText('Most Viewed'))
 

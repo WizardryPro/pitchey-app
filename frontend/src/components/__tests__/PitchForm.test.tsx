@@ -380,7 +380,8 @@ describe('PitchForm (CreatePitch)', () => {
         expect(screen.getByLabelText(/genre/i)).toBeInTheDocument()
         expect(screen.getByLabelText(/format category/i)).toBeInTheDocument()
         expect(screen.getByLabelText(/logline/i)).toBeInTheDocument()
-        expect(screen.getByLabelText(/short synopsis/i)).toBeInTheDocument()
+        // anchored — the form also has "Long Synopsis" and a "Show short synopsis" toggle
+        expect(screen.getByLabelText(/^short synopsis/i)).toBeInTheDocument()
         expect(screen.getByLabelText(/themes/i)).toBeInTheDocument()
         expect(screen.getByLabelText(/world & setting/i)).toBeInTheDocument()
       })
@@ -519,7 +520,8 @@ describe('PitchForm (CreatePitch)', () => {
         expect(screen.getByLabelText(/title/i)).toBeInTheDocument()
       }, { timeout: 1000 })
 
-      const synopsisInput = screen.queryByLabelText(/synopsis/i)
+      // queryAll — multiple synopsis fields exist (short/long/toggle); take the first
+      const synopsisInput = screen.queryAllByLabelText(/synopsis/i)[0]
       if (synopsisInput) {
         await user.type(synopsisInput, 'This is a test synopsis')
         // Character count might not be displayed or in different format

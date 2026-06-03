@@ -151,14 +151,15 @@ describe('InvestorDiscover', () => {
     })
   })
 
-  it('renders Back to Dashboard link', async () => {
+  it('renders the discover header', async () => {
+    // Back/nav chrome now lives in the portal layout, not this page.
     render(
       <MemoryRouter>
         <InvestorDiscover />
       </MemoryRouter>
     )
     await waitFor(() => {
-      expect(screen.getByText('Back to Dashboard')).toBeInTheDocument()
+      expect(screen.getByText('Discover Investment Opportunities')).toBeInTheDocument()
     })
   })
 

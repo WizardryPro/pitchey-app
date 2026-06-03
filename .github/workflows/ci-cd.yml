@@ -74,14 +74,11 @@ jobs:
       - name: 🔧 Type checking
         run: npm run type-check
 
-      # Unit tests now RUN in CI (previously they never executed here, so mocks
-      # silently drifted from the real API). Non-blocking for now: ~79 of 3523
-      # are pre-existing stale-mock failures. Burn-down plan: drive failures to 0,
-      # then remove continue-on-error so this gates. New/contract tests should be
-      # kept green from the start.
+      # Unit tests RUN and GATE in CI. The stale-mock backlog (82 failures that
+      # accumulated while tests never executed here) was burned down to 0, so this
+      # step now blocks on any failure — keeping mocks honest with the real API.
       - name: 🧪 Run unit tests
         run: npm run test:run
-        continue-on-error: true
 
       - name: 🏗️ Build frontend
         run: npm run build

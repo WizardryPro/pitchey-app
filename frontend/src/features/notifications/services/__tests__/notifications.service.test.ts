@@ -19,6 +19,7 @@ import { NotificationsService, type Notification } from '../notifications.servic
 
 const mockGet = vi.mocked(apiClient.get)
 const mockPut = vi.mocked(apiClient.put)
+const mockPost = vi.mocked(apiClient.post)
 
 const makeNotification = (overrides: Partial<Notification> = {}): Notification => ({
   id: 1,
@@ -200,15 +201,16 @@ describe('NotificationsService', () => {
   // ─── updatePreferences ────────────────────────────────────────────
   describe('updatePreferences', () => {
     it('updates preferences and returns true', async () => {
-      mockPut.mockResolvedValueOnce({ success: true })
+      mockPost.mockResolvedValueOnce({ success: true })
 
       const result = await NotificationsService.updatePreferences({ email: false })
       expect(result).toBe(true)
-      expect(mockPut).toHaveBeenCalledWith('/api/notifications/preferences', { email: false })
+      // Registered verb is POST, not PUT (PUT 404'd) — see updatePreferences impl.
+      expect(mockPost).toHaveBeenCalledWith('/api/notifications/preferences', { email: false })
     })
 
     it('returns false on error', async () => {
-      mockPut.mockRejectedValueOnce(new Error('Network error'))
+      mockPost.mockRejectedValueOnce(new Error('Network error'))
       const result = await NotificationsService.updatePreferences({ email: true })
       expect(result).toBe(false)
     })

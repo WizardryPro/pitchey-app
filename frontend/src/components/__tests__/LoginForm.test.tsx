@@ -52,7 +52,7 @@ describe('LoginForm Components', () => {
         expect(screen.getByText('Creator Portal')).toBeInTheDocument()
         expect(screen.getByText('Sign in to manage your pitches')).toBeInTheDocument()
         expect(screen.getByLabelText(/email address/i)).toBeInTheDocument()
-        expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
+        expect(screen.getByLabelText('Password')).toBeInTheDocument()
         expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
       })
 
@@ -92,7 +92,7 @@ describe('LoginForm Components', () => {
       it('should update password field when typing', async () => {
         render(<CreatorLogin />)
 
-        const passwordInput = screen.getByLabelText(/password/i)
+        const passwordInput = screen.getByLabelText('Password')
         await user.type(passwordInput, 'password123')
 
         expect(passwordInput).toHaveValue('password123')
@@ -105,7 +105,7 @@ describe('LoginForm Components', () => {
         await user.click(demoButton)
 
         const emailInput = screen.getByLabelText(/email address/i)
-        const passwordInput = screen.getByLabelText(/password/i)
+        const passwordInput = screen.getByLabelText('Password')
 
         expect(emailInput).toHaveValue('alex.creator@demo.com')
         expect(passwordInput).toHaveValue('Demo123')
@@ -123,7 +123,7 @@ describe('LoginForm Components', () => {
       it('should require password field', async () => {
         render(<CreatorLogin />)
 
-        const passwordInput = screen.getByLabelText(/password/i)
+        const passwordInput = screen.getByLabelText('Password')
         expect(passwordInput).toBeRequired()
       })
 
@@ -137,7 +137,7 @@ describe('LoginForm Components', () => {
       it('should have password input type', () => {
         render(<CreatorLogin />)
 
-        const passwordInput = screen.getByLabelText(/password/i)
+        const passwordInput = screen.getByLabelText('Password')
         expect(passwordInput).toHaveAttribute('type', 'password')
       })
     })
@@ -150,7 +150,7 @@ describe('LoginForm Components', () => {
         render(<CreatorLogin />)
 
         const emailInput = screen.getByLabelText(/email address/i)
-        const passwordInput = screen.getByLabelText(/password/i)
+        const passwordInput = screen.getByLabelText('Password')
         const submitButton = screen.getByRole('button', { name: /sign in/i })
 
         await user.type(emailInput, 'creator@test.com')
@@ -168,7 +168,7 @@ describe('LoginForm Components', () => {
         render(<CreatorLogin />)
 
         const emailInput = screen.getByLabelText(/email address/i)
-        const passwordInput = screen.getByLabelText(/password/i)
+        const passwordInput = screen.getByLabelText('Password')
         const submitButton = screen.getByRole('button', { name: /sign in/i })
 
         await user.type(emailInput, 'creator@test.com')
@@ -213,14 +213,14 @@ describe('LoginForm Components', () => {
         render(<CreatorLogin />)
 
         expect(screen.getByLabelText(/email address/i)).toBeInTheDocument()
-        expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
+        expect(screen.getByLabelText('Password')).toBeInTheDocument()
       })
 
       it('should have proper ARIA attributes', () => {
         render(<CreatorLogin />)
 
         const emailInput = screen.getByLabelText(/email address/i)
-        const passwordInput = screen.getByLabelText(/password/i)
+        const passwordInput = screen.getByLabelText('Password')
 
         expect(emailInput).toHaveAttribute('autocomplete', 'email')
         expect(passwordInput).toHaveAttribute('autocomplete', 'current-password')
@@ -244,7 +244,7 @@ describe('LoginForm Components', () => {
         render(<CreatorLogin />)
 
         const emailInput = screen.getByLabelText(/email address/i)
-        const passwordInput = screen.getByLabelText(/password/i)
+        const passwordInput = screen.getByLabelText('Password')
 
         // Focus on email input first
         emailInput.focus()
@@ -271,7 +271,7 @@ describe('LoginForm Components', () => {
 
       expect(screen.getByText('Investor Portal')).toBeInTheDocument()
       expect(screen.getByLabelText(/email address/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
+      expect(screen.getByLabelText('Password')).toBeInTheDocument()
     })
 
     it('should have investor-specific demo credentials', async () => {
@@ -291,7 +291,7 @@ describe('LoginForm Components', () => {
       render(<InvestorLogin />)
 
       const emailInput = screen.getByLabelText(/email address/i)
-      const passwordInput = screen.getByLabelText(/password/i)
+      const passwordInput = screen.getByLabelText('Password')
       const submitButton = screen.getByRole('button', { name: /sign in/i })
 
       await user.type(emailInput, 'investor@test.com')
@@ -308,7 +308,7 @@ describe('LoginForm Components', () => {
       const { navigate } = render(<InvestorLogin />)
 
       const emailInput = screen.getByLabelText(/email address/i)
-      const passwordInput = screen.getByLabelText(/password/i)
+      const passwordInput = screen.getByLabelText('Password')
       const submitButton = screen.getByRole('button', { name: /sign in/i })
 
       await user.type(emailInput, 'investor@test.com')
@@ -327,7 +327,7 @@ describe('LoginForm Components', () => {
 
       expect(screen.getByText('Production Portal')).toBeInTheDocument()
       expect(screen.getByLabelText(/email address/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
+      expect(screen.getByLabelText('Password')).toBeInTheDocument()
     })
 
     it('should have production-specific demo credentials', async () => {
@@ -347,7 +347,7 @@ describe('LoginForm Components', () => {
       render(<ProductionLogin />)
 
       const emailInput = screen.getByLabelText(/email address/i)
-      const passwordInput = screen.getByLabelText(/password/i)
+      const passwordInput = screen.getByLabelText('Password')
       const submitButton = screen.getByRole('button', { name: /sign in/i })
 
       await user.type(emailInput, 'production@test.com')
@@ -364,7 +364,7 @@ describe('LoginForm Components', () => {
       const { navigate } = render(<ProductionLogin />)
 
       const emailInput = screen.getByLabelText(/email address/i)
-      const passwordInput = screen.getByLabelText(/password/i)
+      const passwordInput = screen.getByLabelText('Password')
       const submitButton = screen.getByRole('button', { name: /sign in/i })
 
       await user.type(emailInput, 'production@test.com')
@@ -385,7 +385,7 @@ describe('LoginForm Components', () => {
       render(<CreatorLogin />)
 
       const emailInput = screen.getByLabelText(/email address/i)
-      const passwordInput = screen.getByLabelText(/password/i)
+      const passwordInput = screen.getByLabelText('Password')
       const submitButton = screen.getByRole('button', { name: /sign in/i })
 
       await user.type(emailInput, 'creator@test.com')
@@ -422,7 +422,7 @@ describe('LoginForm Components', () => {
     it('should not expose password in DOM', async () => {
       render(<CreatorLogin />)
 
-      const passwordInput = screen.getByLabelText(/password/i)
+      const passwordInput = screen.getByLabelText('Password')
       await user.type(passwordInput, 'secretpassword')
 
       expect(passwordInput).toHaveAttribute('type', 'password')
@@ -448,7 +448,7 @@ describe('LoginForm Components', () => {
       render(<CreatorLogin />)
 
       const emailInput = screen.getByLabelText(/email address/i)
-      const passwordInput = screen.getByLabelText(/password/i)
+      const passwordInput = screen.getByLabelText('Password')
       const submitButton = screen.getByRole('button', { name: /sign in/i })
 
       await user.type(emailInput, '  creator@test.com  ')
@@ -479,7 +479,7 @@ describe('LoginForm Components', () => {
 
       // Form should still be accessible regardless of screen size
       expect(screen.getByLabelText(/email address/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
+      expect(screen.getByLabelText('Password')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
     })
   })

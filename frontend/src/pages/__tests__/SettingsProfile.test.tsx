@@ -127,10 +127,10 @@ describe('SettingsProfile', () => {
       expect(lastNameInput).toBeInTheDocument()
     })
 
-    it('pre-populates email field (disabled)', () => {
+    it('pre-populates email field (editable — sign-in email can be changed)', () => {
       renderComponent()
       const emailInput = screen.getByDisplayValue('jane@example.com')
-      expect(emailInput).toBeDisabled()
+      expect(emailInput).toBeEnabled()
     })
 
     it('pre-populates username', () => {

@@ -133,7 +133,7 @@ describe('betterAuthStore', () => {
 
       await expect(
         useBetterAuthStore.getState().loginCreator('test@example.com', 'pass')
-      ).rejects.toThrow('User data not received');
+      ).rejects.toThrow('Login response was incomplete');
     });
 
     it('handles response.data.user format', async () => {

@@ -197,10 +197,13 @@ vi.mock('@features/pitches/utils/characterUtils', () => ({
   normalizeCharacters: (chars: any) => chars || [],
 }))
 
-// ─── DocumentUploadHub ───────────────────────────────────────────────
-vi.mock('@features/uploads/components/FileUpload/DocumentUploadHub', () => ({
-  default: ({ onFilesSelected, disabled }: any) => (
-    <div data-testid="document-upload-hub">Document Upload Hub</div>
+// ─── DocumentUpload ──────────────────────────────────────────────────
+// CreatePitch now uses the named DocumentUpload (parity with the edit page),
+// not DocumentUploadHub — mock the component it actually imports so the real
+// one doesn't render (and break the page) in tests.
+vi.mock('@features/uploads/components/DocumentUpload', () => ({
+  DocumentUpload: (_props: any) => (
+    <div data-testid="document-upload-hub">Document Upload</div>
   ),
 }))
 

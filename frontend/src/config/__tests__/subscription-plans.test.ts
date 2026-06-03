@@ -34,13 +34,8 @@ describe('subscription-plans credit utilities', () => {
       expect(getCreditCost('video_link')).toBe(1)
     })
 
-    it('returns 10 for promoted_pitch', () => {
-      expect(getCreditCost('promoted_pitch')).toBe(10)
-    })
-
-    it('returns 10 for view_pitch', () => {
-      expect(getCreditCost('view_pitch')).toBe(10)
-    })
+    // promoted_pitch + view_pitch were removed from CREDIT_COSTS (no backend
+    // mechanism — see Batch B). Their getCreditCost tests were deleted with them.
 
     it('returns 2 for send_message', () => {
       expect(getCreditCost('send_message')).toBe(2)
@@ -112,8 +107,8 @@ describe('subscription-plans credit utilities', () => {
 
   // ── CREDIT_COSTS constants ─────────────────────────────────────
   describe('CREDIT_COSTS', () => {
-    it('contains 10 action entries', () => {
-      expect(CREDIT_COSTS).toHaveLength(10)
+    it('contains 9 action entries', () => {
+      expect(CREDIT_COSTS).toHaveLength(9)
     })
 
     it('every entry has action, credits, and description', () => {

@@ -53,7 +53,8 @@ vi.mock('../../lib/api-client', () => ({
 }))
 
 vi.mock('../../config/subscription-plans', () => ({
-  getCreditCost: () => ({ credits: 2, description: 'Send message' }),
+  // getCreditCost returns a NUMBER (the credit cost), not an object — matching the real impl.
+  getCreditCost: () => 2,
 }))
 
 // Mock the messaging types import (resolves to backend types)

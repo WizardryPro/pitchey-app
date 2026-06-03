@@ -71,7 +71,7 @@ describe('CreatorOnboardingPage (OnboardingPage)', () => {
   describe('Layout and branding', () => {
     it('renders Pitchey branding', () => {
       renderComponent()
-      expect(screen.getByText('Pitchey')).toBeInTheDocument()
+      expect(screen.getByAltText('Pitchey')).toBeInTheDocument()
     })
 
     it('renders creator-specific subtitle for creator user', () => {
@@ -285,7 +285,7 @@ describe('CreatorOnboardingPage (OnboardingPage)', () => {
       // (avoiding full re-mock cycle; the creator test already covers this path)
       renderComponent()
       // Creator is the fallback — it still renders
-      expect(screen.getByText('Pitchey')).toBeInTheDocument()
+      expect(screen.getByAltText('Pitchey')).toBeInTheDocument()
     })
   })
 })

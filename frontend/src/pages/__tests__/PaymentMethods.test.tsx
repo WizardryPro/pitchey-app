@@ -18,92 +18,53 @@ vi.mock('@/components/ErrorBoundary/PortalErrorBoundary', () => ({
   withPortalErrorBoundary: (Component: any) => Component,
 }))
 
+// StripePortalCard pulls in the billing stack (auth + API); stub it so this
+// stays a focused unit test of the PaymentMethods page shell.
+vi.mock('@features/billing/components/StripePortalCard', () => ({
+  default: () => <div data-testid="stripe-portal-card">Stripe portal</div>,
+}))
+
 let PaymentMethods: React.ComponentType
 beforeAll(async () => {
   const mod = await import('@portals/investor/pages/PaymentMethods')
   PaymentMethods = mod.default
 })
 
+// The page was rewritten to delegate cards/invoices/billing to Stripe's hosted
+// Customer Portal (StripePortalCard); the old ACH/wire/"coming soon" mock UI was
+// removed. These tests assert the current shell.
 describe('PaymentMethods', () => {
-  it('renders page heading', () => {
+  const renderPage = () =>
     render(
       <MemoryRouter>
         <PaymentMethods />
       </MemoryRouter>
     )
+
+  it('renders page heading', () => {
+    renderPage()
     expect(screen.getByText('Payment Methods')).toBeInTheDocument()
   })
 
   it('renders subtitle description', () => {
-    render(
-      <MemoryRouter>
-        <PaymentMethods />
-      </MemoryRouter>
-    )
-    expect(screen.getByText('Manage your payment methods for investments and transactions')).toBeInTheDocument()
+    renderPage()
+    expect(
+      screen.getByText('Manage your payment methods and billing for investments and subscriptions')
+    ).toBeInTheDocument()
   })
 
-  it('renders security notice', () => {
-    render(
-      <MemoryRouter>
-        <PaymentMethods />
-      </MemoryRouter>
-    )
-    expect(screen.getByText('Bank-Level Security')).toBeInTheDocument()
+  it('renders the Stripe customer portal card', () => {
+    renderPage()
+    expect(screen.getByTestId('stripe-portal-card')).toBeInTheDocument()
   })
 
-  it('renders coming soon message', () => {
-    render(
-      <MemoryRouter>
-        <PaymentMethods />
-      </MemoryRouter>
-    )
-    expect(screen.getByText('Payment integration coming soon')).toBeInTheDocument()
+  it('renders the security notice about not storing card details', () => {
+    renderPage()
+    expect(screen.getByText(/We never store sensitive card details/i)).toBeInTheDocument()
   })
 
-  it('renders Payment Information section', () => {
-    render(
-      <MemoryRouter>
-        <PaymentMethods />
-      </MemoryRouter>
-    )
-    expect(screen.getByText('Payment Information')).toBeInTheDocument()
-  })
-
-  it('renders accepted payment methods info', () => {
-    render(
-      <MemoryRouter>
-        <PaymentMethods />
-      </MemoryRouter>
-    )
-    expect(screen.getByText('Accepted Payment Methods')).toBeInTheDocument()
-  })
-
-  it('renders processing times section', () => {
-    render(
-      <MemoryRouter>
-        <PaymentMethods />
-      </MemoryRouter>
-    )
-    expect(screen.getByText('Processing Times')).toBeInTheDocument()
-  })
-
-  it('renders ACH and wire transfer info', () => {
-    render(
-      <MemoryRouter>
-        <PaymentMethods />
-      </MemoryRouter>
-    )
-    expect(screen.getByText(/ACH Transfers/)).toBeInTheDocument()
-    expect(screen.getByText(/Wire Transfers/)).toBeInTheDocument()
-  })
-
-  it('renders Stripe integration notice', () => {
-    render(
-      <MemoryRouter>
-        <PaymentMethods />
-      </MemoryRouter>
-    )
-    expect(screen.getByText(/Stripe/i)).toBeInTheDocument()
+  it('explains that billing is handled in the Stripe portal', () => {
+    renderPage()
+    expect(screen.getByText(/handled in the secure Stripe portal/i)).toBeInTheDocument()
   })
 })
