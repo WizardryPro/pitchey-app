@@ -9,6 +9,7 @@ import {
   DollarSign,
   CheckCircle,
   TrendingUp,
+  BarChart3,
 } from 'lucide-react';
 
 import { AnalyticCard } from './AnalyticCard';
@@ -146,20 +147,25 @@ export const EnhancedProductionAnalytics: React.FC<PitchEvaluationProps> = (prop
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white rounded-xl border p-6">
+      <div className="bg-white rounded-xl border border-gray-200/70 shadow-sm p-6">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Pitch Evaluation Dashboard</h2>
-            <p className="text-gray-600">Track your pitch discovery, evaluation, and deal pipeline</p>
+          <div className="flex items-start gap-3">
+            <span className="hidden sm:inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand-portal-production/10 text-brand-portal-production">
+              <BarChart3 className="w-5 h-5" />
+            </span>
+            <div>
+              <h2 className="text-xl font-bold tracking-tight text-gray-900">Pitch Evaluation Dashboard</h2>
+              <p className="text-sm text-gray-500">Track your pitch discovery, evaluation, and deal pipeline</p>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => setAutoRefresh(!autoRefresh)}
-              className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+              className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 autoRefresh
-                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
               <RefreshCw className={`w-4 h-4 ${autoRefresh ? 'animate-pulse' : ''}`} />

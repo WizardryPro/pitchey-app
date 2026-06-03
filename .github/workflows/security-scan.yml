@@ -156,17 +156,10 @@ jobs:
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
 
-      - name: Semgrep Security Scan
-        continue-on-error: true  # Report findings but don't block pipeline
-        uses: returntocorp/semgrep-action@v1
-        with:
-          config: >-
-            p/security-audit
-            p/secrets
-            p/owasp-top-ten
-            p/javascript
-            p/typescript
-            p/react
+      # Semgrep removed 2026-06-03: the deprecated returntocorp/semgrep-action@v1 Docker
+      # image fails to pull from Docker Hub on every run (image-pull failures aren't caught
+      # by continue-on-error), reding this job for zero value. CodeQL above already provides
+      # JS/TS SAST, and SonarCloud + Snyk + Checkov + Secret Detection cover the rest.
 
       - name: ESLint Security Plugin
         run: |

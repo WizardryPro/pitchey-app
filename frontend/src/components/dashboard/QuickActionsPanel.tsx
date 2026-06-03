@@ -17,6 +17,8 @@ export interface QuickAction {
 interface QuickActionsPanelProps {
   actions: QuickAction[];
   className?: string;
+  /** Columns on desktop. Defaults to 2 (legacy); pass 3 for a tighter grid. Mobile stays 2. */
+  columns?: 2 | 3;
 }
 
 const ACCENTS: Record<QuickActionAccent, { icon: string; hoverBorder: string; halo: string }> = {
@@ -29,11 +31,12 @@ const ACCENTS: Record<QuickActionAccent, { icon: string; hoverBorder: string; ha
   rose:   { icon: 'from-rose-500 to-pink-600 shadow-rose-500/30', hoverBorder: 'hover:border-rose-200', halo: 'group-hover:from-rose-100/60 group-hover:to-pink-100/40' },
 };
 
-export default function QuickActionsPanel({ actions, className = '' }: QuickActionsPanelProps) {
+export default function QuickActionsPanel({ actions, className = '', columns = 2 }: QuickActionsPanelProps) {
+  const gridCls = columns === 3 ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2';
   return (
     <div className={`bg-white rounded-2xl border border-gray-100 shadow-sm p-6 ${className}`}>
       <p className="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-4">Quick Actions</p>
-      <div className="grid grid-cols-2 gap-3">
+      <div className={`grid ${gridCls} gap-3`}>
         {actions.map((action) => {
           const accent = ACCENTS[action.accent ?? 'purple'];
           const Icon = action.icon;

@@ -294,13 +294,6 @@ describe('ProductionDashboard', () => {
       })
     })
 
-    it('renders Create New Pitch button', async () => {
-      renderDashboard()
-      await waitFor(() => {
-        expect(screen.getByText('Create New Pitch')).toBeInTheDocument()
-      })
-    })
-
     it('renders Quick Actions section', async () => {
       renderDashboard()
       await waitFor(() => {
@@ -412,12 +405,12 @@ describe('ProductionDashboard', () => {
       expect(mockNavigate).toHaveBeenCalledWith('/production/pitches')
     })
 
-    it('navigates to create pitch when Create New Pitch clicked', async () => {
+    it('navigates to create pitch when Create Pitch quick action clicked', async () => {
       const { getByText } = renderDashboard()
       await waitFor(() => {
-        expect(getByText('Create New Pitch')).toBeInTheDocument()
+        expect(getByText('Create Pitch')).toBeInTheDocument()
       })
-      getByText('Create New Pitch').closest('button')?.click()
+      getByText('Create Pitch').closest('button')?.click()
       expect(mockNavigate).toHaveBeenCalledWith('/production/pitch/new')
     })
   })
