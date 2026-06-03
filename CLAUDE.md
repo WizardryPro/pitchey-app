@@ -210,6 +210,7 @@ Launch Chrome: `google-chrome-stable --remote-debugging-port=9222 --user-data-di
 
 ### Docs
 - `docs/OBSERVABILITY.md` | `docs/LOGGING.md` | `docs/SENTRY_ERROR_TRACKING.md` | `docs/monitoring-guide.md`
+- **Incident response**: `docs/INCIDENT_RESPONSE.md` (severity matrix, first-5-minutes, recovery, post-mortem template) → references `docs/ROLLBACK_DRILL_RUNBOOK.md` (repaired rollback script + the supervised live-drill checklist for gate (b)).
 
 ## Schema Drift Detection & Resolution
 
