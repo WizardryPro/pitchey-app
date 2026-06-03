@@ -6397,20 +6397,31 @@ pitchey_analytics_datapoints_per_minute 1250
             rating_count?: number | null;
             pitchey_score_avg?: number | null;
           };
+          // pitch_versions schema is a versioned snapshot: (pitch_id, version_number,
+          // title, content jsonb, changes_summary, created_by) — version_number/title/
+          // content are NOT NULL. The previous INSERT targeted columns that don't exist
+          // (logline/short_synopsis/…) and omitted the NOT NULL cols, so it threw on
+          // EVERY edit and was swallowed by the catch below — versioning was silently dead.
           await this.db.query(
             `INSERT INTO pitch_versions
-               (pitch_id, title, logline, short_synopsis, long_synopsis,
-                rating_average, rating_count, pitchey_score_avg)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+               (pitch_id, version_number, title, content, changes_summary, created_by)
+             VALUES ($1,
+                     COALESCE((SELECT MAX(version_number) FROM pitch_versions WHERE pitch_id = $1), 0) + 1,
+                     $2, $3::jsonb, $4, $5)`,
             [
               u.id,
-              u.title ?? null,
-              u.logline ?? null,
-              u.short_synopsis ?? null,
-              u.long_synopsis ?? null,
-              u.rating_average ?? null,
-              u.rating_count ?? null,
-              u.pitchey_score_avg ?? null,
+              u.title ?? 'Untitled',
+              JSON.stringify({
+                title: u.title ?? null,
+                logline: u.logline ?? null,
+                shortSynopsis: u.short_synopsis ?? null,
+                longSynopsis: u.long_synopsis ?? null,
+                ratingAverage: u.rating_average ?? null,
+                ratingCount: u.rating_count ?? null,
+                pitcheyScoreAvg: u.pitchey_score_avg ?? null,
+              }),
+              'Pitch edited',
+              authResult.user.id,
             ]
           );
         } catch (snapErr) {
