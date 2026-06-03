@@ -26,15 +26,6 @@ export default function Homepage() {
   const [newReleases, setNewReleases] = useState<Pitch[]>([]);
   const [hotPitches, setHotPitches] = useState<Pitch[]>([]);
   const [loading, setLoading] = useState(true);
-  // Header overlays the dark hero transparently at the top, then turns solid-white once the
-  // user scrolls past it (into the bright content) so it stays readable.
-  const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
   // likedPitches state removed — replaced by Pitchey Score
 
   // Like handler removed — replaced by Pitchey Score rating system
@@ -113,29 +104,29 @@ export default function Homepage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 via-purple-50 to-white">
       {/* Navigation Header */}
-      <header className={`sticky top-0 z-50 transition-colors duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm' : 'bg-transparent'}`}>
+      <header className="sticky top-0 z-50 bg-[#0a0a12]/70 backdrop-blur-md border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-8">
               <a href="/" className="flex items-center">
-                <img src={scrolled ? '/pitchey-logotype.png' : '/pitchey-logotype-white.png'} alt="Pitchey" className="h-8 w-auto" />
+                <img src="/pitchey-logotype-white.png" alt="Pitchey" className="h-8 w-auto" />
               </a>
               <nav className="hidden md:flex items-center gap-6">
                 <button
                   onClick={() => navigate('/marketplace')}
-                  className={`text-nav-link transition ${scrolled ? 'hover:text-purple-600' : 'text-white/80 hover:text-white'}`}
+                  className="text-nav-link transition text-white/90 hover:text-white"
                 >
                   Browse Pitches
                 </button>
                 <button
                   onClick={() => navigate('/how-it-works')}
-                  className={`text-nav-link transition ${scrolled ? 'hover:text-purple-600' : 'text-white/80 hover:text-white'}`}
+                  className="text-nav-link transition text-white/90 hover:text-white"
                 >
                   How It Works
                 </button>
                 <button
                   onClick={() => navigate('/about')}
-                  className={`text-nav-link transition ${scrolled ? 'hover:text-purple-600' : 'text-white/80 hover:text-white'}`}
+                  className="text-nav-link transition text-white/90 hover:text-white"
                 >
                   About
                 </button>
@@ -184,7 +175,7 @@ export default function Homepage() {
                   {/* Sign Out Button */}
                   <button
                     onClick={async () => { await logout(); navigate('/'); }}
-                    className={`text-button px-3 py-2 transition ${scrolled ? 'text-gray-500 hover:text-red-600' : 'text-white/70 hover:text-white'}`}
+                    className="text-button px-3 py-2 transition text-white/70 hover:text-white"
                     title="Sign Out"
                   >
                     <LogOut className="w-4 h-4" />
@@ -194,7 +185,7 @@ export default function Homepage() {
                 <>
                   <button
                     onClick={() => navigate('/login')}
-                    className={`text-button px-4 py-2 transition ${scrolled ? 'text-purple-600 hover:text-purple-700' : 'text-white hover:text-white/80'}`}
+                    className="text-button px-4 py-2 transition text-white hover:text-white/80"
                   >
                     Sign In
                   </button>
@@ -228,10 +219,24 @@ export default function Homepage() {
         <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
         <div aria-hidden className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
+        {/* Floating film decorations (kept by request) */}
+        <div aria-hidden className="floating-decoration absolute top-16 left-10 opacity-[0.12] animate-float">
+          <Film className="w-24 h-24 text-white" />
+        </div>
+        <div aria-hidden className="floating-decoration absolute bottom-12 right-12 opacity-[0.12] animate-float-delayed">
+          <Film className="w-32 h-32 text-white" />
+        </div>
+        <div aria-hidden className="floating-decoration absolute top-1/2 left-24 opacity-[0.10] animate-float-slow">
+          <Sparkles className="w-16 h-16 text-violet-300" />
+        </div>
+        <div aria-hidden className="floating-decoration absolute top-1/3 right-24 opacity-[0.10] animate-float-slow-delayed">
+          <Star className="w-20 h-20 text-white" />
+        </div>
+
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-36 text-center">
           {/* Eyebrow */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 mb-8 rounded-full border border-white/15 bg-white/5 backdrop-blur text-[11px] font-medium tracking-[0.2em] uppercase text-white/70">
-            <Flame className="w-3.5 h-3.5 text-amber-400" />
+          <div className="inline-flex items-center gap-2.5 px-3 py-1 mb-8 rounded-full border border-white/15 bg-white/5 backdrop-blur text-[11px] font-medium tracking-[0.2em] uppercase text-white/70">
+            <span className="w-1.5 h-1.5 rounded-full bg-violet-400" />
             The film pitch marketplace
           </div>
 
