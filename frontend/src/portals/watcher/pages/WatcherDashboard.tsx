@@ -171,7 +171,7 @@ export default function WatcherDashboard() {
         <div className="flex-1">
           <p className="text-sm font-semibold text-amber-900 mb-0.5">Watcher accounts are for browsing</p>
           <p className="text-sm text-amber-800/90 leading-relaxed">
-            You can browse, like, and comment on pitches. To create, invest in, or produce pitches — or to sign NDAs and access protected content — sign up as a Creator, Investor, or Production account at <Link to="/signup" className="underline font-medium">pitchey.com/signup</Link>.
+            You can browse, like, and comment on pitches. To create, invest in, or produce pitches — or to sign NDAs and access protected content — sign up as a Creator, Investor, or Production account — <Link to="/register" className="underline font-medium">create one here</Link>.
           </p>
         </div>
       </div>

@@ -97,9 +97,9 @@ const OnboardingSettings = lazyRetry(() => import('./components/Onboarding/Onboa
 
 // Multi-Portal Pages
 // PortalSelect (/portals) retired 2026-06-03 — Login.tsx (/login) is the canonical chooser.
-const CreatorLogin = lazyRetry(() => import('./pages/CreatorLogin'));
-const InvestorLogin = lazyRetry(() => import('./pages/InvestorLogin'));
-const ProductionLogin = lazyRetry(() => import('./pages/ProductionLogin'));
+// CreatorLogin/InvestorLogin/ProductionLogin retired 2026-06-03 — /login does creator/
+// investor/production sign-in inline, so /login/<portal> now redirects to the chooser.
+// The page files + their tests are kept for reference but are no longer routed/imported.
 const CreatorDashboard = lazyRetry(() => import('./pages/CreatorDashboard'));
 const InvestorDashboard = lazyRetry(() => import('./pages/InvestorDashboard'));
 const InvestorDashboardDebug = lazyRetry(() => import('./pages/InvestorDashboardDebug'));
@@ -454,19 +454,19 @@ function App() {
           
           {/* Multi-Portal Login Routes */}
           <Route path="/login/creator" element={
-            !isAuthenticated ? <CreatorLogin /> :
+            !isAuthenticated ? <Navigate to="/login" replace /> :
             userType === 'creator' ? <Navigate to="/creator/dashboard" replace /> :
             userType ? <Navigate to={`/${getPortalPath(userType)}/dashboard`} replace /> :
             <Navigate to="/login" replace />
           } />
           <Route path="/login/investor" element={
-            !isAuthenticated ? <InvestorLogin /> :
+            !isAuthenticated ? <Navigate to="/login" replace /> :
             userType === 'investor' ? <Navigate to="/investor/dashboard" replace /> :
             userType ? <Navigate to={`/${getPortalPath(userType)}/dashboard`} replace /> :
             <Navigate to="/login" replace />
           } />
           <Route path="/login/production" element={
-            !isAuthenticated ? <ProductionLogin /> :
+            !isAuthenticated ? <Navigate to="/login" replace /> :
             userType === 'production' ? <Navigate to="/production/dashboard" replace /> :
             userType ? <Navigate to={`/${getPortalPath(userType)}/dashboard`} replace /> :
             <Navigate to="/login" replace />

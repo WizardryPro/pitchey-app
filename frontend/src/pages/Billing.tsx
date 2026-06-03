@@ -194,8 +194,8 @@ export default function Billing() {
                     Watcher accounts don't have subscriptions
                   </h3>
                   <p className="text-sm text-gray-600 max-w-md mx-auto">
-                    Watchers can browse, like, and comment on pitches. To create, invest in, or produce pitches, sign up separately as a Creator, Investor, or Production account at{' '}
-                    <Link to="/signup" className={`${theme.textAccent} ${theme.textAccentHover} font-medium`}>pitchey.com</Link>.
+                    Watchers can browse, like, and comment on pitches. To create, invest in, or produce pitches, sign up separately as a Creator, Investor, or Production account —{' '}
+                    <Link to="/register" className={`${theme.textAccent} ${theme.textAccentHover} font-medium`}>create one here</Link>.
                   </p>
                   <p className="text-sm text-gray-500 mt-4">
                     You can still buy credits under the <button onClick={() => { const params = new URLSearchParams(searchParams); params.set('tab', 'credits'); navigate(`?${params.toString()}`, { replace: true }); }} className={`${theme.textAccent} ${theme.textAccentHover} underline`}>Credits tab</button>.
