@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, Activity, Upload,
-  Bookmark, Users, GitBranch,
+  Bookmark, Users, Handshake,
   MessageSquare, Settings, UserPlus, Shield, FileText
 } from 'lucide-react';
 import { PRODUCTION_ROUTES } from '@/config/navigation.routes';
@@ -28,40 +28,28 @@ export const productionNavigationSections: NavigationSection[] = [
       { label: 'Verification', path: PRODUCTION_ROUTES.verification, icon: Shield },
     ],
   },
-  // "Projects" + "Pipeline" retired from nav 2026-06-03 (activity-feed pivot follow-up) —
-  // pages/routes parked, not deleted (still reachable by direct URL via PRODUCTION_ROUTES.projects
-  // / .pipeline). Production project-management surface is on hold; revive by restoring a
-  // { title: 'Projects', items: [All Projects, Pipeline] } section here. Same park-don't-delete
-  // treatment as the "Submissions" review pipeline below.
-  {
-    // "Submissions" review pipeline retired 2026-06-01 (activity-feed pivot, Phase 3) —
-    // pages/routes parked, not deleted. Activity now lives in the Activity + Following
-    // feeds. Acquisition loop ("Invite Creators") stays.
-    title: 'Creators',
-    items: [
-      { label: 'Invite Creators', path: PRODUCTION_ROUTES.invites, icon: UserPlus },
-    ],
-  },
   {
     title: 'Pitches',
     items: [
       { label: 'My Pitches', path: PRODUCTION_ROUTES.pitches, icon: FileText },
       { label: 'Create Pitch', path: PRODUCTION_ROUTES.pitchNew, icon: Upload },
       { label: 'Saved Pitches', path: PRODUCTION_ROUTES.saved, icon: Bookmark },
+    ],
+  },
+  // Nav consolidation 2026-06-03 — merged the single-item Creators/Team sections and the
+  // Operations section into one "People" group. PARKED from the nav (routes + pages still
+  // reachable by direct URL, not deleted):
+  //   • "Members"          (internal crew — PRODUCTION_ROUTES.teamManagement)
+  //   • "My Collaborations" (your seat on other companies' projects — .myCollaborations)
+  // Both hang off the projects/pipeline surface that's on hold. Revive by re-adding their
+  // items here. ("Projects"/"Pipeline" and the "Submissions" review pipeline were parked
+  // earlier the same way.) "Collaborations" (external business partners) stays.
+  {
+    title: 'People',
+    items: [
+      { label: 'Invite Creators', path: PRODUCTION_ROUTES.invites, icon: UserPlus },
       { label: 'Following', path: PRODUCTION_ROUTES.following, icon: Users },
-    ],
-  },
-  {
-    title: 'Team',
-    items: [
-      { label: 'Members', path: PRODUCTION_ROUTES.teamManagement, icon: Users },
-    ],
-  },
-  {
-    title: 'Operations',
-    items: [
-      { label: 'Collaborations', path: PRODUCTION_ROUTES.collaborations, icon: GitBranch },
-      { label: 'My Collaborations', path: PRODUCTION_ROUTES.myCollaborations, icon: GitBranch },
+      { label: 'Collaborations', path: PRODUCTION_ROUTES.collaborations, icon: Handshake },
     ],
   },
   {

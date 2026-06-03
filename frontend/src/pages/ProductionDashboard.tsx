@@ -977,7 +977,6 @@ function ProductionDashboard() {
               ndaRequestsSent={outgoingNDARequests?.length || 0}
               ndasSigned={signedNDAs?.length || 0}
               creatorsFollowing={followingCreators?.length || 0}
-              projectsStarted={pipelineCount || 0}
             />
 
             {/* Notifications Widget */}
