@@ -46,7 +46,10 @@ export interface User {
 
 // ========== PITCH TYPES ==========
 
-export type PitchStatus = 'draft' | 'published' | 'archived' | 'flagged' | 'rejected';
+// Matches the backend pitch statuses (and PitchStatusSchema in zod-schemas.ts).
+// 'flagged'/'rejected' were never pitch statuses (they belong to NDA/collaboration
+// flows); 'under_review' is what the backend + ManagePitches actually use.
+export type PitchStatus = 'draft' | 'published' | 'under_review' | 'archived';
 export type PitchFormat = 'feature' | 'short' | 'tv' | 'web' | 'documentary' | 'animation' | 'other';
 export type PitchGenre = 'action' | 'adventure' | 'comedy' | 'drama' | 'horror' | 'romance' | 
                          'scifi' | 'thriller' | 'fantasy' | 'mystery' | 'documentary' | 'animation';

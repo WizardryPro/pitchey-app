@@ -102,7 +102,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     features: [
       '30 Creator Credits per month',
       'Enhanced Analytics',
-      'Who viewed, time spent, device',
+      'Who viewed, time spent',
     ],
     userType: 'creator'
   },
@@ -142,7 +142,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     features: [
       '40 Creator Credits per month',
       'Enhanced Analytics',
-      'Who viewed, time spent, device',
+      'Who viewed, time spent',
     ],
     userType: 'production'
   },
