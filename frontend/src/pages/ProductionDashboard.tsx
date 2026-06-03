@@ -1319,7 +1319,7 @@ function ProductionDashboard() {
                   View All Following
                 </Link>
                 <button 
-                  onClick={() => navigate('/marketplace')}
+                  onClick={() => navigate('/production/browse')}
                   className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
                 >
                   Discover More
@@ -1336,7 +1336,7 @@ function ProductionDashboard() {
                 </p>
                 <div className="flex justify-center gap-3">
                   <button
-                    onClick={() => navigate('/marketplace')}
+                    onClick={() => navigate('/production/browse')}
                     className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
                   >
                     Browse Marketplace
@@ -1357,7 +1357,7 @@ function ProductionDashboard() {
                     <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">No Followed Creators Yet</h3>
                     <p className="text-gray-600 mb-4">Start following creators to see their latest pitches and activity here.</p>
-                    <Link to="/marketplace" className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                    <Link to="/production/browse" className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
                       <Search className="w-4 h-4" />
                       Explore Marketplace
                     </Link>
@@ -1800,7 +1800,7 @@ function ProductionDashboard() {
                   Browse the marketplace and bookmark pitches you are interested in evaluating
                 </p>
                 <button
-                  onClick={() => navigate('/marketplace')}
+                  onClick={() => navigate('/production/browse')}
                   className="px-6 py-2.5 bg-brand-action text-white rounded-lg hover:opacity-90 transition font-medium"
                 >
                   Browse Marketplace

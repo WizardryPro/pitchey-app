@@ -38,6 +38,25 @@ export function getPortalPath(userType?: string | null): string {
 }
 
 /**
+ * In-portal "browse pitches" route for a user type. Keeps the portal chrome
+ * (PortalLayout header + sidebar) instead of dumping the user onto the standalone
+ * /marketplace, whose own header replaces the portal chrome and causes a jarring
+ * layout swap ("flutter to the old layout"). Single source of truth so the
+ * marketplace links across headers/sidebars/dashboards can't drift apart again.
+ * Unauthenticated / unknown falls back to the standalone marketplace.
+ */
+export function getBrowsePath(userType?: string | null): string {
+  switch (userType) {
+    case 'creator': return '/creator/browse';
+    case 'production': return '/production/browse';
+    case 'investor': return '/investor/browse';
+    case 'watcher':
+    case 'viewer': return '/watcher/browse';
+    default: return '/marketplace';
+  }
+}
+
+/**
  * Get the correct login route based on user type
  * @param userType - The type of user (creator, investor, production, admin)
  * @returns The appropriate login route

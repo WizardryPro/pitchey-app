@@ -105,7 +105,7 @@ export default function WatcherDashboard() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <Link
-            to="/marketplace"
+            to="/watcher/browse"
             className="group relative overflow-hidden bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-cyan-200 transition-all duration-200"
           >
             <div aria-hidden className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-cyan-100/0 to-cyan-100/0 group-hover:from-cyan-100/60 group-hover:to-sky-100/40 rounded-full blur-2xl transition-all duration-300" />

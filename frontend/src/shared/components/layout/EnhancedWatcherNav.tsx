@@ -59,7 +59,7 @@ export function EnhancedWatcherNav() {
               <ExternalLink className="w-3 h-3 text-gray-400" />
             </Link>
             <Link
-              to="/marketplace"
+              to="/watcher/browse"
               className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 transition-colors duration-200"
             >
               <Store className="w-4 h-4" />

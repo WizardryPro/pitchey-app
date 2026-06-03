@@ -525,6 +525,8 @@ function App() {
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="onboarding" element={<OnboardingPage />} />
             <Route path="dashboard" element={<CreatorDashboard />} />
+            {/* In-portal browse — keeps the creator PortalLayout chrome (see getBrowsePath). */}
+            <Route path="browse" element={<Marketplace />} />
             <Route path="pitch/new" element={<CreatePitch />} />
             <Route path="pitches" element={<ManagePitches />} />
             <Route path="analytics" element={<CreatorAnalyticsPage />} />
@@ -583,6 +585,10 @@ function App() {
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="onboarding" element={<OnboardingPage />} />
             <Route path="dashboard" element={<ProductionDashboard />} />
+            {/* In-portal browse — keeps the production PortalLayout chrome instead of
+                dumping the user onto the standalone /marketplace (old layout).
+                MarketplaceEnhanced hides its own top nav when isInsidePortal matches /production/. */}
+            <Route path="browse" element={<Marketplace />} />
             <Route path="following" element={<Following />} />
             <Route path="profile" element={<Profile />} />
             <Route path="messages/*" element={<Messages />} />
@@ -604,8 +610,10 @@ function App() {
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<WatcherDashboard />} />
             <Route path="library" element={<WatcherLibrary />} />
-            {/* Legacy redirects — old sidebar entries now live in /watcher/library */}
-            <Route path="browse" element={<Navigate to="/watcher/library?tab=saved" replace />} />
+            {/* In-portal marketplace browse — keeps the watcher PortalLayout chrome
+                (restores the original /watcher/browse intent noted in MarketplaceEnhanced). */}
+            <Route path="browse" element={<Marketplace />} />
+            {/* Legacy redirect — old sidebar entry now lives in /watcher/library */}
             <Route path="saved" element={<Navigate to="/watcher/library?tab=saved" replace />} />
             <Route path="following" element={<Navigate to="/watcher/library?tab=following" replace />} />
             <Route path="pitch/new" element={<CreatePitch />} />
