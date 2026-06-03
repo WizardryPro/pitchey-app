@@ -564,7 +564,7 @@ const ProductionPitchView: React.FC = () => {
       case 'casting': return <Users className="h-4 w-4 text-purple-600" />;
       case 'location': return <MapPin className="h-4 w-4 text-blue-600" />;
       case 'budget': return <DollarSign className="h-4 w-4 text-green-600" />;
-      case 'schedule': return <Calendar className="h-4 w-4 text-orange-600" />;
+      case 'schedule': return <Calendar className="h-4 w-4 text-indigo-600" />;
       case 'team': return <Briefcase className="h-4 w-4 text-indigo-600" />;
       default: return <MessageSquare className="h-4 w-4 text-gray-600" />;
     }
@@ -572,21 +572,21 @@ const ProductionPitchView: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
       </div>
     );
   }
 
   if (error || !pitch) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-8">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50 flex items-center justify-center p-8">
         <div className="bg-white rounded-2xl shadow-xl p-8 text-center max-w-md">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Error Loading Pitch</h2>
           <p className="text-gray-600 mb-6">{error || 'Pitch not found'}</p>
           <button
             onClick={() => navigate('/production/dashboard')}
-            className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+            className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
           >
             Back to Dashboard
           </button>
@@ -596,7 +596,7 @@ const ProductionPitchView: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 h-14 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-40">
         <div className="flex items-center gap-4">
@@ -664,7 +664,7 @@ const ProductionPitchView: React.FC = () => {
                         locked
                           ? 'text-gray-300 cursor-not-allowed'
                           : activeTab === tab
-                          ? 'text-orange-600 border-b-2 border-orange-600'
+                          ? 'text-indigo-600 border-b-2 border-indigo-600'
                           : 'text-gray-500 hover:text-gray-700'
                       }`}
                       title={locked ? 'NDA required to view' : undefined}
@@ -708,22 +708,22 @@ const ProductionPitchView: React.FC = () => {
                 )}
                 
                 <div className="flex flex-wrap gap-2 mb-6">
-                  <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm">
+                  <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm">
                     {pitch.genre}
                   </span>
-                  <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm">
-                    <FormatDisplay 
+                  <span className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-sm">
+                    <FormatDisplay
                       formatCategory={pitch.formatCategory}
                       formatSubtype={pitch.formatSubtype}
                       format={pitch.format}
                       variant="subtype-only"
                     />
                   </span>
-                  <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm">
+                  <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm">
                     {formatCurrency(pitch.budget)}
                   </span>
                   {pitch.pages && (
-                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+                    <span className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-sm">
                       {pitch.pages} pages
                     </span>
                   )}
@@ -860,7 +860,7 @@ const ProductionPitchView: React.FC = () => {
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
                     <div
-                      className="bg-orange-500 h-2 rounded-full transition-all duration-300"
+                      className="bg-indigo-500 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${completeness.productionReadiness}%` }}
                     />
                   </div>
@@ -930,7 +930,7 @@ const ProductionPitchView: React.FC = () => {
                             value={member.name}
                             onChange={(e) => handleTeamUpdate(index, 'name', e.target.value)}
                             placeholder="Enter name"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                           />
                         </div>
                         <div>
@@ -940,7 +940,7 @@ const ProductionPitchView: React.FC = () => {
                           <select
                             value={member.status}
                             onChange={(e) => handleTeamUpdate(index, 'status', e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                           >
                             <option value="pending">Pending</option>
                             <option value="considering">Considering</option>
@@ -962,7 +962,7 @@ const ProductionPitchView: React.FC = () => {
                       toast.error(e.message);
                     }
                   }}
-                  className="mt-4 w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+                  className="mt-4 w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                 >
                   Save Team Configuration
                 </button>
@@ -982,7 +982,7 @@ const ProductionPitchView: React.FC = () => {
                         onClick={() => setNoteCategory(cat)}
                         className={`px-3 py-1 rounded-full text-sm capitalize ${
                           noteCategory === cat
-                            ? 'bg-orange-600 text-white'
+                            ? 'bg-indigo-600 text-white'
                             : 'bg-white text-gray-700 border'
                         }`}
                       >
@@ -994,12 +994,12 @@ const ProductionPitchView: React.FC = () => {
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
                     placeholder="Add a production note..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     rows={3}
                   />
                   <button
                     onClick={handleAddNote}
-                    className="mt-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+                    className="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                   >
                     Add Note
                   </button>
@@ -1061,7 +1061,7 @@ const ProductionPitchView: React.FC = () => {
                   {hasExistingProject ? (
                     <button
                       onClick={() => navigate('/production/pipeline')}
-                      className="w-full flex items-center justify-between px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                      className="w-full flex items-center justify-between px-4 py-2 bg-white border border-indigo-200 text-indigo-700 rounded-lg hover:bg-indigo-50 transition-colors"
                     >
                       <span>View in Pipeline</span>
                       <ChevronRight className="h-4 w-4" />
@@ -1069,7 +1069,7 @@ const ProductionPitchView: React.FC = () => {
                   ) : (
                     <button
                       onClick={() => setShowStartProjectModal(true)}
-                      className="w-full flex items-center justify-between px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                      className="w-full flex items-center justify-between px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
                     >
                       <span>Start Project</span>
                       <ChevronRight className="h-4 w-4" />
@@ -1090,7 +1090,7 @@ const ProductionPitchView: React.FC = () => {
                       const greeting = pitch.creatorName || pitch.creatorCompany || 'Creator';
                       navigate(`/production/messages?recipient=${pitch.userId}&pitch=${id}&subject=${encodeURIComponent(`Script Request: ${pitch?.title}`)}&body=${encodeURIComponent(`Hi ${greeting},\n\nI'm interested in your pitch "${pitch?.title}" and would like to request the full script for review.\n\nLooking forward to discussing this further.`)}`);
                     }}
-                    className="w-full flex items-center justify-between px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+                    className="w-full flex items-center justify-between px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                   >
                     <span>Request Full Script</span>
                     <ChevronRight className="h-4 w-4" />
@@ -1112,7 +1112,7 @@ const ProductionPitchView: React.FC = () => {
                           toast.error(e.message);
                         }
                       }}
-                      className="w-full flex items-center justify-between px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
+                      className="w-full flex items-center justify-between px-4 py-2 bg-white border border-indigo-200 text-indigo-700 rounded-lg hover:bg-indigo-50 transition-colors"
                     >
                       <span>Request NDA ({getCreditCost('nda_request')} credits)</span>
                       <Shield className="h-4 w-4" />
@@ -1123,7 +1123,7 @@ const ProductionPitchView: React.FC = () => {
                       navigate(`/production/messages?recipient=${pitch?.userId}&pitch=${id}`);
                       toast('Start your negotiation discussion');
                     }}
-                    className="w-full flex items-center justify-between px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    className="w-full flex items-center justify-between px-4 py-2 bg-white border border-indigo-200 text-indigo-700 rounded-lg hover:bg-indigo-50 transition-colors"
                   >
                     <span>Start Negotiations</span>
                     <ChevronRight className="h-4 w-4" />
@@ -1131,7 +1131,7 @@ const ProductionPitchView: React.FC = () => {
                   {hasExistingProject ? (
                     <button
                       onClick={() => navigate('/production/pipeline')}
-                      className="w-full flex items-center justify-between px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                      className="w-full flex items-center justify-between px-4 py-2 bg-white border border-indigo-200 text-indigo-700 rounded-lg hover:bg-indigo-50 transition-colors"
                     >
                       <span>View in Pipeline</span>
                       <ChevronRight className="h-4 w-4" />
@@ -1139,7 +1139,7 @@ const ProductionPitchView: React.FC = () => {
                   ) : (
                     <button
                       onClick={() => setShowStartProjectModal(true)}
-                      className="w-full flex items-center justify-between px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                      className="w-full flex items-center justify-between px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
                     >
                       <span>Start Project</span>
                       <ChevronRight className="h-4 w-4" />
