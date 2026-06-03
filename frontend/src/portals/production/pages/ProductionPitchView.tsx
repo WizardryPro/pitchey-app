@@ -19,8 +19,6 @@ import { ScheduleMeetingModal } from '@/components/UIActions/ScheduleMeetingModa
 import { toast } from 'react-hot-toast';
 import { ProductionService } from '../services/production.service';
 import type { ProductionNoteResponse, ProductionTeamMember } from '../services/production.service';
-import StartProjectModal from '../components/StartProjectModal';
-import { CollaboratorService } from '@/services/collaborator.service';
 import FollowButton from '@features/browse/components/FollowButton';
 import { pitchService } from '@features/pitches/services/pitch.service';
 import PitchDocuments from '@features/pitches/components/PitchDocuments';
@@ -117,7 +115,6 @@ const ProductionPitchView: React.FC = () => {
     legalClearance: false
   });
   const [showScheduleModal, setShowScheduleModal] = useState(false);
-  const [showStartProjectModal, setShowStartProjectModal] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
     { role: 'Director', name: '', status: 'pending' },
     { role: 'Producer', name: '', status: 'pending' },
@@ -130,8 +127,6 @@ const ProductionPitchView: React.FC = () => {
   const isOwner = !!(pitch?.userId && authUser?.id && String(pitch.userId) === String(authUser.id));
   const [isLiked, setIsLiked] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
-  const [hasExistingProject, setHasExistingProject] = useState(false);
-  const [linkedProjectId, setLinkedProjectId] = useState<number | null>(null);
   const [autoFillLoading, setAutoFillLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -139,25 +134,6 @@ const ProductionPitchView: React.FC = () => {
     if (id) {
       fetchPitchData();
       loadProductionData();
-      // Check if a pipeline project already exists for this pitch
-      void apiClient.get<{ projects: Array<{ id: number }> }>(`/api/production/projects?pitchId=${id}`)
-        .then(async (res) => {
-          if (res.success && res.data?.projects && res.data.projects.length > 0) {
-            setHasExistingProject(true);
-            const projectId = res.data.projects[0].id;
-            setLinkedProjectId(projectId);
-            // Fetch accepted collaborators and merge into team
-            try {
-              const collabRes = await CollaboratorService.listCollaborators(projectId);
-              if (collabRes.success && collabRes.data?.collaborators) {
-                mergeCollaboratorsIntoTeam(collabRes.data.collaborators);
-              }
-            } catch {
-              // Non-critical — team tab still works with manual entries
-            }
-          }
-        })
-        .catch(() => {});
     }
   }, [id]);
 
@@ -253,47 +229,6 @@ const ProductionPitchView: React.FC = () => {
       const e = err instanceof Error ? err : new Error(String(err));
       console.error('Failed to load production data:', e.message);
     }
-  };
-
-  const COLLAB_ROLE_MAP: Record<string, string> = {
-    director: 'Director',
-    line_producer: 'Producer',
-    dp: 'Cinematographer',
-    production_designer: 'Production Designer',
-    editor: 'Editor',
-    sound_designer: 'Sound Designer',
-  };
-
-  const mergeCollaboratorsIntoTeam = (collaborators: Array<{ status: string; role: string; custom_role_name?: string | null; user?: { name: string } | null; invited_email: string }>) => {
-    const accepted = collaborators.filter(c => c.status === 'active');
-    if (accepted.length === 0) return;
-
-    setTeamMembers(prev => {
-      const updated = [...prev];
-      const addedRoles = new Set<string>();
-
-      for (const collab of accepted) {
-        const displayRole = collab.role === 'custom'
-          ? (collab.custom_role_name || 'Custom')
-          : (COLLAB_ROLE_MAP[collab.role] || collab.role);
-        const name = collab.user?.name || collab.invited_email || '';
-
-        // Try to match an existing team slot with empty name
-        const existingIdx = updated.findIndex(
-          m => m.role === displayRole && (!m.name || m.name === '')
-        );
-
-        if (existingIdx >= 0) {
-          updated[existingIdx] = { role: displayRole, name, status: 'confirmed' };
-          addedRoles.add(displayRole);
-        } else if (!addedRoles.has(displayRole)) {
-          updated.push({ role: displayRole, name, status: 'confirmed' });
-          addedRoles.add(displayRole);
-        }
-      }
-
-      return updated;
-    });
   };
 
   const calculateCompleteness = () => {
@@ -775,16 +710,13 @@ const ProductionPitchView: React.FC = () => {
                     isOwner={isOwner}
                     isAuthenticated={isAuthenticated}
                   />
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div className="bg-amber-50 rounded-lg p-3 text-center">
-                      <p className="text-2xl font-bold text-amber-900">{pitch.ratingAverage ? Number(pitch.ratingAverage).toFixed(1) : '—'}</p>
-                      <p className="text-xs text-amber-600 flex items-center justify-center gap-1">
-                        <Star className="w-3 h-3" /> Pitchey Score
-                      </p>
-                    </div>
+                  {/* Pitchey Score moved into the Feedback & Ratings section below
+                      (FeedbackDisplay's headline cards) — reliable role-weighted score
+                      from the ratings API, instead of the flaky pitch.ratingAverage. */}
+                  <div className="mt-4">
                     <div className="bg-gray-50 rounded-lg p-3 text-center">
                       <p className="text-2xl font-bold text-gray-900">{pitch.ndaCount ?? 0}</p>
-                      <p className="text-xs text-gray-500 flex items-center justify-center gap-1"><Shield className="w-3 h-3" /> NDAs</p>
+                      <p className="text-xs text-gray-500 flex items-center justify-center gap-1"><Shield className="w-3 h-3" /> NDAs Signed</p>
                     </div>
                   </div>
                 </div>
@@ -840,7 +772,7 @@ const ProductionPitchView: React.FC = () => {
                 isOwner={isOwner}
                 isAuthenticated={isAuthenticated}
                 userType={authUser?.userType || ''}
-                showScoreSummary={false}
+                showScoreSummary={true}
               />
               </div>
             )}
@@ -921,7 +853,7 @@ const ProductionPitchView: React.FC = () => {
                   <div className="grid grid-cols-2 gap-3">
                     {Object.entries(productionChecklist).map(([key, value]) => (
                       <div key={key} className="flex items-center">
-                        {isOwner || hasExistingProject ? (
+                        {isOwner ? (
                           <button
                             onClick={() => handleChecklistUpdate(key as keyof typeof productionChecklist)}
                             className="mr-2"
@@ -956,9 +888,6 @@ const ProductionPitchView: React.FC = () => {
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900">Team Assembly</h2>
-                    {linkedProjectId && (
-                      <p className="text-sm text-gray-500 mt-1">Accepted collaborators auto-populate from the linked project</p>
-                    )}
                   </div>
                 </div>
 
@@ -1102,30 +1031,7 @@ const ProductionPitchView: React.FC = () => {
           {/* Right Column - Sidebar */}
           <div className="space-y-6">
             {/* Production Actions — only for pitches by other users */}
-            {isOwner ? (
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Pitch</h3>
-                <div className="space-y-2">
-                  {hasExistingProject ? (
-                    <button
-                      onClick={() => navigate('/production/pipeline')}
-                      className="w-full flex items-center justify-between px-4 py-2 bg-white border border-indigo-200 text-indigo-700 rounded-lg hover:bg-indigo-50 transition-colors"
-                    >
-                      <span>View in Pipeline</span>
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => setShowStartProjectModal(true)}
-                      className="w-full flex items-center justify-between px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                    >
-                      <span>Start Project</span>
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            ) : (
+            {!isOwner && (
               <div className="bg-white rounded-xl shadow-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Production Actions</h3>
                 <div className="space-y-2">
@@ -1176,23 +1082,6 @@ const ProductionPitchView: React.FC = () => {
                     <span>Start Negotiations</span>
                     <ChevronRight className="h-4 w-4" />
                   </button>
-                  {hasExistingProject ? (
-                    <button
-                      onClick={() => navigate('/production/pipeline')}
-                      className="w-full flex items-center justify-between px-4 py-2 bg-white border border-indigo-200 text-indigo-700 rounded-lg hover:bg-indigo-50 transition-colors"
-                    >
-                      <span>View in Pipeline</span>
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => setShowStartProjectModal(true)}
-                      className="w-full flex items-center justify-between px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                    >
-                      <span>Start Project</span>
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  )}
                 </div>
               </div>
             )}
@@ -1325,22 +1214,6 @@ const ProductionPitchView: React.FC = () => {
         meetingType="production"
         defaultSubject={`Production Discussion: ${pitch.title}`}
       />
-
-      {showStartProjectModal && (
-        <StartProjectModal
-          pitch={{
-            id: Number(pitch.id),
-            title: pitch.title,
-            genre: pitch.genre,
-            budget: pitch.budget,
-            estimatedBudget: pitch.estimatedBudget,
-            productionTimeline: pitch.productionTimeline,
-            logline: pitch.logline,
-            shortSynopsis: pitch.shortSynopsis,
-          }}
-          onClose={() => setShowStartProjectModal(false)}
-        />
-      )}
     </div>
   );
 };
