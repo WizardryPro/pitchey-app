@@ -450,56 +450,60 @@ export default function Homepage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {trendingPitches.map((pitch) => (
-                <div
-                  key={pitch.id}
-                  onClick={() => navigate(`/pitch/${pitch.id}`)}
-                  className="pitch-card bg-white rounded-xl overflow-hidden border border-gray-200 hover:border-purple-300 shadow-sm hover:shadow-md transition cursor-pointer group"
-                >
-                  <div className="h-40 bg-gradient-to-br from-purple-100 to-pink-100 relative">
-                    {((pitch as any).title_image || (pitch as any).thumbnail_url || pitch.titleImage || pitch.thumbnailUrl) ? (
-                      <img src={(pitch as any).title_image || (pitch as any).thumbnail_url || pitch.titleImage || pitch.thumbnailUrl} alt={pitch.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <GenrePlaceholder genre={pitch.genre} />
-                    )}
-                    <div className="absolute top-2 right-2 bg-purple-600 px-2 py-1 rounded text-xs text-white">
-                      <FormatDisplay
-                        formatCategory={pitch.formatCategory}
-                        formatSubtype={pitch.formatSubtype}
-                        format={pitch.format}
-                        variant="subtype-only"
-                      />
+              {trendingPitches.map((pitch) => {
+                const img = (pitch as any).title_image || (pitch as any).thumbnail_url || pitch.titleImage || pitch.thumbnailUrl;
+                return (
+                  <div
+                    key={pitch.id}
+                    onClick={() => navigate(`/pitch/${pitch.id}`)}
+                    className="group bg-white rounded-2xl overflow-hidden border border-gray-200/70 shadow-sm transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:border-violet-200"
+                  >
+                    <div className="relative h-44 overflow-hidden bg-gray-900">
+                      {img ? (
+                        <img src={img} alt={pitch.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                      ) : (
+                        <GenrePlaceholder genre={pitch.genre} />
+                      )}
+                      <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                      <div className="absolute top-2.5 right-2.5 rounded-full bg-black/55 backdrop-blur px-2.5 py-0.5 text-[11px] text-white">
+                        <FormatDisplay
+                          formatCategory={pitch.formatCategory}
+                          formatSubtype={pitch.formatSubtype}
+                          format={pitch.format}
+                          variant="subtype-only"
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div className="p-4 space-y-2">
-                    <h3 className="text-card-title mb-1 group-hover:text-purple-600 transition">
-                      {pitch.title}
-                    </h3>
-                    <p className="text-metadata text-purple-600 mb-2">{pitch.genre}</p>
-                    <p className="text-metadata mb-3 line-clamp-2">{pitch.logline}</p>
-                    <div className="flex items-center justify-between text-metadata pt-2">
-                      <div className="flex items-center gap-3">
+                    <div className="p-4">
+                      <h3 className="text-card-title mb-1 line-clamp-1 transition group-hover:text-brand-anchor">
+                        {pitch.title}
+                      </h3>
+                      <p className="text-metadata text-brand-anchor mb-2">{pitch.genre}</p>
+                      <p className="text-metadata mb-3 line-clamp-2">{pitch.logline}</p>
+                      <div className="flex items-center justify-between text-metadata border-t border-gray-100 pt-3">
+                        <div className="flex items-center gap-3">
+                          <span className="flex items-center gap-1">
+                            <Eye className="w-3 h-3" />
+                            {pitch.viewCount}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Heart className="w-3 h-3 text-red-500 fill-red-500" />
+                            {(pitch as any).likeCount ?? (pitch as any).like_count ?? 0}
+                          </span>
+                          <span className="flex items-center gap-1 text-amber-500">
+                            <Star className="w-3 h-3" />
+                            {pitch.ratingAverage ? Number(pitch.ratingAverage).toFixed(1) : '—'}
+                          </span>
+                        </div>
                         <span className="flex items-center gap-1">
-                          <Eye className="w-3 h-3" />
-                          {pitch.viewCount}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Heart className="w-3 h-3 text-red-500 fill-red-500" />
-                          {(pitch as any).likeCount ?? (pitch as any).like_count ?? 0}
-                        </span>
-                        <span className="flex items-center gap-1 text-amber-500">
-                          <Star className="w-3 h-3" />
-                          {pitch.ratingAverage ? Number(pitch.ratingAverage).toFixed(1) : '—'}
+                          <Calendar className="w-3 h-3" />
+                          {pitch.createdAt ? new Date(pitch.createdAt).toLocaleDateString() : 'Recent'}
                         </span>
                       </div>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {pitch.createdAt ? new Date(pitch.createdAt).toLocaleDateString() : 'Recent'}
-                      </span>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -511,7 +515,7 @@ export default function Homepage() {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="font-display text-section-title mb-2">
-                <Sparkles className="inline w-8 h-8 text-yellow-600 mr-2" />
+                <Sparkles className="inline w-8 h-8 text-violet-500 mr-2" />
                 New Releases
               </h2>
               <p className="text-body">Fresh content just added to the platform</p>
@@ -531,59 +535,63 @@ export default function Homepage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {newReleases.map((pitch) => (
-                <div
-                  key={pitch.id}
-                  onClick={() => navigate(`/pitch/${pitch.id}`)}
-                  className="pitch-card bg-white/95 backdrop-blur-md rounded-xl overflow-hidden border border-yellow-500/20 hover:border-yellow-500/40 transition cursor-pointer group"
-                >
-                  <div className="h-40 bg-gradient-to-br from-yellow-600/20 to-orange-600/20 relative">
-                    {((pitch as any).title_image || (pitch as any).thumbnail_url || pitch.titleImage || pitch.thumbnailUrl) ? (
-                      <img src={(pitch as any).title_image || (pitch as any).thumbnail_url || pitch.titleImage || pitch.thumbnailUrl} alt={pitch.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <GenrePlaceholder genre={pitch.genre} />
-                    )}
-                    <div className="absolute top-2 left-2 bg-brand-new/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs text-white font-medium">
-                      NEW
+              {newReleases.map((pitch) => {
+                const img = (pitch as any).title_image || (pitch as any).thumbnail_url || pitch.titleImage || pitch.thumbnailUrl;
+                return (
+                  <div
+                    key={pitch.id}
+                    onClick={() => navigate(`/pitch/${pitch.id}`)}
+                    className="group bg-white rounded-2xl overflow-hidden border border-gray-200/70 shadow-sm transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:border-violet-200"
+                  >
+                    <div className="relative h-44 overflow-hidden bg-gray-900">
+                      {img ? (
+                        <img src={img} alt={pitch.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                      ) : (
+                        <GenrePlaceholder genre={pitch.genre} />
+                      )}
+                      <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                      <div className="absolute top-2.5 left-2.5 rounded-full bg-brand-new/90 backdrop-blur-sm px-2.5 py-0.5 text-[11px] font-semibold text-white">
+                        NEW
+                      </div>
+                      <div className="absolute top-2.5 right-2.5 rounded-full bg-black/55 backdrop-blur px-2.5 py-0.5 text-[11px] text-white">
+                        <FormatDisplay
+                          formatCategory={pitch.formatCategory}
+                          formatSubtype={pitch.formatSubtype}
+                          format={pitch.format}
+                          variant="subtype-only"
+                        />
+                      </div>
                     </div>
-                    <div className="absolute top-2 right-2 bg-purple-600 px-2 py-1 rounded text-xs text-white">
-                      <FormatDisplay
-                        formatCategory={pitch.formatCategory}
-                        formatSubtype={pitch.formatSubtype}
-                        format={pitch.format}
-                        variant="subtype-only"
-                      />
-                    </div>
-                  </div>
-                  <div className="p-4 space-y-2">
-                    <h3 className="text-card-title text-black mb-1 group-hover:text-purple-600 transition">
-                      {pitch.title}
-                    </h3>
-                    <p className="text-metadata text-gray-600 mb-2">{pitch.genre}</p>
-                    <p className="text-metadata text-gray-700 mb-3 line-clamp-2">{pitch.logline}</p>
-                    <div className="flex items-center justify-between text-metadata text-gray-600 pt-2">
-                      <div className="flex items-center gap-3">
+                    <div className="p-4">
+                      <h3 className="text-card-title mb-1 line-clamp-1 transition group-hover:text-brand-anchor">
+                        {pitch.title}
+                      </h3>
+                      <p className="text-metadata text-brand-anchor mb-2">{pitch.genre}</p>
+                      <p className="text-metadata text-gray-600 mb-3 line-clamp-2">{pitch.logline}</p>
+                      <div className="flex items-center justify-between text-metadata text-gray-600 border-t border-gray-100 pt-3">
+                        <div className="flex items-center gap-3">
+                          <span className="flex items-center gap-1">
+                            <Eye className="w-3 h-3" />
+                            {pitch.viewCount}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Heart className="w-3 h-3 text-red-500 fill-red-500" />
+                            {(pitch as any).likeCount ?? (pitch as any).like_count ?? 0}
+                          </span>
+                          <span className="flex items-center gap-1 text-amber-500">
+                            <Star className="w-3 h-3" />
+                            {pitch.ratingAverage ? Number(pitch.ratingAverage).toFixed(1) : '—'}
+                          </span>
+                        </div>
                         <span className="flex items-center gap-1">
-                          <Eye className="w-3 h-3" />
-                          {pitch.viewCount}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Heart className="w-3 h-3 text-red-500 fill-red-500" />
-                          {(pitch as any).likeCount ?? (pitch as any).like_count ?? 0}
-                        </span>
-                        <span className="flex items-center gap-1 text-amber-500">
-                          <Star className="w-3 h-3" />
-                          {pitch.ratingAverage ? Number(pitch.ratingAverage).toFixed(1) : '—'}
+                          <Calendar className="w-3 h-3" />
+                          {pitch.createdAt ? new Date(pitch.createdAt).toLocaleDateString() : 'Recent'}
                         </span>
                       </div>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {pitch.createdAt ? new Date(pitch.createdAt).toLocaleDateString() : 'Recent'}
-                      </span>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
