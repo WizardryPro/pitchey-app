@@ -78,7 +78,7 @@ const NotFound: React.FC = () => {
               Marketplace
             </button>
             <button
-              onClick={() => { void navigate('/portals'); }}
+              onClick={() => { void navigate('/login'); }}
               className="text-purple-600 hover:text-purple-700 underline"
             >
               Sign In

@@ -30,12 +30,12 @@ export default function BackButton({
     
     // If on a login page, go back to portals
     if (path.startsWith('/login/')) {
-      navigate('/portals');
+      navigate('/login');
       return;
     }
     
     // If on portals page, go back to marketplace
-    if (path === '/portals') {
+    if (path === '/login') {
       navigate('/');
       return;
     }
@@ -76,7 +76,7 @@ export default function BackButton({
     const path = location.pathname;
     
     if (path.startsWith('/login/')) return 'Back to Portal Selection';
-    if (path === '/portals') return 'Back to Marketplace';
+    if (path === '/login') return 'Back to Marketplace';
     if (path.startsWith('/pitch/')) return 'Back to Marketplace';
     if (path.startsWith('/creator/') && path !== '/creator/dashboard') return 'Back to Dashboard';
     if (path.startsWith('/investor/') && path !== '/investor/dashboard') return 'Back to Dashboard';

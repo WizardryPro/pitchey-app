@@ -175,7 +175,7 @@ export const PUBLIC_ROUTES = {
   contact: '/contact',
   terms: '/terms',
   privacy: '/privacy',
-  portals: '/portals',
+  portals: '/login',
   
   // Login routes
   loginCreator: '/login/creator',

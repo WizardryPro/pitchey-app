@@ -245,7 +245,7 @@ class ApiClient {
                                path.startsWith('/production') ? 'production' :
                                path.startsWith('/creator') ? 'creator' :
                                path.startsWith('/admin') ? 'admin' : null;
-                const loginPath = portal ? `/login/${portal}` : '/portals';
+                const loginPath = portal ? `/login/${portal}` : '/login';
                 window.location.href = loginPath;
               }
             } else {

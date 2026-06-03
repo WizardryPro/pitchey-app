@@ -47,7 +47,7 @@ export default function PermissionGuard({
   // Not authenticated at all — redirect to login
   if (!isAuthenticated) {
     if (hideIfDenied) return <>{fallback}</>;
-    return <Navigate to={redirectTo || '/portals'} replace />;
+    return <Navigate to={redirectTo || '/login'} replace />;
   }
 
   // Check permissions

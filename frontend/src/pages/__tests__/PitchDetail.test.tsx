@@ -184,7 +184,7 @@ describe('PitchDetail', () => {
       // PitchDetail now carries post-login return path via router state so the
       // user lands back on this pitch after auth (postLoginRedirect.ts).
       expect(mockNavigate).toHaveBeenCalledWith(
-        '/portals',
+        '/login',
         { state: { from: '/pitch/1' } },
       )
     })

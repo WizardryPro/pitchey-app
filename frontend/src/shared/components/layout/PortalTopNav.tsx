@@ -192,7 +192,7 @@ export default function PortalTopNav() {
                     // state. Both read by postLoginRedirect.resolvePostLoginRedirect.
                     const from = location.pathname + location.search;
                     setPendingReturnTo(from);
-                    void navigate('/portals', { state: { from } });
+                    void navigate('/login', { state: { from } });
                   }}
                   className="px-2.5 py-1.5 sm:px-4 sm:py-2 text-purple-600 hover:text-purple-700 transition font-medium text-xs sm:text-sm flex items-center gap-1.5"
                 >
@@ -203,7 +203,7 @@ export default function PortalTopNav() {
                   onClick={() => {
                     const from = location.pathname + location.search;
                     setPendingReturnTo(from);
-                    void navigate('/portals', { state: { from } });
+                    void navigate('/login', { state: { from } });
                   }}
                   className="px-2.5 py-1.5 sm:px-4 sm:py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-xs sm:text-sm flex-shrink-0 flex items-center gap-1.5"
                 >

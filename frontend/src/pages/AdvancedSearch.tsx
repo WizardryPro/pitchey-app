@@ -366,7 +366,7 @@ export default function AdvancedSearch() {
               )}
               {!user && (
                 <button
-                  onClick={() => navigate('/portals')}
+                  onClick={() => navigate('/login')}
                   className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition"
                 >
                   Sign In

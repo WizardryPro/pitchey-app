@@ -112,7 +112,7 @@ export default function Pricing() {
                         ))}
                       </ul>
                       <button
-                        onClick={() => navigate('/portals')}
+                        onClick={() => navigate('/login')}
                         className={`mt-6 w-full py-2.5 rounded-lg font-medium transition ${featured ? 'bg-purple-600 text-white hover:bg-purple-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'}`}
                       >
                         Get Started

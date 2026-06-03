@@ -70,13 +70,13 @@ describe('PermissionGuard', () => {
   // ─── Unauthenticated Users ──────────────────────────────────────────
 
   describe('unauthenticated users', () => {
-    it('redirects to /portals when not authenticated', () => {
+    it('redirects to /login when not authenticated', () => {
       renderGuard({
         requires: Permission.PITCH_CREATE,
         children: <div>Protected Content</div>,
       });
       expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
-      expect(screen.getByTestId('navigate')).toHaveAttribute('data-to', '/portals');
+      expect(screen.getByTestId('navigate')).toHaveAttribute('data-to', '/login');
     });
 
     it('redirects to custom path when redirectTo is set', () => {
@@ -431,7 +431,7 @@ describe('PermissionRoute', () => {
     expect(screen.getByTestId('navigate')).toHaveAttribute('data-to', '/forbidden');
   });
 
-  it('redirects unauthenticated users to /portals', () => {
+  it('redirects unauthenticated users to /login', () => {
     mockAuthState.isAuthenticated = false;
     render(
       <MemoryRouter>
@@ -440,6 +440,6 @@ describe('PermissionRoute', () => {
         </PermissionRoute>
       </MemoryRouter>
     );
-    expect(screen.getByTestId('navigate')).toHaveAttribute('data-to', '/portals');
+    expect(screen.getByTestId('navigate')).toHaveAttribute('data-to', '/login');
   });
 });

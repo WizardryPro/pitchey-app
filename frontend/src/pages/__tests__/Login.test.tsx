@@ -80,15 +80,10 @@ describe('Login', () => {
     expect(registerLink.closest('a')).toHaveAttribute('href', '/register')
   })
 
-  it('renders direct portal links at the bottom', () => {
+  it('renders the discreet admin shield linking to admin login', () => {
     renderLogin()
-    expect(screen.getByText('Direct portal links')).toBeInTheDocument()
-    const creatorLink = screen.getByRole('link', { name: 'Creator' })
-    const investorLink = screen.getByRole('link', { name: 'Investor' })
-    const productionLink = screen.getByRole('link', { name: 'Production' })
-    expect(creatorLink).toHaveAttribute('href', '/login/creator')
-    expect(investorLink).toHaveAttribute('href', '/login/investor')
-    expect(productionLink).toHaveAttribute('href', '/login/production')
+    const adminLink = screen.getByRole('link', { name: 'Admin sign in' })
+    expect(adminLink).toHaveAttribute('href', '/login/admin')
   })
 
   it('shows login form after selecting Creator Portal', () => {

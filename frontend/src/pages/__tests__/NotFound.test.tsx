@@ -108,6 +108,6 @@ describe('NotFound', () => {
   it('navigates to portals when Sign In popular link is clicked', () => {
     renderNotFound()
     fireEvent.click(screen.getByRole('button', { name: 'Sign In' }))
-    expect(mockNavigate).toHaveBeenCalledWith('/portals')
+    expect(mockNavigate).toHaveBeenCalledWith('/login')
   })
 })

@@ -215,7 +215,7 @@ export default function EmailOTPLogin() {
           {/* Back to password login */}
           <div className="text-center">
             <Link
-              to="/portals"
+              to="/login"
               className="text-sm text-purple-600 hover:text-purple-700 flex items-center gap-1 justify-center"
             >
               <ArrowLeft className="w-4 h-4" /> Sign in with password

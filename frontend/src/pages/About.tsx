@@ -196,7 +196,7 @@ const About: React.FC = () => {
 
           <div className="mt-12 flex gap-4">
             <button 
-              onClick={() => navigate('/portals')}
+              onClick={() => navigate('/login')}
               className="px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition"
             >
               Get Started
