@@ -473,81 +473,41 @@ function InvestorDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <QuickActionsPanel className="mb-8" actions={quickActions} />
+        <QuickActionsPanel className="mb-8" actions={quickActions} columns={3} />
 
-        {/* Tab Navigation - Now visible on all screen sizes with complete navigation */}
-        <div className="bg-white rounded-t-xl shadow-sm border-b border-gray-200">
-          <nav className="flex flex-wrap gap-x-1 sm:gap-x-6 px-4 sm:px-6 overflow-x-auto">
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`py-3 sm:py-4 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
-                activeTab === 'dashboard'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Dashboard
-            </button>
-            <button
-              onClick={() => setActiveTab('browse')}
-              className={`py-3 sm:py-4 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
-                activeTab === 'browse'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Browse
-            </button>
-            <button
-              onClick={() => setActiveTab('investments')}
-              className={`py-3 sm:py-4 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
-                activeTab === 'investments'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Investments
-            </button>
-            <button
-              onClick={() => setActiveTab('due-diligence')}
-              className={`py-3 sm:py-4 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
-                activeTab === 'due-diligence'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Due Diligence
-            </button>
-            <button
-              onClick={() => setActiveTab('network')}
-              className={`py-3 sm:py-4 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
-                activeTab === 'network'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Network
-            </button>
-            <button
-              onClick={() => setActiveTab('analytics')}
-              className={`py-3 sm:py-4 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
-                activeTab === 'analytics'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Analytics
-            </button>
-            <button
-              onClick={() => setActiveTab('financials')}
-              className={`py-3 sm:py-4 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
-                activeTab === 'financials'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Financials
-            </button>
+        {/* Tab Navigation — segmented control (investor-indigo active pill, icons).
+            Natural-width tabs with horizontal scroll since there are seven. */}
+        <div className="mb-6 overflow-x-auto">
+          <nav
+            aria-label="Dashboard sections"
+            className="inline-flex items-center gap-1 p-1 bg-gray-100 rounded-xl"
+          >
+            {([
+              { id: 'dashboard', label: 'Dashboard', icon: Activity },
+              { id: 'browse', label: 'Browse', icon: Eye },
+              { id: 'investments', label: 'Investments', icon: DollarSign },
+              { id: 'due-diligence', label: 'Due Diligence', icon: Shield },
+              { id: 'network', label: 'Network', icon: Users },
+              { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+              { id: 'financials', label: 'Financials', icon: Wallet },
+            ] as const).map(({ id, label, icon: Icon }) => {
+              const isActive = activeTab === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => setActiveTab(id)}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all duration-200 ${
+                    isActive
+                      ? 'bg-white text-brand-portal-investor shadow-sm ring-1 ring-black/5'
+                      : 'text-gray-500 hover:text-gray-800 hover:bg-white/60'
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-brand-portal-investor' : 'text-gray-400'}`} />
+                  <span>{label}</span>
+                </button>
+              );
+            })}
           </nav>
         </div>
 

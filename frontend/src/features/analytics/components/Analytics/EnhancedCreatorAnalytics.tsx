@@ -296,7 +296,7 @@ export const EnhancedCreatorAnalytics: React.FC<CreatorAnalyticsProps> = ({
               onClick={() => setAutoRefresh(!autoRefresh)}
               className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm transition-colors ${
                 autoRefresh 
-                  ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                  ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
