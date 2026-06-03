@@ -8,7 +8,7 @@ import type { Pitch } from '@features/pitches/services/pitch.service';
 import { getGenresSync, getFormatsSync } from '@config/pitchConstants';
 import FormatDisplay from '../components/FormatDisplay';
 import GenrePlaceholder from '@shared/components/GenrePlaceholder';
-import HeatBadge, { getHeatScore, getPitcheyScore } from '../components/HeatBadge';
+import { getHeatScore, getPitcheyScore } from '../components/HeatBadge';
 import PitcheyRating from '../components/PitcheyRating';
 import { getPortalPath, getDashboardRoute } from '@/utils/navigation';
 import { getPortalTheme } from '@shared/hooks/usePortalTheme';
@@ -329,12 +329,12 @@ export default function Homepage() {
       {/* Hottest Pitches — top 3 by Bayesian + role-weighted heat score.
           Replaces the old "How Pitchey Works" tri-card; we'd rather surface real
           traction than explain the product in the abstract. */}
-      <section className="py-16 bg-gradient-to-br from-orange-50 via-white to-red-50 border-b border-gray-100">
+      <section className="py-20 bg-gradient-to-b from-gray-50 via-white to-gray-50 border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-semibold mb-4 shadow-sm">
-              <Flame className="w-3.5 h-3.5" />
-              HOTTEST RIGHT NOW
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-50 border border-violet-100 text-violet-700 text-[11px] font-semibold tracking-[0.18em] uppercase mb-4">
+              <Flame className="w-3.5 h-3.5 text-amber-500" />
+              Hottest right now
             </div>
             <h2 className="font-display text-section-title mb-3">Top Pitches by Heat Score</h2>
             <p className="text-body max-w-2xl mx-auto">
@@ -344,7 +344,7 @@ export default function Homepage() {
 
           {loading ? (
             <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
             </div>
           ) : hotPitches.length === 0 ? (
             <p className="text-center text-gray-500">No hot pitches yet — check back soon.</p>
@@ -354,35 +354,40 @@ export default function Homepage() {
                 const pitchRecord = pitch as unknown as Record<string, unknown>;
                 const heat = getHeatScore(pitchRecord);
                 const score = getPitcheyScore(pitchRecord);
+                const cover = (pitch as any).cover_image || (pitch as any).title_image || pitch.titleImage || pitch.thumbnailUrl;
                 return (
                   <div
                     key={pitch.id}
                     onClick={() => navigate(`/pitch/${pitch.id}`)}
-                    className="relative bg-white rounded-2xl overflow-hidden border border-orange-200 shadow-md hover:shadow-xl hover:border-orange-400 transition cursor-pointer group"
+                    className="group relative bg-white rounded-2xl overflow-hidden border border-gray-200/70 shadow-sm transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:border-violet-200"
                   >
-                    {/* Rank medallion */}
-                    <div className="absolute top-3 left-3 z-10 w-10 h-10 rounded-full bg-white/95 backdrop-blur-sm shadow-md flex items-center justify-center font-bold text-orange-600 text-lg">
-                      #{idx + 1}
-                    </div>
-                    {/* Heat badge top-right */}
-                    <div className="absolute top-3 right-3 z-10">
-                      <HeatBadge score={heat} />
-                    </div>
-
-                    <div className="h-48 bg-gradient-to-br from-orange-100 to-red-100 relative">
-                      {((pitch as any).cover_image || (pitch as any).title_image || pitch.titleImage || pitch.thumbnailUrl) ? (
+                    {/* Poster — poster-forward, with a legibility scrim */}
+                    <div className="relative h-56 overflow-hidden bg-gray-900">
+                      {cover ? (
                         <img
-                          src={(pitch as any).cover_image || (pitch as any).title_image || pitch.titleImage || pitch.thumbnailUrl}
+                          src={cover}
                           alt={pitch.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                         />
                       ) : (
                         <GenrePlaceholder genre={pitch.genre} />
                       )}
+                      <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/10" />
+                      {/* Rank medallion — violet, editorial numeral */}
+                      <div className="absolute top-3 left-3 w-9 h-9 rounded-full bg-brand-anchor text-white shadow-lg flex items-center justify-center font-display font-bold text-base">
+                        {idx + 1}
+                      </div>
+                      {/* Subtle heat chip */}
+                      {heat > 0 && (
+                        <div className="absolute bottom-3 right-3 inline-flex items-center gap-1 rounded-full bg-black/55 backdrop-blur px-2 py-0.5 text-xs font-medium text-white">
+                          <Flame className="w-3 h-3 text-amber-400" />
+                          {heat.toFixed(1)}
+                        </div>
+                      )}
                     </div>
 
                     <div className="p-5">
-                      <h3 className="font-bold text-lg text-gray-900 mb-1 line-clamp-1 group-hover:text-orange-600 transition">
+                      <h3 className="font-bold text-lg text-gray-900 mb-1 line-clamp-1 transition group-hover:text-brand-anchor">
                         {pitch.title}
                       </h3>
                       <p className="text-xs text-gray-500 mb-2">
@@ -396,14 +401,9 @@ export default function Homepage() {
                       <p className="text-sm text-gray-600 line-clamp-2 mb-4">
                         {pitch.logline}
                       </p>
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <div className="flex items-center gap-3">
-                          <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> {(pitch as any).view_count ?? pitch.viewCount ?? 0}</span>
-                          <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5" /> {(pitch as any).like_count ?? (pitch as any).likeCount ?? 0}</span>
-                        </div>
-                        {heat > 0 && (
-                          <span className="font-semibold text-orange-600">{heat.toFixed(1)} heat</span>
-                        )}
+                      <div className="flex items-center gap-4 border-t border-gray-100 pt-3 text-xs text-gray-500">
+                        <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> {(pitch as any).view_count ?? pitch.viewCount ?? 0}</span>
+                        <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5" /> {(pitch as any).like_count ?? (pitch as any).likeCount ?? 0}</span>
                       </div>
                     </div>
                   </div>
@@ -412,10 +412,10 @@ export default function Homepage() {
             </div>
           )}
 
-          <div className="flex justify-center mt-10">
+          <div className="flex justify-center mt-12">
             <button
               onClick={() => navigate('/marketplace?sort=hot')}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-lg transition font-medium shadow-sm"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-medium shadow-lg shadow-purple-500/20 transition"
             >
               See all hot pitches
               <ArrowRight className="w-4 h-4" />
