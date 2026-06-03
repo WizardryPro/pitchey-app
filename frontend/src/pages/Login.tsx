@@ -55,7 +55,7 @@ export default function Login() {
     }
   };
 
-  const setDemoCredentials = () => {
+  const setDemoCredentials = async () => {
     if (!selectedPortal) {
       alert('Please select a portal type first');
       return;
@@ -69,6 +69,25 @@ export default function Login() {
 
     const demo = demoAccounts[selectedPortal];
     setFormData({ email: demo.email, password: demo.password });
+
+    // Demo accounts bypass Turnstile on the backend, so log in directly instead of just
+    // pre-filling — otherwise the user is stranded behind the Turnstile gate. Mirrors the
+    // dedicated /login/<portal> pages.
+    try {
+      if (selectedPortal === 'creator') {
+        await loginCreator(demo.email, demo.password, turnstileToken);
+        void navigate(resolvePostLoginRedirect(rawFrom, '/creator/dashboard'));
+      } else if (selectedPortal === 'investor') {
+        await loginInvestor(demo.email, demo.password, turnstileToken);
+        void navigate(resolvePostLoginRedirect(rawFrom, '/investor/dashboard'));
+      } else if (selectedPortal === 'production') {
+        await loginProduction(demo.email, demo.password, turnstileToken);
+        void navigate(resolvePostLoginRedirect(rawFrom, '/production/dashboard'));
+      }
+    } catch (err) {
+      console.error('Demo login failed:', err);
+      resetTurnstile();
+    }
   };
 
   // Accent classes are full literal strings per portal. The old code interpolated
@@ -296,8 +315,9 @@ export default function Login() {
                 <p className="text-purple-200 text-xs text-center mb-3">Try our demo account</p>
                 <button
                   type="button"
-                  onClick={setDemoCredentials}
-                  className="w-full py-2 bg-purple-500/30 hover:bg-purple-500/40 text-purple-100 rounded-lg text-sm font-medium transition border border-purple-400/30"
+                  disabled={loading}
+                  onClick={() => { void setDemoCredentials(); }}
+                  className="w-full py-2 bg-purple-500/30 hover:bg-purple-500/40 text-purple-100 rounded-lg text-sm font-medium transition border border-purple-400/30 disabled:opacity-50"
                 >
                   Use Demo {selectedPortal === 'creator' ? 'Creator' : selectedPortal === 'investor' ? 'Investor' : 'Production'} Account
                 </button>
