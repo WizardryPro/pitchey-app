@@ -15,7 +15,6 @@ import apiClient, { savedPitchesAPI } from '@/lib/api-client';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import FormatDisplay from '@/components/FormatDisplay';
 import { getCreditCost } from '@config/subscription-plans';
-import { ScheduleMeetingModal } from '@/components/UIActions/ScheduleMeetingModal';
 import { toast } from 'react-hot-toast';
 import { ProductionService } from '../services/production.service';
 import type { ProductionNoteResponse, ProductionTeamMember } from '../services/production.service';
@@ -114,7 +113,6 @@ const ProductionPitchView: React.FC = () => {
     marketingStrategy: false,
     legalClearance: false
   });
-  const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
     { role: 'Director', name: '', status: 'pending' },
     { role: 'Producer', name: '', status: 'pending' },
@@ -1072,16 +1070,6 @@ const ProductionPitchView: React.FC = () => {
                       <Shield className="h-4 w-4" />
                     </button>
                   )}
-                  <button
-                    onClick={() => {
-                      navigate(`/production/messages?recipient=${pitch?.userId}&pitch=${id}`);
-                      toast('Start your negotiation discussion');
-                    }}
-                    className="w-full flex items-center justify-between px-4 py-2 bg-white border border-indigo-200 text-indigo-700 rounded-lg hover:bg-indigo-50 transition-colors"
-                  >
-                    <span>Start Negotiations</span>
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
                 </div>
               </div>
             )}
@@ -1205,15 +1193,6 @@ const ProductionPitchView: React.FC = () => {
           </div>
         </div>
       </div>
-
-      <ScheduleMeetingModal
-        isOpen={showScheduleModal}
-        onClose={() => setShowScheduleModal(false)}
-        recipientId={pitch.userId || ''}
-        recipientName={pitch.creatorName || pitch.creatorCompany || 'Creator'}
-        meetingType="production"
-        defaultSubject={`Production Discussion: ${pitch.title}`}
-      />
     </div>
   );
 };
