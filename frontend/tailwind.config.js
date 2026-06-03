@@ -68,6 +68,8 @@ export default {
   			}
   		},
   		fontFamily: {
+  			// Editorial display face for the marketing hero + section titles ("Premiere Night").
+  			display: ['Fraunces', 'Georgia', 'Cambria', 'Times New Roman', 'serif'],
   			system: [
   				'-apple-system',
   				'BlinkMacSystemFont',

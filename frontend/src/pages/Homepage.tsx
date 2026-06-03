@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Film, TrendingUp, Search, Play, Star, Eye, Heart, Calendar, ArrowRight, Sparkles, User, Building2, Wallet, LogOut, Flame } from 'lucide-react';
+import { Film, TrendingUp, Search, Play, Star, Eye, Heart, Calendar, ArrowRight, Sparkles, User, Building2, Wallet, LogOut, Flame, Menu, X } from 'lucide-react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { pitchService } from '@features/pitches/services/pitch.service';
 import { pitchAPI } from '../lib/api';
@@ -8,7 +8,7 @@ import type { Pitch } from '@features/pitches/services/pitch.service';
 import { getGenresSync, getFormatsSync } from '@config/pitchConstants';
 import FormatDisplay from '../components/FormatDisplay';
 import GenrePlaceholder from '@shared/components/GenrePlaceholder';
-import HeatBadge, { getHeatScore, getPitcheyScore } from '../components/HeatBadge';
+import { getHeatScore, getPitcheyScore } from '../components/HeatBadge';
 import PitcheyRating from '../components/PitcheyRating';
 import { getPortalPath, getDashboardRoute } from '@/utils/navigation';
 import { getPortalTheme } from '@shared/hooks/usePortalTheme';
@@ -26,6 +26,20 @@ export default function Homepage() {
   const [newReleases, setNewReleases] = useState<Pitch[]>([]);
   const [hotPitches, setHotPitches] = useState<Pitch[]>([]);
   const [loading, setLoading] = useState(true);
+  // Header blends with the dark hero at the top, then turns solid-white once the user scrolls
+  // PAST the hero into the bright content (so it stays readable on light backgrounds).
+  const heroRef = useRef<HTMLElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  useEffect(() => {
+    const onScroll = () => {
+      const heroBottom = heroRef.current?.getBoundingClientRect().bottom ?? 0;
+      setScrolled(heroBottom <= 64); // 64 = header height; switch when the hero clears the nav
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
   // likedPitches state removed — replaced by Pitchey Score
 
   // Like handler removed — replaced by Pitchey Score rating system
@@ -104,35 +118,35 @@ export default function Homepage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 via-purple-50 to-white">
       {/* Navigation Header */}
-      <header className="bg-white backdrop-blur-md sticky top-0 z-50 border-b border-gray-200 shadow-sm">
+      <header className={`sticky top-0 z-50 transition-colors duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm' : 'bg-[#0a0a12]/70 backdrop-blur-md border-b border-white/5'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-8">
               <a href="/" className="flex items-center">
-                <img src="/pitchey-logotype.png" alt="Pitchey" className="h-8 w-auto" />
+                <img src={scrolled ? '/pitchey-logotype.png' : '/pitchey-logotype-white.png'} alt="Pitchey" className="h-8 w-auto" />
               </a>
               <nav className="hidden md:flex items-center gap-6">
-                <button 
+                <button
                   onClick={() => navigate('/marketplace')}
-                  className="text-nav-link hover:text-purple-600 transition"
+                  className={`text-nav-link transition ${scrolled ? 'hover:text-purple-600' : 'text-white/90 hover:text-white'}`}
                 >
                   Browse Pitches
                 </button>
-                <button 
+                <button
                   onClick={() => navigate('/how-it-works')}
-                  className="text-nav-link hover:text-purple-600 transition"
+                  className={`text-nav-link transition ${scrolled ? 'hover:text-purple-600' : 'text-white/90 hover:text-white'}`}
                 >
                   How It Works
                 </button>
-                <button 
+                <button
                   onClick={() => navigate('/about')}
-                  className="text-nav-link hover:text-purple-600 transition"
+                  className={`text-nav-link transition ${scrolled ? 'hover:text-purple-600' : 'text-white/90 hover:text-white'}`}
                 >
                   About
                 </button>
               </nav>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-4">
               {isAuthenticated && user ? (
                 <>
                   {/* User Status Badge — tint comes from the portal theme so the
@@ -175,7 +189,7 @@ export default function Homepage() {
                   {/* Sign Out Button */}
                   <button
                     onClick={async () => { await logout(); navigate('/'); }}
-                    className="text-button px-3 py-2 text-gray-500 hover:text-red-600 transition"
+                    className={`text-button px-3 py-2 transition ${scrolled ? 'text-gray-500 hover:text-red-600' : 'text-white/70 hover:text-white'}`}
                     title="Sign Out"
                   >
                     <LogOut className="w-4 h-4" />
@@ -185,7 +199,7 @@ export default function Homepage() {
                 <>
                   <button
                     onClick={() => navigate('/login')}
-                    className="text-button px-4 py-2 text-purple-600 hover:text-purple-700 transition"
+                    className={`text-button px-4 py-2 transition ${scrolled ? 'text-purple-600 hover:text-purple-700' : 'text-white hover:text-white/80'}`}
                   >
                     Sign In
                   </button>
@@ -198,106 +212,180 @@ export default function Homepage() {
                 </>
               )}
             </div>
+
+            {/* Mobile hamburger — the desktop nav links are hidden < md, so narrow viewports
+                need a way to reach Browse / How It Works / About + the auth actions. */}
+            <button
+              onClick={() => setMobileMenuOpen((o) => !o)}
+              aria-label="Toggle navigation menu"
+              aria-expanded={mobileMenuOpen}
+              className={`md:hidden inline-flex items-center justify-center p-2 rounded-lg transition ${scrolled ? 'text-gray-700 hover:bg-gray-100' : 'text-white hover:bg-white/10'}`}
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile dropdown menu */}
+        {mobileMenuOpen && (
+          <div className={`md:hidden border-t ${scrolled ? 'bg-white border-gray-200' : 'bg-[#0a0a12]/95 backdrop-blur border-white/10'}`}>
+            <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
+              {[
+                { label: 'Browse Pitches', to: '/marketplace' },
+                { label: 'How It Works', to: '/how-it-works' },
+                { label: 'About', to: '/about' },
+              ].map((item) => (
+                <button
+                  key={item.to}
+                  onClick={() => { setMobileMenuOpen(false); navigate(item.to); }}
+                  className={`text-left px-3 py-2.5 rounded-lg text-sm font-medium transition ${scrolled ? 'text-gray-700 hover:bg-gray-100' : 'text-white/90 hover:bg-white/10'}`}
+                >
+                  {item.label}
+                </button>
+              ))}
+              <div className={`my-2 border-t ${scrolled ? 'border-gray-200' : 'border-white/10'}`} />
+              {isAuthenticated && user ? (
+                <>
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); navigate(userType ? `/${getPortalPath(userType)}/dashboard` : '/login'); }}
+                    className="px-3 py-2.5 rounded-lg bg-purple-600 text-white text-sm font-semibold text-center hover:bg-purple-700 transition"
+                  >
+                    Dashboard
+                  </button>
+                  <button
+                    onClick={async () => { setMobileMenuOpen(false); await logout(); navigate('/'); }}
+                    className={`text-left px-3 py-2.5 rounded-lg text-sm font-medium transition ${scrolled ? 'text-gray-600 hover:bg-gray-100' : 'text-white/80 hover:bg-white/10'}`}
+                  >
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}
+                    className={`text-left px-3 py-2.5 rounded-lg text-sm font-medium transition ${scrolled ? 'text-purple-600 hover:bg-purple-50' : 'text-white hover:bg-white/10'}`}
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); navigate('/register'); }}
+                    className="px-3 py-2.5 rounded-lg bg-purple-600 text-white text-sm font-semibold text-center hover:bg-purple-700 transition"
+                  >
+                    Get Started
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </header>
 
-      {/* Hero Section */}
-      <section className="relative py-20 lg:py-32 overflow-hidden bg-gradient-to-br from-purple-700 via-purple-600 to-indigo-700 text-white">
-        {/* Enhanced Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-tr from-violet-900/40 via-purple-800/30 to-fuchsia-900/40"></div>
-        
-        {/* Animated Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="hero-pattern" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
-                <circle cx="50" cy="50" r="1" fill="white" className="animate-pulse" />
-                <circle cx="25" cy="25" r="0.5" fill="white" className="animate-pulse-slow" />
-                <circle cx="75" cy="75" r="0.5" fill="white" className="animate-pulse-slow" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#hero-pattern)" />
-          </svg>
-        </div>
+      {/* Hero — "Premiere Night": dark, cinematic, editorial display type. The bright content
+          rails below it intentionally read as the marquee turning the lights up.
+          -mt-16 pulls the hero up behind the sticky nav so the nav's backdrop is the hero
+          itself (not the light page background). */}
+      <section ref={heroRef} className="relative -mt-16 overflow-hidden bg-[#0a0a12] text-white">
+        {/* Spotlight glows */}
+        <div aria-hidden className="absolute -top-48 left-1/2 -translate-x-1/2 w-[64rem] h-[44rem] rounded-full blur-[80px] bg-[radial-gradient(ellipse_at_center,rgba(132,45,168,0.45),transparent_62%)]" />
+        <div aria-hidden className="absolute top-1/4 -right-24 w-[34rem] h-[34rem] rounded-full blur-[90px] bg-[radial-gradient(circle,rgba(245,158,11,0.20),transparent_60%)]" />
+        <div aria-hidden className="absolute -bottom-32 -left-24 w-[34rem] h-[34rem] rounded-full blur-[90px] bg-[radial-gradient(circle,rgba(91,79,199,0.22),transparent_60%)]" />
+        {/* Film grain */}
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-[0.06] mix-blend-overlay pointer-events-none"
+          style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")" }}
+        />
+        {/* Letterbox accent lines */}
+        <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+        <div aria-hidden className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
-        {/* Film Reel Decorations */}
-        <div className="floating-decoration absolute top-10 left-10 opacity-20 animate-float">
+        {/* Floating film decorations (kept by request) */}
+        <div aria-hidden className="floating-decoration absolute top-16 left-10 opacity-[0.12] animate-float">
           <Film className="w-24 h-24 text-white" />
         </div>
-        <div className="floating-decoration absolute bottom-10 right-10 opacity-20 animate-float-delayed">
+        <div aria-hidden className="floating-decoration absolute bottom-12 right-12 opacity-[0.12] animate-float-delayed">
           <Film className="w-32 h-32 text-white" />
         </div>
-        <div className="floating-decoration absolute top-1/2 left-20 opacity-15 animate-float-slow">
-          <Sparkles className="w-16 h-16 text-white" />
+        <div aria-hidden className="floating-decoration absolute top-1/2 left-24 opacity-[0.10] animate-float-slow">
+          <Sparkles className="w-16 h-16 text-violet-300" />
         </div>
-        <div className="floating-decoration absolute top-1/3 right-20 opacity-15 animate-float-slow-delayed">
+        <div aria-hidden className="floating-decoration absolute top-1/3 right-24 opacity-[0.10] animate-float-slow-delayed">
           <Star className="w-20 h-20 text-white" />
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 hero-content">
-          <div className="text-center">
-            <h1 className="text-hero-main mb-6 text-shadow-strong animate-fade-in">
-              Where Stories
-              <span className="bg-clip-text bg-gradient-to-r from-yellow-300 to-pink-300"> Find Life</span>
-            </h1>
-            <p className="text-hero-sub mb-12 max-w-3xl mx-auto text-shadow-clean animate-fade-in-delay">
-              The premier marketplace where pitching meets opportunity. 
-              Share your vision, discover original stories, and connect with producers and investors shaping the future of film, television, and new media.
-            </p>
-            
-            {/* Search Bar */}
-            <div className="max-w-2xl mx-auto mb-8">
-              <form 
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (searchQuery.trim()) {
-                    navigate(`/marketplace?search=${encodeURIComponent(searchQuery.trim())}`);
-                  }
-                }}
-                className="flex bg-white rounded-lg shadow-lg overflow-hidden"
-              >
-                <input
-                  type="text"
-                  placeholder="Search pitches by title, genre, or keywords..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && searchQuery.trim()) {
-                      e.preventDefault();
-                      navigate(`/marketplace?search=${encodeURIComponent(searchQuery.trim())}`);
-                    }
-                  }}
-                  className="flex-1 px-6 py-4 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-inset"
-                />
-                <button
-                  type="submit"
-                  disabled={!searchQuery.trim()}
-                  aria-label="Search"
-                  className="px-6 py-4 bg-purple-600 hover:bg-purple-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                  <Search className="w-5 h-5 text-white" />
-                </button>
-              </form>
-            </div>
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-36 pb-24 lg:pt-48 lg:pb-36 text-center">
+          {/* Eyebrow */}
+          <div className="inline-flex items-center gap-2.5 px-3 py-1 mb-8 rounded-full border border-white/15 bg-white/5 backdrop-blur text-[11px] font-medium tracking-[0.2em] uppercase text-white/70">
+            <span className="w-1.5 h-1.5 rounded-full bg-violet-400" />
+            The film pitch marketplace
+          </div>
 
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button
-                onClick={() => navigate('/login')}
-                className="text-button px-8 py-4 bg-white/10 backdrop-blur-sm border border-white/30 text-white rounded-xl hover:bg-white/20 transition transform hover:scale-105"
-              >
-                <Sparkles className="inline w-5 h-5 mr-2" />
-                Start Your Journey
-              </button>
-              <button
-                onClick={() => navigate('/marketplace')}
-                className="text-button px-8 py-4 bg-white text-purple-600 rounded-xl hover:bg-gray-100 transition transform hover:scale-105 shadow-lg"
-              >
-                <Play className="inline w-5 h-5 mr-2" />
-                Browse Pitches
-              </button>
-            </div>
+          {/* Headline — editorial display */}
+          <h1 className="font-display font-black tracking-tight leading-[0.92] text-5xl sm:text-7xl lg:text-8xl mb-6">
+            Where stories
+            <br />
+            <span className="italic font-semibold bg-gradient-to-r from-violet-300 via-fuchsia-300 to-purple-300 bg-clip-text text-transparent">
+              find life
+            </span>
+          </h1>
+
+          <p className="max-w-2xl mx-auto text-lg sm:text-xl leading-relaxed text-white/60 mb-10">
+            Share your vision, discover original stories, and connect directly with the producers
+            and investors shaping the future of film, television, and new media.
+          </p>
+
+          {/* Search */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (searchQuery.trim()) {
+                navigate(`/marketplace?search=${encodeURIComponent(searchQuery.trim())}`);
+              }
+            }}
+            className="max-w-xl mx-auto mb-8 flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] backdrop-blur p-1.5 transition focus-within:border-white/35 focus-within:bg-white/[0.09]"
+          >
+            <Search className="w-5 h-5 ml-3 text-white/40 flex-shrink-0" />
+            <input
+              type="text"
+              placeholder="Search pitches by title, genre, or keyword…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 bg-transparent px-1 py-2.5 text-white placeholder-white/40 focus:outline-none"
+            />
+            <button
+              type="submit"
+              disabled={!searchQuery.trim()}
+              className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 transition hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Search
+            </button>
+          </form>
+
+          {/* CTAs */}
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={() => navigate('/login')}
+              className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold shadow-lg shadow-purple-500/30 transition hover:from-purple-500 hover:to-indigo-500"
+            >
+              <Sparkles className="w-5 h-5" />
+              Start your journey
+            </button>
+            <button
+              onClick={() => navigate('/marketplace')}
+              className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl border border-white/20 text-white transition hover:bg-white/10"
+            >
+              <Play className="w-5 h-5" />
+              Browse pitches
+            </button>
+          </div>
+
+          {/* Credibility strip */}
+          <div className="mt-14 flex items-center justify-center gap-4 text-[11px] uppercase tracking-[0.18em] text-white/35">
+            <span>Creators</span>
+            <span className="w-1 h-1 rounded-full bg-white/25" />
+            <span>Investors</span>
+            <span className="w-1 h-1 rounded-full bg-white/25" />
+            <span>Studios</span>
           </div>
         </div>
       </section>
@@ -306,14 +394,14 @@ export default function Homepage() {
       {/* Hottest Pitches — top 3 by Bayesian + role-weighted heat score.
           Replaces the old "How Pitchey Works" tri-card; we'd rather surface real
           traction than explain the product in the abstract. */}
-      <section className="py-16 bg-gradient-to-br from-orange-50 via-white to-red-50 border-b border-gray-100">
+      <section className="py-20 bg-gradient-to-b from-gray-50 via-white to-gray-50 border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-semibold mb-4 shadow-sm">
-              <Flame className="w-3.5 h-3.5" />
-              HOTTEST RIGHT NOW
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-50 border border-violet-100 text-violet-700 text-[11px] font-semibold tracking-[0.18em] uppercase mb-4">
+              <Flame className="w-3.5 h-3.5 text-amber-500" />
+              Hottest right now
             </div>
-            <h2 className="text-section-title mb-3">Top Pitches by Heat Score</h2>
+            <h2 className="font-display text-section-title mb-3">Top Pitches by Heat Score</h2>
             <p className="text-body max-w-2xl mx-auto">
               Ranked by views, likes, NDAs signed, and who's engaging — weighted so production and investor attention counts more than anonymous browsing.
             </p>
@@ -321,7 +409,7 @@ export default function Homepage() {
 
           {loading ? (
             <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
             </div>
           ) : hotPitches.length === 0 ? (
             <p className="text-center text-gray-500">No hot pitches yet — check back soon.</p>
@@ -331,35 +419,40 @@ export default function Homepage() {
                 const pitchRecord = pitch as unknown as Record<string, unknown>;
                 const heat = getHeatScore(pitchRecord);
                 const score = getPitcheyScore(pitchRecord);
+                const cover = (pitch as any).cover_image || (pitch as any).title_image || pitch.titleImage || pitch.thumbnailUrl;
                 return (
                   <div
                     key={pitch.id}
                     onClick={() => navigate(`/pitch/${pitch.id}`)}
-                    className="relative bg-white rounded-2xl overflow-hidden border border-orange-200 shadow-md hover:shadow-xl hover:border-orange-400 transition cursor-pointer group"
+                    className="group relative bg-white rounded-2xl overflow-hidden border border-gray-200/70 shadow-sm transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:border-violet-200"
                   >
-                    {/* Rank medallion */}
-                    <div className="absolute top-3 left-3 z-10 w-10 h-10 rounded-full bg-white/95 backdrop-blur-sm shadow-md flex items-center justify-center font-bold text-orange-600 text-lg">
-                      #{idx + 1}
-                    </div>
-                    {/* Heat badge top-right */}
-                    <div className="absolute top-3 right-3 z-10">
-                      <HeatBadge score={heat} />
-                    </div>
-
-                    <div className="h-48 bg-gradient-to-br from-orange-100 to-red-100 relative">
-                      {((pitch as any).cover_image || (pitch as any).title_image || pitch.titleImage || pitch.thumbnailUrl) ? (
+                    {/* Poster — poster-forward, with a legibility scrim */}
+                    <div className="relative h-56 overflow-hidden bg-gray-900">
+                      {cover ? (
                         <img
-                          src={(pitch as any).cover_image || (pitch as any).title_image || pitch.titleImage || pitch.thumbnailUrl}
+                          src={cover}
                           alt={pitch.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                         />
                       ) : (
                         <GenrePlaceholder genre={pitch.genre} />
                       )}
+                      <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/10" />
+                      {/* Rank medallion — violet, editorial numeral */}
+                      <div className="absolute top-3 left-3 w-9 h-9 rounded-full bg-brand-anchor text-white shadow-lg flex items-center justify-center font-display font-bold text-base">
+                        {idx + 1}
+                      </div>
+                      {/* Subtle heat chip */}
+                      {heat > 0 && (
+                        <div className="absolute bottom-3 right-3 inline-flex items-center gap-1 rounded-full bg-black/55 backdrop-blur px-2 py-0.5 text-xs font-medium text-white">
+                          <Flame className="w-3 h-3 text-amber-400" />
+                          {heat.toFixed(1)}
+                        </div>
+                      )}
                     </div>
 
                     <div className="p-5">
-                      <h3 className="font-bold text-lg text-gray-900 mb-1 line-clamp-1 group-hover:text-orange-600 transition">
+                      <h3 className="font-bold text-lg text-gray-900 mb-1 line-clamp-1 transition group-hover:text-brand-anchor">
                         {pitch.title}
                       </h3>
                       <p className="text-xs text-gray-500 mb-2">
@@ -373,14 +466,9 @@ export default function Homepage() {
                       <p className="text-sm text-gray-600 line-clamp-2 mb-4">
                         {pitch.logline}
                       </p>
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <div className="flex items-center gap-3">
-                          <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> {(pitch as any).view_count ?? pitch.viewCount ?? 0}</span>
-                          <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5" /> {(pitch as any).like_count ?? (pitch as any).likeCount ?? 0}</span>
-                        </div>
-                        {heat > 0 && (
-                          <span className="font-semibold text-orange-600">{heat.toFixed(1)} heat</span>
-                        )}
+                      <div className="flex items-center gap-4 border-t border-gray-100 pt-3 text-xs text-gray-500">
+                        <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> {(pitch as any).view_count ?? pitch.viewCount ?? 0}</span>
+                        <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5" /> {(pitch as any).like_count ?? (pitch as any).likeCount ?? 0}</span>
                       </div>
                     </div>
                   </div>
@@ -389,10 +477,10 @@ export default function Homepage() {
             </div>
           )}
 
-          <div className="flex justify-center mt-10">
+          <div className="flex justify-center mt-12">
             <button
               onClick={() => navigate('/marketplace?sort=hot')}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-lg transition font-medium shadow-sm"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-medium shadow-lg shadow-purple-500/20 transition"
             >
               See all hot pitches
               <ArrowRight className="w-4 h-4" />
@@ -406,7 +494,7 @@ export default function Homepage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-section-title mb-2">
+              <h2 className="font-display text-section-title mb-2">
                 <TrendingUp className="inline w-8 h-8 text-purple-600 mr-2" />
                 Trending Now
               </h2>
@@ -427,56 +515,60 @@ export default function Homepage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {trendingPitches.map((pitch) => (
-                <div
-                  key={pitch.id}
-                  onClick={() => navigate(`/pitch/${pitch.id}`)}
-                  className="pitch-card bg-white rounded-xl overflow-hidden border border-gray-200 hover:border-purple-300 shadow-sm hover:shadow-md transition cursor-pointer group"
-                >
-                  <div className="h-40 bg-gradient-to-br from-purple-100 to-pink-100 relative">
-                    {((pitch as any).title_image || (pitch as any).thumbnail_url || pitch.titleImage || pitch.thumbnailUrl) ? (
-                      <img src={(pitch as any).title_image || (pitch as any).thumbnail_url || pitch.titleImage || pitch.thumbnailUrl} alt={pitch.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <GenrePlaceholder genre={pitch.genre} />
-                    )}
-                    <div className="absolute top-2 right-2 bg-purple-600 px-2 py-1 rounded text-xs text-white">
-                      <FormatDisplay
-                        formatCategory={pitch.formatCategory}
-                        formatSubtype={pitch.formatSubtype}
-                        format={pitch.format}
-                        variant="subtype-only"
-                      />
+              {trendingPitches.map((pitch) => {
+                const img = (pitch as any).title_image || (pitch as any).thumbnail_url || pitch.titleImage || pitch.thumbnailUrl;
+                return (
+                  <div
+                    key={pitch.id}
+                    onClick={() => navigate(`/pitch/${pitch.id}`)}
+                    className="group bg-white rounded-2xl overflow-hidden border border-gray-200/70 shadow-sm transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:border-violet-200"
+                  >
+                    <div className="relative h-44 overflow-hidden bg-gray-900">
+                      {img ? (
+                        <img src={img} alt={pitch.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                      ) : (
+                        <GenrePlaceholder genre={pitch.genre} />
+                      )}
+                      <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                      <div className="absolute top-2.5 right-2.5 rounded-full bg-black/55 backdrop-blur px-2.5 py-0.5 text-[11px] text-white">
+                        <FormatDisplay
+                          formatCategory={pitch.formatCategory}
+                          formatSubtype={pitch.formatSubtype}
+                          format={pitch.format}
+                          variant="subtype-only"
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div className="p-4 space-y-2">
-                    <h3 className="text-card-title mb-1 group-hover:text-purple-600 transition">
-                      {pitch.title}
-                    </h3>
-                    <p className="text-metadata text-purple-600 mb-2">{pitch.genre}</p>
-                    <p className="text-metadata mb-3 line-clamp-2">{pitch.logline}</p>
-                    <div className="flex items-center justify-between text-metadata pt-2">
-                      <div className="flex items-center gap-3">
+                    <div className="p-4">
+                      <h3 className="text-card-title mb-1 line-clamp-1 transition group-hover:text-brand-anchor">
+                        {pitch.title}
+                      </h3>
+                      <p className="text-metadata text-brand-anchor mb-2">{pitch.genre}</p>
+                      <p className="text-metadata mb-3 line-clamp-2">{pitch.logline}</p>
+                      <div className="flex items-center justify-between text-metadata border-t border-gray-100 pt-3">
+                        <div className="flex items-center gap-3">
+                          <span className="flex items-center gap-1">
+                            <Eye className="w-3 h-3" />
+                            {pitch.viewCount}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Heart className="w-3 h-3 text-red-500 fill-red-500" />
+                            {(pitch as any).likeCount ?? (pitch as any).like_count ?? 0}
+                          </span>
+                          <span className="flex items-center gap-1 text-amber-500">
+                            <Star className="w-3 h-3" />
+                            {pitch.ratingAverage ? Number(pitch.ratingAverage).toFixed(1) : '—'}
+                          </span>
+                        </div>
                         <span className="flex items-center gap-1">
-                          <Eye className="w-3 h-3" />
-                          {pitch.viewCount}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Heart className="w-3 h-3 text-red-500 fill-red-500" />
-                          {(pitch as any).likeCount ?? (pitch as any).like_count ?? 0}
-                        </span>
-                        <span className="flex items-center gap-1 text-amber-500">
-                          <Star className="w-3 h-3" />
-                          {pitch.ratingAverage ? Number(pitch.ratingAverage).toFixed(1) : '—'}
+                          <Calendar className="w-3 h-3" />
+                          {pitch.createdAt ? new Date(pitch.createdAt).toLocaleDateString() : 'Recent'}
                         </span>
                       </div>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {pitch.createdAt ? new Date(pitch.createdAt).toLocaleDateString() : 'Recent'}
-                      </span>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -487,8 +579,8 @@ export default function Homepage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-section-title mb-2">
-                <Sparkles className="inline w-8 h-8 text-yellow-600 mr-2" />
+              <h2 className="font-display text-section-title mb-2">
+                <Sparkles className="inline w-8 h-8 text-violet-500 mr-2" />
                 New Releases
               </h2>
               <p className="text-body">Fresh content just added to the platform</p>
@@ -508,59 +600,63 @@ export default function Homepage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {newReleases.map((pitch) => (
-                <div
-                  key={pitch.id}
-                  onClick={() => navigate(`/pitch/${pitch.id}`)}
-                  className="pitch-card bg-white/95 backdrop-blur-md rounded-xl overflow-hidden border border-yellow-500/20 hover:border-yellow-500/40 transition cursor-pointer group"
-                >
-                  <div className="h-40 bg-gradient-to-br from-yellow-600/20 to-orange-600/20 relative">
-                    {((pitch as any).title_image || (pitch as any).thumbnail_url || pitch.titleImage || pitch.thumbnailUrl) ? (
-                      <img src={(pitch as any).title_image || (pitch as any).thumbnail_url || pitch.titleImage || pitch.thumbnailUrl} alt={pitch.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <GenrePlaceholder genre={pitch.genre} />
-                    )}
-                    <div className="absolute top-2 left-2 bg-brand-new/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs text-white font-medium">
-                      NEW
+              {newReleases.map((pitch) => {
+                const img = (pitch as any).title_image || (pitch as any).thumbnail_url || pitch.titleImage || pitch.thumbnailUrl;
+                return (
+                  <div
+                    key={pitch.id}
+                    onClick={() => navigate(`/pitch/${pitch.id}`)}
+                    className="group bg-white rounded-2xl overflow-hidden border border-gray-200/70 shadow-sm transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:border-violet-200"
+                  >
+                    <div className="relative h-44 overflow-hidden bg-gray-900">
+                      {img ? (
+                        <img src={img} alt={pitch.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                      ) : (
+                        <GenrePlaceholder genre={pitch.genre} />
+                      )}
+                      <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                      <div className="absolute top-2.5 left-2.5 rounded-full bg-brand-new/90 backdrop-blur-sm px-2.5 py-0.5 text-[11px] font-semibold text-white">
+                        NEW
+                      </div>
+                      <div className="absolute top-2.5 right-2.5 rounded-full bg-black/55 backdrop-blur px-2.5 py-0.5 text-[11px] text-white">
+                        <FormatDisplay
+                          formatCategory={pitch.formatCategory}
+                          formatSubtype={pitch.formatSubtype}
+                          format={pitch.format}
+                          variant="subtype-only"
+                        />
+                      </div>
                     </div>
-                    <div className="absolute top-2 right-2 bg-purple-600 px-2 py-1 rounded text-xs text-white">
-                      <FormatDisplay
-                        formatCategory={pitch.formatCategory}
-                        formatSubtype={pitch.formatSubtype}
-                        format={pitch.format}
-                        variant="subtype-only"
-                      />
-                    </div>
-                  </div>
-                  <div className="p-4 space-y-2">
-                    <h3 className="text-card-title text-black mb-1 group-hover:text-purple-600 transition">
-                      {pitch.title}
-                    </h3>
-                    <p className="text-metadata text-gray-600 mb-2">{pitch.genre}</p>
-                    <p className="text-metadata text-gray-700 mb-3 line-clamp-2">{pitch.logline}</p>
-                    <div className="flex items-center justify-between text-metadata text-gray-600 pt-2">
-                      <div className="flex items-center gap-3">
+                    <div className="p-4">
+                      <h3 className="text-card-title mb-1 line-clamp-1 transition group-hover:text-brand-anchor">
+                        {pitch.title}
+                      </h3>
+                      <p className="text-metadata text-brand-anchor mb-2">{pitch.genre}</p>
+                      <p className="text-metadata text-gray-600 mb-3 line-clamp-2">{pitch.logline}</p>
+                      <div className="flex items-center justify-between text-metadata text-gray-600 border-t border-gray-100 pt-3">
+                        <div className="flex items-center gap-3">
+                          <span className="flex items-center gap-1">
+                            <Eye className="w-3 h-3" />
+                            {pitch.viewCount}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Heart className="w-3 h-3 text-red-500 fill-red-500" />
+                            {(pitch as any).likeCount ?? (pitch as any).like_count ?? 0}
+                          </span>
+                          <span className="flex items-center gap-1 text-amber-500">
+                            <Star className="w-3 h-3" />
+                            {pitch.ratingAverage ? Number(pitch.ratingAverage).toFixed(1) : '—'}
+                          </span>
+                        </div>
                         <span className="flex items-center gap-1">
-                          <Eye className="w-3 h-3" />
-                          {pitch.viewCount}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Heart className="w-3 h-3 text-red-500 fill-red-500" />
-                          {(pitch as any).likeCount ?? (pitch as any).like_count ?? 0}
-                        </span>
-                        <span className="flex items-center gap-1 text-amber-500">
-                          <Star className="w-3 h-3" />
-                          {pitch.ratingAverage ? Number(pitch.ratingAverage).toFixed(1) : '—'}
+                          <Calendar className="w-3 h-3" />
+                          {pitch.createdAt ? new Date(pitch.createdAt).toLocaleDateString() : 'Recent'}
                         </span>
                       </div>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {pitch.createdAt ? new Date(pitch.createdAt).toLocaleDateString() : 'Recent'}
-                      </span>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -570,7 +666,7 @@ export default function Homepage() {
       {/* Value Prop */}
       <section className="py-20 bg-gradient-to-r from-purple-50 to-pink-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-section-title mb-6">The data no other platform has</h2>
+          <h2 className="font-display text-section-title mb-6">The data no other platform has</h2>
           <p className="text-body mb-8 mx-auto">
             Pitchey shows creators exactly who is engaging with their pitch — named investors, production companies, and the feedback they share. No black box, no anonymous metrics.
           </p>
