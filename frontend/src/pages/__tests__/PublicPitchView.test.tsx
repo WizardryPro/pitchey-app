@@ -285,7 +285,10 @@ describe('PublicPitchView', () => {
     })
   })
 
-  it('shows Back to Marketplace link', async () => {
+  it('shows a Back to Marketplace button in the error state', async () => {
+    // The standalone header "Back to Marketplace" chrome was removed (PortalTopNav
+    // provides it now); the button now lives only in the not-found/error state.
+    mockGetPublicById.mockResolvedValueOnce(null)
     render(
       <MemoryRouter>
         <PublicPitchView />
@@ -297,7 +300,8 @@ describe('PublicPitchView', () => {
     })
   })
 
-  it('shows Dashboard button for authenticated user', async () => {
+  it('shows a Go to Dashboard button for an authenticated investor', async () => {
+    // mockUser is an authenticated investor viewing someone else's pitch.
     render(
       <MemoryRouter>
         <PublicPitchView />
@@ -305,7 +309,7 @@ describe('PublicPitchView', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('Dashboard')).toBeInTheDocument()
+      expect(screen.getByText('Go to Dashboard')).toBeInTheDocument()
     })
   })
 
