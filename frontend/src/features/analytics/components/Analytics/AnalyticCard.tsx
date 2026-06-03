@@ -37,42 +37,41 @@ export const AnalyticCard: React.FC<AnalyticCardProps> = ({
     }
   };
 
-  const getVariantClasses = () => {
+  // White cards with the accent confined to the icon chip — keeps a row of KPIs cohesive
+  // instead of a rainbow of full-card tints. The passed-in icon keeps its own color; this
+  // only sets the soft chip background behind it.
+  const chipBg = () => {
     switch (variant) {
-      case 'primary': return 'bg-blue-50 text-blue-600 border-blue-200';
-      case 'secondary': return 'bg-gray-50 text-gray-600 border-gray-200';
-      case 'success': return 'bg-green-50 text-green-600 border-green-200';
-      case 'warning': return 'bg-yellow-50 text-yellow-600 border-yellow-200';
-      case 'danger': return 'bg-red-50 text-red-600 border-red-200';
+      case 'primary': return 'bg-blue-50';
+      case 'secondary': return 'bg-indigo-50';
+      case 'success': return 'bg-emerald-50';
+      case 'warning': return 'bg-amber-50';
+      case 'danger': return 'bg-red-50';
     }
   };
 
   return (
-    <div className={`rounded-xl border p-6 shadow-sm ${getVariantClasses()}`}>
-      <div className="flex justify-between items-start mb-3">
-        <div className="rounded-full p-3 bg-white shadow-sm">
+    <div className="group rounded-xl border border-gray-200/70 bg-white p-5 shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md">
+      <div className="mb-4 flex items-start justify-between">
+        <div className={`inline-flex h-11 w-11 items-center justify-center rounded-xl ${chipBg()} transition-transform duration-200 group-hover:scale-105`}>
           {icon}
         </div>
-        <div className="flex items-center gap-1">
-          {change !== 0 && (
-            change > 0 ? (
-              <TrendingUp className="w-4 h-4 text-green-500" />
-            ) : (
-              <TrendingDown className="w-4 h-4 text-red-500" />
-            )
-          )}
-          {change !== 0 && (
-            <span className={`text-xs ${change > 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {Math.abs(change).toFixed(1)}%
-            </span>
-          )}
-        </div>
+        {change !== 0 && (
+          <span
+            className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs font-semibold ${
+              change > 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+            }`}
+          >
+            {change > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+            {Math.abs(change).toFixed(1)}%
+          </span>
+        )}
       </div>
       <div>
-        <h3 className="text-sm text-gray-500 mb-1">{title}</h3>
-        <p className="text-2xl font-bold">{formatValue()}</p>
+        <p className="text-2xl font-bold tracking-tight text-gray-900 tabular-nums">{formatValue()}</p>
+        <h3 className="mt-0.5 text-sm font-medium text-gray-500">{title}</h3>
         {description && (
-          <p className="text-xs text-gray-500 mt-1">{description}</p>
+          <p className="mt-1 text-xs text-gray-400">{description}</p>
         )}
       </div>
     </div>

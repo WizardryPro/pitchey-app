@@ -910,50 +910,45 @@ function ProductionDashboard() {
 
       {showShareModal && <ShareLinksModal onClose={() => setShowShareModal(false)} />}
 
-      {/* Tab Navigation */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="flex flex-wrap gap-x-4 sm:gap-x-8 overflow-x-auto">
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
-                activeTab === 'overview'
-                  ? 'border-purple-500 text-purple-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Overview
-            </button>
-            <button
-              onClick={() => setActiveTab('saved')}
-              className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
-                activeTab === 'saved'
-                  ? 'border-purple-500 text-purple-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Saved Pitches
-            </button>
-            <button
-              onClick={() => setActiveTab('following')}
-              className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
-                activeTab === 'following'
-                  ? 'border-purple-500 text-purple-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Following
-            </button>
-            <button
-              onClick={() => setActiveTab('ndas')}
-              className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
-                activeTab === 'ndas'
-                  ? 'border-purple-500 text-purple-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              NDAs
-            </button>
-          </nav>
+      {/* Tab Navigation — segmented control (portal-blue active pill, live counts) */}
+      <div className="mb-6">
+        <nav
+          aria-label="Dashboard sections"
+          className="inline-flex w-full sm:w-auto items-center gap-1 p-1 bg-gray-100 rounded-xl overflow-x-auto"
+        >
+          {([
+            { id: 'overview', label: 'Overview', icon: Activity, count: null },
+            { id: 'saved', label: 'Saved Pitches', icon: Bookmark, count: savedPitchItems?.length || 0 },
+            { id: 'following', label: 'Following', icon: Users, count: followingCreators?.length || 0 },
+            { id: 'ndas', label: 'NDAs', icon: Shield, count: signedNDAs?.length || 0 },
+          ] as const).map(({ id, label, icon: Icon, count }) => {
+            const isActive = activeTab === id;
+            return (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                aria-current={isActive ? 'page' : undefined}
+                className={`relative flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all duration-200 ${
+                  isActive
+                    ? 'bg-white text-brand-portal-production shadow-sm ring-1 ring-black/5'
+                    : 'text-gray-500 hover:text-gray-800 hover:bg-white/60'
+                }`}
+              >
+                <Icon className={`w-4 h-4 ${isActive ? 'text-brand-portal-production' : 'text-gray-400'}`} />
+                <span>{label}</span>
+                {count !== null && count > 0 && (
+                  <span
+                    className={`ml-0.5 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-[11px] font-semibold tabular-nums ${
+                      isActive ? 'bg-brand-portal-production/10 text-brand-portal-production' : 'bg-gray-200 text-gray-500'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
       </div>
 
       {/* Verification Warning */}
@@ -971,16 +966,10 @@ function ProductionDashboard() {
       <div className="space-y-6">
         {activeTab === 'overview' && (
           <div className="space-y-8">
-            {/* Primary CTA - Create New Pitch */}
-            <div>
-              <button
-                onClick={() => navigate('/production/pitch/new')}
-                className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 bg-purple-600 text-white text-lg font-bold rounded-xl hover:bg-purple-700 shadow-lg hover:shadow-xl transition-all"
-              >
-                <Plus className="w-6 h-6" />
-                Create New Pitch
-              </button>
-            </div>
+            {/* Quick Actions — the primary routing hub, top of the overview so users can
+                jump straight to any destination (Create Pitch tile replaces the old standalone
+                CTA). 3-col on desktop for a tighter grid. */}
+            <QuickActionsPanel actions={quickActions} columns={3} />
 
             {/* Pitch Evaluation Analytics */}
             <EnhancedProductionAnalytics
@@ -1007,9 +996,6 @@ function ProductionDashboard() {
                 </button>
               </div>
             )}
-
-            {/* Quick Actions — shared creator-style panel (incl. Share Profile) */}
-            <QuickActionsPanel actions={quickActions} />
 
             {/* Recent Activity */}
             <div className="bg-white rounded-xl shadow-sm p-6">
