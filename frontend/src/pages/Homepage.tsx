@@ -203,8 +203,10 @@ export default function Homepage() {
       </header>
 
       {/* Hero — "Premiere Night": dark, cinematic, editorial display type. The bright content
-          rails below it intentionally read as the marquee turning the lights up. */}
-      <section className="relative overflow-hidden bg-[#0a0a12] text-white">
+          rails below it intentionally read as the marquee turning the lights up.
+          -mt-16 pulls the hero up behind the sticky nav so the nav's backdrop is the hero
+          itself (not the light page background). */}
+      <section className="relative -mt-16 overflow-hidden bg-[#0a0a12] text-white">
         {/* Spotlight glows */}
         <div aria-hidden className="absolute -top-48 left-1/2 -translate-x-1/2 w-[64rem] h-[44rem] rounded-full blur-[80px] bg-[radial-gradient(ellipse_at_center,rgba(132,45,168,0.45),transparent_62%)]" />
         <div aria-hidden className="absolute top-1/4 -right-24 w-[34rem] h-[34rem] rounded-full blur-[90px] bg-[radial-gradient(circle,rgba(245,158,11,0.20),transparent_60%)]" />
@@ -233,7 +235,7 @@ export default function Homepage() {
           <Star className="w-20 h-20 text-white" />
         </div>
 
-        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-36 text-center">
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-36 pb-24 lg:pt-48 lg:pb-36 text-center">
           {/* Eyebrow */}
           <div className="inline-flex items-center gap-2.5 px-3 py-1 mb-8 rounded-full border border-white/15 bg-white/5 backdrop-blur text-[11px] font-medium tracking-[0.2em] uppercase text-white/70">
             <span className="w-1.5 h-1.5 rounded-full bg-violet-400" />
