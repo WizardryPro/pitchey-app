@@ -6798,8 +6798,24 @@ pitchey_analytics_datapoints_per_minute 1250
         return builder.error(ErrorCode.VALIDATION_ERROR, 'Invalid file type for media.');
       }
 
-      // Enforce credit cost: images = extra_image (1), videos = video_link (1)
       const isVideo = file.type.startsWith('video/');
+
+      // Size backstop — the frontend gates uploads client-side (images ~50MB,
+      // video ~500MB), but the backend had no cap, so it would accept (and charge
+      // credits for) an arbitrarily large file. Match the most-generous advertised
+      // per-type limit so no legitimate upload is rejected. Checked BEFORE the
+      // credit deduction so oversized files aren't charged.
+      const MAX_IMAGE_BYTES = 50 * 1024 * 1024;
+      const MAX_VIDEO_BYTES = 500 * 1024 * 1024;
+      const maxBytes = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+      if (file.size > maxBytes) {
+        return builder.error(
+          ErrorCode.VALIDATION_ERROR,
+          `File too large. Maximum ${isVideo ? '500MB for video' : '50MB for images'}.`
+        );
+      }
+
+      // Enforce credit cost: images = extra_image (1), videos = video_link (1)
       const usageType = isVideo ? 'video_link' : 'extra_image';
       const creditResult = await this.deductCreditsInternal(
         authResult.user.id, getCreditCost(usageType), `Media upload: ${file.name}`, usageType
