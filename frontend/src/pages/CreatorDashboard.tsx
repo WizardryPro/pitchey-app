@@ -236,11 +236,41 @@ function CreatorDashboard() {
 
         setTotalViews(validatedStats.views_count);
         setAvgRating(validatedStats.average_rating);
+        // The backend returns raw investment / NDA / notification rows, which don't carry the
+        // title/description/icon/color the row renderer expects — so they painted as blank lines.
+        // Normalise each source into that shape from its real fields.
         const activityObj = safeAccess(data, 'recentActivity', {});
+        const investmentActivity = safeArray(safeAccess(activityObj, 'investments', [])).map((inv: any, i: number) => ({
+          id: `inv-${safeString(inv?.id) || i}`,
+          title: safeString(inv?.title) || 'New investment',
+          description: safeString(inv?.description) || [
+            inv?.pitch_title ? `"${safeString(inv.pitch_title)}"` : null,
+            inv?.amount != null ? `$${Number(inv.amount).toLocaleString()}` : null,
+          ].filter(Boolean).join(' · '),
+          icon: safeString(inv?.icon) || 'dollar-sign',
+          color: safeString(inv?.color) || 'green',
+        }));
+        const ndaActivity = safeArray(safeAccess(activityObj, 'ndaRequests', [])).map((nda: any, i: number) => ({
+          id: `nda-${safeString(nda?.id) || i}`,
+          title: safeString(nda?.title) || (nda?.status === 'signed' ? 'NDA signed' : nda?.status === 'pending' ? 'NDA requested' : 'NDA update'),
+          description: safeString(nda?.description) || [
+            nda?.pitch_title ? `"${safeString(nda.pitch_title)}"` : null,
+            nda?.requester_username ? `by ${safeString(nda.requester_username)}` : null,
+          ].filter(Boolean).join(' · '),
+          icon: safeString(nda?.icon) || 'user-plus',
+          color: safeString(nda?.color) || 'purple',
+        }));
+        const notificationActivity = safeArray(safeAccess(activityObj, 'notifications', [])).map((n: any, i: number) => ({
+          id: `notif-${safeString(n?.id) || i}`,
+          title: safeString(n?.title) || 'Notification',
+          description: safeString(n?.description) || safeString(n?.message),
+          icon: safeString(n?.icon) || 'message-circle',
+          color: safeString(n?.color) || 'blue',
+        }));
         const flatActivity = [
-          ...safeArray(safeAccess(activityObj, 'investments', [])),
-          ...safeArray(safeAccess(activityObj, 'ndaRequests', [])),
-          ...safeArray(safeAccess(activityObj, 'notifications', []))
+          ...investmentActivity,
+          ...ndaActivity,
+          ...notificationActivity,
         ] as Record<string, unknown>[];
         setRecentActivity(flatActivity);
         setPitches(safeArray(safeAccess(data, 'recentPitches', [])));
