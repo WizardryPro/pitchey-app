@@ -710,7 +710,7 @@ export default function MarketplaceEnhanced() {
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         whileHover={{ y: -4 }}
-        className="group bg-white rounded-lg shadow-sm hover:shadow-xl transition-all overflow-hidden cursor-pointer"
+        className="group bg-white rounded-2xl border border-gray-200/70 shadow-sm hover:shadow-xl hover:border-violet-200 transition-all overflow-hidden cursor-pointer"
         onClick={() => handlePitchClick(pitch)}
       >
         <div className="aspect-[4/5] sm:aspect-[3/4] relative overflow-hidden bg-gray-100">
@@ -760,7 +760,7 @@ export default function MarketplaceEnhanced() {
         </div>
 
         <div className="p-3 sm:p-4">
-          <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1 text-sm sm:text-base">
+          <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1 text-sm sm:text-base transition group-hover:text-brand-anchor">
             {pitch.title}
           </h3>
           <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2 truncate flex items-center gap-1">
@@ -808,36 +808,38 @@ export default function MarketplaceEnhanced() {
       {/* Portal-aware top nav — hidden when inside a portal (PortalLayout has its own) */}
       {!isInsidePortal && <PortalTopNav />}
 
-      {/* Header with stats */}
-      <div className="bg-gradient-to-r from-purple-700 to-indigo-600 text-white">
-        <div className="container mx-auto px-4 py-5 sm:py-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      {/* Header with stats — cinematic, cohesive with the landing hero */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#15102e] via-purple-800 to-indigo-700 text-white">
+        <div aria-hidden className="absolute -top-28 right-1/4 w-[42rem] h-[26rem] rounded-full blur-[80px] bg-[radial-gradient(ellipse_at_center,rgba(132,45,168,0.45),transparent_62%)]" />
+        <div aria-hidden className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+        <div className="relative container mx-auto px-4 py-7 sm:py-10">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">Marketplace</h1>
-              <p className="text-sm sm:text-base text-purple-200">Discover and invest in the next big hit</p>
+              <h1 className="font-display font-black tracking-tight text-3xl sm:text-4xl lg:text-5xl mb-1">Marketplace</h1>
+              <p className="text-sm sm:text-base text-purple-200/80">Discover and back the next big story.</p>
             </div>
 
             {/* Quick stats — 2x2 on mobile, 4 across on tablet+ */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 md:gap-4 w-full md:w-auto">
-              <div className="bg-white/10 backdrop-blur rounded-lg px-3 py-2 sm:p-3">
-                <div className="text-xl sm:text-2xl font-bold">{filteredPitches.length}</div>
-                <div className="text-[10px] sm:text-xs text-purple-200">Active Pitches</div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 w-full md:w-auto">
+              <div className="rounded-xl border border-white/10 bg-white/[0.06] backdrop-blur px-4 py-3">
+                <div className="text-xl sm:text-2xl font-bold tabular-nums">{filteredPitches.length}</div>
+                <div className="text-[10px] sm:text-xs uppercase tracking-wider text-purple-200/70">Active Pitches</div>
               </div>
-              <div className="bg-white/10 backdrop-blur rounded-lg px-3 py-2 sm:p-3">
-                <div className="text-xl sm:text-2xl font-bold">{stats.activeCreators}</div>
-                <div className="text-[10px] sm:text-xs text-purple-200">Creators</div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.06] backdrop-blur px-4 py-3">
+                <div className="text-xl sm:text-2xl font-bold tabular-nums">{stats.activeCreators}</div>
+                <div className="text-[10px] sm:text-xs uppercase tracking-wider text-purple-200/70">Creators</div>
               </div>
-              <div className="bg-white/10 backdrop-blur rounded-lg px-3 py-2 sm:p-3">
-                <div className="text-xl sm:text-2xl font-bold">
+              <div className="rounded-xl border border-white/10 bg-white/[0.06] backdrop-blur px-4 py-3">
+                <div className="text-xl sm:text-2xl font-bold tabular-nums">
                   {stats.totalInvestment > 0 ? formatBudgetCompact(stats.totalInvestment) : '$0'}
                 </div>
-                <div className="text-[10px] sm:text-xs text-purple-200">Total Invested</div>
+                <div className="text-[10px] sm:text-xs uppercase tracking-wider text-purple-200/70">Total Invested</div>
               </div>
-              <div className="bg-white/10 backdrop-blur rounded-lg px-3 py-2 sm:p-3">
-                <div className="text-xl sm:text-2xl font-bold">
+              <div className="rounded-xl border border-white/10 bg-white/[0.06] backdrop-blur px-4 py-3">
+                <div className="text-xl sm:text-2xl font-bold tabular-nums">
                   {formatBudgetCompact(stats.avgBudget) || '$0'}
                 </div>
-                <div className="text-[10px] sm:text-xs text-purple-200">Avg Budget</div>
+                <div className="text-[10px] sm:text-xs uppercase tracking-wider text-purple-200/70">Avg Budget</div>
               </div>
             </div>
           </div>
