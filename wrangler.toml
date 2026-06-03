@@ -214,8 +214,12 @@ ENABLE_EDGE_CACHING = "true"
 # Authentication Configuration
 BETTER_AUTH_URL = "https://pitchey-api-prod.ndlovucavelle.workers.dev"
 
-# n8n Video Processing Webhook
-N8N_WEBHOOK_URL = "http://localhost:5678/webhook/video-uploaded"
+# n8n Video Processing Webhook — DISABLED in prod (Cloud-2).
+# This pointed at a dev-only localhost n8n instance, so queueVideoProcessing()
+# await'd an unreachable fetch on every video upload (added latency + a captured
+# Sentry error each time). multipart-upload.ts skips the webhook when this var is
+# unset. Re-enable with a REAL deployed n8n URL when the video pipeline ships.
+# N8N_WEBHOOK_URL = "http://localhost:5678/webhook/video-uploaded"
 
 # Distributed Tracing Configuration
 ENABLE_DISTRIBUTED_TRACING = "true"
