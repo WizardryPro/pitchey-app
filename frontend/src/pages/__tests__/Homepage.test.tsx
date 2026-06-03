@@ -121,13 +121,13 @@ describe('Homepage', () => {
 
   it('renders the hero headline', () => {
     renderHomepage()
-    expect(screen.getByText(/Where Stories/)).toBeInTheDocument()
-    expect(screen.getByText(/Find Life/)).toBeInTheDocument()
+    expect(screen.getByText(/Where stories/i)).toBeInTheDocument()
+    expect(screen.getByText(/find life/i)).toBeInTheDocument()
   })
 
   it('renders the hero subheadline', () => {
     renderHomepage()
-    expect(screen.getByText(/premier marketplace/i)).toBeInTheDocument()
+    expect(screen.getByText(/discover original stories/i)).toBeInTheDocument()
   })
 
   it('renders search bar', () => {
