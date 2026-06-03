@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { Eye, Heart, Share2, Tag, Film, Calendar, User, Shield, Lock, DollarSign, Briefcase, LogIn, Building2, Wallet, Bookmark, UserPlus } from 'lucide-react';
+import { Eye, Heart, Share2, Tag, Film, Calendar, User, Shield, Lock, DollarSign, Briefcase, LogIn, Building2, Wallet, Bookmark, UserPlus, ArrowLeft } from 'lucide-react';
 import { pitchAPI } from '../lib/api';
 import type { Pitch } from '../lib/api';
 import { useBetterAuthStore } from '../store/betterAuthStore';
@@ -228,10 +228,22 @@ export default function PublicPitchView() {
   return (
     <div className="min-h-screen bg-gray-50">
       <PortalTopNav />
-      {/* Standalone "Back to Marketplace / Sign In for Full Access" chrome was
-          deleted; PortalTopNav above provides Marketplace + Sign In already.
-          PitchRouter guarantees this component only renders for anonymous
-          viewers, so the auth-branch that used to live here was dead code. */}
+
+      {/* Back-to-marketplace affordance — the top nav has a Marketplace link, but a guest
+          who lands on a pitch from a card needs an obvious way back. Prefer real browser-back
+          (preserves marketplace scroll/filters) when there's history; fall back to /marketplace. */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        <button
+          onClick={() => {
+            if (window.history.length > 1) navigate(-1);
+            else void navigate('/marketplace');
+          }}
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 transition hover:text-purple-600"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Marketplace
+        </button>
+      </div>
 
       {/* Hero Image */}
       {pitch.titleImage && (
