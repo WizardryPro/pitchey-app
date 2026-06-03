@@ -28,9 +28,17 @@ vi.mock('../sessionCache', () => ({
 
 vi.mock('../../lib/session-manager', () => ({
   sessionManager: {
+    // Mirror the real performCheck contract: success:true whenever the check fn
+    // RESOLVES (even with a null user = genuine empty session); success:false
+    // only when it THROWS (transient/network failure). The store relies on this
+    // distinction to avoid logging users out on transient blips.
     checkSession: vi.fn(async (fn: () => Promise<any>) => {
-      const user = await fn();
-      return { success: !!user, user, timestamp: Date.now() };
+      try {
+        const user = await fn();
+        return { success: true, user, timestamp: Date.now() };
+      } catch {
+        return { success: false, timestamp: Date.now() };
+      }
     }),
     updateCache: vi.fn(),
     clearCache: vi.fn(),
@@ -424,6 +432,23 @@ describe('betterAuthStore', () => {
       const state = useBetterAuthStore.getState();
       expect(state.user).toBeNull();
       expect(state.isAuthenticated).toBe(false);
+    });
+
+    it('preserves the session on a transient check failure (no flash-logout)', async () => {
+      // A 5xx/network blip makes getSession throw -> performCheck returns
+      // success:false. The user must stay logged in so route guards don't bounce
+      // to /login/<portal> and flash the old login page mid-navigation.
+      useBetterAuthStore.setState({ user: mockUser, isAuthenticated: true });
+      mockGetSession.mockRejectedValue(new Error('SESSION_CHECK_TRANSIENT'));
+
+      await act(async () => {
+        await useBetterAuthStore.getState().checkSession();
+      });
+
+      const state = useBetterAuthStore.getState();
+      expect(state.user).toEqual(mockUser);
+      expect(state.isAuthenticated).toBe(true);
+      expect(state.loading).toBe(false);
     });
 
     it('handles session check errors gracefully', async () => {

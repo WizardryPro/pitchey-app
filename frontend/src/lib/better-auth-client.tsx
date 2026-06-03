@@ -151,22 +151,33 @@ export function createPortalAuthMethods(): PortalAuthMethods {
 
     // Session management
     async getSession(): Promise<Session | null> {
+      let response: Response;
       try {
-        const response = await fetch(`${API_URL}/api/auth/session`, {
+        response = await fetch(`${API_URL}/api/auth/session`, {
           method: 'GET',
           credentials: 'include'
         });
-
-        if (!response.ok) {
-          return null;
-        }
-
-        const data = await response.json();
-        return data as Session;
       } catch (error) {
-        console.error('Failed to get session:', error);
+        // Network failure — this is NOT a definitive "no session". Throw so the
+        // caller can preserve existing auth state instead of logging the user out
+        // (a transient blip must not flash the login page). See betterAuthStore.
+        console.error('Failed to get session (network):', error);
+        throw new Error('SESSION_CHECK_TRANSIENT');
+      }
+
+      // Definitively unauthenticated — return null so the caller clears the session.
+      if (response.status === 401 || response.status === 403) {
         return null;
       }
+
+      // Any other non-ok (5xx, etc.) is a transient backend issue, not a logout.
+      if (!response.ok) {
+        console.error('Failed to get session (status ' + response.status + ')');
+        throw new Error('SESSION_CHECK_TRANSIENT');
+      }
+
+      const data = await response.json();
+      return data as Session;
     },
 
     async signOut(): Promise<{ success: boolean }> {
