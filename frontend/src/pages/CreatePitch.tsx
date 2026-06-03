@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Upload, X, FileText, Video, Image as ImageIcon, Shield, AlertCircle, WifiOff, CheckCircle, Circle } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { ArrowLeft, Upload, X, FileText, Video, Image as ImageIcon, Shield, AlertCircle, WifiOff, CheckCircle, Circle, UserPlus } from 'lucide-react';
 import { useToast } from '@shared/components/feedback/ToastProvider';
 import LoadingSpinner from '@shared/components/feedback/LoadingSpinner';
 import { pitchService } from '@features/pitches/services/pitch.service';
@@ -38,9 +38,19 @@ import {
 
 export default function CreatePitch() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { success, error } = useToast();
   const { user } = useBetterAuthStore();
   const isProduction = user?.userType === 'production';
+
+  // When a creator lands here via a producer's invite link (InviteLanding redirect, or the
+  // post-verification return-to for new sign-ups), surface who they're pitching to. The actual
+  // producer→creator attribution is the auto-follow recorded at invite redemption; this banner
+  // just makes that intent visible. Source: nav state (logged-in redirect) or ?invitedBy= (new-user
+  // return-to, which survives the email-verification round-trip that nav state cannot).
+  const invitedBy = ((location.state as { invitedBy?: string } | null)?.invitedBy
+    || new URLSearchParams(location.search).get('invitedBy')
+    || '').trim();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState<'form' | 'creating' | 'uploading' | 'complete'>('form');
   const isOnline = useOnlineStatus();
@@ -640,6 +650,20 @@ export default function CreatePitch() {
           </div>
         </div>
       </header>
+
+      {invitedBy && (
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+          <div className="flex items-center gap-3 rounded-lg border border-purple-200 bg-purple-50 px-4 py-3">
+            <span className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+              <UserPlus className="w-4 h-4 text-purple-600" />
+            </span>
+            <p className="text-sm text-purple-900">
+              You're pitching to <strong>{invitedBy}</strong>. They'll see your pitch in their feed as
+              soon as you publish.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Pitch Completeness Bar */}
       <div className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b">

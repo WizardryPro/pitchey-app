@@ -3,11 +3,21 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { UserPlus, AlertCircle, CheckCircle, Lock, Mail, User, Shield, BarChart3, Eye, Globe } from 'lucide-react';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { apiClient } from '@/lib/api-client';
+import { setPendingReturnTo } from '@/utils/postLoginRedirect';
+
+// Where to land a redeemer so they can pitch straight to the inviting producer. Pitch-capable
+// roles go to their create-pitch flow; everyone else (investor/watcher) just redeems and lands
+// on a dashboard — the redeem still records the producer→creator follow either way.
+function pitchTargetFor(userType: string | undefined): string {
+  if (userType === 'production') return '/production/pitch/new';
+  if (userType === 'creator') return '/creator/pitch/new';
+  return '/creator/dashboard';
+}
 
 export default function InviteLanding() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
-  const { isAuthenticated, register, loading: authLoading, error: authError } = useBetterAuthStore();
+  const { isAuthenticated, user, register, loading: authLoading, error: authError } = useBetterAuthStore();
 
   const [invite, setInvite] = useState<{
     inviterName: string;
@@ -59,19 +69,26 @@ export default function InviteLanding() {
   // If already authenticated, redeem THEN redirect — only navigate on success.
   // (Previously the redeem was fire-and-forgotten and we navigated regardless, so a
   // failed redeem sent the user to the dashboard as if they'd joined the team.)
+  // Pitch-capable roles land straight in the create-pitch flow with the inviter's name in
+  // nav state (so CreatePitch can show "You're pitching to {producer}"); others fall back to
+  // a dashboard. The redeem auto-follows the creator on the producer's behalf regardless.
   useEffect(() => {
     if (isAuthenticated && code && invite?.valid) {
       void (async () => {
         try {
           await apiClient.post(`/api/invites/${code}/redeem`, {});
-          navigate('/creator/dashboard', { replace: true });
+          const target = pitchTargetFor(user?.userType);
+          navigate(target, {
+            replace: true,
+            state: target.endsWith('/pitch/new') ? { invitedBy: invite.inviterName } : undefined,
+          });
         } catch (err) {
           const e = err instanceof Error ? err : new Error(String(err));
           setError(`Could not redeem this invite: ${e.message}`);
         }
       })();
     }
-  }, [isAuthenticated, code, invite, navigate]);
+  }, [isAuthenticated, user, code, invite, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,6 +101,13 @@ export default function InviteLanding() {
       // Store invite code before registering
       localStorage.setItem('pendingInviteCode', code || '');
       localStorage.setItem('pendingVerificationEmail', formData.email);
+
+      // New sign-ups register as creators (below); land them in the create-pitch flow after
+      // they verify + log in. The ?invitedBy survives the email round-trip that nav state can't.
+      // betterAuthStore redeems the pendingInviteCode once the session is established.
+      setPendingReturnTo(
+        `/creator/pitch/new?invitedBy=${encodeURIComponent(invite?.inviterName || '')}`,
+      );
 
       await register({
         email: formData.email,

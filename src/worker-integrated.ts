@@ -20708,7 +20708,8 @@ Signatures: [To be completed upon signing]
         VALUES ($1, $2, $3, $4)
       `, [code, userId, userName, body.email || null]);
 
-      const inviteUrl = `https://pitchey.com/invite/${code}`;
+      const frontendUrl = this.env.FRONTEND_URL || 'https://pitchey-5o8.pages.dev';
+      const inviteUrl = `${frontendUrl}/invite/${code}`;
 
       // Send invite email if an email address was provided
       if (body.email && this.emailService) {
