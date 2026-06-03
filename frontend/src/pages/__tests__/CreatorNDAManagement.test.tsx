@@ -73,14 +73,16 @@ describe('CreatorNDAManagement', () => {
     expect(screen.getByText('Comprehensive NDA workflow and analytics')).toBeInTheDocument()
   })
 
-  it('renders back button', () => {
+  it('renders the NDA Management heading', () => {
+    // The back button / global chrome now comes from PortalLayout's MinimalHeader,
+    // not this page component (which only renders the heading + content).
     render(
       <MemoryRouter>
         <CreatorNDAManagement />
       </MemoryRouter>
     )
 
-    expect(screen.getByTestId('back-button')).toBeInTheDocument()
+    expect(screen.getByText('NDA Management')).toBeInTheDocument()
   })
 
   it('renders ComprehensiveNDAManagement when authenticated', () => {

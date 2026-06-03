@@ -73,37 +73,24 @@ const mockCreatorResponse = {
   },
 }
 
+// The component fetches /api/pitches?userId=N — the server filters by creator,
+// and the component reads body.data as the array directly (no client-side filter).
 const mockPitchesResponse = {
-  data: {
-    pitches: [
-      {
-        id: 10,
-        title: 'Midnight Run',
-        logline: 'A detective chases a fugitive',
-        genre: 'Thriller',
-        format: 'Feature Film',
-        status: 'published',
-        view_count: 3000,
-        like_count: 150,
-        created_at: '2026-01-15T00:00:00Z',
-        nda_required: false,
-        user_id: '5',
-      },
-      {
-        id: 11,
-        title: 'Other Creator Pitch',
-        logline: 'Not by this creator',
-        genre: 'Comedy',
-        format: 'Short Film',
-        status: 'published',
-        view_count: 100,
-        like_count: 5,
-        created_at: '2026-01-20T00:00:00Z',
-        nda_required: false,
-        user_id: '99',
-      },
-    ],
-  },
+  data: [
+    {
+      id: 10,
+      title: 'Midnight Run',
+      logline: 'A detective chases a fugitive',
+      genre: 'Thriller',
+      format: 'Feature Film',
+      status: 'published',
+      view_count: 3000,
+      like_count: 150,
+      created_at: '2026-01-15T00:00:00Z',
+      nda_required: false,
+      user_id: '5',
+    },
+  ],
 }
 
 // ─── Component import ────────────────────────────────────────────────────────
@@ -129,7 +116,7 @@ describe('CreatorProfile', () => {
           json: () => Promise.resolve(mockCreatorResponse),
         })
       }
-      if (url.includes('/api/pitches/public/search')) {
+      if (url.includes('/api/pitches?userId') || url.includes('/api/pitches/public/search')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve(mockPitchesResponse),
@@ -156,12 +143,12 @@ describe('CreatorProfile', () => {
     })
   })
 
-  it('calls GET /api/pitches/public/search for creator pitches', async () => {
+  it('calls GET /api/pitches?userId for creator pitches', async () => {
     render(<MemoryRouter><Component /></MemoryRouter>)
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/pitches/public/search'),
+        expect.stringContaining('/api/pitches?userId=5'),
         expect.objectContaining({ credentials: 'include' })
       )
     })
@@ -190,7 +177,8 @@ describe('CreatorProfile', () => {
       expect(screen.getByText('1,200')).toBeInTheDocument()
     })
     expect(screen.getByText('Followers')).toBeInTheDocument()
-    expect(screen.getByText('8')).toBeInTheDocument()
+    // "Pitches" count is pitches.length (the fetched list), not a stored total.
+    expect(screen.getByText('1')).toBeInTheDocument()
     expect(screen.getByText('Pitches')).toBeInTheDocument()
   })
 
