@@ -7,7 +7,7 @@ import {
   FileText, Download, Calculator, MapPin, Camera,
   Clapperboard, Settings, CheckSquare, Square,
   AlertCircle, CheckCircle, XCircle, Star, ChevronRight,
-  Truck, Home, Globe, Mic, Edit3, Package, Upload, Sparkles
+  Truck, Home, Globe, Mic, Edit3, Package, Upload, Sparkles, Heart
 } from 'lucide-react';
 import { pitchAPI } from '@/lib/api';
 import { formatCurrency } from '@shared/utils/formatters';
@@ -25,6 +25,7 @@ import FollowButton from '@features/browse/components/FollowButton';
 import { pitchService } from '@features/pitches/services/pitch.service';
 import PitchDocuments from '@features/pitches/components/PitchDocuments';
 import SocialProofBadge from '@shared/components/SocialProofBadge';
+import FeedbackSection from '@/components/feedback/FeedbackSection';
 
 interface Pitch {
   id: string;
@@ -194,7 +195,8 @@ const ProductionPitchView: React.FC = () => {
       }
       
       setPitch(response);
-      
+      setIsLiked(!!(response as any).isLiked);
+
     } catch (error) {
       console.error('Failed to fetch pitch:', error);
       setError('Failed to load pitch details');
@@ -363,7 +365,27 @@ const ProductionPitchView: React.FC = () => {
     navigate(`/production/messages?recipient=${pitch?.userId}&pitch=${id}`);
   };
 
-  // Like handler removed — replaced by Pitchey Score rating system
+  // Like — production cos can like a pitch they're evaluating (mirrors PitchDetail).
+  // Optimistic toggle; POST to add, DELETE to remove.
+  const handleLike = async () => {
+    if (!pitch) return;
+    if (!isAuthenticated) { navigate('/login/production'); return; }
+    const next = !isLiked;
+    setIsLiked(next);
+    setPitch(p => p ? ({ ...p, likes: (p.likes || 0) + (next ? 1 : -1) }) : p);
+    try {
+      const { API_URL } = await import('@/config');
+      const res = await fetch(`${API_URL}/api/pitches/${pitch.id}/like`, {
+        method: next ? 'POST' : 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error(`Like failed: ${res.status}`);
+    } catch (err) {
+      // Revert on failure
+      setIsLiked(!next);
+      setPitch(p => p ? ({ ...p, likes: (p.likes || 0) + (next ? -1 : 1) }) : p);
+    }
+  };
 
   const handleSharePitch = () => {
     navigator.clipboard.writeText(window.location.href).then(() => {
@@ -612,6 +634,20 @@ const ProductionPitchView: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-2 sm:space-x-3">
+          {!isOwner && (
+            <button
+              onClick={handleLike}
+              className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                isLiked
+                  ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <Heart className={`h-4 w-4 sm:mr-1.5 ${isLiked ? 'fill-current' : ''}`} />
+              <span className="hidden sm:inline">{isLiked ? 'Liked' : 'Like'}</span>
+            </button>
+          )}
+
           <button
             onClick={handleShortlistToggle}
             className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${
@@ -679,6 +715,7 @@ const ProductionPitchView: React.FC = () => {
 
             {/* Tab Content */}
             {activeTab === 'overview' && (
+              <div className="space-y-6">
               <div className="bg-white rounded-xl shadow-lg p-8">
                 {pitch.thumbnail && (
                   <img 
@@ -794,6 +831,17 @@ const ProductionPitchView: React.FC = () => {
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Feedback & rating — production cos can rate + leave structured
+                  feedback, same as other viewers on PitchDetail. */}
+              <FeedbackSection
+                pitchId={Number(pitch.id)}
+                isOwner={isOwner}
+                isAuthenticated={isAuthenticated}
+                userType={authUser?.userType || ''}
+                showScoreSummary={false}
+              />
               </div>
             )}
 
