@@ -14,10 +14,15 @@ BOLD='\033[1m'
 NC='\033[0m'
 
 # Configuration
-WORKER_NAME="pitchey-production"
-FRONTEND_PROJECT="pitchey"
+WORKER_NAME="pitchey-api-prod"          # matches wrangler.toml `name`
+FRONTEND_PROJECT="pitchey"              # CF Pages project name (served at pitchey-5o8.pages.dev)
+FRONTEND_BRANCH="main"                  # prod branch — without it `pages deploy` makes a PREVIEW
 WORKER_URL="https://pitchey-api-prod.ndlovucavelle.workers.dev"
 FRONTEND_URL="https://pitchey-5o8.pages.dev"
+
+# Wrangler is a LOCAL devDependency here — always invoke via npx, never assume a
+# global install (the old `command -v wrangler` + `npm i -g` path died on EACCES).
+WRANGLER="npx --no-install wrangler"
 
 # Rollback options
 ROLLBACK_WORKER=false
@@ -89,7 +94,14 @@ show_help() {
 
 confirm_action() {
     local action="$1"
-    
+
+    # A dry run makes no changes — don't gate it behind the interactive prompt
+    # (this is what lets the drill run --dry-run non-interactively in CI/automation).
+    if [[ "$DRY_RUN" == "true" ]]; then
+        echo_info "Dry run — no confirmation required (no changes will be made)"
+        return 0
+    fi
+
     if [[ "$FORCE" == "true" ]]; then
         echo_warning "Force mode enabled - skipping confirmation"
         return 0
@@ -113,28 +125,25 @@ confirm_action() {
 
 check_prerequisites() {
     echo_info "Checking rollback prerequisites..."
-    
-    # Check wrangler CLI
-    if ! command -v wrangler &> /dev/null; then
-        echo_error "Wrangler CLI not found. Installing..."
-        npm install -g wrangler@latest || {
-            echo_error "Failed to install wrangler"
-            exit 1
-        }
-    fi
-    
-    # Check authentication
-    if ! wrangler auth whoami &> /dev/null; then
-        echo_error "Not authenticated with Cloudflare"
-        echo_error "Please run: wrangler auth login"
+
+    # Check wrangler is resolvable via npx (local devDependency)
+    if ! $WRANGLER --version &> /dev/null; then
+        echo_error "Wrangler not found. Run 'npm ci' in the repo root first."
         exit 1
     fi
-    
+
+    # Check authentication (command is `whoami`, NOT `auth whoami`)
+    if ! $WRANGLER whoami &> /dev/null; then
+        echo_error "Not authenticated with Cloudflare"
+        echo_error "Please run: npx wrangler login"
+        exit 1
+    fi
+
     # Check git
     if ! command -v git &> /dev/null; then
         echo_error "Git not found. Some rollback operations may not work."
     fi
-    
+
     echo_success "Prerequisites check passed"
 }
 
@@ -143,7 +152,7 @@ get_worker_versions() {
     
     # Get deployment versions from Cloudflare
     local versions
-    if versions=$(wrangler deployments list 2>/dev/null); then
+    if versions=$($WRANGLER deployments list 2>/dev/null); then
         echo_info "Available worker versions:"
         echo "$versions" | head -10
         return 0
@@ -161,115 +170,88 @@ rollback_worker_to_previous() {
         return 0
     fi
     
-    # Method 1: Try to rollback to previous deployment
-    if wrangler rollback 2>/dev/null; then
+    # Method 1: roll back to the immediately-previous version. `-y` auto-confirms
+    # (bare `wrangler rollback` prompts interactively and would hang during an
+    # incident). With no version-id, wrangler targets the version before the
+    # current active one.
+    if $WRANGLER rollback -y -m "emergency rollback via rollback-deployment.sh"; then
         echo_success "Worker rolled back to previous version"
         return 0
     fi
-    
+
     echo_warning "Direct rollback failed. Deploying emergency worker..."
     deploy_emergency_worker
 }
 
 deploy_emergency_worker() {
     echo_info "Deploying emergency minimal worker..."
-    
+
     if [[ "$DRY_RUN" == "true" ]]; then
-        echo_info "[DRY RUN] Would deploy emergency worker"
+        echo_info "[DRY RUN] Would deploy emergency maintenance worker as '$WORKER_NAME'"
         return 0
     fi
-    
-    # Create minimal emergency worker
-    local emergency_worker="/tmp/emergency-worker.ts"
-    cat > "$emergency_worker" << 'EOF'
-/**
- * Emergency Minimal Worker for Pitchey Platform
- */
 
-addEventListener('fetch', event => {
-  event.respondWith(handleRequest(event.request))
-})
+    # Build a self-contained maintenance worker in a temp dir with its OWN minimal
+    # wrangler config — deployed under the same worker name so it replaces the live
+    # worker with a 503 maintenance page. We do NOT touch src/ (the real entry is
+    # src/worker-integrated.ts; the old script wrote to a non-existent
+    # src/worker-platform-fixed.ts and would have deployed the real worker instead).
+    local emergency_dir
+    emergency_dir="$(mktemp -d)"
 
-async function handleRequest(request: Request): Promise<Response> {
-  const url = new URL(request.url)
-  
-  // Health check endpoint
-  if (url.pathname === '/api/health') {
-    return new Response(JSON.stringify({
-      status: 'maintenance',
-      message: 'System is under maintenance. Please try again later.',
-      timestamp: new Date().toISOString()
-    }), {
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      }
-    })
-  }
-  
-  // All other requests return maintenance message
-  if (url.pathname.startsWith('/api/')) {
-    return new Response(JSON.stringify({
-      error: 'Service temporarily unavailable',
-      message: 'The service is currently under maintenance. Please try again later.',
-      code: 'MAINTENANCE_MODE'
-    }), {
-      status: 503,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      }
-    })
-  }
-  
-  // Return maintenance page for all other requests
-  return new Response(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Maintenance - Pitchey Platform</title>
-      <style>
-        body { font-family: system-ui; text-align: center; padding: 50px; background: #f5f5f5; }
-        .container { max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; }
-        h1 { color: #e74c3c; margin-bottom: 20px; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <h1>🔧 Maintenance Mode</h1>
-        <p>The Pitchey platform is currently undergoing maintenance.</p>
-        <p>Please check back in a few minutes.</p>
-        <p><small>Last Update: ${new Date().toLocaleString()}</small></p>
-      </div>
-    </body>
-    </html>
-  `, {
-    headers: {
-      'Content-Type': 'text/html',
+    # Module-syntax worker (service-worker `addEventListener` is incompatible with
+    # the module config the platform uses).
+    cat > "$emergency_dir/worker.js" << 'EOF'
+export default {
+  async fetch(request) {
+    const url = new URL(request.url);
+    const cors = { 'Access-Control-Allow-Origin': '*' };
+
+    if (url.pathname === '/api/health') {
+      return new Response(JSON.stringify({
+        status: 'maintenance',
+        message: 'System is under maintenance. Please try again later.',
+        timestamp: new Date().toISOString(),
+      }), { status: 503, headers: { 'Content-Type': 'application/json', ...cors } });
     }
-  })
-}
+
+    if (url.pathname.startsWith('/api/')) {
+      return new Response(JSON.stringify({
+        error: 'Service temporarily unavailable',
+        message: 'The service is currently under maintenance. Please try again later.',
+        code: 'MAINTENANCE_MODE',
+      }), { status: 503, headers: { 'Content-Type': 'application/json', ...cors } });
+    }
+
+    return new Response(
+      '<!DOCTYPE html><html><head><title>Maintenance - Pitchey</title>' +
+      '<style>body{font-family:system-ui;text-align:center;padding:50px;background:#f5f5f5}' +
+      '.c{max-width:600px;margin:0 auto;background:#fff;padding:40px;border-radius:8px}' +
+      'h1{color:#e74c3c}</style></head><body><div class="c"><h1>🔧 Maintenance Mode</h1>' +
+      '<p>The Pitchey platform is currently undergoing maintenance.</p>' +
+      '<p>Please check back in a few minutes.</p></div></body></html>',
+      { status: 503, headers: { 'Content-Type': 'text/html', ...cors } }
+    );
+  }
+};
 EOF
-    
-    # Backup current worker file
-    if [[ -f "src/worker-platform-fixed.ts" ]]; then
-        cp "src/worker-platform-fixed.ts" "src/worker-platform-fixed.ts.backup-$(date +%s)"
-        echo_info "Current worker backed up"
-    fi
-    
-    # Deploy emergency worker
-    cp "$emergency_worker" "src/worker-platform-fixed.ts"
-    
-    if wrangler deploy; then
-        echo_success "Emergency worker deployed successfully"
-        echo_warning "System is now in maintenance mode"
+
+    cat > "$emergency_dir/wrangler.toml" << EOF
+name = "$WORKER_NAME"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+EOF
+
+    if $WRANGLER deploy --config "$emergency_dir/wrangler.toml"; then
+        echo_success "Emergency maintenance worker deployed as '$WORKER_NAME'"
+        echo_warning "System is now in maintenance mode (503). Roll forward with the normal deploy to restore."
     else
         echo_error "Failed to deploy emergency worker"
+        rm -rf "$emergency_dir"
         return 1
     fi
-    
-    # Cleanup
-    rm -f "$emergency_worker"
+
+    rm -rf "$emergency_dir"
 }
 
 rollback_frontend() {
@@ -356,8 +338,9 @@ deploy_emergency_frontend() {
 </html>
 EOF
     
-    # Deploy emergency frontend
-    if wrangler pages deploy "$emergency_dir" --project-name="$FRONTEND_PROJECT"; then
+    # Deploy emergency frontend. --branch is REQUIRED for the canonical prod URL —
+    # without it CF Pages publishes a preview deployment, not pitchey-5o8.pages.dev.
+    if $WRANGLER pages deploy "$emergency_dir" --project-name="$FRONTEND_PROJECT" --branch="$FRONTEND_BRANCH"; then
         echo_success "Emergency maintenance page deployed"
         echo_warning "Frontend is now showing maintenance page"
     else
@@ -381,12 +364,12 @@ reset_worker_secrets() {
     echo_warning "Setting emergency secrets configuration..."
     
     # Disable database in emergency mode
-    echo "false" | wrangler secret put USE_DATABASE || true
-    echo "false" | wrangler secret put USE_EMAIL || true
-    echo "false" | wrangler secret put USE_STORAGE || true
-    
+    echo "false" | $WRANGLER secret put USE_DATABASE || true
+    echo "false" | $WRANGLER secret put USE_EMAIL || true
+    echo "false" | $WRANGLER secret put USE_STORAGE || true
+
     # Set a temporary JWT secret (will force re-login)
-    echo "emergency_jwt_secret_$(date +%s)" | wrangler secret put JWT_SECRET || true
+    echo "emergency_jwt_secret_$(date +%s)" | $WRANGLER secret put JWT_SECRET || true
     
     echo_success "Worker secrets reset to emergency configuration"
     echo_warning "This will log out all users and disable some features"
