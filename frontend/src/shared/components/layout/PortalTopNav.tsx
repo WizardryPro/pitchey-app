@@ -47,7 +47,6 @@ const NAV_BY_ROLE: Partial<Record<UserTypeCanonical, NavItem[]>> = {
     { label: 'Dashboard', to: PRODUCTION_ROUTES.dashboard },
     { label: 'Browse', to: '/marketplace' },
     HOT_LINK,
-    { label: 'Projects', to: PRODUCTION_ROUTES.projects },
     { label: 'NDAs', to: '/production/ndas' },
     { label: 'Messages', to: PRODUCTION_ROUTES.messages },
   ],

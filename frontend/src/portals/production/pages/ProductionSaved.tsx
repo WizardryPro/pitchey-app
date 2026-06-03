@@ -13,7 +13,6 @@ import { useNavigate } from 'react-router-dom';
 import { SavedPitchesService, type SavedPitch as ApiSavedPitch } from '@features/pitches/services/saved-pitches.service';
 import { Clapperboard } from 'lucide-react';
 import { getGenresSync } from '@/config/pitchConstants';
-import StartProjectModal from '../components/StartProjectModal';
 
 // Loading skeleton for pitch cards
 function PitchCardSkeleton() {
@@ -70,7 +69,6 @@ export default function ProductionSaved() {
   const [savedPitches, setSavedPitches] = useState<SavedPitch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [startProjectPitch, setStartProjectPitch] = useState<SavedPitch | null>(null);
 
   useEffect(() => {
     fetchSavedPitches();
@@ -365,17 +363,6 @@ export default function ProductionSaved() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        title="Start Project"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setStartProjectPitch(pitch);
-                        }}
-                      >
-                        <Clapperboard className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
                           navigate(`/production/messages?pitch=${pitch.id}`);
@@ -436,16 +423,6 @@ export default function ProductionSaved() {
         })()}
       </main>
 
-      {startProjectPitch && (
-        <StartProjectModal
-          pitch={{
-            id: startProjectPitch.id,
-            title: startProjectPitch.title,
-            genre: startProjectPitch.genre,
-          }}
-          onClose={() => setStartProjectPitch(null)}
-        />
-      )}
     </div>
   );
 }

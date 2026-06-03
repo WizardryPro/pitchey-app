@@ -214,12 +214,6 @@ const InvestorWallet = lazyRetry(() => import('@portals/investor/pages/InvestorW
 const PaymentMethods = lazyRetry(() => import('@portals/investor/pages/PaymentMethods'));
 
 // New Pages
-const ProductionProjects = lazyRetry(() => import('@portals/production/pages/ProductionProjects'));
-const ProductionProjectsDevelopment = lazyRetry(() => import('@portals/production/pages/ProductionProjectsDevelopment'));
-const ProductionProjectsActive = lazyRetry(() => import('@portals/production/pages/ProductionProjectsActive'));
-const ProductionProjectsPost = lazyRetry(() => import('@portals/production/pages/ProductionProjectsPost'));
-const ProductionProjectsCompleted = lazyRetry(() => import('@portals/production/pages/ProductionProjectsCompleted'));
-const ProductionPipeline = lazyRetry(() => import('@portals/production/pages/ProductionPipeline'));
 const ProductionSubmissions = lazyRetry(() => import('@portals/production/pages/ProductionSubmissions'));
 const ProductionSubmissionsNew = lazyRetry(() => import('@portals/production/pages/ProductionSubmissionsNew'));
 const ProductionSubmissionsReview = lazyRetry(() => import('@portals/production/pages/ProductionSubmissionsReview'));

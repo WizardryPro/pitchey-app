@@ -108,7 +108,6 @@ export default function DashboardHeader({
       case 'production':
         return [
           ...commonItems,
-          { label: 'Projects', href: '/production/projects', icon: Film },
           { label: 'Activity', href: '/production/activity', icon: Activity },
           { label: 'Team', href: '/production/team', icon: Users },
           { label: 'Analytics', href: '/production/analytics', icon: BarChart3 },
