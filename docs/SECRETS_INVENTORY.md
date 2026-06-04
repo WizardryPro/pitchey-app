@@ -28,19 +28,25 @@ makes that fast, plus a one-file local vault so a real value backup exists.
 
 > Sentry DSN is not a `wrangler secret` — it lives in `wrangler.toml` `[vars]` (`SENTRY_DSN`), already in git.
 
+## Helper script: `scripts/secrets-vault.sh`
+
+Manages the vault — **never prints values**:
+
+```bash
+scripts/secrets-vault.sh status    # what's in the vault vs CF (no values shown)
+scripts/secrets-vault.sh fill      # prompt (no-echo) for each empty secret -> vault
+scripts/secrets-vault.sh fill NAME # (re)enter one
+scripts/secrets-vault.sh verify    # vault keys vs `wrangler secret list` (drift check)
+scripts/secrets-vault.sh push      # restore: push filled vault values to the worker (confirms first)
+```
+
 ## Recovery procedure (if secrets are lost)
 
-1. Restore the vendor secrets into `.secrets/vault.env` from your password manager (or re-issue from each vendor above).
-2. Push each back to the worker:
-   ```bash
-   while IFS='=' read -r k v; do
-     [[ "$k" =~ ^[A-Z_]+$ ]] && printf '%s' "$v" | npx wrangler secret put "$k"
-   done < .secrets/vault.env
-   ```
-3. After `DATABASE_URL` rotation, remember Neon password rotation is prod-affecting — update the worker secret in the same step (Hyperdrive copy no longer exists as of 2026-06-04, so that second step is gone).
-4. Redeploy: `npx wrangler deploy`. Verify `GET /api/health` → `ok`.
+1. `scripts/secrets-vault.sh fill` — paste each value from your password manager / re-issue from the vendor above.
+2. `scripts/secrets-vault.sh push` — pushes them back to the worker (`wrangler secret put`, after a YES confirm).
+3. `npx wrangler deploy` (if needed), then verify `GET /api/health` → `ok`.
+4. Note: Neon password rotation is prod-affecting — update `DATABASE_URL` and `push` in the same step. (The Hyperdrive credential copy no longer exists as of 2026-06-04, so that extra step is gone.)
 
 ## Backup hygiene
-- Re-run after **any** `wrangler secret put`: update `.secrets/vault.env` + your password manager.
-- The generic `scripts/secrets-config-manager.sh` (HashiCorp Vault) is **not** wired up — this one-file vault is the pragmatic backup.
-- Template to copy: `docs/secrets-vault.template.env` → `.secrets/vault.env` (gitignored), then fill values.
+- After **any** `wrangler secret put`, run `scripts/secrets-vault.sh fill NAME` to keep the vault current + update your password manager.
+- The generic `scripts/secrets-config-manager.sh` (HashiCorp Vault) is **not** wired up — `secrets-vault.sh` + the one-file vault is the pragmatic backup.
