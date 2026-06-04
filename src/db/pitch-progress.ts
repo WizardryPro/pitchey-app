@@ -67,9 +67,12 @@ export async function getFeedbackProgress(
     `;
     const editCount = Number(edits?.n ?? 0);
 
-    // Baseline: the score snapshot at/just-before the feedback.
+    // Baseline: the score snapshot at/just-before the feedback. pitch_versions
+    // stores the snapshot in a `content` jsonb (see updatePitch's INSERT) — there
+    // are NO pitchey_score_avg / rating_average columns on this table, so the old
+    // query threw "column ... does not exist" on every call (5×/24h in prod).
     const [baseline] = await sql`
-      SELECT pitchey_score_avg, rating_average
+      SELECT content
       FROM pitch_versions
       WHERE pitch_id = ${pitchId} AND created_at <= ${fb.created_at}
       ORDER BY created_at DESC
@@ -87,7 +90,15 @@ export async function getFeedbackProgress(
     const pickScore = (row: any): number | null =>
       row ? (num(row.pitchey_score_avg) ?? num(row.rating_average)) : null;
 
-    const scoreAtFeedback = pickScore(baseline);
+    // The baseline score lives in the jsonb snapshot (keys written by updatePitch).
+    const baselineContent = (() => {
+      const c = (baseline as any)?.content;
+      if (!c) return null;
+      try { return typeof c === 'string' ? JSON.parse(c) : c; } catch { return null; }
+    })();
+    const scoreAtFeedback = baselineContent
+      ? (num(baselineContent.pitcheyScoreAvg) ?? num(baselineContent.ratingAverage))
+      : null;
     const scoreNow = pickScore(now);
     const scoreDelta =
       scoreAtFeedback != null && scoreNow != null

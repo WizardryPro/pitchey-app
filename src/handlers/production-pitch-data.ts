@@ -28,6 +28,30 @@ function extractPitchId(request: Request): number {
   return parseInt(parts[4] || '0', 10);
 }
 
+/**
+ * S2 authorization gate. Production notes/checklist/team are production-side
+ * tools, but the write handlers keyed only on the requester's user_id — so ANY
+ * authenticated user could write production data onto ANY pitchId (live evidence:
+ * a creator wrote a note on a production-owned pitch). The writer must be either a
+ * production user (evaluating a pitch) or a seated B3 company member of the pitch
+ * owner's company.
+ */
+async function canWriteProductionData(sql: any, userId: number, pitchId: number): Promise<boolean> {
+  try {
+    const [me] = await sql`SELECT user_type FROM users WHERE id = ${userId}`;
+    if (me?.user_type === 'production') return true;
+    const member = await sql`
+      SELECT 1 FROM team_members tm
+      JOIN teams t ON t.id = tm.team_id
+      JOIN pitches p ON p.user_id = t.owner_id
+      WHERE p.id = ${pitchId} AND tm.user_id = ${userId} AND tm.role = 'member'
+      LIMIT 1`;
+    return member.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Notes
 // ---------------------------------------------------------------------------
@@ -75,6 +99,10 @@ export async function createProductionNote(request: Request, env: Env): Promise<
 
   const sql = getDb(env);
   if (!sql) return errorResponse('Database unavailable', origin, 503);
+
+  if (!(await canWriteProductionData(sql, Number(userId), pitchId))) {
+    return errorResponse('Not authorized to add production notes to this pitch', origin, 403);
+  }
 
   try {
     const body = await request.json() as Record<string, unknown>;
@@ -188,6 +216,10 @@ export async function updateProductionChecklist(request: Request, env: Env): Pro
   const sql = getDb(env);
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
+  if (!(await canWriteProductionData(sql, Number(userId), pitchId))) {
+    return errorResponse('Not authorized to update production data on this pitch', origin, 403);
+  }
+
   try {
     const body = await request.json() as Record<string, unknown>;
     const checklist = body.checklist;
@@ -258,6 +290,10 @@ export async function updateProductionTeam(request: Request, env: Env): Promise<
 
   const sql = getDb(env);
   if (!sql) return errorResponse('Database unavailable', origin, 503);
+
+  if (!(await canWriteProductionData(sql, Number(userId), pitchId))) {
+    return errorResponse('Not authorized to update production data on this pitch', origin, 403);
+  }
 
   try {
     const body = await request.json() as Record<string, unknown>;
