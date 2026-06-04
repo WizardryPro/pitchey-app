@@ -27,6 +27,7 @@ import { getSubscriptionTier } from '../config/subscription-plans';
 import { config } from '../config';
 import FollowButton from '@features/browse/components/FollowButton';
 import NDAManagementPanel from '@features/ndas/components/NDAManagementPanel';
+import { CompanyJoinCodeCard } from '@features/teams/components/CompanyTeamCards';
 import FormatDisplay from '../components/FormatDisplay';
 import { EnhancedProductionAnalytics } from '@features/analytics/components/Analytics/EnhancedProductionAnalytics';
 import { withPortalErrorBoundary } from '../components/ErrorBoundary/PortalErrorBoundary';
@@ -959,6 +960,9 @@ function ProductionDashboard() {
                 jump straight to any destination (Create Pitch tile replaces the old standalone
                 CTA). 3-col on desktop for a tighter grid. */}
             <QuickActionsPanel actions={quickActions} columns={3} />
+
+            {/* B3: share a join code so creators can join the company and collaborate */}
+            <CompanyJoinCodeCard />
 
             {/* Pitch Evaluation Analytics */}
             <EnhancedProductionAnalytics

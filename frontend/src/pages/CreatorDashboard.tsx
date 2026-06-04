@@ -12,6 +12,7 @@ import { QuickNDAStatus } from '@features/ndas/components/NDA/NDADashboardIntegr
 import { getSubscriptionTier } from '../config/subscription-plans';
 import { InvestmentService } from '@features/deals/services/investment.service';
 import FundingOverview from '@features/deals/components/Investment/FundingOverview';
+import { JoinCompanyCard } from '@features/teams/components/CompanyTeamCards';
 // Analytics embedded view removed — users navigate to /creator/analytics instead
 import { withPortalErrorBoundary } from '../components/ErrorBoundary/PortalErrorBoundary';
 import { useSentryPortal } from '@/shared/hooks/useSentryPortal';
@@ -481,6 +482,11 @@ function CreatorDashboard() {
         <QuickActionsPanel className="lg:col-span-2" actions={quickActions} />
       </div>
       {showShareModal && <ShareLinksModal onClose={() => setShowShareModal(false)} />}
+
+      {/* B3: creators redeem a production company's join code to collaborate */}
+      <div className="mb-8">
+        <JoinCompanyCard />
+      </div>
 
       {/* ===== MY PITCHES + NDA QUICK STATUS ===== */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">

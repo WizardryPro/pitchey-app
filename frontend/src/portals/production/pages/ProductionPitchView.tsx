@@ -53,6 +53,7 @@ interface Pitch {
   createdAt: string;
   updatedAt: string;
   hasSignedNDA?: boolean;
+  isCompanyMember?: boolean;
   ndaCount?: number;
   thumbnail?: string;
   pitchDeck?: string;
@@ -895,7 +896,7 @@ const ProductionPitchView: React.FC = () => {
               </div>
             )}
 
-            {activeTab === 'team' && (isOwner || pitch?.hasSignedNDA) && (
+            {activeTab === 'team' && (isOwner || pitch?.hasSignedNDA || pitch?.isCompanyMember) && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <div className="flex items-center justify-between mb-6">
                   <div>
@@ -958,7 +959,7 @@ const ProductionPitchView: React.FC = () => {
               </div>
             )}
 
-            {activeTab === 'notes' && (isOwner || pitch?.hasSignedNDA) && (
+            {activeTab === 'notes' && (isOwner || pitch?.hasSignedNDA || pitch?.isCompanyMember) && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Production Notes</h2>
                 
