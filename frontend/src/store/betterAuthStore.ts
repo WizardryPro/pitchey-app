@@ -191,7 +191,7 @@ export const useBetterAuthStore = create<BetterAuthState>((set) => ({
     // Generic login - let the server determine the portal
     set({ loading: true, error: null });
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/sign-in`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/auth/sign-in`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, turnstileToken }),
@@ -226,7 +226,7 @@ export const useBetterAuthStore = create<BetterAuthState>((set) => ({
     set({ loading: true, error: null });
     try {
       const { turnstileToken, ...registrationData } = data;
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/sign-up`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/auth/sign-up`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...registrationData, turnstileToken }),

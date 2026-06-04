@@ -779,6 +779,7 @@ export function useWebSocketAdvanced(options: UseWebSocketAdvancedOptions = {}) 
         // circuit breaker accumulates failures, and the user ends up with 10
         // failed reconnect attempts and a 5-minute circuit-breaker lockout.
         let tokenAcquired = false;
+        let tokenFetchStatus = 0; // 0 = network throw (no HTTP response)
         try {
           const tokenResponse = await fetch(`${config.API_URL}/api/ws/token`, {
             credentials: 'include',
@@ -786,6 +787,7 @@ export function useWebSocketAdvanced(options: UseWebSocketAdvancedOptions = {}) 
               'Accept': 'application/json',
             },
           });
+          tokenFetchStatus = tokenResponse.status;
 
           if (tokenResponse.ok) {
             const tokenData = await tokenResponse.json();
@@ -802,6 +804,22 @@ export function useWebSocketAdvanced(options: UseWebSocketAdvancedOptions = {}) 
         }
 
         if (!tokenAcquired) {
+          // Polling-degradation signal (connectivity-map P1). WS auth is
+          // token-only; when /api/ws/token fails for an authenticated user
+          // (login race, transient 5xx) we silently fall back to polling. That
+          // degradation was previously invisible. A 401 here is the expected
+          // unauthenticated case (login page / expired session) and stays noise-
+          // free; anything else (network throw, 5xx, missing token in a 200) is
+          // a real degradation worth a Sentry breadcrumb so the polling tax
+          // becomes observable.
+          if (tokenFetchStatus !== 401 && tokenFetchStatus !== 403) {
+            Sentry.addBreadcrumb({
+              category: 'websocket',
+              message: 'WS token fetch failed — degrading to polling',
+              level: 'warning',
+              data: { tokenFetchStatus },
+            });
+          }
           // Revert state to disconnected and bail out without touching the
           // circuit breaker — this is expected behaviour for unauthenticated
           // users (login page, expired session) and must not be counted as a

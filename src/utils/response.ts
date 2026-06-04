@@ -39,6 +39,7 @@ export interface ErrorDetails {
 const ALLOWED_ORIGINS = [
   'https://pitchey-5o8.pages.dev',     // Primary production (Ndlovucavelle's `pitchey` Pages project)
   'https://pitchey.com',               // Marketing stub (pitchey-coming-soon, separate account)
+  'https://www.pitchey.com',           // Marketing stub www CNAME (proxied → apex); latent until it makes authed calls
   'http://localhost:5173',             // Local development (Vite)
   'http://127.0.0.1:5173',             // Local development (Vite via IP)
   'http://localhost:3000',             // Local development (alternative)
