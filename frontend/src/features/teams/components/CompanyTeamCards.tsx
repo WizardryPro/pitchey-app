@@ -4,13 +4,19 @@ import { Users, KeyRound, Copy, Check, RefreshCw } from 'lucide-react';
 const API = import.meta.env.VITE_API_URL || '';
 
 async function api(path: string, init?: RequestInit) {
-  const res = await fetch(`${API}${path}`, {
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    ...init,
-  });
-  const body = await res.json().catch(() => ({}));
-  return { ok: res.ok, status: res.status, body } as { ok: boolean; status: number; body: any };
+  try {
+    const res = await fetch(`${API}${path}`, {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      ...init,
+    });
+    const body = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, body } as { ok: boolean; status: number; body: any };
+  } catch {
+    // Network failure (or an unmocked fetch in tests) — degrade gracefully rather
+    // than throwing an unhandled rejection. All callers handle ok:false.
+    return { ok: false, status: 0, body: {} as any };
+  }
 }
 
 /**
