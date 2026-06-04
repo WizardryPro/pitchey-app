@@ -41,6 +41,34 @@ jobs:
             exit 1
           fi
 
+      # Per-service check. `curl -f` above only proves /api/health returns 200 —
+      # but it returns 200 even when a dependency is broken (the overall `status`
+      # field stayed "ok" while email was "auth_error" after a stale Resend key,
+      # so a dead-email outage failed SILENTLY). This inspects each service's
+      # status and fails the job if any isn't healthy, which then fires the Slack
+      # + GitHub-issue alerting below.
+      - name: Check service statuses (email/db/redis/stripe/rateLimit)
+        id: services
+        run: |
+          BODY="$(curl -fsS https://pitchey-api-prod.ndlovucavelle.workers.dev/api/health)"
+          BAD="$(echo "$BODY" | python3 -c '
+          import sys, json
+          services = (json.load(sys.stdin).get("data") or {}).get("services") or {}
+          healthy = {"connected", "active", "ok", "healthy"}
+          bad = []
+          for name, info in services.items():
+              st = info.get("status") if isinstance(info, dict) else info
+              if st not in healthy:
+                  bad.append(name + "=" + str(st))
+          print(", ".join(bad))
+          ')"
+          if [ -n "$BAD" ]; then
+            echo "❌ UNHEALTHY: $BAD"
+            echo "UNHEALTHY_SERVICES=$BAD" >> "$GITHUB_ENV"
+            exit 1
+          fi
+          echo "✅ All services healthy"
+
       # Red must have teeth — the previous version of this workflow failed silently,
       # with "failure surfaces in the Actions tab eventually" as the only escalation path.
       # Now: Slack on failure if SLACK_WEBHOOK is configured, GitHub issue as fallback.
@@ -50,7 +78,7 @@ jobs:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         run: |
           curl -X POST -H 'Content-Type: application/json' \
-            --data "{\"text\":\"🚨 Pitchey health check failed — run ${{ github.run_id }}. Check: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            --data "{\"text\":\"🚨 Pitchey health check failed — ${{ env.UNHEALTHY_SERVICES || 'frontend/API unreachable' }} — run ${{ github.run_id }}. Check: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
             "$SLACK_WEBHOOK"
 
       - name: Open GitHub issue on failure
@@ -58,9 +86,12 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const title = `🚨 Health check failed — ${new Date().toISOString().slice(0, 10)}`;
+            const unhealthy = process.env.UNHEALTHY_SERVICES || '';
+            const title = `🚨 Health check failed${unhealthy ? ' — ' + unhealthy : ''} — ${new Date().toISOString().slice(0, 10)}`;
             const body = [
               `Automated health check failed at ${new Date().toISOString()}.`,
+              ``,
+              unhealthy ? `**Unhealthy services:** ${unhealthy}` : `Frontend or API unreachable (no per-service detail).`,
               ``,
               `Workflow: ${context.workflow}`,
               `Run: https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
