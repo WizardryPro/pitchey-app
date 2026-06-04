@@ -29,8 +29,10 @@ compromised account, lost secrets — as opposed to a transient outage (that's
 | **Durable Objects** (`NotificationHub`, `WebSocketRoom`), **Analytics Engine** (2 datasets) | Live notification/WS state; metrics | None needed | Ephemeral / derived. AE history is lossy by design. |
 
 **Takeaway:** Neon is the only store whose loss is unacceptable, and it has the strongest
-backup (managed PITR). The two real **gaps** are **secrets** (no backup) and **R2** (no
-versioning) — both are in *Action items* below.
+backup (managed PITR). The two real **gaps** are **secrets** and **R2** (no versioning).
+**Secrets gap is now closed** by [SECRETS_INVENTORY.md](SECRETS_INVENTORY.md) (recovery map
+per vendor) + a gitignored `.secrets/vault.env` value backup (Cloud-5, 2026-06-04). R2
+versioning remains in *Action items* below.
 
 ---
 
