@@ -4,7 +4,6 @@
  * Features runtime validation with Zod schemas
  */
 
-import { config } from '../config';
 import { sessionCache } from '../store/sessionCache';
 import { sessionManager } from './session-manager';
 import type { 

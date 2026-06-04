@@ -11800,19 +11800,15 @@ pitchey_analytics_datapoints_per_minute 1250
         }
       }
 
-      if (!userId) {
-        // Try cookie-based auth as fallback (same validateAuth path)
-        try {
-          const authResult = await this.validateAuth(request);
-          if (authResult.valid && authResult.user) {
-            userId = String(authResult.user.id);
-            portalType = authResult.user.userType || authResult.user.user_type || 'creator';
-            username = authResult.user.name || authResult.user.email || undefined;
-          }
-        } catch (authErr) {
-          console.warn('WebSocket cookie auth failed:', authErr);
-        }
-      }
+      // NOTE: there is intentionally NO cookie-based fallback here. The frontend
+      // connects cross-origin to wss://…workers.dev, and the proxy rewrites the
+      // `pitchey-session` cookie to SameSite=Lax — so the browser never sends it
+      // on the WS upgrade. A cookie fallback was dead code (it could only ever
+      // match a directly-set None cookie, which prod never issues) and masked the
+      // real auth path. WS auth is token-only: the client fetches /api/ws/token
+      // same-origin (cookie forwarded) and connects with ?token=<sessionId>.
+      // Removed 2026-06-04 (connectivity-map P1). On token failure the client
+      // degrades to polling and emits a Sentry signal (useWebSocketAdvanced.ts).
 
       if (!userId) {
         return new Response(JSON.stringify({
