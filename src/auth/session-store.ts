@@ -9,7 +9,7 @@
  * History: rip tracked in issue #19, completed 2026-05-04.
  */
 
-import { neon } from '@neondatabase/serverless';
+import { getDb } from '../db/connection';
 
 export interface SessionStoreEnv {
   DATABASE_URL: string;
@@ -39,11 +39,14 @@ export interface SessionStore {
 }
 
 export function createSessionStore(env: SessionStoreEnv): SessionStore {
-  // Hyperdrive routes through CF's edge connection pool when bound; falls back
-  // to direct Neon when not. Caching MUST be disabled on the Hyperdrive
-  // binding — query result caching here would let revoked sessions keep
-  // authenticating until the cache TTL expires. See wrangler.toml.
-  const sql = neon(env.HYPERDRIVE?.connectionString || env.DATABASE_URL);
+  // Use the shared retry-wrapped client (db/connection.ts getDb) so login/session
+  // queries survive Neon cold-start drops (HTTP 530 / CF 1016). A bare neon() here
+  // was the one login-critical DB path NOT covered by the cold-start retry — the
+  // same failure shape as the 2026-06-03 signup-500s (surfaced by the 2026-06-04
+  // connectivity audit). Hyperdrive binding was removed 2026-06-04, so
+  // env.HYPERDRIVE is always undefined now; getDb connects via DATABASE_URL.
+  const sql = getDb(env);
+  if (!sql) throw new Error('SessionStore: DATABASE_URL not configured');
 
   return {
 
