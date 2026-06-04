@@ -5,7 +5,7 @@ import {
   Shield, MessageSquare, Clock, Calendar, User, Tag,
   Film, DollarSign, Briefcase, TrendingUp, Users,
   FileText, Download, Calculator, MapPin, Camera,
-  Clapperboard, Settings, CheckSquare, Square,
+  Clapperboard, Settings,
   AlertCircle, CheckCircle, XCircle, Star, ChevronRight,
   Truck, Home, Globe, Mic, Edit3, Package, Upload, Sparkles, Heart
 } from 'lucide-react';
@@ -136,6 +136,29 @@ const ProductionPitchView: React.FC = () => {
   const canEditWorkspace = ownerIsProduction
     ? (isOwner || !!pitch?.isCompanyMember)
     : (authUser?.userType === 'production');
+
+  // --- Workspace access affordances (UI/UX) -------------------------------
+  // A quiet "who am I here" system shared across the Feasibility/Team/Notes
+  // tabs, so the edit-vs-view split reads as intentional rather than as a
+  // disabled form.
+  const accessChip = canEditWorkspace ? (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-200">
+      <Edit3 className="h-3.5 w-3.5" /> Editor
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500 ring-1 ring-inset ring-slate-200">
+      <Eye className="h-3.5 w-3.5" /> View only
+    </span>
+  );
+  const workspaceScopeNote = ownerIsProduction
+    ? (canEditWorkspace ? 'Shared workspace — visible to your whole company team.' : 'Read-only access granted by your signed NDA.')
+    : 'Private workspace — only you can see these notes.';
+  const teamStatusMeta: Record<string, { label: string; cls: string }> = {
+    confirmed:   { label: 'Confirmed',   cls: 'bg-emerald-100 text-emerald-700 ring-emerald-200' },
+    considering: { label: 'Considering', cls: 'bg-amber-100 text-amber-700 ring-amber-200' },
+    pending:     { label: 'Open',        cls: 'bg-slate-100 text-slate-500 ring-slate-200' },
+  };
+
   const [isLiked, setIsLiked] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [autoFillLoading, setAutoFillLoading] = useState(false);
@@ -872,91 +895,115 @@ const ProductionPitchView: React.FC = () => {
 
                   {/* Production Checklist */}
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Production Checklist</h3>
-                    <span className="text-sm text-gray-500">{getChecklistProgress().toFixed(0)}% Complete</span>
+                    <div className="flex items-center gap-2.5">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-700">Production Checklist</h3>
+                      {accessChip}
+                    </div>
+                    <span className="text-sm font-medium text-gray-500">{getChecklistProgress().toFixed(0)}% Complete</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {Object.entries(productionChecklist).map(([key, value]) => (
-                      <div key={key} className="flex items-center">
-                        {canEditWorkspace ? (
-                          <button
-                            onClick={() => handleChecklistUpdate(key as keyof typeof productionChecklist)}
-                            className="mr-2"
-                          >
-                            {value ? (
-                              <CheckSquare className="h-5 w-5 text-green-600" />
-                            ) : (
-                              <Square className="h-5 w-5 text-gray-400" />
-                            )}
-                          </button>
-                        ) : (
-                          <span className="mr-2">
-                            {value ? (
-                              <CheckSquare className="h-5 w-5 text-green-600" />
-                            ) : (
-                              <Square className="h-5 w-5 text-gray-400" />
-                            )}
-                          </span>
-                        )}
-                        <label className="text-gray-700 capitalize">
-                          {key.replace(/([A-Z])/g, ' $1').trim()}
-                        </label>
-                      </div>
-                    ))}
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {Object.entries(productionChecklist).map(([key, value]) => {
+                      const label = key.replace(/([A-Z])/g, ' $1').trim();
+                      const indicator = value ? (
+                        <CheckCircle className="h-5 w-5 shrink-0 text-emerald-500" />
+                      ) : (
+                        <span className="h-5 w-5 shrink-0 rounded-full ring-1 ring-inset ring-gray-300" />
+                      );
+                      const textCls = value ? 'font-medium text-gray-900' : 'text-gray-500';
+                      const boxCls = value
+                        ? 'border-emerald-200 bg-emerald-50/60'
+                        : 'border-gray-200 bg-gray-50/60';
+                      return canEditWorkspace ? (
+                        <button
+                          key={key}
+                          onClick={() => handleChecklistUpdate(key as keyof typeof productionChecklist)}
+                          className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition hover:border-emerald-300 hover:bg-emerald-50/80 ${boxCls}`}
+                        >
+                          {indicator}
+                          <span className={`text-sm capitalize ${textCls}`}>{label}</span>
+                        </button>
+                      ) : (
+                        <div key={key} className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 ${boxCls}`}>
+                          {indicator}
+                          <span className={`text-sm capitalize ${textCls}`}>{label}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
             )}
 
             {activeTab === 'team' && (isOwner || pitch?.hasSignedNDA || pitch?.isCompanyMember) && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Team Assembly</h2>
+              <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-6 sm:p-8">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-inset ring-indigo-100">
+                      <Users className="h-5 w-5" />
+                    </span>
+                    <h2 className="text-xl font-bold tracking-tight text-gray-900">Team Assembly</h2>
                   </div>
+                  {accessChip}
                 </div>
+                <p className="mt-1 mb-6 pl-[3.05rem] text-sm text-gray-500">{workspaceScopeNote}</p>
 
-                <div className="space-y-4">
-                  {teamMembers.map((member, index) => (
-                    <div key={index} className={`p-4 rounded-lg ${member.status === 'confirmed' && member.name ? 'bg-green-50 border border-green-200' : 'bg-gray-50'}`}>
-                      <div className="flex items-center space-x-4">
-                        <div className="flex-1">
-                          <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
-                            {member.role}
-                            {member.status === 'confirmed' && member.name && (
-                              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Confirmed</span>
-                            )}
-                          </label>
-                          <input
-                            type="text"
-                            value={member.name}
-                            onChange={(e) => handleTeamUpdate(index, 'name', e.target.value)}
-                            placeholder="Enter name"
-                            disabled={!canEditWorkspace}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:text-gray-500"
-                          />
+                <div className="space-y-2.5">
+                  {teamMembers.map((member, index) => {
+                    const meta = teamStatusMeta[member.status] || teamStatusMeta.pending;
+                    const initials = member.name
+                      ? member.name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()
+                      : '';
+                    return (
+                      <div
+                        key={index}
+                        className={`flex items-center gap-4 rounded-xl border p-3.5 transition ${
+                          member.status === 'confirmed' && member.name
+                            ? 'border-emerald-200 bg-emerald-50/60'
+                            : 'border-gray-100 bg-gray-50/60'
+                        }`}
+                      >
+                        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
+                          initials ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-400'
+                        }`}>
+                          {initials || <Users className="h-4 w-4" />}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-gray-400">{member.role}</p>
+                          {canEditWorkspace ? (
+                            <input
+                              type="text"
+                              value={member.name}
+                              onChange={(e) => handleTeamUpdate(index, 'name', e.target.value)}
+                              placeholder="Add a name…"
+                              className="mt-0.5 w-full bg-transparent text-sm font-medium text-gray-900 placeholder:text-gray-400 placeholder:font-normal focus:outline-none"
+                            />
+                          ) : (
+                            <p className={`mt-0.5 text-sm font-medium ${member.name ? 'text-gray-900' : 'italic text-gray-400'}`}>
+                              {member.name || 'Unassigned'}
+                            </p>
+                          )}
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Status
-                          </label>
+                        {canEditWorkspace ? (
                           <select
                             value={member.status}
                             onChange={(e) => handleTeamUpdate(index, 'status', e.target.value)}
-                            disabled={!canEditWorkspace}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:text-gray-500"
+                            className={`shrink-0 cursor-pointer appearance-none rounded-full border-0 px-3 py-1 text-xs font-semibold ring-1 ring-inset focus:outline-none focus:ring-2 focus:ring-indigo-400 ${meta.cls}`}
                           >
-                            <option value="pending">Pending</option>
+                            <option value="pending">Open</option>
                             <option value="considering">Considering</option>
                             <option value="confirmed">Confirmed</option>
                           </select>
-                        </div>
+                        ) : (
+                          <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset ${meta.cls}`}>
+                            {meta.label}
+                          </span>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
-                
-                {canEditWorkspace ? (
+
+                {canEditWorkspace && (
                   <button
                     onClick={async () => {
                       try {
@@ -967,20 +1014,27 @@ const ProductionPitchView: React.FC = () => {
                         toast.error(e.message);
                       }
                     }}
-                    className="mt-4 w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                    className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
                   >
-                    Save Team Configuration
+                    <CheckCircle className="h-4 w-4" /> Save Team Configuration
                   </button>
-                ) : (
-                  <p className="mt-4 text-sm text-gray-400 text-center">View-only — your NDA grants read access to this team.</p>
                 )}
               </div>
             )}
 
             {activeTab === 'notes' && (isOwner || pitch?.hasSignedNDA || pitch?.isCompanyMember) && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Production Notes</h2>
-                
+              <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-6 sm:p-8">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-inset ring-indigo-100">
+                      <FileText className="h-5 w-5" />
+                    </span>
+                    <h2 className="text-xl font-bold tracking-tight text-gray-900">Production Notes</h2>
+                  </div>
+                  {accessChip}
+                </div>
+                <p className="mt-1 mb-6 pl-[3.05rem] text-sm text-gray-500">{workspaceScopeNote}</p>
+
                 {/* Add Note Form — editors only (owner + company members). NDA
                     viewers see the notes list below, read-only. */}
                 {canEditWorkspace && (
