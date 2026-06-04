@@ -31,14 +31,14 @@ const PORTAL_LOGIN = {
 type Portal = keyof typeof PORTAL_LOGIN;
 
 async function login(page: Page, portal: Portal): Promise<void> {
-  // NOTE: route is /login/<portal>, NOT /<portal>/login — the older auth.setup.ts
-  // had this backwards, which is why its .auth/*-login-failed.png artifacts exist.
-  await page.goto(PORTAL_LOGIN[portal]);
-  // The normal "Sign in" submit is gated behind Turnstile (disabled with no token
-  // in headless). The "Use Demo <Portal> Account" button auto-submits demo creds
-  // and isn't gated; with the local/CI worker's TURNSTILE_ENABLED=false the empty
-  // token is accepted. (These tests are local/CI only — never against prod, where
-  // Turnstile is enforced.)
+  // The dedicated /login/<portal> pages were retired (commit 82e1c3d8) — they now
+  // redirect to the canonical /login chooser. So: open the chooser, click the portal
+  // card to reveal the inline form, then the "Use Demo <Portal> Account" button.
+  // That button auto-submits demo creds and isn't Turnstile-gated; with the local/CI
+  // worker's TURNSTILE_ENABLED=false the empty token is accepted. (Local/CI only —
+  // never against prod, where Turnstile is enforced.)
+  await page.goto('/login');
+  await page.getByRole('button', { name: new RegExp(`${portal} Portal`, 'i') }).click();
   await page.getByRole('button', { name: /Use Demo .*Account/i }).click();
   await page.waitForURL(`**/${portal}/dashboard`, { timeout: 20000 });
 }
