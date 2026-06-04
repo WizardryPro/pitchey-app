@@ -3071,6 +3071,13 @@ class RouteRegistry {
       return getCreatorPitchFeedback(req, this.env);
     });
 
+    // Producer slate — workspace-driven evaluation funnel (owned + saved pitches
+    // annotated with derived readiness + stage). NOT the parked /api/production/pipeline.
+    this.register('GET', '/api/production/slate', async (req) => {
+      const { getProductionSlate } = await import('./handlers/production-pitch-data');
+      return getProductionSlate(req, this.env);
+    });
+
     // Project Collaborators — aggregate team view + invitation management + scoped project access
     this.register('GET', '/api/production/team/collaborators', async (req) => {
       const { getAllTeamCollaborators } = await import('./handlers/collaborator');
