@@ -54,6 +54,9 @@ interface Pitch {
   updatedAt: string;
   hasSignedNDA?: boolean;
   isCompanyMember?: boolean;
+  creatorType?: string;            // owner's user_type — selects workspace mode
+  creator_type?: string;           // snake-case as returned by getPitch
+  creator?: { id?: number; name?: string; userType?: string };
   ndaCount?: number;
   thumbnail?: string;
   pitchDeck?: string;
@@ -124,6 +127,15 @@ const ProductionPitchView: React.FC = () => {
   ]);
 
   const isOwner = !!(pitch?.userId && authUser?.id && String(pitch.userId) === String(authUser.id));
+  // Hybrid production workspace (Karl option B), mirrors the backend's resolveWorkspace:
+  //  • production-OWNED pitch → owner + seated company members edit the one
+  //    canonical workspace; NDA-signed producers VIEW read-only.
+  //  • creator-OWNED pitch → any production user edits their OWN private workspace.
+  const ownerIsProduction =
+    (pitch?.creatorType || pitch?.creator_type || pitch?.creator?.userType) === 'production';
+  const canEditWorkspace = ownerIsProduction
+    ? (isOwner || !!pitch?.isCompanyMember)
+    : (authUser?.userType === 'production');
   const [isLiked, setIsLiked] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [autoFillLoading, setAutoFillLoading] = useState(false);
@@ -866,7 +878,7 @@ const ProductionPitchView: React.FC = () => {
                   <div className="grid grid-cols-2 gap-3">
                     {Object.entries(productionChecklist).map(([key, value]) => (
                       <div key={key} className="flex items-center">
-                        {isOwner ? (
+                        {canEditWorkspace ? (
                           <button
                             onClick={() => handleChecklistUpdate(key as keyof typeof productionChecklist)}
                             className="mr-2"
@@ -920,7 +932,8 @@ const ProductionPitchView: React.FC = () => {
                             value={member.name}
                             onChange={(e) => handleTeamUpdate(index, 'name', e.target.value)}
                             placeholder="Enter name"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            disabled={!canEditWorkspace}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:text-gray-500"
                           />
                         </div>
                         <div>
@@ -930,7 +943,8 @@ const ProductionPitchView: React.FC = () => {
                           <select
                             value={member.status}
                             onChange={(e) => handleTeamUpdate(index, 'status', e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            disabled={!canEditWorkspace}
+                            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:text-gray-500"
                           >
                             <option value="pending">Pending</option>
                             <option value="considering">Considering</option>
@@ -942,20 +956,24 @@ const ProductionPitchView: React.FC = () => {
                   ))}
                 </div>
                 
-                <button
-                  onClick={async () => {
-                    try {
-                      await ProductionService.updatePitchTeam(parseInt(id!, 10), teamMembers);
-                      toast.success('Team configuration saved');
-                    } catch (err) {
-                      const e = err instanceof Error ? err : new Error(String(err));
-                      toast.error(e.message);
-                    }
-                  }}
-                  className="mt-4 w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-                >
-                  Save Team Configuration
-                </button>
+                {canEditWorkspace ? (
+                  <button
+                    onClick={async () => {
+                      try {
+                        await ProductionService.updatePitchTeam(parseInt(id!, 10), teamMembers);
+                        toast.success('Team configuration saved');
+                      } catch (err) {
+                        const e = err instanceof Error ? err : new Error(String(err));
+                        toast.error(e.message);
+                      }
+                    }}
+                    className="mt-4 w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                  >
+                    Save Team Configuration
+                  </button>
+                ) : (
+                  <p className="mt-4 text-sm text-gray-400 text-center">View-only — your NDA grants read access to this team.</p>
+                )}
               </div>
             )}
 
@@ -963,7 +981,9 @@ const ProductionPitchView: React.FC = () => {
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Production Notes</h2>
                 
-                {/* Add Note Form */}
+                {/* Add Note Form — editors only (owner + company members). NDA
+                    viewers see the notes list below, read-only. */}
+                {canEditWorkspace && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                   <div className="flex space-x-2 mb-3">
                     {(['casting', 'location', 'budget', 'schedule', 'team', 'general'] as const).map((cat) => (
@@ -994,6 +1014,7 @@ const ProductionPitchView: React.FC = () => {
                     Add Note
                   </button>
                 </div>
+                )}
 
                 {/* Notes List */}
                 <div className="space-y-3">
@@ -1010,6 +1031,7 @@ const ProductionPitchView: React.FC = () => {
                               </p>
                             </div>
                           </div>
+                          {canEditWorkspace ? (
                           <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                             <button
                               onClick={() => handleToggleShare(note.id)}
@@ -1030,6 +1052,11 @@ const ProductionPitchView: React.FC = () => {
                               <XCircle className="h-4 w-4" />
                             </button>
                           </div>
+                          ) : note.shared ? (
+                            <span className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700 flex-shrink-0 ml-2">
+                              <Share2 className="h-3 w-3" /> Shared
+                            </span>
+                          ) : null}
                         </div>
                       </div>
                     ))
