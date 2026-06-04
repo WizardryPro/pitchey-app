@@ -1218,6 +1218,12 @@ function ProductionDashboard() {
                           View Details
                         </Link>
                         <Link
+                          to={`/production/pitches/${pitch.id}/edit`}
+                          className="flex-1 text-center py-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200"
+                        >
+                          Edit
+                        </Link>
+                        <Link
                           to={`/pitch/${pitch.id}/analytics`}
                           className="flex-1 text-center py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200"
                         >

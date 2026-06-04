@@ -154,9 +154,12 @@ const ProductionPitchView: React.FC = () => {
         // First try the public endpoint which always works
         response = await pitchAPI.getPublicById(parseInt(id!));
         
-        // If user is authenticated and has proper access, try to get enhanced data
-        if (isAuthenticated && authUser?.userType === 'production' && response.hasSignedNDA) {
-          // User has signed NDA, try to get full authenticated data
+        // For any authenticated production user, fetch the authenticated record so
+        // owner/like state (isLiked) and NDA-gated content paint. Previously this was
+        // gated on response.hasSignedNDA, but the PUBLIC endpoint never emits that flag —
+        // so the upgrade never ran: owners saw no like-state and the heart never filled.
+        // The backend getById enforces access itself; a 403 falls back to public data.
+        if (isAuthenticated && authUser?.userType === 'production') {
           try {
             const fullResponse = await pitchAPI.getById(parseInt(id!));
             response = fullResponse; // Use the full data if available
@@ -601,6 +604,16 @@ const ProductionPitchView: React.FC = () => {
             >
               <MessageSquare className="h-4 w-4 sm:mr-1.5" />
               <span className="hidden sm:inline">Contact</span>
+            </button>
+          )}
+
+          {isOwner && pitch && (
+            <button
+              onClick={() => navigate(`/production/pitches/${pitch.id}/edit`)}
+              className="flex items-center px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700"
+            >
+              <Edit3 className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Edit</span>
             </button>
           )}
 
