@@ -1221,11 +1221,12 @@ export function useWebSocketAdvanced(options: UseWebSocketAdvancedOptions = {}) 
       };
     }
     
-    // CRITICAL: Disconnect immediately if not authenticated
+    // CRITICAL: Disconnect immediately if not authenticated. disconnect() is
+    // idempotent (it guards every ref/timer), so call it unconditionally instead
+    // of reading connectionStatus — that read is exactly what used to pull
+    // connection state into this effect's deps.
     if (!isAuthenticated || !user) {
-      if (connectionStatus.connected || connectionStatus.connecting) {
-        disconnect();
-      }
+      disconnect();
       // Clear any connection state
       setConnectionStatus(prev => ({
         ...prev,
@@ -1235,11 +1236,15 @@ export function useWebSocketAdvanced(options: UseWebSocketAdvancedOptions = {}) 
         error: null
       }));
     }
-    
+
     return () => {
       disconnect();
     };
-  }, [opts.autoConnect, isAuthenticated, user, connectionStatus.connected, connectionStatus.connecting]); // Include connection state
+    // P9: deps are auth/intent ONLY — NOT connectionStatus.connected/connecting.
+    // With those in the array, a successful connect() (which flips connected
+    // true) re-ran this effect, whose cleanup disconnect()'d the just-opened
+    // socket → connect→disconnect→reconnect churn feeding the circuit breaker.
+  }, [opts.autoConnect, isAuthenticated, user]);
   
   // Guard against browser extension message channel errors
   useEffect(() => {

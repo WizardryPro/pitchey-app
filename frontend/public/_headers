@@ -3,14 +3,18 @@
 # Global security headers for all pages
 /*
   # Security Headers
-  X-Frame-Options: SAMEORIGIN
+  # DENY (not SAMEORIGIN): the app is never legitimately framed — it frames
+  # Stripe/Turnstile (see frame-src below), not the other way round. Matches the
+  # Worker's DENY + frame-ancestors 'none' (security-fix.ts) so the policy is
+  # consistent across static pages and API. (P5: was SAMEORIGIN, an audit split.)
+  X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-XSS-Protection: 1; mode=block
   Permissions-Policy: geolocation=(), microphone=(), camera=()
   
   # Content Security Policy for React apps
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com https://browser.sentry-cdn.com https://challenges.cloudflare.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; connect-src 'self' https://pitchey-api-prod.ndlovucavelle.workers.dev wss://pitchey-api-prod.ndlovucavelle.workers.dev https://*.pitchey-5o8.pages.dev wss://*.pitchey-5o8.pages.dev https://api.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.de.sentry.io; frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://challenges.cloudflare.com;
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com https://browser.sentry-cdn.com https://challenges.cloudflare.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; connect-src 'self' https://pitchey-api-prod.ndlovucavelle.workers.dev wss://pitchey-api-prod.ndlovucavelle.workers.dev https://*.pitchey-5o8.pages.dev wss://*.pitchey-5o8.pages.dev https://api.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.de.sentry.io; frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://challenges.cloudflare.com; frame-ancestors 'none';
   
   # Performance Headers - don't cache index.html
   Cache-Control: no-cache, no-store, must-revalidate
