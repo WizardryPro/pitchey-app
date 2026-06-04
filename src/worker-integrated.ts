@@ -8621,11 +8621,19 @@ pitchey_analytics_datapoints_per_minute 1250
     const authResult = await this.requireAuth(request);
     if (!authResult.authorized) return authResult.response!;
 
-    // Watchers cannot request NDAs
-    if (authResult.user?.userType === 'watcher') {
+    // NDA access is for evaluators only: investors + production companies hold
+    // NDA_REQUEST/NDA_SIGN (rbac.service.ts). Creators OWN pitches — they approve
+    // or reject NDA requests, they don't request access — and watchers are
+    // audience-only. requestNDA already 403s these via Permission.NDA_REQUEST;
+    // this keeps the can-request pre-check consistent so the UI never shows a
+    // dead "Request NDA Access" CTA to a creator/watcher.
+    const ndaRole = authResult.user?.userType;
+    if (ndaRole !== 'investor' && ndaRole !== 'production') {
       return builder.success({
         canRequest: false,
-        reason: 'Watchers cannot sign NDAs. Upgrade your account to request NDA access.',
+        reason: ndaRole === 'creator'
+          ? 'Creators own pitches and review NDA requests — they don\'t request access themselves.'
+          : 'NDA access is available to investors and production companies.',
         existingNDA: null
       });
     }

@@ -1,0 +1,16 @@
+-- 098_canonical_production_workspace.sql
+--
+-- Hybrid production workspace (Karl-aligned, option B). ADDITIVE ONLY — no data
+-- is moved, collapsed, or deleted; the existing (user_id, pitch_id) schema
+-- already supports both modes, and the handlers resolve which user_id to target:
+--
+--   • Production-OWNED pitch  → ONE canonical workspace, keyed on the pitch
+--     owner's user_id. The owner + seated B3 team members read/write that single
+--     row (checklist/team) and the team's notes; NDA-signed producers view it
+--     read-only. (Handler-enforced — see src/handlers/production-pitch-data.ts.)
+--   • Creator-OWNED pitch     → per-producer PRIVATE workspace (unchanged): each
+--     evaluating production user keeps their own notes/checklist/team.
+--
+-- This index speeds the new "all team notes for a pitch" read used on
+-- production-owned pitches (WHERE pitch_id = $1 AND user_id = ANY(team)).
+CREATE INDEX IF NOT EXISTS idx_production_notes_pitch ON production_notes(pitch_id);
