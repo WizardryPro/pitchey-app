@@ -1090,7 +1090,8 @@ export async function joinTeamByCodeHandler(request: Request, env: Env): Promise
   try {
     const auth = await verifyAuth(request, env);
     if (!auth.success || !auth.user) return json({ success: false, error: 'Unauthorized' }, 401);
-    const body = await request.json().catch(() => ({})) as { code?: string };
+    let body: { code?: string } = {};
+    try { body = (await request.json()) as { code?: string }; } catch { /* empty/invalid body → 'code required' below */ }
     const code = (body.code || '').trim().toUpperCase();
     if (!code) return json({ success: false, error: 'Join code required' }, 400);
     const sql = getDb(env) as any;
