@@ -161,6 +161,12 @@ BACKEND_URL = "https://pitchey-api-prod.ndlovucavelle.workers.dev"
 ENVIRONMENT = "production"
 VERSION = "2.0-integrated"
 
+# P3 keep-warm: when "true", the */5 cron pings Neon (SELECT 1) to close the
+# 5-min autosuspend gap and cut the cold-start P99 tail. DEFAULT OFF — pins the
+# compute ~24/7 (~+70 CU-hrs/mo on a shared org quota; see #65). Confirm Neon
+# billing headroom before flipping to "true".
+KEEP_WARM_DB = "false"
+
 # Container Service Configuration
 ENABLE_CONTAINERS = "true"
 CONTAINER_ORCHESTRATION = "true"

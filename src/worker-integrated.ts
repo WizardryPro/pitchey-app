@@ -21327,7 +21327,8 @@ const websocketSafeHandler = {
         case "*/5 * * * *": // Every 5 minutes
           await Promise.all([
             checkNDAExpirations(env, ctx),
-            checkContainerHealth(env, ctx)
+            checkContainerHealth(env, ctx),
+            keepDatabaseWarm(env, ctx) // P3: closes the Neon 5-min autosuspend gap (gated off by default)
           ]);
           break;
 
@@ -21388,6 +21389,34 @@ async function checkNDAExpirations(env: any, ctx: ExecutionContext): Promise<voi
 
 async function checkContainerHealth(env: any, ctx: ExecutionContext): Promise<void> {
   console.log("Checking container health...");
+}
+
+// P3 (connectivity-map): Neon compute autosuspends after 5 min idle
+// (suspend_timeout_seconds=0 → 300s default). The `*/15` trending cron is the
+// only other DB-touching scheduled job, so two 5-min gaps per 15-min window let
+// the compute suspend → the next request pays a cold-start (the P99 1.67s tail).
+// This `*/5` ping closes those gaps. It is GATED OFF by default and only runs
+// when env.KEEP_WARM_DB === 'true'.
+//
+// WHY GATED: keeping the compute warm 24/7 pins active_time to ~720h/mo
+// (~+70 CU-hrs at the 0.25 min-CU floor). The org runs two projects on a shared
+// Neon quota and ALREADY hit a quota outage (#65, 2026-04-30). Do NOT enable
+// blind — first confirm billing headroom in the Neon Console (Billing → compute
+// hours). To enable: set KEEP_WARM_DB="true" in wrangler.toml [vars] + redeploy.
+async function keepDatabaseWarm(env: any, _ctx: ExecutionContext): Promise<void> {
+  if (env.KEEP_WARM_DB !== 'true') return; // default off — see #65 quota note above
+  try {
+    const { getDb } = await import('./db');
+    const sql = getDb(env);
+    if (!sql) return;
+    await sql`SELECT 1`;
+    console.log(JSON.stringify({ level: 'info', category: 'keep_warm', action: 'db_ping', outcome: 'success' }));
+  } catch (err) {
+    const e = err instanceof Error ? err : new Error(String(err));
+    // Non-fatal: the retry-wrapped getDb already handles cold-start drops; a
+    // failure here just means the warm-ping missed, the next real request retries.
+    console.warn(JSON.stringify({ level: 'warn', category: 'keep_warm', action: 'db_ping', outcome: 'failed', error: e.message }));
+  }
 }
 
 async function monitorJobQueues(env: any, ctx: ExecutionContext): Promise<void> {
