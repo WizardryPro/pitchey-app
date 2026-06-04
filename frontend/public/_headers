@@ -16,8 +16,14 @@
   # Content Security Policy for React apps
   Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com https://browser.sentry-cdn.com https://challenges.cloudflare.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; connect-src 'self' https://pitchey-api-prod.ndlovucavelle.workers.dev wss://pitchey-api-prod.ndlovucavelle.workers.dev https://*.pitchey-5o8.pages.dev wss://*.pitchey-5o8.pages.dev https://api.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.de.sentry.io; frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://challenges.cloudflare.com; frame-ancestors 'none';
   
-  # Performance Headers - don't cache index.html
-  Cache-Control: no-cache, no-store, must-revalidate
+  # NO Cache-Control on this catch-all. CF Pages MERGES every matching _headers
+  # rule, so a Cache-Control here bleeds onto /assets/* and /sw.js and produces
+  # self-contradictory headers (no-store + immutable on the same response —
+  # which force-uncached the hashed assets and pinned the SW kill-switch). HTML
+  # freshness is now owned by functions/_middleware.ts (sets no-store on every
+  # text/html response: root, /index.html, and all SPA routes). Hashed assets
+  # cache immutably via the /assets/* rule. Asset classes below use
+  # non-overlapping globs so no path is double-matched.
 
   # Note: do NOT set `Content-Encoding: gzip` here. CF Pages auto-compresses
   # responses based on the client's Accept-Encoding. Manually claiming gzip
@@ -27,15 +33,12 @@
   # itself on responses it actually compresses.
   Vary: Accept-Encoding
 
-# Static assets - longer cache
+# Static assets — content-hashed by Vite, safe to cache forever. This covers
+# ALL hashed JS/CSS/fonts/images (Vite emits them under /assets/). Deliberately
+# no blanket /*.js or /*.css rule: those also matched /sw.js + /service-worker.js
+# and pinned the kill-switch SW immutable (defeating its purpose), and they
+# double-matched /assets/*.js. Top-level files get their own rules below.
 /assets/*
-  Cache-Control: public, max-age=31536000, immutable
-
-# JavaScript and CSS files (hashed by Vite)
-/*.js
-  Cache-Control: public, max-age=31536000, immutable
-
-/*.css
   Cache-Control: public, max-age=31536000, immutable
 
 # Branded OG image endpoints (workers-og PNG output) — long edge cache.
@@ -80,9 +83,9 @@
 /*.otf
   Cache-Control: public, max-age=31536000, immutable
 
-# Service workers — MUST revalidate so the kill-switch SW propagates (these
-# would otherwise be pinned 1yr immutable by the /*.js rule above, keeping a
-# stale SW alive for returning users).
+# Service workers — MUST revalidate so the kill-switch SW propagates. (The
+# blanket /*.js immutable rule that used to fight this was removed — see the
+# /assets/* note above. These are now the ONLY rules matching the SW scripts.)
 /sw.js
   Cache-Control: no-cache
 
@@ -95,13 +98,13 @@
 /manifest.json
   Cache-Control: public, max-age=86400
 
-# HTML files - no cache to ensure fresh content
-/*.html
-  Cache-Control: no-cache, no-store, must-revalidate
-  Pragma: no-cache
-  Expires: 0
-
+# Entry document — never cache, so a returning user always re-fetches the
+# current index.html (and the hashed asset hrefs inside it) after a deploy.
+# Only /index.html is listed (non-overlapping — no asset path matches it), so
+# this can't merge onto /assets/* or /sw.js the way the old `/*` rule did.
+# Extensionless SPA routes (/login, /production/pitch/229, …) are served
+# index.html by CF Pages' native not_found_handling with
+# `max-age=0, must-revalidate` — which revalidates every load, so they're fresh
+# too without needing a rule here (a glob couldn't target them anyway).
 /index.html
   Cache-Control: no-cache, no-store, must-revalidate
-  Pragma: no-cache
-  Expires: 0

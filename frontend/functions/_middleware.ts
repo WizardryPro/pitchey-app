@@ -33,6 +33,12 @@ export const onRequest: PagesFunction = async (context) => {
     return context.next();
   }
 
+  // SPA fallback only. HTML cache-control is NOT set here: CF Pages serves most
+  // SPA routes (native not_found_handling) WITHOUT invoking this middleware, so
+  // a header set here would only cover `/` and produce an inconsistent policy.
+  // HTML freshness is owned by _headers (/index.html no-store) + CF's default
+  // `max-age=0, must-revalidate` on served HTML (revalidates every load — fresh,
+  // never a stale bundle). Hashed assets stay immutable via the /assets/* rule.
   try {
     const response = await context.env.ASSETS.fetch(context.request);
     if (response.status !== 404) {
