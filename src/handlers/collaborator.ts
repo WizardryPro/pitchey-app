@@ -765,10 +765,14 @@ export async function getCollaborationNotes(request: Request, env: Env): Promise
 
     // Get notes from production_notes (owner's notes) + collaborator-created notes
     const pitchId = pipeline[0].pitch_id || projectId;
+    // S1: only surface SHARED notes + the requester's OWN notes. Without the
+    // shared/own filter every collaborator saw all private (shared=false) notes
+    // on the pitch — including the owner's and other collaborators' private notes.
     const notesResult = await safeQuery(() => sql`
       SELECT id, content, category, author, created_at, updated_at
       FROM production_notes
       WHERE pitch_id = ${pitchId}
+        AND (shared = true OR user_id = ${Number(userId)})
       ORDER BY created_at ASC
     `, { fallback: [], context: 'collaborator.notes.read' });
 

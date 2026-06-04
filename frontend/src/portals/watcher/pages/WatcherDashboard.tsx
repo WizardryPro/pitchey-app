@@ -105,7 +105,7 @@ export default function WatcherDashboard() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <Link
-            to="/marketplace"
+            to="/watcher/browse"
             className="group relative overflow-hidden bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-cyan-200 transition-all duration-200"
           >
             <div aria-hidden className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-cyan-100/0 to-cyan-100/0 group-hover:from-cyan-100/60 group-hover:to-sky-100/40 rounded-full blur-2xl transition-all duration-300" />
@@ -171,7 +171,7 @@ export default function WatcherDashboard() {
         <div className="flex-1">
           <p className="text-sm font-semibold text-amber-900 mb-0.5">Watcher accounts are for browsing</p>
           <p className="text-sm text-amber-800/90 leading-relaxed">
-            You can browse, like, and comment on pitches. To create, invest in, or produce pitches — or to sign NDAs and access protected content — sign up as a Creator, Investor, or Production account at <Link to="/signup" className="underline font-medium">pitchey.com/signup</Link>.
+            You can browse, like, and comment on pitches. To create, invest in, or produce pitches — or to sign NDAs and access protected content — sign up as a Creator, Investor, or Production account — <Link to="/register" className="underline font-medium">create one here</Link>.
           </p>
         </div>
       </div>

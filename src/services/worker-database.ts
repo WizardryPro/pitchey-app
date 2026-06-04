@@ -86,6 +86,7 @@ function getOrCreateSqlClient(connectionString: string): NeonQueryFunction<false
 
 export class WorkerDatabase implements DatabaseService {
   private _sql: NeonQueryFunction<false, false>;
+  private _wrappedSql?: NeonQueryFunction<false, false>;
   private readonly connectionString: string;
   private readonly maxRetries: number;
   private readonly retryDelay: number;
@@ -116,10 +117,53 @@ export class WorkerDatabase implements DatabaseService {
   }
 
   /**
-   * Get the raw SQL client for direct queries
+   * Get the SQL client for direct tagged-template queries.
+   *
+   * Returns a retry-wrapping proxy of the raw neon client so the ~27 worker
+   * sites that use `const sql = db.getSql(); await sql\`...\`` get the SAME
+   * transient-retry (Neon cold-start HTTP 530 / Cloudflare 1016 "Origin DNS
+   * error") that query() has. Before this, those sites bypassed retry and 500'd
+   * on a cold endpoint. The tagged-template call is retried; every other member
+   * (.query gets retry too; .unsafe/.transaction pass straight through —
+   * transactions must never be naively retried) is forwarded unchanged.
    */
   getSql(): NeonQueryFunction<false, false> {
-    return this._sql;
+    if (this._wrappedSql) return this._wrappedSql;
+    const raw: any = this._sql;
+    const withRetry = <T>(op: () => Promise<T>) => this.withRetryRaw(op);
+    this._wrappedSql = new Proxy(raw, {
+      apply(target, thisArg, args) {
+        // sql`...` tagged-template invocation — retry transient infra failures.
+        return withRetry(() => Reflect.apply(target, thisArg, args));
+      },
+      get(target, prop, receiver) {
+        if (prop === 'query') {
+          return (text: string, params?: unknown[]) => withRetry(() => target.query(text, params));
+        }
+        return Reflect.get(target, prop, receiver);
+      },
+    }) as NeonQueryFunction<false, false>;
+    return this._wrappedSql;
+  }
+
+  /**
+   * Run a raw DB op with the same transient-retry policy as query(), but
+   * rethrow the ORIGINAL neon error (not a wrapped DatabaseError) so getSql()
+   * call sites keep catching the error shape they already handle.
+   */
+  private async withRetryRaw<T>(op: () => Promise<T>): Promise<T> {
+    let lastError: unknown;
+    for (let attempt = 0; attempt < this.maxRetries; attempt++) {
+      try {
+        return await op();
+      } catch (error) {
+        lastError = error;
+        if (!this.isRetryableError(error) || attempt === this.maxRetries - 1) throw error;
+        console.error(`DB getSql attempt ${attempt + 1} failed (retryable):`, (error as Error)?.message);
+        await this.delay(this.retryDelay * Math.pow(2, attempt));
+      }
+    }
+    throw lastError;
   }
 
   /**
@@ -215,6 +259,15 @@ export class WorkerDatabase implements DatabaseService {
       /ECONNRESET/,
       /ECONNREFUSED/,
       /ENOTFOUND/,
+      // Neon serverless cold-start race: when the compute endpoint is suspended,
+      // the first query can return a transient Cloudflare gateway/origin error
+      // (e.g. "NeonDbError: Server error (HTTP status 530): error code: 1016" —
+      // 1016 is "Origin DNS error"). These are infra-level and resolve on retry
+      // once the endpoint wakes; genuine SQL errors come back as HTTP 4xx with a
+      // pg message and are caught by the non-retryable patterns above.
+      /HTTP status 5\d\d/i,
+      /error code: 1016/,
+      /fetch failed/i,
     ];
 
     // SQL syntax/logic errors - not retryable

@@ -27,10 +27,10 @@ import { getSubscriptionTier } from '../config/subscription-plans';
 import { config } from '../config';
 import FollowButton from '@features/browse/components/FollowButton';
 import NDAManagementPanel from '@features/ndas/components/NDAManagementPanel';
+import { CompanyJoinCodeCard } from '@features/teams/components/CompanyTeamCards';
 import FormatDisplay from '../components/FormatDisplay';
 import { EnhancedProductionAnalytics } from '@features/analytics/components/Analytics/EnhancedProductionAnalytics';
 import { withPortalErrorBoundary } from '../components/ErrorBoundary/PortalErrorBoundary';
-import StartProjectModal from '@portals/production/components/StartProjectModal';
 import { uploadService } from '@features/uploads/services/upload.service';
 import { useSentryPortal } from '@/shared/hooks/useSentryPortal';
 import { useWebSocket } from '@shared/contexts/WebSocketContext';
@@ -91,7 +91,6 @@ function ProductionDashboard() {
   const [followingCreators, setFollowingCreators] = useState<any[]>([]);
   const [followingSortBy, setFollowingSortBy] = useState('recent');
   const [followingFilterBy, setFollowingFilterBy] = useState('all');
-  const [startProjectPitch, setStartProjectPitch] = useState<{ id: number; title: string; genre?: string; logline?: string; budget?: any } | null>(null);
   const [likedPitches, setLikedPitches] = useState<number[]>([]);
   const [savedPitches, setSavedPitches] = useState<number[]>([]);
   const [savedPitchItems, setSavedPitchItems] = useState<any[]>([]);
@@ -962,6 +961,9 @@ function ProductionDashboard() {
                 CTA). 3-col on desktop for a tighter grid. */}
             <QuickActionsPanel actions={quickActions} columns={3} />
 
+            {/* B3: share a join code so creators can join the company and collaborate */}
+            <CompanyJoinCodeCard />
+
             {/* Pitch Evaluation Analytics */}
             <EnhancedProductionAnalytics
               savedPitchCount={savedPitchItems?.length || 0}
@@ -1220,6 +1222,12 @@ function ProductionDashboard() {
                           View Details
                         </Link>
                         <Link
+                          to={`/production/pitches/${pitch.id}/edit`}
+                          className="flex-1 text-center py-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200"
+                        >
+                          Edit
+                        </Link>
+                        <Link
                           to={`/pitch/${pitch.id}/analytics`}
                           className="flex-1 text-center py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200"
                         >
@@ -1319,7 +1327,7 @@ function ProductionDashboard() {
                   View All Following
                 </Link>
                 <button 
-                  onClick={() => navigate('/marketplace')}
+                  onClick={() => navigate('/production/browse')}
                   className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
                 >
                   Discover More
@@ -1336,7 +1344,7 @@ function ProductionDashboard() {
                 </p>
                 <div className="flex justify-center gap-3">
                   <button
-                    onClick={() => navigate('/marketplace')}
+                    onClick={() => navigate('/production/browse')}
                     className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
                   >
                     Browse Marketplace
@@ -1357,7 +1365,7 @@ function ProductionDashboard() {
                     <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">No Followed Creators Yet</h3>
                     <p className="text-gray-600 mb-4">Start following creators to see their latest pitches and activity here.</p>
-                    <Link to="/marketplace" className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                    <Link to="/production/browse" className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
                       <Search className="w-4 h-4" />
                       Explore Marketplace
                     </Link>
@@ -1488,16 +1496,6 @@ function ProductionDashboard() {
                                 </button>
                               );
                             })()}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setStartProjectPitch({ id: pitch.id, title: pitch.title, genre: pitch.genre, logline: pitch.logline, budget: pitch.budget });
-                              }}
-                              className="flex items-center gap-1 px-3 py-1 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                            >
-                              <Film className="w-4 h-4" />
-                              <span className="text-sm">Start Project</span>
-                            </button>
                             <Link
                               to={`/pitch/${pitch.id}`}
                               onClick={(e) => e.stopPropagation()}
@@ -1800,7 +1798,7 @@ function ProductionDashboard() {
                   Browse the marketplace and bookmark pitches you are interested in evaluating
                 </p>
                 <button
-                  onClick={() => navigate('/marketplace')}
+                  onClick={() => navigate('/production/browse')}
                   className="px-6 py-2.5 bg-brand-action text-white rounded-lg hover:opacity-90 transition font-medium"
                 >
                   Browse Marketplace
@@ -2249,12 +2247,6 @@ function ProductionDashboard() {
             </div>
           </div>
         </div>
-      )}
-      {startProjectPitch && (
-        <StartProjectModal
-          pitch={startProjectPitch}
-          onClose={() => setStartProjectPitch(null)}
-        />
       )}
     </div>
   );

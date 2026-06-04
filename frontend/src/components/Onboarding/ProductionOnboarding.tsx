@@ -564,7 +564,7 @@ const PipelineManagementStep: React.FC<{
         <Button 
           variant="outline" 
           onClick={() => {
-            navigate(PRODUCTION_ROUTES.pipeline);
+            navigate('/production/dashboard');
             onComplete();
           }}
         >

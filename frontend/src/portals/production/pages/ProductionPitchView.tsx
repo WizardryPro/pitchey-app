@@ -7,7 +7,7 @@ import {
   FileText, Download, Calculator, MapPin, Camera,
   Clapperboard, Settings, CheckSquare, Square,
   AlertCircle, CheckCircle, XCircle, Star, ChevronRight,
-  Truck, Home, Globe, Mic, Edit3, Package, Upload, Sparkles
+  Truck, Home, Globe, Mic, Edit3, Package, Upload, Sparkles, Heart
 } from 'lucide-react';
 import { pitchAPI } from '@/lib/api';
 import { formatCurrency } from '@shared/utils/formatters';
@@ -15,16 +15,14 @@ import apiClient, { savedPitchesAPI } from '@/lib/api-client';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import FormatDisplay from '@/components/FormatDisplay';
 import { getCreditCost } from '@config/subscription-plans';
-import { ScheduleMeetingModal } from '@/components/UIActions/ScheduleMeetingModal';
 import { toast } from 'react-hot-toast';
 import { ProductionService } from '../services/production.service';
 import type { ProductionNoteResponse, ProductionTeamMember } from '../services/production.service';
-import StartProjectModal from '../components/StartProjectModal';
-import { CollaboratorService } from '@/services/collaborator.service';
 import FollowButton from '@features/browse/components/FollowButton';
 import { pitchService } from '@features/pitches/services/pitch.service';
 import PitchDocuments from '@features/pitches/components/PitchDocuments';
 import SocialProofBadge from '@shared/components/SocialProofBadge';
+import FeedbackSection from '@/components/feedback/FeedbackSection';
 
 interface Pitch {
   id: string;
@@ -55,6 +53,7 @@ interface Pitch {
   createdAt: string;
   updatedAt: string;
   hasSignedNDA?: boolean;
+  isCompanyMember?: boolean;
   ndaCount?: number;
   thumbnail?: string;
   pitchDeck?: string;
@@ -115,8 +114,6 @@ const ProductionPitchView: React.FC = () => {
     marketingStrategy: false,
     legalClearance: false
   });
-  const [showScheduleModal, setShowScheduleModal] = useState(false);
-  const [showStartProjectModal, setShowStartProjectModal] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
     { role: 'Director', name: '', status: 'pending' },
     { role: 'Producer', name: '', status: 'pending' },
@@ -129,34 +126,14 @@ const ProductionPitchView: React.FC = () => {
   const isOwner = !!(pitch?.userId && authUser?.id && String(pitch.userId) === String(authUser.id));
   const [isLiked, setIsLiked] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
-  const [hasExistingProject, setHasExistingProject] = useState(false);
-  const [linkedProjectId, setLinkedProjectId] = useState<number | null>(null);
   const [autoFillLoading, setAutoFillLoading] = useState(false);
+  const [ndaRequested, setNdaRequested] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (id) {
       fetchPitchData();
       loadProductionData();
-      // Check if a pipeline project already exists for this pitch
-      void apiClient.get<{ projects: Array<{ id: number }> }>(`/api/production/projects?pitchId=${id}`)
-        .then(async (res) => {
-          if (res.success && res.data?.projects && res.data.projects.length > 0) {
-            setHasExistingProject(true);
-            const projectId = res.data.projects[0].id;
-            setLinkedProjectId(projectId);
-            // Fetch accepted collaborators and merge into team
-            try {
-              const collabRes = await CollaboratorService.listCollaborators(projectId);
-              if (collabRes.success && collabRes.data?.collaborators) {
-                mergeCollaboratorsIntoTeam(collabRes.data.collaborators);
-              }
-            } catch {
-              // Non-critical — team tab still works with manual entries
-            }
-          }
-        })
-        .catch(() => {});
     }
   }, [id]);
 
@@ -178,9 +155,12 @@ const ProductionPitchView: React.FC = () => {
         // First try the public endpoint which always works
         response = await pitchAPI.getPublicById(parseInt(id!));
         
-        // If user is authenticated and has proper access, try to get enhanced data
-        if (isAuthenticated && authUser?.userType === 'production' && response.hasSignedNDA) {
-          // User has signed NDA, try to get full authenticated data
+        // For any authenticated production user, fetch the authenticated record so
+        // owner/like state (isLiked) and NDA-gated content paint. Previously this was
+        // gated on response.hasSignedNDA, but the PUBLIC endpoint never emits that flag —
+        // so the upgrade never ran: owners saw no like-state and the heart never filled.
+        // The backend getById enforces access itself; a 403 falls back to public data.
+        if (isAuthenticated && authUser?.userType === 'production') {
           try {
             const fullResponse = await pitchAPI.getById(parseInt(id!));
             response = fullResponse; // Use the full data if available
@@ -194,7 +174,8 @@ const ProductionPitchView: React.FC = () => {
       }
       
       setPitch(response);
-      
+      setIsLiked(!!(response as any).isLiked);
+
     } catch (error) {
       console.error('Failed to fetch pitch:', error);
       setError('Failed to load pitch details');
@@ -251,47 +232,6 @@ const ProductionPitchView: React.FC = () => {
       const e = err instanceof Error ? err : new Error(String(err));
       console.error('Failed to load production data:', e.message);
     }
-  };
-
-  const COLLAB_ROLE_MAP: Record<string, string> = {
-    director: 'Director',
-    line_producer: 'Producer',
-    dp: 'Cinematographer',
-    production_designer: 'Production Designer',
-    editor: 'Editor',
-    sound_designer: 'Sound Designer',
-  };
-
-  const mergeCollaboratorsIntoTeam = (collaborators: Array<{ status: string; role: string; custom_role_name?: string | null; user?: { name: string } | null; invited_email: string }>) => {
-    const accepted = collaborators.filter(c => c.status === 'active');
-    if (accepted.length === 0) return;
-
-    setTeamMembers(prev => {
-      const updated = [...prev];
-      const addedRoles = new Set<string>();
-
-      for (const collab of accepted) {
-        const displayRole = collab.role === 'custom'
-          ? (collab.custom_role_name || 'Custom')
-          : (COLLAB_ROLE_MAP[collab.role] || collab.role);
-        const name = collab.user?.name || collab.invited_email || '';
-
-        // Try to match an existing team slot with empty name
-        const existingIdx = updated.findIndex(
-          m => m.role === displayRole && (!m.name || m.name === '')
-        );
-
-        if (existingIdx >= 0) {
-          updated[existingIdx] = { role: displayRole, name, status: 'confirmed' };
-          addedRoles.add(displayRole);
-        } else if (!addedRoles.has(displayRole)) {
-          updated.push({ role: displayRole, name, status: 'confirmed' });
-          addedRoles.add(displayRole);
-        }
-      }
-
-      return updated;
-    });
   };
 
   const calculateCompleteness = () => {
@@ -363,7 +303,27 @@ const ProductionPitchView: React.FC = () => {
     navigate(`/production/messages?recipient=${pitch?.userId}&pitch=${id}`);
   };
 
-  // Like handler removed — replaced by Pitchey Score rating system
+  // Like — production cos can like a pitch they're evaluating (mirrors PitchDetail).
+  // Optimistic toggle; POST to add, DELETE to remove.
+  const handleLike = async () => {
+    if (!pitch) return;
+    if (!isAuthenticated) { navigate('/login/production'); return; }
+    const next = !isLiked;
+    setIsLiked(next);
+    setPitch(p => p ? ({ ...p, likes: (p.likes || 0) + (next ? 1 : -1) }) : p);
+    try {
+      const { API_URL } = await import('@/config');
+      const res = await fetch(`${API_URL}/api/pitches/${pitch.id}/like`, {
+        method: next ? 'POST' : 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error(`Like failed: ${res.status}`);
+    } catch (err) {
+      // Revert on failure
+      setIsLiked(!next);
+      setPitch(p => p ? ({ ...p, likes: (p.likes || 0) + (next ? -1 : 1) }) : p);
+    }
+  };
 
   const handleSharePitch = () => {
     navigator.clipboard.writeText(window.location.href).then(() => {
@@ -564,7 +524,7 @@ const ProductionPitchView: React.FC = () => {
       case 'casting': return <Users className="h-4 w-4 text-purple-600" />;
       case 'location': return <MapPin className="h-4 w-4 text-blue-600" />;
       case 'budget': return <DollarSign className="h-4 w-4 text-green-600" />;
-      case 'schedule': return <Calendar className="h-4 w-4 text-orange-600" />;
+      case 'schedule': return <Calendar className="h-4 w-4 text-indigo-600" />;
       case 'team': return <Briefcase className="h-4 w-4 text-indigo-600" />;
       default: return <MessageSquare className="h-4 w-4 text-gray-600" />;
     }
@@ -572,21 +532,21 @@ const ProductionPitchView: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
       </div>
     );
   }
 
   if (error || !pitch) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-8">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50 flex items-center justify-center p-8">
         <div className="bg-white rounded-2xl shadow-xl p-8 text-center max-w-md">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Error Loading Pitch</h2>
           <p className="text-gray-600 mb-6">{error || 'Pitch not found'}</p>
           <button
             onClick={() => navigate('/production/dashboard')}
-            className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+            className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
           >
             Back to Dashboard
           </button>
@@ -596,7 +556,7 @@ const ProductionPitchView: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 h-14 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-40">
         <div className="flex items-center gap-4">
@@ -612,6 +572,20 @@ const ProductionPitchView: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-2 sm:space-x-3">
+          {!isOwner && (
+            <button
+              onClick={handleLike}
+              className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                isLiked
+                  ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <Heart className={`h-4 w-4 sm:mr-1.5 ${isLiked ? 'fill-current' : ''}`} />
+              <span className="hidden sm:inline">{isLiked ? 'Liked' : 'Like'}</span>
+            </button>
+          )}
+
           <button
             onClick={handleShortlistToggle}
             className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${
@@ -634,6 +608,16 @@ const ProductionPitchView: React.FC = () => {
             </button>
           )}
 
+          {isOwner && pitch && (
+            <button
+              onClick={() => navigate(`/production/pitches/${pitch.id}/edit`)}
+              className="flex items-center px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700"
+            >
+              <Edit3 className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Edit</span>
+            </button>
+          )}
+
           <button
             onClick={handleSharePitch}
             className="flex items-center px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200"
@@ -650,7 +634,7 @@ const ProductionPitchView: React.FC = () => {
           {/* Left Column - Pitch Details */}
           <div className="lg:col-span-2">
             {/* Tabs */}
-            <div className="bg-white rounded-xl shadow-lg mb-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6">
               <div className="flex border-b">
                 {['overview', 'production', 'team', 'notes'].map((tab) => {
                   const ndaRequired = tab === 'team' || tab === 'notes';
@@ -664,7 +648,7 @@ const ProductionPitchView: React.FC = () => {
                         locked
                           ? 'text-gray-300 cursor-not-allowed'
                           : activeTab === tab
-                          ? 'text-orange-600 border-b-2 border-orange-600'
+                          ? 'text-indigo-600 border-b-2 border-indigo-600'
                           : 'text-gray-500 hover:text-gray-700'
                       }`}
                       title={locked ? 'NDA required to view' : undefined}
@@ -679,7 +663,8 @@ const ProductionPitchView: React.FC = () => {
 
             {/* Tab Content */}
             {activeTab === 'overview' && (
-              <div className="bg-white rounded-xl shadow-lg p-8">
+              <div className="space-y-6">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 {pitch.thumbnail && (
                   <img 
                     src={pitch.thumbnail} 
@@ -708,22 +693,22 @@ const ProductionPitchView: React.FC = () => {
                 )}
                 
                 <div className="flex flex-wrap gap-2 mb-6">
-                  <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm">
+                  <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm">
                     {pitch.genre}
                   </span>
-                  <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm">
-                    <FormatDisplay 
+                  <span className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-sm">
+                    <FormatDisplay
                       formatCategory={pitch.formatCategory}
                       formatSubtype={pitch.formatSubtype}
                       format={pitch.format}
                       variant="subtype-only"
                     />
                   </span>
-                  <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm">
+                  <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm">
                     {formatCurrency(pitch.budget)}
                   </span>
                   {pitch.pages && (
-                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+                    <span className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-sm">
                       {pitch.pages} pages
                     </span>
                   )}
@@ -738,16 +723,13 @@ const ProductionPitchView: React.FC = () => {
                     isOwner={isOwner}
                     isAuthenticated={isAuthenticated}
                   />
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div className="bg-amber-50 rounded-lg p-3 text-center">
-                      <p className="text-2xl font-bold text-amber-900">{pitch.ratingAverage ? Number(pitch.ratingAverage).toFixed(1) : '—'}</p>
-                      <p className="text-xs text-amber-600 flex items-center justify-center gap-1">
-                        <Star className="w-3 h-3" /> Pitchey Score
-                      </p>
-                    </div>
+                  {/* Pitchey Score moved into the Feedback & Ratings section below
+                      (FeedbackDisplay's headline cards) — reliable role-weighted score
+                      from the ratings API, instead of the flaky pitch.ratingAverage. */}
+                  <div className="mt-4">
                     <div className="bg-gray-50 rounded-lg p-3 text-center">
                       <p className="text-2xl font-bold text-gray-900">{pitch.ndaCount ?? 0}</p>
-                      <p className="text-xs text-gray-500 flex items-center justify-center gap-1"><Shield className="w-3 h-3" /> NDAs</p>
+                      <p className="text-xs text-gray-500 flex items-center justify-center gap-1"><Shield className="w-3 h-3" /> NDAs Signed</p>
                     </div>
                   </div>
                 </div>
@@ -795,12 +777,23 @@ const ProductionPitchView: React.FC = () => {
                   )}
                 </div>
               </div>
+
+              {/* Feedback & rating — production cos can rate + leave structured
+                  feedback, same as other viewers on PitchDetail. */}
+              <FeedbackSection
+                pitchId={Number(pitch.id)}
+                isOwner={isOwner}
+                isAuthenticated={isAuthenticated}
+                userType={authUser?.userType || ''}
+                showScoreSummary={true}
+              />
+              </div>
             )}
 
             {activeTab === 'production' && completeness && (
               <div className="space-y-6">
                 {/* Pitch Completeness */}
-                <div className="bg-white rounded-xl shadow-lg p-8">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                   <h2 className="text-2xl font-bold text-gray-900 mb-1">Pitch Package Assessment</h2>
                   <p className="text-sm text-gray-500 mb-6">What the creator has provided — gaps indicate areas to request more information</p>
 
@@ -851,7 +844,7 @@ const ProductionPitchView: React.FC = () => {
                 </div>
 
                 {/* Production Readiness */}
-                <div className="bg-white rounded-xl shadow-lg p-8">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                   <div className="flex items-center justify-between mb-2">
                     <h2 className="text-lg font-bold text-gray-900">Production Readiness</h2>
                     <span className={`text-lg font-bold ${getScoreColor(completeness.productionReadiness)}`}>
@@ -860,7 +853,7 @@ const ProductionPitchView: React.FC = () => {
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
                     <div
-                      className="bg-orange-500 h-2 rounded-full transition-all duration-300"
+                      className="bg-indigo-500 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${completeness.productionReadiness}%` }}
                     />
                   </div>
@@ -873,7 +866,7 @@ const ProductionPitchView: React.FC = () => {
                   <div className="grid grid-cols-2 gap-3">
                     {Object.entries(productionChecklist).map(([key, value]) => (
                       <div key={key} className="flex items-center">
-                        {isOwner || hasExistingProject ? (
+                        {isOwner ? (
                           <button
                             onClick={() => handleChecklistUpdate(key as keyof typeof productionChecklist)}
                             className="mr-2"
@@ -903,14 +896,11 @@ const ProductionPitchView: React.FC = () => {
               </div>
             )}
 
-            {activeTab === 'team' && (isOwner || pitch?.hasSignedNDA) && (
-              <div className="bg-white rounded-xl shadow-lg p-8">
+            {activeTab === 'team' && (isOwner || pitch?.hasSignedNDA || pitch?.isCompanyMember) && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900">Team Assembly</h2>
-                    {linkedProjectId && (
-                      <p className="text-sm text-gray-500 mt-1">Accepted collaborators auto-populate from the linked project</p>
-                    )}
                   </div>
                 </div>
 
@@ -930,7 +920,7 @@ const ProductionPitchView: React.FC = () => {
                             value={member.name}
                             onChange={(e) => handleTeamUpdate(index, 'name', e.target.value)}
                             placeholder="Enter name"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                           />
                         </div>
                         <div>
@@ -940,7 +930,7 @@ const ProductionPitchView: React.FC = () => {
                           <select
                             value={member.status}
                             onChange={(e) => handleTeamUpdate(index, 'status', e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                           >
                             <option value="pending">Pending</option>
                             <option value="considering">Considering</option>
@@ -962,15 +952,15 @@ const ProductionPitchView: React.FC = () => {
                       toast.error(e.message);
                     }
                   }}
-                  className="mt-4 w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+                  className="mt-4 w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                 >
                   Save Team Configuration
                 </button>
               </div>
             )}
 
-            {activeTab === 'notes' && (isOwner || pitch?.hasSignedNDA) && (
-              <div className="bg-white rounded-xl shadow-lg p-8">
+            {activeTab === 'notes' && (isOwner || pitch?.hasSignedNDA || pitch?.isCompanyMember) && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Production Notes</h2>
                 
                 {/* Add Note Form */}
@@ -982,7 +972,7 @@ const ProductionPitchView: React.FC = () => {
                         onClick={() => setNoteCategory(cat)}
                         className={`px-3 py-1 rounded-full text-sm capitalize ${
                           noteCategory === cat
-                            ? 'bg-orange-600 text-white'
+                            ? 'bg-indigo-600 text-white'
                             : 'bg-white text-gray-700 border'
                         }`}
                       >
@@ -994,12 +984,12 @@ const ProductionPitchView: React.FC = () => {
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
                     placeholder="Add a production note..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     rows={3}
                   />
                   <button
                     onClick={handleAddNote}
-                    className="mt-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+                    className="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                   >
                     Add Note
                   </button>
@@ -1053,49 +1043,24 @@ const ProductionPitchView: React.FC = () => {
 
           {/* Right Column - Sidebar */}
           <div className="space-y-6">
-            {/* Production Actions — only for pitches by other users */}
-            {isOwner ? (
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Pitch</h3>
-                <div className="space-y-2">
-                  {hasExistingProject ? (
-                    <button
-                      onClick={() => navigate('/production/pipeline')}
-                      className="w-full flex items-center justify-between px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                    >
-                      <span>View in Pipeline</span>
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => setShowStartProjectModal(true)}
-                      className="w-full flex items-center justify-between px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-                    >
-                      <span>Start Project</span>
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Production Actions</h3>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => {
-                      if (!pitch?.userId) {
-                        toast.error('Cannot send message: creator information unavailable');
-                        return;
-                      }
-                      const greeting = pitch.creatorName || pitch.creatorCompany || 'Creator';
-                      navigate(`/production/messages?recipient=${pitch.userId}&pitch=${id}&subject=${encodeURIComponent(`Script Request: ${pitch?.title}`)}&body=${encodeURIComponent(`Hi ${greeting},\n\nI'm interested in your pitch "${pitch?.title}" and would like to request the full script for review.\n\nLooking forward to discussing this further.`)}`);
-                    }}
-                    className="w-full flex items-center justify-between px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
-                  >
-                    <span>Request Full Script</span>
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                  {!pitch?.hasSignedNDA && (
+            {/* Access — the NDA is the single gate that unlocks the full script,
+                pitch deck, and all production materials (no separate "request script"). */}
+            {!isOwner && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <h3 className="text-lg font-semibold text-gray-900">Access</h3>
+                {pitch?.hasSignedNDA ? (
+                  <div className="mt-3 flex items-start gap-2.5 rounded-lg bg-emerald-50 px-3.5 py-3 text-emerald-800">
+                    <CheckCircle className="h-5 w-5 shrink-0 text-emerald-600" />
+                    <p className="text-sm font-medium leading-snug">NDA signed — the full script &amp; production materials are unlocked below.</p>
+                  </div>
+                ) : ndaRequested ? (
+                  <div className="mt-3 flex items-start gap-2.5 rounded-lg bg-amber-50 px-3.5 py-3 text-amber-800">
+                    <Clock className="h-5 w-5 shrink-0 text-amber-600" />
+                    <p className="text-sm font-medium leading-snug">NDA request pending — you'll get access once the creator approves it.</p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="mt-1 mb-4 text-sm leading-relaxed text-gray-500">Sign an NDA to unlock the full script, pitch deck, and production materials.</p>
                     <button
                       onClick={async () => {
                         if (!id) return;
@@ -1103,6 +1068,7 @@ const ProductionPitchView: React.FC = () => {
                         try {
                           const res = await apiClient.post('/api/ndas/request', { pitchId: id });
                           if (res.success) {
+                            setNdaRequested(true);
                             toast.success('NDA request sent');
                           } else {
                             toast.error((res.error as any)?.message || 'Failed to request NDA');
@@ -1112,45 +1078,19 @@ const ProductionPitchView: React.FC = () => {
                           toast.error(e.message);
                         }
                       }}
-                      className="w-full flex items-center justify-between px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 font-medium text-white shadow-sm transition hover:bg-indigo-700"
                     >
-                      <span>Request NDA ({getCreditCost('nda_request')} credits)</span>
                       <Shield className="h-4 w-4" />
+                      Request NDA Access · {getCreditCost('nda_request')} credits
                     </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      navigate(`/production/messages?recipient=${pitch?.userId}&pitch=${id}`);
-                      toast('Start your negotiation discussion');
-                    }}
-                    className="w-full flex items-center justify-between px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                  >
-                    <span>Start Negotiations</span>
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                  {hasExistingProject ? (
-                    <button
-                      onClick={() => navigate('/production/pipeline')}
-                      className="w-full flex items-center justify-between px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                    >
-                      <span>View in Pipeline</span>
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => setShowStartProjectModal(true)}
-                      className="w-full flex items-center justify-between px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-                    >
-                      <span>Start Project</span>
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
+                    <p className="mt-3 text-center text-xs text-gray-400">Questions for the creator? Use Contact above.</p>
+                  </>
+                )}
               </div>
             )}
 
             {/* Production Requirements */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Production Requirements</h3>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -1192,7 +1132,7 @@ const ProductionPitchView: React.FC = () => {
             {/* AI Assessment — owner only. Removed when viewing someone else's pitch
                 (a production user assessing another creator's pitch shouldn't see the
                 owner-side auto-fill toolkit). */}
-            {isOwner && <div className="bg-white rounded-xl shadow-lg p-6">
+            {isOwner && <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">AI Assessment</h3>
               <p className="text-sm text-gray-500 mb-4">
                 Upload a script, treatment, or pitch deck to auto-fill the feasibility checklist, team priorities, and production notes.
@@ -1228,7 +1168,7 @@ const ProductionPitchView: React.FC = () => {
             </div>}
 
             {/* Documents — show full links post-NDA, attachment status pre-NDA */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Production Materials</h3>
               {(isOwner || pitch.hasSignedNDA) ? (
                 ((pitch as any).documents?.length || pitch.script || pitch.pitchDeck || pitch.trailer) ? (
@@ -1268,31 +1208,6 @@ const ProductionPitchView: React.FC = () => {
           </div>
         </div>
       </div>
-
-      <ScheduleMeetingModal
-        isOpen={showScheduleModal}
-        onClose={() => setShowScheduleModal(false)}
-        recipientId={pitch.userId || ''}
-        recipientName={pitch.creatorName || pitch.creatorCompany || 'Creator'}
-        meetingType="production"
-        defaultSubject={`Production Discussion: ${pitch.title}`}
-      />
-
-      {showStartProjectModal && (
-        <StartProjectModal
-          pitch={{
-            id: Number(pitch.id),
-            title: pitch.title,
-            genre: pitch.genre,
-            budget: pitch.budget,
-            estimatedBudget: pitch.estimatedBudget,
-            productionTimeline: pitch.productionTimeline,
-            logline: pitch.logline,
-            shortSynopsis: pitch.shortSynopsis,
-          }}
-          onClose={() => setShowStartProjectModal(false)}
-        />
-      )}
     </div>
   );
 };

@@ -62,12 +62,6 @@ const InvestorDiscover = lazy(() => import('@portals/investor/pages/InvestorDisc
 const ProductionActivity = lazy(() => import('@portals/production/pages/ProductionActivity'));
 const ProductionAnalytics = lazy(() => import('@portals/production/pages/ProductionAnalytics'));
 const ProductionStats = lazy(() => import('@portals/production/pages/ProductionStats'));
-const ProductionProjects = lazy(() => import('@portals/production/pages/ProductionProjects'));
-const ProductionProjectsActive = lazy(() => import('@portals/production/pages/ProductionProjectsActive'));
-const ProductionProjectsDevelopment = lazy(() => import('@portals/production/pages/ProductionProjectsDevelopment'));
-const ProductionProjectsPost = lazy(() => import('@portals/production/pages/ProductionProjectsPost'));
-const ProductionProjectsCompleted = lazy(() => import('@portals/production/pages/ProductionProjectsCompleted'));
-const ProductionPipeline = lazy(() => import('@portals/production/pages/ProductionPipeline'));
 const ProductionSubmissions = lazy(() => import('@portals/production/pages/ProductionSubmissions'));
 const ProductionSubmissionsNew = lazy(() => import('@portals/production/pages/ProductionSubmissionsNew'));
 const ProductionSubmissionsReview = lazy(() => import('@portals/production/pages/ProductionSubmissionsReview'));
@@ -299,26 +293,6 @@ export function AllProductionRoutes({ isAuthenticated, userType }: RoutesProps) 
       } />
       <Route path={getRelativePath(PRODUCTION_ROUTES.stats, '/production')} element={
         isProduction ? <ProductionStats /> : <Navigate to="/login/production" />
-      } />
-      
-      {/* Projects */}
-      <Route path={getRelativePath(PRODUCTION_ROUTES.projects, '/production')} element={
-        isProduction ? <ProductionProjects /> : <Navigate to="/login/production" />
-      } />
-      <Route path={getRelativePath(PRODUCTION_ROUTES.projectsActive, '/production')} element={
-        isProduction ? <ProductionProjectsActive /> : <Navigate to="/login/production" />
-      } />
-      <Route path={getRelativePath(PRODUCTION_ROUTES.projectsDevelopment, '/production')} element={
-        isProduction ? <ProductionProjectsDevelopment /> : <Navigate to="/login/production" />
-      } />
-      <Route path={getRelativePath(PRODUCTION_ROUTES.projectsPost, '/production')} element={
-        isProduction ? <ProductionProjectsPost /> : <Navigate to="/login/production" />
-      } />
-      <Route path={getRelativePath(PRODUCTION_ROUTES.projectsCompleted, '/production')} element={
-        isProduction ? <ProductionProjectsCompleted /> : <Navigate to="/login/production" />
-      } />
-      <Route path={getRelativePath(PRODUCTION_ROUTES.pipeline, '/production')} element={
-        isProduction ? <ProductionPipeline /> : <Navigate to="/login/production" />
       } />
       
       {/* Submissions */}

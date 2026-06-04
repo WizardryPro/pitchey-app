@@ -6,7 +6,7 @@ import { paymentsAPI } from '@/lib/apiServices';
 import { WebSocketStatusCompact } from '@/components/WebSocketStatus';
 import { NotificationBell } from '@features/notifications/components/NotificationBell';
 import Logo from '@/components/Logo';
-import { getPortalPath } from '@/utils/navigation';
+import { getPortalPath, getBrowsePath } from '@/utils/navigation';
 import { getPortalTheme } from '@shared/hooks/usePortalTheme';
 
 
@@ -80,6 +80,9 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
   // Portal theme — single source of truth for color accents. See usePortalTheme.
   const theme = getPortalTheme(userType);
   const showRoleBadge = Boolean(userType) && userType !== null;
+  // Route to the in-portal browse for this portal so the marketplace keeps the
+  // portal chrome instead of swapping to the standalone /marketplace (old layout).
+  const browsePath = getBrowsePath(userType);
 
   return (
     <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-4 sticky top-0 z-40">
@@ -125,7 +128,7 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
             <span className="hidden md:inline">Home</span>
           </Link>
           <Link
-            to="/marketplace"
+            to={browsePath}
             className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
             title="Marketplace"
           >
@@ -188,7 +191,7 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
                   Home
                 </button>
                 <button
-                  onClick={() => { navigate('/marketplace'); setIsProfileOpen(false); }}
+                  onClick={() => { navigate(browsePath); setIsProfileOpen(false); }}
                   className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                 >
                   <Store className="w-4 h-4" />

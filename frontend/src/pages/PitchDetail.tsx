@@ -606,7 +606,7 @@ export default function PitchDetail() {
                   {(pitch as { synopsisTruncated?: boolean }).synopsisTruncated && (
                     <p className="mt-3 text-sm text-gray-500 italic">
                       You're reading a teaser. Sign up as a{' '}
-                      <Link to="/signup" className="text-purple-600 hover:text-purple-700 font-medium">
+                      <Link to="/register" className="text-purple-600 hover:text-purple-700 font-medium">
                         Creator, Investor, or Production
                       </Link>{' '}
                       account to read the full synopsis.

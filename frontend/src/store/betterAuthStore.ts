@@ -282,20 +282,33 @@ export const useBetterAuthStore = create<BetterAuthState>((set) => ({
       // Use session manager to prevent rate limiting, but always hit the API
       // (don't trust localStorage cache as ground truth)
       const result = await sessionManager.checkSession(async () => {
-        try {
-          const session = await portalAuth.getSession();
-          const user = session?.user || null;
-          if (user) {
-            sessionCache.set(user);
-          } else {
-            sessionCache.clear();
-          }
-          return user;
-        } catch {
+        // getSession returns null only on a definitive 401/403 (genuine logout)
+        // and THROWS on transient failures (network/5xx). Let the throw propagate
+        // so performCheck reports success:false and the store preserves the
+        // existing session instead of clearing it. Do NOT swallow it here — that
+        // was converting transient blips into logouts and flashing the old login
+        // page mid-navigation.
+        const session = await portalAuth.getSession();
+        const user = session?.user || null;
+        if (user) {
+          sessionCache.set(user);
+        } else {
           sessionCache.clear();
-          return null;
         }
+        return user;
       });
+
+      // Transient check failure (network blip / 5xx — e.g. a cold-start DB error
+      // bubbling up as a 500). performCheck returns success:false here, distinct
+      // from a genuine empty session (success:true, user:null). Do NOT log the
+      // user out: flipping isAuthenticated false makes route guards bounce to
+      // /login/<portal>, which flashes the old login page mid-navigation before
+      // the next check restores state. Preserve current state; the next check
+      // (or the 60s session-manager cache) reconciles.
+      if (!result.success) {
+        set({ loading: false });
+        return;
+      }
 
       // Detect userType mismatch (stale cache from previous login)
       const currentUser = useBetterAuthStore.getState().user;

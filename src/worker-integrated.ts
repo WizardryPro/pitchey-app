@@ -162,7 +162,11 @@ import {
   resendInvitationHandler,
   cancelInvitationHandler,
   updateMemberRoleHandler,
-  removeTeamMemberHandler
+  removeTeamMemberHandler,
+  generateTeamJoinCodeHandler,
+  getTeamJoinCodeHandler,
+  revokeTeamJoinCodeHandler,
+  joinTeamByCodeHandler
 } from './handlers/teams';
 
 // Import settings management handlers
@@ -2637,6 +2641,12 @@ class RouteRegistry {
     // Team Management routes (use internal validateAuth for consistency)
     this.register('GET', '/api/teams', (req) => this.getTeamsInternal(req));
     this.register('POST', '/api/teams', (req) => createTeamHandler(req, this.env));
+    // B3 company-team join codes — register BEFORE /api/teams/:id so the specific
+    // paths match first. POST /api/teams/join is a creator redeeming a code.
+    this.register('POST', '/api/teams/join', (req) => joinTeamByCodeHandler(req, this.env));
+    this.register('POST', '/api/teams/:id/generate-code', (req) => generateTeamJoinCodeHandler(req, this.env));
+    this.register('GET', '/api/teams/:id/code', (req) => getTeamJoinCodeHandler(req, this.env));
+    this.register('DELETE', '/api/teams/:id/code', (req) => revokeTeamJoinCodeHandler(req, this.env));
     this.register('GET', '/api/teams/invites', (req) => getInvitationsHandler(req, this.env));
     this.register('POST', '/api/teams/invites/:id/accept', (req) => acceptInvitationHandler(req, this.env));
     this.register('POST', '/api/teams/invites/:id/reject', (req) => rejectInvitationHandler(req, this.env));
@@ -5944,6 +5954,7 @@ pitchey_analytics_datapoints_per_minute 1250
       let authUserId: number | null = null;
       let viewerUserType: string | null = null;
       let hasNDAAccess = false;
+      let isCompanyMember = false;
       try {
         const authResult = await this.validateAuth(request);
         if (authResult.valid && authResult.user) {
@@ -6000,6 +6011,17 @@ pitchey_analytics_datapoints_per_minute 1250
               hasNDAAccess = accessRows.length > 0;
             } catch { /* pitch_access table may not exist in all envs */ }
           }
+          // B3: company-team membership — a seated 'member' of a company team owned
+          // by this pitch's owner gets Team/Notes access without a per-pitch NDA.
+          try {
+            const memberRows = await sql`
+              SELECT 1 FROM team_members tm
+              JOIN teams t ON t.id = tm.team_id
+              WHERE t.owner_id = ${pitch.user_id} AND tm.user_id = ${authUserId} AND tm.role = 'member'
+              LIMIT 1
+            `;
+            isCompanyMember = memberRows.length > 0;
+          } catch { /* teams tables may not exist in all envs */ }
         }
       } catch {
         // Auth check is optional for public pitch viewing
@@ -6091,6 +6113,7 @@ pitchey_analytics_datapoints_per_minute 1250
         isOwner,
         hasSignedNDA: hasNDAAccess,
         hasNDA: hasNDAAccess,
+        isCompanyMember,
         hasProtectedContent,
         view_count: parseInt(String(pitch.view_count || '0')),
         investment_count: investmentCount,
@@ -6397,20 +6420,31 @@ pitchey_analytics_datapoints_per_minute 1250
             rating_count?: number | null;
             pitchey_score_avg?: number | null;
           };
+          // pitch_versions schema is a versioned snapshot: (pitch_id, version_number,
+          // title, content jsonb, changes_summary, created_by) — version_number/title/
+          // content are NOT NULL. The previous INSERT targeted columns that don't exist
+          // (logline/short_synopsis/…) and omitted the NOT NULL cols, so it threw on
+          // EVERY edit and was swallowed by the catch below — versioning was silently dead.
           await this.db.query(
             `INSERT INTO pitch_versions
-               (pitch_id, title, logline, short_synopsis, long_synopsis,
-                rating_average, rating_count, pitchey_score_avg)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+               (pitch_id, version_number, title, content, changes_summary, created_by)
+             VALUES ($1,
+                     COALESCE((SELECT MAX(version_number) FROM pitch_versions WHERE pitch_id = $1), 0) + 1,
+                     $2, $3::jsonb, $4, $5)`,
             [
               u.id,
-              u.title ?? null,
-              u.logline ?? null,
-              u.short_synopsis ?? null,
-              u.long_synopsis ?? null,
-              u.rating_average ?? null,
-              u.rating_count ?? null,
-              u.pitchey_score_avg ?? null,
+              u.title ?? 'Untitled',
+              JSON.stringify({
+                title: u.title ?? null,
+                logline: u.logline ?? null,
+                shortSynopsis: u.short_synopsis ?? null,
+                longSynopsis: u.long_synopsis ?? null,
+                ratingAverage: u.rating_average ?? null,
+                ratingCount: u.rating_count ?? null,
+                pitcheyScoreAvg: u.pitchey_score_avg ?? null,
+              }),
+              'Pitch edited',
+              authResult.user.id,
             ]
           );
         } catch (snapErr) {

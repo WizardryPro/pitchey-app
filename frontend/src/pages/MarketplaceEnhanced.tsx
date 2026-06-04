@@ -109,7 +109,6 @@ function getCreatorDisplay(pitch: Pitch): string {
 // Enhanced filtering and sorting options.
 // `shortLabel` is used in the compact pill row; `label` stays in the a11y/title.
 const SORT_OPTIONS = [
-  { value: 'hot', label: 'Hottest', shortLabel: 'Hot', icon: Zap },
   { value: 'trending', label: 'Trending Now', shortLabel: 'Trending', icon: TrendingUp },
   { value: 'newest', label: 'Newest First', shortLabel: 'New', icon: Clock },
   { value: 'popular', label: 'Most Popular', shortLabel: 'Popular', icon: Star },

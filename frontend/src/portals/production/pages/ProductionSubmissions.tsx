@@ -8,7 +8,6 @@ import {
 import { apiClient } from '@/lib/api-client';
 import { toast } from 'react-hot-toast';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
-import StartProjectModal from '@portals/production/components/StartProjectModal';
 
 interface Submission {
   id: string;
@@ -44,7 +43,6 @@ export default function ProductionSubmissions() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [startProjectPitch, setStartProjectPitch] = useState<{ id: number; title: string; genre?: string } | null>(null);
   
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
 
@@ -393,15 +391,6 @@ export default function ProductionSubmissions() {
                           </button>
                         </>
                       )}
-                      {submission.status === 'accepted' && (
-                        <button
-                          onClick={() => setStartProjectPitch({ id: parseInt(submission.id), title: submission.title, genre: submission.genre })}
-                          className="px-3 py-1.5 bg-purple-600 text-white hover:bg-purple-700 rounded-lg transition text-sm flex items-center gap-1.5"
-                        >
-                          <Film className="w-3.5 h-3.5" />
-                          Start Project
-                        </button>
-                      )}
                       {submission.status === 'archived' ? (
                         <button
                           onClick={() => void updateSubmissionStatus(submission.id, 'reviewing')}
@@ -443,12 +432,6 @@ export default function ProductionSubmissions() {
         )}
       </div>
 
-      {startProjectPitch && (
-        <StartProjectModal
-          pitch={startProjectPitch}
-          onClose={() => setStartProjectPitch(null)}
-        />
-      )}
     </div>
   );
 }

@@ -76,28 +76,13 @@ id = "65f0c620465046139f73416abb3f3ecd"
 binding = "CONTAINER_METRICS"
 id = "55fd8288547e4d57a2abb8b2590444f8"
 
-# ===== QUEUES FOR CONTAINER PROCESSING =====
-[[queues.producers]]
-binding = "VIDEO_PROCESSING_QUEUE"
-queue = "pitchey-video-processing"
-
-[[queues.producers]]
-binding = "DOCUMENT_PROCESSING_QUEUE"
-queue = "pitchey-document-processing"
-
-[[queues.producers]]
-binding = "AI_INFERENCE_QUEUE"
-queue = "pitchey-ai-inference"
-
-[[queues.producers]]
-binding = "MEDIA_TRANSCODING_QUEUE"
-queue = "pitchey-media-transcoding"
-
-[[queues.producers]]
-binding = "CODE_EXECUTION_QUEUE"
-queue = "pitchey-code-execution"
-
-# Queue consumers will be configured after deployment
+# ===== QUEUES — REMOVED (Cloud-3) =====
+# 5 producers were declared but the main worker exports NO queue() consumer, so
+# every send (only VIDEO_PROCESSING_QUEUE was ever called — on video upload) went
+# into the void and dropped after retention. Producers removed until the
+# video-processing pipeline is actually built (add the consumer + producer
+# together). Code refs are guarded (`if (this.env.VIDEO_PROCESSING_QUEUE)`), so the
+# binding's absence is a clean no-op.
 
 # ===== ANALYTICS ENGINE =====
 [[analytics_engine_datasets]]
@@ -142,26 +127,20 @@ bucket_name = "pitchey-audit-logs"
 binding = "TRACE_LOGS"
 bucket_name = "pitchey-trace-logs"
 
-# ===== HYPERDRIVE (CONNECTION POOL) =====
-# Caching is explicitly disabled on the resource (see `wrangler hyperdrive get
-# <id>`). Re-enabling caching would let revoked session rows keep
-# authenticating until cache TTL expires — connection pooling only is the
-# safe and intended use for the auth path.
-#
-# CREDENTIAL ROTATION GOTCHA: Hyperdrive stores its own copy of the Neon
-# connection string. Rotating the Neon password requires updating BOTH:
-#   1. wrangler secret put DATABASE_URL              (the Worker secret)
-#   2. wrangler hyperdrive update <id> --connection-string=...   (the binding)
-# Forgetting step 2 makes Hyperdrive try to connect with the dead credential;
-# requests start 500-ing at the edge with no obvious cause.
-#
-# Orphan: `pitchey-db` (id bc2d846d32e64b5c8122654e4f12c959) is an unused
-# duplicate from earlier abandoned integration attempts; safe to delete via
-# `wrangler hyperdrive delete bc2d846d32e64b5c8122654e4f12c959` once verified
-# nothing else references it.
-[[hyperdrive]]
-binding = "HYPERDRIVE"
-id = "dec8d1ab675649c8b69d88cb4c160704"
+# ===== HYPERDRIVE — REMOVED (Cloud-4) =====
+# The binding (id dec8d1ab675649c8b69d88cb4c160704) was bound but BYPASSED: the
+# live DB path (WorkerDatabase + getDb) connects to env.DATABASE_URL directly and
+# never touches env.HYPERDRIVE. It was pure credential-rotation footgun —
+# Hyperdrive keeps its own copy of the Neon creds, so a Neon password rotation
+# that forgot to also update Hyperdrive would 500 at the edge with no obvious
+# cause. Removed. Code refs use `env.HYPERDRIVE?.connectionString || env.DATABASE_URL`
+# so the fallback is clean; the orphan services/health-monitor.ts that called
+# HYPERDRIVE.prepare() is dead code (not imported; live health is handlers/
+# health-monitoring.ts on DATABASE_URL).
+# CF resources still exist (unbinding neutralizes the footgun; deletion is the
+# final cleanup — OWNER ACTION, an API delete is auto-denied):
+#   wrangler hyperdrive delete dec8d1ab675649c8b69d88cb4c160704   (was bound)
+#   wrangler hyperdrive delete bc2d846d32e64b5c8122654e4f12c959   (orphan pitchey-db)
 
 # ===== CRON TRIGGERS =====
 [triggers]
@@ -214,8 +193,12 @@ ENABLE_EDGE_CACHING = "true"
 # Authentication Configuration
 BETTER_AUTH_URL = "https://pitchey-api-prod.ndlovucavelle.workers.dev"
 
-# n8n Video Processing Webhook
-N8N_WEBHOOK_URL = "http://localhost:5678/webhook/video-uploaded"
+# n8n Video Processing Webhook — DISABLED in prod (Cloud-2).
+# This pointed at a dev-only localhost n8n instance, so queueVideoProcessing()
+# await'd an unreachable fetch on every video upload (added latency + a captured
+# Sentry error each time). multipart-upload.ts skips the webhook when this var is
+# unset. Re-enable with a REAL deployed n8n URL when the video pipeline ships.
+# N8N_WEBHOOK_URL = "http://localhost:5678/webhook/video-uploaded"
 
 # Distributed Tracing Configuration
 ENABLE_DISTRIBUTED_TRACING = "true"

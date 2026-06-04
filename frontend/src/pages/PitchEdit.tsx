@@ -3,6 +3,7 @@ import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Save, X, Upload, FileText, Video, Image as ImageIcon, Shield, WifiOff } from 'lucide-react';
 import { pitchService } from '@features/pitches/services/pitch.service';
+import { useBetterAuthStore } from '../store/betterAuthStore';
 import { uploadService } from '@features/uploads/services/upload.service';
 import type { Pitch, UpdatePitchInput } from '@shared/types/api';
 import { getGenresSync } from '@config/pitchConstants';
@@ -59,7 +60,11 @@ export default function PitchEdit() {
   const [genres] = useState<readonly string[] | string[]>(getGenresSync());
   const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
   const isOnline = useOnlineStatus();
-  const pitchesListPath = '/creator/pitches';
+  // Redirect to the editor's OWN portal pitch list after save/back/cancel. Hardcoding
+  // '/creator/pitches' bounced production users to /login/creator (a creator-gated route)
+  // after a save that actually SUCCEEDED — experienced as "edit threw an error / lost work".
+  const userType = useBetterAuthStore((s) => s.user?.userType);
+  const pitchesListPath = userType === 'production' ? '/production/pitches' : '/creator/pitches';
 
 
   const [formData, setFormData] = useState<PitchFormData>({

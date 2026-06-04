@@ -257,7 +257,9 @@ describe('ProductionPitchView', () => {
     await waitFor(() => {
       expect(screen.getByText('Production Requirements')).toBeInTheDocument()
     })
-    expect(screen.getByText('Production Actions')).toBeInTheDocument()
+    // (Removed stale 'Production Actions' assertion — that sidebar block was
+    // dropped in the PitchDetail-style polish refactor; the 'Production
+    // Requirements' heading above already confirms the sidebar renders.)
   })
 
   it('shows production materials section when documents exist', async () => {
