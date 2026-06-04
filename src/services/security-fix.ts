@@ -142,6 +142,18 @@ export function addSecurityHeaders(response: Response, environment?: string): Re
   const headers = new Headers(response.headers);
 
   // Content Security Policy
+  //
+  // P6 — CSP ownership is split by surface, on purpose:
+  //   • This (Worker) policy covers Worker responses. Those are JSON (where CSP
+  //     is inert — nothing executes) EXCEPT the Swagger docs HTML route
+  //     (routes/documentation.ts), which loads its UI from cdn.jsdelivr.net /
+  //     unpkg.com — hence the only script-src hosts here.
+  //   • The wide policy with Stripe / Turnstile / Sentry lives in
+  //     frontend/public/_headers, because those flows run in the SPA, never in a
+  //     Worker-served HTML page. Don't widen this one to "match" the SPA — the
+  //     Worker has no payment/challenge surface; broadening it only weakens it.
+  // If you ever add a Worker route that returns HTML needing one of those hosts,
+  // add it HERE (and document why), don't copy the whole SPA policy.
   headers.set('Content-Security-Policy',
     "default-src 'self'; " +
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; " +
