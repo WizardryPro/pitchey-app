@@ -162,7 +162,11 @@ import {
   resendInvitationHandler,
   cancelInvitationHandler,
   updateMemberRoleHandler,
-  removeTeamMemberHandler
+  removeTeamMemberHandler,
+  generateTeamJoinCodeHandler,
+  getTeamJoinCodeHandler,
+  revokeTeamJoinCodeHandler,
+  joinTeamByCodeHandler
 } from './handlers/teams';
 
 // Import settings management handlers
@@ -2637,6 +2641,12 @@ class RouteRegistry {
     // Team Management routes (use internal validateAuth for consistency)
     this.register('GET', '/api/teams', (req) => this.getTeamsInternal(req));
     this.register('POST', '/api/teams', (req) => createTeamHandler(req, this.env));
+    // B3 company-team join codes — register BEFORE /api/teams/:id so the specific
+    // paths match first. POST /api/teams/join is a creator redeeming a code.
+    this.register('POST', '/api/teams/join', (req) => joinTeamByCodeHandler(req, this.env));
+    this.register('POST', '/api/teams/:id/generate-code', (req) => generateTeamJoinCodeHandler(req, this.env));
+    this.register('GET', '/api/teams/:id/code', (req) => getTeamJoinCodeHandler(req, this.env));
+    this.register('DELETE', '/api/teams/:id/code', (req) => revokeTeamJoinCodeHandler(req, this.env));
     this.register('GET', '/api/teams/invites', (req) => getInvitationsHandler(req, this.env));
     this.register('POST', '/api/teams/invites/:id/accept', (req) => acceptInvitationHandler(req, this.env));
     this.register('POST', '/api/teams/invites/:id/reject', (req) => rejectInvitationHandler(req, this.env));
@@ -5944,6 +5954,7 @@ pitchey_analytics_datapoints_per_minute 1250
       let authUserId: number | null = null;
       let viewerUserType: string | null = null;
       let hasNDAAccess = false;
+      let isCompanyMember = false;
       try {
         const authResult = await this.validateAuth(request);
         if (authResult.valid && authResult.user) {
@@ -6000,6 +6011,17 @@ pitchey_analytics_datapoints_per_minute 1250
               hasNDAAccess = accessRows.length > 0;
             } catch { /* pitch_access table may not exist in all envs */ }
           }
+          // B3: company-team membership — a seated 'member' of a company team owned
+          // by this pitch's owner gets Team/Notes access without a per-pitch NDA.
+          try {
+            const memberRows = await sql`
+              SELECT 1 FROM team_members tm
+              JOIN teams t ON t.id = tm.team_id
+              WHERE t.owner_id = ${pitch.user_id} AND tm.user_id = ${authUserId} AND tm.role = 'member'
+              LIMIT 1
+            `;
+            isCompanyMember = memberRows.length > 0;
+          } catch { /* teams tables may not exist in all envs */ }
         }
       } catch {
         // Auth check is optional for public pitch viewing
@@ -6091,6 +6113,7 @@ pitchey_analytics_datapoints_per_minute 1250
         isOwner,
         hasSignedNDA: hasNDAAccess,
         hasNDA: hasNDAAccess,
+        isCompanyMember,
         hasProtectedContent,
         view_count: parseInt(String(pitch.view_count || '0')),
         investment_count: investmentCount,
