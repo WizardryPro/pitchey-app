@@ -1585,30 +1585,35 @@ class RouteRegistry {
   }
 
   private async handleRegisterSimple(request: Request): Promise<Response> {
-    const body = await request.json() as RegisterBody;
-    const { email, password, name, userType } = body;
     const origin = request.headers.get('Origin');
+    const fail = (code: string, message: string, status: number) => new Response(
+      JSON.stringify({ success: false, error: { code, message } }),
+      { status, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) } },
+    );
+
+    // Validate the body BEFORE touching any field — an empty/malformed body used
+    // to throw on `email.split('@')` and surface as a generic 500 (bots hitting
+    // this with garbage inflated the error rate). Now it's a clean 400.
+    let body: RegisterBody;
+    try {
+      body = (await request.json()) as RegisterBody;
+    } catch {
+      return fail('VALIDATION_ERROR', 'Invalid or missing request body', 400);
+    }
+    const { email, password, name, userType } = body || ({} as RegisterBody);
+    if (!email || !password) {
+      return fail('VALIDATION_ERROR', 'Email and password are required', 400);
+    }
+
     const username = (body as any).username || email.split('@')[0];
     const companyName = (body as any).companyName || null;
 
-    // Verify Turnstile token
+    // Verify Turnstile token (after basic validation so malformed bodies get a
+    // 400, not a 403).
     const clientIP = request.headers.get('CF-Connecting-IP') || undefined;
     const turnstileResult = await verifyTurnstileToken((body as any).turnstileToken, this.env.TURNSTILE_SECRET_KEY, clientIP);
     if (!turnstileResult.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: { code: 'TURNSTILE_FAILED', message: turnstileResult.error || 'Bot verification failed' }
-      }), { status: 403, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) } });
-    }
-
-    if (!email || !password) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'Email and password are required' }
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) }
-      });
+      return fail('TURNSTILE_FAILED', turnstileResult.error || 'Bot verification failed', 403);
     }
 
     try {

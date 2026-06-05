@@ -54,6 +54,8 @@ interface Pitch {
   updatedAt: string;
   hasSignedNDA?: boolean;
   isCompanyMember?: boolean;
+  requiresNDA?: boolean;           // pitch was created with NDA protection
+  require_nda?: boolean;           // snake-case fallback
   creatorType?: string;            // owner's user_type — selects workspace mode
   creator_type?: string;           // snake-case as returned by getPitch
   creator?: { id?: number; name?: string; userType?: string };
@@ -137,6 +139,11 @@ const ProductionPitchView: React.FC = () => {
   const canEditWorkspace = ownerIsProduction
     ? (isOwner || !!pitch?.isCompanyMember)
     : (authUser?.userType === 'production');
+
+  // Whether this pitch was created WITH NDA protection. Pitches created without
+  // one are openly accessible — so we don't offer "Request NDA Access" on them.
+  const requiresNda =
+    pitch?.requiresNDA ?? pitch?.require_nda ?? (pitch?.visibility === 'nda_only');
 
   // --- Workspace access affordances (UI/UX) -------------------------------
   // A quiet "who am I here" system shared across the Feasibility/Team/Notes
@@ -1175,7 +1182,12 @@ const ProductionPitchView: React.FC = () => {
             {!isOwner && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                 <h3 className="text-lg font-semibold text-gray-900">Access</h3>
-                {pitch?.hasSignedNDA ? (
+                {!requiresNda ? (
+                  <div className="mt-3 flex items-start gap-2.5 rounded-lg bg-emerald-50 px-3.5 py-3 text-emerald-800">
+                    <CheckCircle className="h-5 w-5 shrink-0 text-emerald-600" />
+                    <p className="text-sm font-medium leading-snug">No NDA required — the script &amp; production materials are open below.</p>
+                  </div>
+                ) : pitch?.hasSignedNDA ? (
                   <div className="mt-3 flex items-start gap-2.5 rounded-lg bg-emerald-50 px-3.5 py-3 text-emerald-800">
                     <CheckCircle className="h-5 w-5 shrink-0 text-emerald-600" />
                     <p className="text-sm font-medium leading-snug">NDA signed — the full script &amp; production materials are unlocked below.</p>
@@ -1297,7 +1309,7 @@ const ProductionPitchView: React.FC = () => {
             {/* Documents — show full links post-NDA, attachment status pre-NDA */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Production Materials</h3>
-              {(isOwner || pitch.hasSignedNDA) ? (
+              {(isOwner || pitch.hasSignedNDA || !requiresNda) ? (
                 ((pitch as any).documents?.length || pitch.script || pitch.pitchDeck || pitch.trailer) ? (
                   <PitchDocuments
                     documents={(pitch as any).documents}
