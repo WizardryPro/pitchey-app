@@ -1261,7 +1261,7 @@ export async function getCompanyNdaStatusHandler(request: Request, env: Env): Pr
     if (!sql) return json({ success: true, data: { signed: false } });
 
     const parts = new URL(request.url).pathname.split('/');
-    const teamId = parseInt(parts[4] || '0', 10);
+    const teamId = parseInt(parts[3] || '0', 10);
     if (!teamId) return json({ success: false, error: 'Invalid team ID' }, 400);
 
     const [team] = await sql`SELECT id, name, owner_id FROM teams WHERE id = ${teamId}`;
@@ -1298,7 +1298,7 @@ export async function signCompanyNdaHandler(request: Request, env: Env): Promise
     if (!sql) return json({ success: false, error: 'Database unavailable' }, 503);
 
     const parts = new URL(request.url).pathname.split('/');
-    const teamId = parseInt(parts[4] || '0', 10);
+    const teamId = parseInt(parts[3] || '0', 10);
     if (!teamId) return json({ success: false, error: 'Invalid team ID' }, 400);
 
     let body: { agreed?: boolean; name?: string; address?: string } = {};
