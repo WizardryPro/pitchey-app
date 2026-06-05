@@ -23,6 +23,7 @@ import { pitchService } from '@features/pitches/services/pitch.service';
 import PitchDocuments from '@features/pitches/components/PitchDocuments';
 import SocialProofBadge from '@shared/components/SocialProofBadge';
 import FeedbackSection from '@/components/feedback/FeedbackSection';
+import { CollaborationNdaModal } from '@features/teams/components/CollaborationNdaModal';
 
 interface Pitch {
   id: string;
@@ -54,6 +55,8 @@ interface Pitch {
   updatedAt: string;
   hasSignedNDA?: boolean;
   isCompanyMember?: boolean;
+  companyTeamId?: number | null;     // team to sign the collaboration NDA for
+  companyNdaSigned?: boolean;        // member has signed the company NDA (B3 Phase 2)
   requiresNDA?: boolean;           // pitch was created with NDA protection
   require_nda?: boolean;           // snake-case fallback
   creatorType?: string;            // owner's user_type — selects workspace mode
@@ -136,9 +139,17 @@ const ProductionPitchView: React.FC = () => {
   //  • creator-OWNED pitch → any production user edits their OWN private workspace.
   const ownerIsProduction =
     (pitch?.creatorType || pitch?.creator_type || pitch?.creator?.userType) === 'production';
+  // B3 Phase 2: a seated company member only collaborates once they've signed the
+  // company collaboration NDA. Pending members see a sign prompt, not the workspace.
+  const isCompanyMemberSigned = !!pitch?.isCompanyMember && !!pitch?.companyNdaSigned;
+  const isCompanyMemberPending = !!pitch?.isCompanyMember && !pitch?.companyNdaSigned;
   const canEditWorkspace = ownerIsProduction
-    ? (isOwner || !!pitch?.isCompanyMember)
+    ? (isOwner || isCompanyMemberSigned)
     : (authUser?.userType === 'production');
+  // Anyone who may see the workspace tab CONTENT (owner, NDA-signed producer, or
+  // a signed company member). Pending members are excluded — they get the prompt.
+  const canSeeWorkspace = isOwner || !!pitch?.hasSignedNDA || isCompanyMemberSigned;
+  const [signCompanyNda, setSignCompanyNda] = useState(false);
 
   // Whether this pitch was created WITH NDA protection. Pitches created without
   // one are openly accessible — so we don't offer "Request NDA Access" on them.
@@ -698,11 +709,11 @@ const ProductionPitchView: React.FC = () => {
               <div className="flex border-b">
                 {['overview', 'production', 'team', 'notes'].map((tab) => {
                   const ndaRequired = tab === 'team' || tab === 'notes';
-                  // Seated company members (B3) reach Team/Notes without an NDA —
-                  // matches the tab-content gate (isOwner || hasSignedNDA ||
-                  // isCompanyMember). Without isCompanyMember here the tab button
-                  // stayed locked for members even though the content would render.
-                  const locked = ndaRequired && !isOwner && !pitch?.hasSignedNDA && !pitch?.isCompanyMember;
+                  // Seated company members (B3) reach Team/Notes once they've
+                  // signed the company collaboration NDA — matches the tab-content
+                  // gate (canSeeWorkspace). Pending members stay locked and see the
+                  // sign prompt in the Access card.
+                  const locked = ndaRequired && !canSeeWorkspace;
                   return (
                     <button
                       key={tab}
@@ -963,7 +974,7 @@ const ProductionPitchView: React.FC = () => {
               </div>
             )}
 
-            {activeTab === 'team' && (isOwner || pitch?.hasSignedNDA || pitch?.isCompanyMember) && (
+            {activeTab === 'team' && canSeeWorkspace && (
               <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-6 sm:p-8">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-2.5">
@@ -1075,7 +1086,7 @@ const ProductionPitchView: React.FC = () => {
               </div>
             )}
 
-            {activeTab === 'notes' && (isOwner || pitch?.hasSignedNDA || pitch?.isCompanyMember) && (
+            {activeTab === 'notes' && canSeeWorkspace && (
               <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-6 sm:p-8">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-2.5">
@@ -1197,7 +1208,22 @@ const ProductionPitchView: React.FC = () => {
                     <Clock className="h-5 w-5 shrink-0 text-amber-600" />
                     <p className="text-sm font-medium leading-snug">NDA request pending — you'll get access once the creator approves it.</p>
                   </div>
-                ) : pitch?.isCompanyMember ? (
+                ) : isCompanyMemberPending ? (
+                  <div className="mt-3 rounded-lg bg-amber-50 px-3.5 py-3 text-amber-900">
+                    <div className="flex items-start gap-2.5">
+                      <Shield className="h-5 w-5 shrink-0 text-amber-600" />
+                      <p className="text-sm font-medium leading-snug">
+                        Sign the {pitch?.creator?.name || 'company'} NDA to start collaborating on this project.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setSignCompanyNda(true)}
+                      className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2.5 font-medium text-white shadow-sm transition hover:bg-purple-700"
+                    >
+                      <Shield className="h-4 w-4" /> Sign NDA to collaborate
+                    </button>
+                  </div>
+                ) : isCompanyMemberSigned ? (
                   <div className="mt-3 flex items-start gap-2.5 rounded-lg bg-indigo-50 px-3.5 py-3 text-indigo-800">
                     <Users className="h-5 w-5 shrink-0 text-indigo-600" />
                     <p className="text-sm font-medium leading-snug">You're collaborating on this project as a company member.</p>
@@ -1354,6 +1380,16 @@ const ProductionPitchView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {signCompanyNda && pitch?.companyTeamId && (
+        <CollaborationNdaModal
+          teamId={pitch.companyTeamId}
+          company={pitch?.creator?.name || 'the company'}
+          defaultName={(authUser as any)?.name || (authUser as any)?.username || ''}
+          onClose={() => setSignCompanyNda(false)}
+          onSigned={() => { setSignCompanyNda(false); fetchPitchData(); }}
+        />
+      )}
     </div>
   );
 };

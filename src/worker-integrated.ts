@@ -5990,6 +5990,8 @@ pitchey_analytics_datapoints_per_minute 1250
       let viewerUserType: string | null = null;
       let hasNDAAccess = false;
       let isCompanyMember = false;
+      let companyTeamId: number | null = null;
+      let companyNdaSigned = false;
       try {
         const authResult = await this.validateAuth(request);
         if (authResult.valid && authResult.user) {
@@ -6050,12 +6052,26 @@ pitchey_analytics_datapoints_per_minute 1250
           // by this pitch's owner gets Team/Notes access without a per-pitch NDA.
           try {
             const memberRows = await sql`
-              SELECT 1 FROM team_members tm
+              SELECT tm.team_id FROM team_members tm
               JOIN teams t ON t.id = tm.team_id
               WHERE t.owner_id = ${pitch.user_id} AND tm.user_id = ${authUserId} AND tm.role = 'member'
               LIMIT 1
             `;
             isCompanyMember = memberRows.length > 0;
+            if (isCompanyMember) {
+              companyTeamId = Number(memberRows[0].team_id);
+              // B3 Phase 2: has this member signed the company collaboration NDA?
+              // Drives the sign-vs-edit state in the workspace UI. Pre-migration
+              // (table absent) → false (member sees the sign prompt).
+              try {
+                const sigRows = await sql`
+                  SELECT 1 FROM company_nda_signatures
+                  WHERE team_id = ${companyTeamId} AND signer_id = ${authUserId} AND status = 'signed'
+                  LIMIT 1
+                `;
+                companyNdaSigned = sigRows.length > 0;
+              } catch { /* company_nda_signatures may not exist pre-migration */ }
+            }
           } catch { /* teams tables may not exist in all envs */ }
         }
       } catch {
@@ -6149,6 +6165,8 @@ pitchey_analytics_datapoints_per_minute 1250
         hasSignedNDA: hasNDAAccess,
         hasNDA: hasNDAAccess,
         isCompanyMember,
+        companyTeamId,
+        companyNdaSigned,
         hasProtectedContent,
         view_count: parseInt(String(pitch.view_count || '0')),
         investment_count: investmentCount,
