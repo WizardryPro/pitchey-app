@@ -28,6 +28,7 @@ import { config } from '../config';
 import FollowButton from '@features/browse/components/FollowButton';
 import NDAManagementPanel from '@features/ndas/components/NDAManagementPanel';
 import { CompanyJoinCodeCard } from '@features/teams/components/CompanyTeamCards';
+import ProductionSlateBoard from '../portals/production/components/ProductionSlateBoard';
 import FormatDisplay from '../components/FormatDisplay';
 import { EnhancedProductionAnalytics } from '@features/analytics/components/Analytics/EnhancedProductionAnalytics';
 import { withPortalErrorBoundary } from '../components/ErrorBoundary/PortalErrorBoundary';
@@ -963,6 +964,9 @@ function ProductionDashboard() {
 
             {/* B3: share a join code so creators can join the company and collaborate */}
             <CompanyJoinCodeCard />
+
+            {/* Workspace-driven deal funnel — owned + saved pitches by readiness */}
+            <ProductionSlateBoard />
 
             {/* Pitch Evaluation Analytics */}
             <EnhancedProductionAnalytics
