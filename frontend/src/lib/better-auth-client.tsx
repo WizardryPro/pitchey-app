@@ -5,42 +5,17 @@
  */
 
 import React from 'react';
-import { createAuthClient } from 'better-auth/react';
-import { organizationClient } from 'better-auth/client/plugins';
-import { adminClient } from 'better-auth/client/plugins';
-import { multiSessionClient } from 'better-auth/client/plugins';
 import { API_URL } from '../config';
 import type { User } from '@shared/types/api';
 
 // Portal types
 export type PortalType = 'creator' | 'investor' | 'production';
 
-// Better Auth client configuration
-export const authClient = createAuthClient({
-  baseURL: API_URL,
-  
-  // Plugin configuration
-  plugins: [
-    organizationClient(),
-    adminClient(), 
-    multiSessionClient()
-  ],
-  
-  // Cookie configuration
-  cookies: {
-    sessionToken: {
-      name: 'pitchey-session'
-    }
-  },
-
-  // Fetch configuration for Cloudflare Workers
-  fetchOptions: {
-    credentials: 'include' as RequestCredentials,
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  }
-});
+// NOTE: Better Auth was ripped (issue #19). The real auth is plain fetch via
+// `portalAuth`/`createPortalAuthMethods` below. The old `createAuthClient`
+// (better-auth/react) object was dead-loaded — defined, never referenced — so it
+// only served to bundle the entire `better-auth` package (and trip its recurring
+// npm-audit advisory). Removed 2026-06-05; deps dropped from package.json.
 
 // Authentication response types
 export interface AuthResponse {
