@@ -13,6 +13,7 @@ import { getSubscriptionTier } from '../config/subscription-plans';
 import { InvestmentService } from '@features/deals/services/investment.service';
 import FundingOverview from '@features/deals/components/Investment/FundingOverview';
 import { JoinCompanyCard } from '@features/teams/components/CompanyTeamCards';
+import { CreatorCollaborations } from '@features/teams/components/CreatorCollaborations';
 // Analytics embedded view removed — users navigate to /creator/analytics instead
 import { withPortalErrorBoundary } from '../components/ErrorBoundary/PortalErrorBoundary';
 import { useSentryPortal } from '@/shared/hooks/useSentryPortal';
@@ -484,8 +485,10 @@ function CreatorDashboard() {
       {showShareModal && <ShareLinksModal onClose={() => setShowShareModal(false)} />}
 
       {/* B3: creators redeem a production company's join code to collaborate */}
-      <div className="mb-8">
+      <div className="mb-8 space-y-6">
         <JoinCompanyCard />
+        {/* …and reach the projects of companies they've already joined */}
+        <CreatorCollaborations />
       </div>
 
       {/* ===== MY PITCHES + NDA QUICK STATUS ===== */}

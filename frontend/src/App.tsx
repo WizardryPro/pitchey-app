@@ -567,8 +567,12 @@ function App() {
           } />
           {/* Production Pitch View — outside PortalLayout (full-width, no sidebar) */}
           <Route path="/production/pitch/:id" element={
-            isAuthenticated && userType === 'production' ? <ProductionPitchView /> :
-            <Navigate to="/login/production" />
+            // Any authenticated user may open it (B3: seated creator members need
+            // to reach the shared workspace). Access to Team/Notes/Feasibility is
+            // gated INSIDE the view by isOwner || isCompanyMember || hasSignedNDA;
+            // non-entitled users just see the public overview.
+            isAuthenticated ? <ProductionPitchView /> :
+            <Navigate to="/login" />
           } />
 
           {/* Production Portal Routes - with profile guard + PortalLayout */}
