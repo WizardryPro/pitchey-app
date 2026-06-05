@@ -3105,6 +3105,15 @@ class RouteRegistry {
       const { signCompanyNdaHandler } = await import('./handlers/teams');
       return signCompanyNdaHandler(req, this.env);
     });
+    // Producer per-seat NDA status (owner-only) + downloadable signed record (signer or owner).
+    this.register('GET', '/api/teams/:id/collaboration-nda/members', async (req) => {
+      const { getCompanyNdaMembersHandler } = await import('./handlers/teams');
+      return getCompanyNdaMembersHandler(req, this.env);
+    });
+    this.register('GET', '/api/teams/:id/collaboration-nda/document', async (req) => {
+      const { getCompanyNdaDocumentHandler } = await import('./handlers/teams');
+      return getCompanyNdaDocumentHandler(req, this.env);
+    });
 
     // Project Collaborators — aggregate team view + invitation management + scoped project access
     this.register('GET', '/api/production/team/collaborators', async (req) => {

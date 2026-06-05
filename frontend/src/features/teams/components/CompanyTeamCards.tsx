@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Users, KeyRound, Copy, Check, RefreshCw } from 'lucide-react';
+import { Users, KeyRound, Copy, Check, RefreshCw, Shield, Clock, FileText } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -87,13 +87,28 @@ export function JoinCompanyCard() {
  * Production-side: generate/rotate and share a join code so creators can join the
  * company team (B3). Resolves the company team via /api/teams, reads/sets the code.
  */
+interface SeatMember {
+  userId: number;
+  name: string;
+  email: string;
+  ndaStatus: 'signed' | 'pending';
+  signedAt: string | null;
+  documentUrl: string | null;
+}
+
 export function CompanyJoinCodeCard() {
   const [teamId, setTeamId] = useState<number | null>(null);
   const [code, setCode] = useState<string | null>(null);
   const [seats, setSeats] = useState<{ used: number; limit: number } | null>(null);
+  const [members, setMembers] = useState<SeatMember[]>([]);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  const loadMembers = async (tid: number) => {
+    const res = await api(`/api/teams/${tid}/collaboration-nda/members`);
+    if (res.ok) setMembers(Array.isArray(res.body?.data?.members) ? res.body.data.members : []);
+  };
 
   useEffect(() => {
     (async () => {
@@ -108,6 +123,7 @@ export function CompanyJoinCodeCard() {
         setCode(codeRes.body?.data?.code ?? null);
         setSeats({ used: codeRes.body?.data?.seatsUsed ?? 0, limit: codeRes.body?.data?.seatLimit ?? 0 });
       }
+      await loadMembers(company.id);
     })();
   }, []);
 
@@ -162,6 +178,44 @@ export function CompanyJoinCodeCard() {
         </button>
       )}
       {err && <p className="mt-3 text-sm text-red-600">{err}</p>}
+
+      {members.length > 0 && (
+        <div className="mt-5 border-t border-gray-100 pt-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Members &amp; NDA status</p>
+          <ul className="space-y-1.5">
+            {members.map((m) => (
+              <li key={m.userId} className="flex items-center justify-between gap-2 rounded-lg px-1 py-1">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-gray-800">{m.name}</p>
+                  <p className="truncate text-xs text-gray-400">{m.email}</p>
+                </div>
+                {m.ndaStatus === 'signed' ? (
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                      <Shield className="h-3 w-3" /> Signed
+                    </span>
+                    {m.documentUrl && (
+                      <a
+                        href={`${API}${m.documentUrl}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-medium text-purple-600 hover:text-purple-800"
+                        title="View signed NDA"
+                      >
+                        <FileText className="h-3 w-3" /> NDA
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-inset ring-amber-200">
+                    <Clock className="h-3 w-3" /> Pending
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

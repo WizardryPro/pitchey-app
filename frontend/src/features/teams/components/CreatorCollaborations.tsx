@@ -19,6 +19,7 @@ interface Company {
   company: string;
   ownerId: number;
   ndaSigned: boolean;
+  documentUrl: string | null;
   pitches: CollabPitch[];
 }
 
@@ -79,7 +80,20 @@ export function CreatorCollaborations() {
                   </span>
                 )}
               </div>
-              <span className="text-xs text-gray-400">{c.pitches.length} project{c.pitches.length === 1 ? '' : 's'}</span>
+              <div className="flex items-center gap-3">
+                {c.ndaSigned && c.documentUrl && (
+                  <a
+                    href={`${import.meta.env.VITE_API_URL || ''}${c.documentUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-medium text-purple-600 hover:text-purple-800"
+                    title="View your signed NDA"
+                  >
+                    <FileText className="h-3.5 w-3.5" /> Signed NDA
+                  </a>
+                )}
+                <span className="text-xs text-gray-400">{c.pitches.length} project{c.pitches.length === 1 ? '' : 's'}</span>
+              </div>
             </div>
 
             {!c.ndaSigned ? (
