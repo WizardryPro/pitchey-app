@@ -510,3 +510,125 @@ export async function getCreatorPitchFeedback(request: Request, env: Env): Promi
     return jsonResponse({ success: true, data: { feedback: [] } }, origin);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Producer slate (workspace-driven evaluation pipeline)
+// ---------------------------------------------------------------------------
+
+type SlateStage = 'evaluating' | 'reviewing' | 'packaging' | 'ready';
+
+function buildSlateItem(r: any): {
+  pitchId: number; title: string; genre: string | null; format: string | null;
+  poster: string | null; source: string; stage: SlateStage;
+  completeness: { score: number; total: number };
+  checklistPct: number; rolesConfirmed: number; rolesTotal: number; rolesFilled: number;
+  notesCount: number; hasNda: boolean;
+} {
+  // Mirror the Feasibility tab's 9-field completeness (ProductionPitchView.calculateCompleteness).
+  const team = Array.isArray(r.team) ? r.team : [];
+  const rolesTotal = team.length;
+  const rolesFilled = team.filter((m: any) => m?.name && String(m.name).trim() !== '').length;
+  const rolesConfirmed = team.filter((m: any) => m?.status === 'confirmed').length;
+  const rolesActive = team.filter((m: any) => m?.status === 'confirmed' || m?.status === 'considering').length;
+
+  const present = [
+    !!r.logline,
+    !!(r.short_synopsis || r.long_synopsis),
+    !!r.script_url,
+    !!r.pitch_deck_url,
+    !!r.trailer_url,
+    !!(r.budget_range || r.estimated_budget || r.budget),
+    Array.isArray(r.characters) ? r.characters.length > 0 : !!r.characters,
+    !!r.target_audience,
+    rolesFilled > 0,
+  ];
+  const completenessScore = present.filter(Boolean).length;
+
+  const checklist = r.checklist && typeof r.checklist === 'object' ? r.checklist : {};
+  const checklistKeys = Object.keys(checklist);
+  const checklistDone = checklistKeys.filter((k) => !!checklist[k]).length;
+  const checklistPct = checklistKeys.length > 0 ? Math.round((checklistDone / checklistKeys.length) * 100) : 0;
+
+  const notesCount = Number(r.notes_count) || 0;
+  const hasNda = r.has_nda === true;
+
+  // Derived stage — default thresholds (tunable). Pure function of the signals.
+  let stage: SlateStage = 'evaluating';
+  if (hasNda || notesCount > 0 || checklistPct > 0 || rolesFilled > 0) stage = 'reviewing';
+  if (rolesActive >= 1 || checklistPct >= 40) stage = 'packaging';
+  if (rolesConfirmed >= 2 && checklistPct >= 80) stage = 'ready';
+
+  return {
+    pitchId: r.id, title: r.title, genre: r.genre ?? null, format: r.format ?? null,
+    poster: r.poster ?? null, source: r.source, stage,
+    completeness: { score: completenessScore, total: present.length },
+    checklistPct, rolesConfirmed, rolesTotal, rolesFilled,
+    notesCount, hasNda,
+  };
+}
+
+/**
+ * GET /api/production/slate
+ *
+ * The producer's deal funnel: their OWNED production pitches + SAVED creator
+ * pitches, each annotated with workspace-derived readiness (completeness,
+ * checklist %, confirmed roles, notes, NDA) and a DERIVED stage (evaluating →
+ * reviewing → packaging → ready). v1: purely derived — read-only, no new tables,
+ * no manual override. Does NOT touch the parked `production_pipeline` feature.
+ *
+ * All of a producer's own workspace rows are keyed on their user_id (canonical
+ * owner row for owned pitches = themselves; private row for saved creator
+ * pitches), so the join is simply `user_id = me`.
+ */
+export async function getProductionSlate(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin');
+  const userId = await getUserId(request, env);
+  if (!userId) return errorResponse('Unauthorized', origin, 401);
+  const me = Number(userId);
+
+  const emptyCounts = { evaluating: 0, reviewing: 0, packaging: 0, ready: 0 };
+  const sql = getDb(env);
+  if (!sql) return jsonResponse({ success: true, data: { slate: [], counts: emptyCounts } }, origin);
+
+  try {
+    const [u] = await sql`SELECT user_type FROM users WHERE id = ${me}`;
+    if (u?.user_type !== 'production') return errorResponse('Production accounts only', origin, 403);
+
+    const res = await safeQuery(() => sql`
+      WITH slate_pitches AS (
+        SELECT p.id, p.title, p.genre, p.format, p.logline,
+               p.short_synopsis, p.long_synopsis, p.script_url, p.pitch_deck_url, p.trailer_url,
+               p.target_audience, p.characters, p.budget_range, p.estimated_budget, p.budget,
+               COALESCE(p.thumbnail_url, p.title_image) AS poster,
+               p.created_at, 'owned' AS source
+        FROM pitches p
+        WHERE p.user_id = ${me}
+        UNION
+        SELECT p.id, p.title, p.genre, p.format, p.logline,
+               p.short_synopsis, p.long_synopsis, p.script_url, p.pitch_deck_url, p.trailer_url,
+               p.target_audience, p.characters, p.budget_range, p.estimated_budget, p.budget,
+               COALESCE(p.thumbnail_url, p.title_image) AS poster,
+               p.created_at, 'saved' AS source
+        FROM saved_pitches sp
+        JOIN pitches p ON p.id = sp.pitch_id
+        WHERE sp.user_id = ${me} AND p.user_id <> ${me}
+      )
+      SELECT sp.*, c.checklist, t.team,
+        COALESCE((SELECT COUNT(*)::int FROM production_notes n WHERE n.pitch_id = sp.id AND n.user_id = ${me}), 0) AS notes_count,
+        EXISTS (SELECT 1 FROM ndas nd WHERE nd.pitch_id = sp.id AND nd.signer_id = ${me} AND (nd.status = 'approved' OR nd.status = 'signed')) AS has_nda
+      FROM slate_pitches sp
+      LEFT JOIN production_checklists c ON c.user_id = ${me} AND c.pitch_id = sp.id
+      LEFT JOIN production_team_assignments t ON t.user_id = ${me} AND t.pitch_id = sp.id
+      ORDER BY sp.created_at DESC
+    `, { fallback: [], context: 'production-pitch-data.slate' });
+
+    const slate = res.rows.map((r: any) => buildSlateItem(r));
+    const counts = { ...emptyCounts };
+    for (const s of slate) counts[s.stage]++;
+    return jsonResponse({ success: true, data: { slate, counts } }, origin);
+  } catch (err) {
+    const e = err instanceof Error ? err : new Error(String(err));
+    console.error('getProductionSlate error:', e.message);
+    return jsonResponse({ success: true, data: { slate: [], counts: emptyCounts } }, origin);
+  }
+}
