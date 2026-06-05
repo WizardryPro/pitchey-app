@@ -1166,8 +1166,17 @@ export async function getCreatorCollaborationsHandler(request: Request, env: Env
         SELECT id, title, COALESCE(thumbnail_url, title_image) AS poster, genre, format, status
         FROM pitches WHERE user_id = ${t.owner_id}
         ORDER BY updated_at DESC NULLS LAST LIMIT 50`;
+      // Has this creator signed the company's collaboration NDA? (table may not
+      // exist pre-migration → treat as not signed.)
+      let ndaSigned = false;
+      try {
+        const [sig] = await sql`
+          SELECT 1 FROM company_nda_signatures
+          WHERE team_id = ${t.team_id} AND signer_id = ${me} AND status = 'signed' LIMIT 1`;
+        ndaSigned = !!sig;
+      } catch { /* pre-migration */ }
       companies.push({
-        teamId: t.team_id, name: t.team_name, company: t.company, ownerId: t.owner_id,
+        teamId: t.team_id, name: t.team_name, company: t.company, ownerId: t.owner_id, ndaSigned,
         pitches: pitches.map((p: any) => ({ id: p.id, title: p.title, poster: p.poster, genre: p.genre, format: p.format, status: p.status })),
       });
     }
@@ -1226,5 +1235,97 @@ export async function getPitchCollaboratorsHandler(request: Request, env: Env): 
     return json({ success: true, data: { collaborators } });
   } catch {
     return json({ success: true, data: { collaborators: [] } });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Collaboration NDA (B3): a creator signs the company's Platform Standard NDA.
+// Company-scoped (one signature per team+signer), separate from the pitch-scoped
+// `ndas` table. See docs/sessions/2026-06-05-collaboration-nda-scope.md.
+// ---------------------------------------------------------------------------
+
+const COLLAB_NDA_VERSION = 'pitchey-standard-v1';
+
+/**
+ * GET /api/teams/:id/collaboration-nda
+ * Returns the acting user's collaboration-NDA status for this company team.
+ * The NDA *text* is fetched separately from /api/ndas/standard (company autofill).
+ */
+export async function getCompanyNdaStatusHandler(request: Request, env: Env): Promise<Response> {
+  const corsHeaders = getCorsHeaders(request.headers.get('Origin'));
+  const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+  try {
+    const auth = await verifyAuth(request, env);
+    if (!auth.success || !auth.user) return json({ success: false, error: 'Unauthorized' }, 401);
+    const sql = getDb(env) as any;
+    if (!sql) return json({ success: true, data: { signed: false } });
+
+    const parts = new URL(request.url).pathname.split('/');
+    const teamId = parseInt(parts[4] || '0', 10);
+    if (!teamId) return json({ success: false, error: 'Invalid team ID' }, 400);
+
+    const [team] = await sql`SELECT id, name, owner_id FROM teams WHERE id = ${teamId}`;
+    if (!team) return json({ success: false, error: 'Team not found' }, 404);
+
+    const [sig] = await sql`
+      SELECT signed_at, nda_version, status FROM company_nda_signatures
+      WHERE team_id = ${teamId} AND signer_id = ${auth.user.id} AND status = 'signed' LIMIT 1`;
+
+    return json({ success: true, data: {
+      teamId, company: team.name,
+      signed: !!sig,
+      signedAt: sig?.signed_at ?? null,
+      ndaVersion: sig?.nda_version ?? COLLAB_NDA_VERSION,
+    } });
+  } catch {
+    return json({ success: true, data: { signed: false } });
+  }
+}
+
+/**
+ * POST /api/teams/:id/collaboration-nda/sign
+ * Body: { agreed: true, name, address? }. Records the creator's click-to-sign
+ * signature (captures IP/UA). Idempotent on (team_id, signer_id). Caller must be
+ * a seated member of the team.
+ */
+export async function signCompanyNdaHandler(request: Request, env: Env): Promise<Response> {
+  const corsHeaders = getCorsHeaders(request.headers.get('Origin'));
+  const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+  try {
+    const auth = await verifyAuth(request, env);
+    if (!auth.success || !auth.user) return json({ success: false, error: 'Unauthorized' }, 401);
+    const sql = getDb(env) as any;
+    if (!sql) return json({ success: false, error: 'Database unavailable' }, 503);
+
+    const parts = new URL(request.url).pathname.split('/');
+    const teamId = parseInt(parts[4] || '0', 10);
+    if (!teamId) return json({ success: false, error: 'Invalid team ID' }, 400);
+
+    let body: { agreed?: boolean; name?: string; address?: string } = {};
+    try { body = (await request.json()) as typeof body; } catch { /* validated below */ }
+    if (body.agreed !== true) return json({ success: false, error: 'You must agree to the NDA terms' }, 400);
+    const signedName = (body.name || '').trim();
+    if (!signedName) return json({ success: false, error: 'Full legal name is required' }, 400);
+
+    // Caller must be a seated member of this team.
+    const [member] = await sql`
+      SELECT 1 FROM team_members WHERE team_id = ${teamId} AND user_id = ${auth.user.id} AND role IN ('member','editor') LIMIT 1`;
+    if (!member) return json({ success: false, error: 'You are not a member of this company' }, 403);
+
+    const ip = request.headers.get('CF-Connecting-IP') || null;
+    const ua = request.headers.get('User-Agent') || null;
+    const sigData = JSON.stringify({ agreed: true });
+
+    const [row] = await sql`
+      INSERT INTO company_nda_signatures
+        (team_id, signer_id, nda_version, signed_name, signed_address, ip_address, user_agent, signature_data)
+      VALUES (${teamId}, ${auth.user.id}, ${COLLAB_NDA_VERSION}, ${signedName}, ${body.address || null}, ${ip}, ${ua}, ${sigData}::jsonb)
+      ON CONFLICT (team_id, signer_id) DO UPDATE SET status = 'signed'
+      RETURNING signed_at`;
+
+    return json({ success: true, data: { signed: true, signedAt: row?.signed_at } });
+  } catch (err) {
+    const e = err instanceof Error ? err : new Error(String(err));
+    return json({ success: false, error: e.message }, 500);
   }
 }
