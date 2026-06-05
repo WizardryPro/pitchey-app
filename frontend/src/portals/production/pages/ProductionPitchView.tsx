@@ -396,12 +396,31 @@ const ProductionPitchView: React.FC = () => {
     }
   };
 
-  const handleSharePitch = () => {
-    navigator.clipboard.writeText(window.location.href).then(() => {
+  const handleSharePitch = async () => {
+    if (!pitch) return;
+    // Share the PUBLIC pitch URL (/pitch/:id), NOT the gated /production/pitch/:id
+    // portal route. Only the public route has the social-unfurl Pages Function
+    // (functions/pitch/[id].ts) that injects Open Graph / Twitter Card tags + a
+    // preview image, so this is what renders a rich card in DMs / X / FB / iMessage.
+    const url = `${window.location.origin}/pitch/${pitch.id}`;
+    const title = pitch.title ? `${pitch.title} — Pitchey` : 'Pitchey';
+    const text = pitch.logline || 'Check out this pitch on Pitchey.';
+    // Native share sheet where supported (mobile + some desktop); clipboard fallback.
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text, url });
+        return;
+      } catch (err) {
+        // User dismissed the sheet → stop quietly. Other errors → clipboard fallback.
+        if (err instanceof Error && err.name === 'AbortError') return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
       toast.success('Link copied to clipboard');
-    }).catch(() => {
+    } catch {
       toast.error('Failed to copy link');
-    });
+    }
   };
 
   const handleAddNote = async () => {
