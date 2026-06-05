@@ -1126,3 +1126,105 @@ export async function joinTeamByCodeHandler(request: Request, env: Env): Promise
     return json({ success: false, error: 'Failed to join company' }, 500);
   }
 }
+// ---------------------------------------------------------------------------
+// B3 creator-side surfaces: reach the company workspaces you've joined +
+// auto-list collaborators (so the "team" of people surfaces without manual entry).
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /api/creator/collaborations
+ * For a creator who joined production companies via a code: the companies they're
+ * a seated member of + each company's pitches (the projects they can collaborate
+ * on). This is the entry point so a joined creator can actually reach the shared
+ * workspace — without it the join code led to a dead end.
+ */
+export async function getCreatorCollaborationsHandler(request: Request, env: Env): Promise<Response> {
+  const corsHeaders = getCorsHeaders(request.headers.get('Origin'));
+  const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+  try {
+    const auth = await verifyAuth(request, env);
+    if (!auth.success || !auth.user) return json({ success: false, error: 'Unauthorized' }, 401);
+    const sql = getDb(env) as any;
+    if (!sql) return json({ success: true, data: { companies: [] } });
+    const me = auth.user.id;
+
+    // Match what actually grants workspace access (resolveWorkspace): a seated
+    // role on a team owned by a production company. Not gated on is_company_team
+    // (inconsistent across legacy teams) nor role='member' only (editors too).
+    const teams = await sql`
+      SELECT DISTINCT t.id AS team_id, t.name AS team_name, t.owner_id,
+             COALESCE(u.company_name, u.name, u.username, u.email) AS company
+      FROM team_members tm
+      JOIN teams t ON t.id = tm.team_id
+      JOIN users u ON u.id = t.owner_id
+      WHERE tm.user_id = ${me} AND tm.role IN ('member','editor') AND u.user_type = 'production'
+      ORDER BY t.id DESC`;
+
+    const companies = [];
+    for (const t of teams) {
+      const pitches = await sql`
+        SELECT id, title, COALESCE(thumbnail_url, title_image) AS poster, genre, format, status
+        FROM pitches WHERE user_id = ${t.owner_id}
+        ORDER BY updated_at DESC NULLS LAST LIMIT 50`;
+      companies.push({
+        teamId: t.team_id, name: t.team_name, company: t.company, ownerId: t.owner_id,
+        pitches: pitches.map((p: any) => ({ id: p.id, title: p.title, poster: p.poster, genre: p.genre, format: p.format, status: p.status })),
+      });
+    }
+    return json({ success: true, data: { companies } });
+  } catch {
+    return json({ success: true, data: { companies: [] } }); // degrade quietly
+  }
+}
+
+/**
+ * GET /api/production/pitches/:pitchId/collaborators
+ * The people with workspace access on this (production-owned) pitch = the owner +
+ * seated company members. Auto-populated from team_members — the "team" of
+ * collaborators surfaces without anyone typing it into the creative roster.
+ */
+export async function getPitchCollaboratorsHandler(request: Request, env: Env): Promise<Response> {
+  const corsHeaders = getCorsHeaders(request.headers.get('Origin'));
+  const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+  try {
+    const auth = await verifyAuth(request, env);
+    if (!auth.success || !auth.user) return json({ success: false, error: 'Unauthorized' }, 401);
+    const sql = getDb(env) as any;
+    if (!sql) return json({ success: true, data: { collaborators: [] } });
+
+    const parts = new URL(request.url).pathname.split('/');
+    const pitchId = parseInt(parts[4] || '0', 10);
+    if (!pitchId) return json({ success: false, error: 'Invalid pitch ID' }, 400);
+
+    const [pitch] = await sql`SELECT user_id FROM pitches WHERE id = ${pitchId}`;
+    if (!pitch) return json({ success: true, data: { collaborators: [] } });
+    const ownerId = pitch.user_id;
+
+    // Only collaborators of this company (owner or seated members) may see the roster.
+    const me = auth.user.id;
+    const isOwner = String(me) === String(ownerId);
+    let isMember = false;
+    if (!isOwner) {
+      const m = await sql`
+        SELECT 1 FROM team_members tm JOIN teams t ON t.id = tm.team_id
+        WHERE t.owner_id = ${ownerId} AND tm.user_id = ${me} AND tm.role IN ('owner','editor','member') LIMIT 1`;
+      isMember = m.length > 0;
+    }
+    if (!isOwner && !isMember) return json({ success: true, data: { collaborators: [] } });
+
+    const owner = await sql`SELECT id, COALESCE(name, username, email) AS name, user_type FROM users WHERE id = ${ownerId}`;
+    const members = await sql`
+      SELECT u.id, COALESCE(u.name, u.username, u.email) AS name, u.user_type, tm.joined_at
+      FROM team_members tm JOIN teams t ON t.id = tm.team_id JOIN users u ON u.id = tm.user_id
+      WHERE t.owner_id = ${ownerId} AND tm.role IN ('member','editor') AND u.id <> ${ownerId}
+      ORDER BY tm.joined_at ASC NULLS LAST`;
+
+    const collaborators = [
+      ...owner.map((o: any) => ({ id: o.id, name: o.name, userType: o.user_type, role: 'owner' })),
+      ...members.map((m: any) => ({ id: m.id, name: m.name, userType: m.user_type, role: 'member' })),
+    ];
+    return json({ success: true, data: { collaborators } });
+  } catch {
+    return json({ success: true, data: { collaborators: [] } });
+  }
+}

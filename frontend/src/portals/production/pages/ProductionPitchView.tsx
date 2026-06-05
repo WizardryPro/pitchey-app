@@ -101,6 +101,7 @@ const ProductionPitchView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'production' | 'team' | 'notes'>('overview');
   const [isShortlisted, setIsShortlisted] = useState(false);
   const [savedPitchId, setSavedPitchId] = useState<number | null>(null);
+  const [collaborators, setCollaborators] = useState<{ name: string; userType: string; role: string }[]>([]);
   const [notes, setNotes] = useState<ProductionNote[]>([]);
   const [newNote, setNewNote] = useState('');
   const [noteCategory, setNoteCategory] = useState<ProductionNote['category']>('general');
@@ -179,6 +180,22 @@ const ProductionPitchView: React.FC = () => {
     }
   }, [pitch, productionChecklist, teamMembers]);
 
+  // Auto-list the workspace collaborators (owner + creators who joined via the
+  // company code). Surfaces "who's on this team" without manual entry — distinct
+  // from the manually-curated creative roster below.
+  useEffect(() => {
+    if (!id) return;
+    let live = true;
+    apiClient.get<any>(`/api/production/pitches/${id}/collaborators`)
+      .then((res: any) => {
+        if (!live) return;
+        const d = res?.data ?? res;
+        setCollaborators(Array.isArray(d?.collaborators) ? d.collaborators : []);
+      })
+      .catch(() => { /* degrade quietly */ });
+    return () => { live = false; };
+  }, [id]);
+
   const fetchPitchData = async () => {
     try {
       setLoading(true);
@@ -190,12 +207,13 @@ const ProductionPitchView: React.FC = () => {
         // First try the public endpoint which always works
         response = await pitchAPI.getPublicById(parseInt(id!));
         
-        // For any authenticated production user, fetch the authenticated record so
-        // owner/like state (isLiked) and NDA-gated content paint. Previously this was
-        // gated on response.hasSignedNDA, but the PUBLIC endpoint never emits that flag —
-        // so the upgrade never ran: owners saw no like-state and the heart never filled.
-        // The backend getById enforces access itself; a 403 falls back to public data.
-        if (isAuthenticated && authUser?.userType === 'production') {
+        // For ANY authenticated user, fetch the authenticated record so owner/like
+        // state (isLiked), hasSignedNDA, AND isCompanyMember paint — the public
+        // endpoint emits none of those. This was previously gated to production
+        // users, which locked the Team/Notes tabs for seated creator members (B3)
+        // because isCompanyMember never reached the client. The backend getById
+        // enforces access itself; a 403 falls back to public data.
+        if (isAuthenticated) {
           try {
             const fullResponse = await pitchAPI.getById(parseInt(id!));
             response = fullResponse; // Use the full data if available
@@ -673,7 +691,11 @@ const ProductionPitchView: React.FC = () => {
               <div className="flex border-b">
                 {['overview', 'production', 'team', 'notes'].map((tab) => {
                   const ndaRequired = tab === 'team' || tab === 'notes';
-                  const locked = ndaRequired && !isOwner && !pitch?.hasSignedNDA;
+                  // Seated company members (B3) reach Team/Notes without an NDA —
+                  // matches the tab-content gate (isOwner || hasSignedNDA ||
+                  // isCompanyMember). Without isCompanyMember here the tab button
+                  // stayed locked for members even though the content would render.
+                  const locked = ndaRequired && !isOwner && !pitch?.hasSignedNDA && !pitch?.isCompanyMember;
                   return (
                     <button
                       key={tab}
@@ -945,8 +967,32 @@ const ProductionPitchView: React.FC = () => {
                   </div>
                   {accessChip}
                 </div>
-                <p className="mt-1 mb-6 pl-[3.05rem] text-sm text-gray-500">{workspaceScopeNote}</p>
+                <p className="mt-1 mb-5 pl-[3.05rem] text-sm text-gray-500">{workspaceScopeNote}</p>
 
+                {/* Collaborators — auto-populated from the company join codes
+                    (owner + creators who redeemed a code). NOT the creative roster
+                    below; nobody types these in. */}
+                {collaborators.length > 0 && (
+                  <div className="mb-6 rounded-xl bg-indigo-50/40 p-3.5 ring-1 ring-inset ring-indigo-100">
+                    <p className="mb-2 text-[0.68rem] font-semibold uppercase tracking-wide text-indigo-500">
+                      Collaborators · auto-added when they join your company code
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {collaborators.map((c, i) => {
+                        const initials = (c.name || '?').trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+                        return (
+                          <span key={i} className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs font-medium text-gray-700 ring-1 ring-inset ring-gray-200">
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-[0.6rem] font-semibold text-white">{initials}</span>
+                            {c.name}
+                            {c.role === 'owner' && <span className="text-[0.6rem] font-semibold uppercase text-indigo-400">owner</span>}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <p className="mb-2 pl-0.5 text-[0.68rem] font-semibold uppercase tracking-wide text-gray-400">Creative roster</p>
                 <div className="space-y-2.5">
                   {teamMembers.map((member, index) => {
                     const meta = teamStatusMeta[member.status] || teamStatusMeta.pending;

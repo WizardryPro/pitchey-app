@@ -3078,6 +3078,19 @@ class RouteRegistry {
       return getProductionSlate(req, this.env);
     });
 
+    // B3 creator-side: the companies a creator joined + their pitches (entry
+    // point to the shared workspace), and the auto-listed collaborators on a pitch.
+    // NOTE: /api/creator/collaborations is already taken by the scoped-collaborator
+    // feature — this uses /companies to avoid the route collision.
+    this.register('GET', '/api/creator/companies', async (req) => {
+      const { getCreatorCollaborationsHandler } = await import('./handlers/teams');
+      return getCreatorCollaborationsHandler(req, this.env);
+    });
+    this.register('GET', '/api/production/pitches/:pitchId/collaborators', async (req) => {
+      const { getPitchCollaboratorsHandler } = await import('./handlers/teams');
+      return getPitchCollaboratorsHandler(req, this.env);
+    });
+
     // Project Collaborators — aggregate team view + invitation management + scoped project access
     this.register('GET', '/api/production/team/collaborators', async (req) => {
       const { getAllTeamCollaborators } = await import('./handlers/collaborator');
