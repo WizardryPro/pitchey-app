@@ -263,7 +263,9 @@ describe('ProductionPitchView', () => {
   })
 
   it('shows production materials section when documents exist', async () => {
-    mockPitchGetPublicById.mockResolvedValue(mockPitch)
+    // requiresNDA: true → this asserts the NDA-gated state (labels shown as
+    // "Not attached"); a no-NDA pitch would instead show open materials.
+    mockPitchGetPublicById.mockResolvedValue({ ...mockPitch, requiresNDA: true })
 
     render(
       <MemoryRouter>
@@ -299,7 +301,9 @@ describe('ProductionPitchView', () => {
   })
 
   it('shows NDA credit cost when NDA not signed', async () => {
-    mockPitchGetPublicById.mockResolvedValue({ ...mockPitch, hasSignedNDA: false })
+    // requiresNDA: true → the pitch needs an NDA, so the "Request NDA Access ·
+    // N credits" CTA shows. (On a no-NDA pitch we show "No NDA required" instead.)
+    mockPitchGetPublicById.mockResolvedValue({ ...mockPitch, hasSignedNDA: false, requiresNDA: true })
 
     render(
       <MemoryRouter>
