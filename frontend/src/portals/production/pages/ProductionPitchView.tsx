@@ -1197,6 +1197,13 @@ const ProductionPitchView: React.FC = () => {
                     <Clock className="h-5 w-5 shrink-0 text-amber-600" />
                     <p className="text-sm font-medium leading-snug">NDA request pending — you'll get access once the creator approves it.</p>
                   </div>
+                ) : pitch?.isCompanyMember ? (
+                  <div className="mt-3 flex items-start gap-2.5 rounded-lg bg-indigo-50 px-3.5 py-3 text-indigo-800">
+                    <Users className="h-5 w-5 shrink-0 text-indigo-600" />
+                    <p className="text-sm font-medium leading-snug">You're collaborating on this project as a company member.</p>
+                  </div>
+                ) : !(authUser?.userType === 'investor' || authUser?.userType === 'production') ? (
+                  <p className="mt-3 text-sm leading-relaxed text-gray-500">The full script &amp; materials are released under an NDA to evaluating investors and production companies.</p>
                 ) : (
                   <>
                     <p className="mt-1 mb-4 text-sm leading-relaxed text-gray-500">Sign an NDA to unlock the full script, pitch deck, and production materials.</p>

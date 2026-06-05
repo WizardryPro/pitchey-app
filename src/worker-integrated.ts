@@ -3096,6 +3096,16 @@ class RouteRegistry {
       return getPitchCollaboratorsHandler(req, this.env);
     });
 
+    // Collaboration NDA — a creator signs the company's Platform Standard NDA (B3).
+    this.register('GET', '/api/teams/:id/collaboration-nda', async (req) => {
+      const { getCompanyNdaStatusHandler } = await import('./handlers/teams');
+      return getCompanyNdaStatusHandler(req, this.env);
+    });
+    this.register('POST', '/api/teams/:id/collaboration-nda/sign', async (req) => {
+      const { signCompanyNdaHandler } = await import('./handlers/teams');
+      return signCompanyNdaHandler(req, this.env);
+    });
+
     // Project Collaborators — aggregate team view + invitation management + scoped project access
     this.register('GET', '/api/production/team/collaborators', async (req) => {
       const { getAllTeamCollaborators } = await import('./handlers/collaborator');

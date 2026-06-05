@@ -41,6 +41,12 @@ vi.mock('../../config/subscription-plans', () => ({
   getCreditCost: (action: string) => action === 'nda_request' ? 10 : 5,
 }))
 
+// Acting user = a production company (evaluator). Needed so the credit-based
+// "Request NDA Access" CTA renders — it's now gated to investors/production.
+vi.mock('@/store/betterAuthStore', () => ({
+  useBetterAuthStore: () => ({ isAuthenticated: true, user: { id: '99', userType: 'production', email: 'prod@demo.com' } }),
+}))
+
 const mockPitch = {
   id: '42',
   userId: '7',
