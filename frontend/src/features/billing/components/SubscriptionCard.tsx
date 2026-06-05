@@ -55,7 +55,12 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
   const popularTierId = POPULAR_TIER_BY_PORTAL[portalForTiers] || '';
 
   const currentTierDef = currentTierId ? findTier(currentTierId) : null;
-  const currentTierName = currentTierDef?.name || 'Free';
+  // Show the tier name only for a real PAID subscription. Free / no-subscription
+  // (incl. the 'free'→'watcher' mapping above, used for price comparison) reads
+  // "Free" — not "The Watcher", which leaked onto non-watcher portals.
+  const currentTierName = (currentTierDef && (currentTierDef.price?.monthly ?? 0) > 0)
+    ? currentTierDef.name
+    : 'Free';
 
   const handleUpgrade = async (planKey: string) => {
     const plan = findTier(planKey);
