@@ -51,6 +51,21 @@ interface WorkspaceCtx {
   canView: boolean;
 }
 
+/** Has this creator signed the company's (collaboration) NDA? Keyed on the pitch
+ *  owner — one signature per company covers all its projects (B3 per-company
+ *  scope). Pre-migration (table absent) → false, i.e. the secure default of
+ *  blocking workspace access until signed. See collaboration-nda-scope.md. */
+async function hasSignedCompanyNda(sql: any, signerId: number, ownerId: number): Promise<boolean> {
+  try {
+    const r = await sql`
+      SELECT 1 FROM company_nda_signatures s
+      JOIN teams t ON t.id = s.team_id
+      WHERE t.owner_id = ${ownerId} AND s.signer_id = ${signerId} AND s.status = 'signed'
+      LIMIT 1`;
+    return r.length > 0;
+  } catch { return false; }
+}
+
 /** Defensive "has this user signed/been-granted an NDA on this pitch" — tolerant
  *  of the signer_id / requester_id / pitch_access schema drift (see CLAUDE.md). */
 async function hasSignedNda(sql: any, userId: number, pitchId: number): Promise<boolean> {
@@ -93,12 +108,20 @@ async function resolveWorkspace(sql: any, actingUserId: number, pitchId: number)
         WHERE t.owner_id = ${ownerId} AND tm.role IN ('owner','editor','member')`;
       teamUserIds = [ownerId, ...members.map((m: any) => Number(m.user_id))];
     } catch { /* team_members drift — owner-only */ }
+    const isOwner = actingUserId === ownerId;
     const isTeam = teamUserIds.includes(actingUserId);
-    let canView = isTeam;
+    // Collaboration-NDA gate (B3 Phase 2): a seated member (a creator who joined
+    // via a code) must sign the company NDA before the shared workspace unlocks.
+    // The owner is exempt; NDA-signed external producers keep their read-only view.
+    let memberAccess = isOwner;
+    if (!isOwner && isTeam) {
+      memberAccess = await hasSignedCompanyNda(sql, actingUserId, ownerId);
+    }
+    let canView = memberAccess;
     if (!canView && myType === 'production') {
       canView = await hasSignedNda(sql, actingUserId, pitchId); // NDA producer → read-only
     }
-    return { ownerId, isProductionPitch, workspaceUserId: ownerId, teamUserIds, canEdit: isTeam, canView };
+    return { ownerId, isProductionPitch, workspaceUserId: ownerId, teamUserIds, canEdit: memberAccess, canView };
   }
 
   // Creator-owned pitch — private per-producer workspace.

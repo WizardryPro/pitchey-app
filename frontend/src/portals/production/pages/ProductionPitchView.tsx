@@ -19,10 +19,12 @@ import { toast } from 'react-hot-toast';
 import { ProductionService } from '../services/production.service';
 import type { ProductionNoteResponse, ProductionTeamMember } from '../services/production.service';
 import FollowButton from '@features/browse/components/FollowButton';
+import InterestedCard from '@features/pitches/components/InterestedCard';
 import { pitchService } from '@features/pitches/services/pitch.service';
 import PitchDocuments from '@features/pitches/components/PitchDocuments';
 import SocialProofBadge from '@shared/components/SocialProofBadge';
 import FeedbackSection from '@/components/feedback/FeedbackSection';
+import { CollaborationNdaModal } from '@features/teams/components/CollaborationNdaModal';
 
 interface Pitch {
   id: string;
@@ -54,6 +56,8 @@ interface Pitch {
   updatedAt: string;
   hasSignedNDA?: boolean;
   isCompanyMember?: boolean;
+  companyTeamId?: number | null;     // team to sign the collaboration NDA for
+  companyNdaSigned?: boolean;        // member has signed the company NDA (B3 Phase 2)
   requiresNDA?: boolean;           // pitch was created with NDA protection
   require_nda?: boolean;           // snake-case fallback
   creatorType?: string;            // owner's user_type — selects workspace mode
@@ -136,9 +140,17 @@ const ProductionPitchView: React.FC = () => {
   //  • creator-OWNED pitch → any production user edits their OWN private workspace.
   const ownerIsProduction =
     (pitch?.creatorType || pitch?.creator_type || pitch?.creator?.userType) === 'production';
+  // B3 Phase 2: a seated company member only collaborates once they've signed the
+  // company collaboration NDA. Pending members see a sign prompt, not the workspace.
+  const isCompanyMemberSigned = !!pitch?.isCompanyMember && !!pitch?.companyNdaSigned;
+  const isCompanyMemberPending = !!pitch?.isCompanyMember && !pitch?.companyNdaSigned;
   const canEditWorkspace = ownerIsProduction
-    ? (isOwner || !!pitch?.isCompanyMember)
+    ? (isOwner || isCompanyMemberSigned)
     : (authUser?.userType === 'production');
+  // Anyone who may see the workspace tab CONTENT (owner, NDA-signed producer, or
+  // a signed company member). Pending members are excluded — they get the prompt.
+  const canSeeWorkspace = isOwner || !!pitch?.hasSignedNDA || isCompanyMemberSigned;
+  const [signCompanyNda, setSignCompanyNda] = useState(false);
 
   // Whether this pitch was created WITH NDA protection. Pitches created without
   // one are openly accessible — so we don't offer "Request NDA Access" on them.
@@ -385,12 +397,31 @@ const ProductionPitchView: React.FC = () => {
     }
   };
 
-  const handleSharePitch = () => {
-    navigator.clipboard.writeText(window.location.href).then(() => {
+  const handleSharePitch = async () => {
+    if (!pitch) return;
+    // Share the PUBLIC pitch URL (/pitch/:id), NOT the gated /production/pitch/:id
+    // portal route. Only the public route has the social-unfurl Pages Function
+    // (functions/pitch/[id].ts) that injects Open Graph / Twitter Card tags + a
+    // preview image, so this is what renders a rich card in DMs / X / FB / iMessage.
+    const url = `${window.location.origin}/pitch/${pitch.id}`;
+    const title = pitch.title ? `${pitch.title} — Pitchey` : 'Pitchey';
+    const text = pitch.logline || 'Check out this pitch on Pitchey.';
+    // Native share sheet where supported (mobile + some desktop); clipboard fallback.
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text, url });
+        return;
+      } catch (err) {
+        // User dismissed the sheet → stop quietly. Other errors → clipboard fallback.
+        if (err instanceof Error && err.name === 'AbortError') return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
       toast.success('Link copied to clipboard');
-    }).catch(() => {
+    } catch {
       toast.error('Failed to copy link');
-    });
+    }
   };
 
   const handleAddNote = async () => {
@@ -632,32 +663,7 @@ const ProductionPitchView: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-2 sm:space-x-3">
-          {!isOwner && (
-            <button
-              onClick={handleLike}
-              className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                isLiked
-                  ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              <Heart className={`h-4 w-4 sm:mr-1.5 ${isLiked ? 'fill-current' : ''}`} />
-              <span className="hidden sm:inline">{isLiked ? 'Liked' : 'Like'}</span>
-            </button>
-          )}
-
-          <button
-            onClick={handleShortlistToggle}
-            className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${
-              isShortlisted
-                ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            {isShortlisted ? <BookmarkCheck className="h-4 w-4 sm:mr-1.5" /> : <Bookmark className="h-4 w-4 sm:mr-1.5" />}
-            <span className="hidden sm:inline">{isShortlisted ? 'Shortlisted' : 'Shortlist'}</span>
-          </button>
-
+          {/* Like + Save now live in the unified InterestedCard in the sidebar */}
           {!isOwner && (
             <button
               onClick={handleContactCreator}
@@ -698,11 +704,11 @@ const ProductionPitchView: React.FC = () => {
               <div className="flex border-b">
                 {['overview', 'production', 'team', 'notes'].map((tab) => {
                   const ndaRequired = tab === 'team' || tab === 'notes';
-                  // Seated company members (B3) reach Team/Notes without an NDA —
-                  // matches the tab-content gate (isOwner || hasSignedNDA ||
-                  // isCompanyMember). Without isCompanyMember here the tab button
-                  // stayed locked for members even though the content would render.
-                  const locked = ndaRequired && !isOwner && !pitch?.hasSignedNDA && !pitch?.isCompanyMember;
+                  // Seated company members (B3) reach Team/Notes once they've
+                  // signed the company collaboration NDA — matches the tab-content
+                  // gate (canSeeWorkspace). Pending members stay locked and see the
+                  // sign prompt in the Access card.
+                  const locked = ndaRequired && !canSeeWorkspace;
                   return (
                     <button
                       key={tab}
@@ -963,7 +969,7 @@ const ProductionPitchView: React.FC = () => {
               </div>
             )}
 
-            {activeTab === 'team' && (isOwner || pitch?.hasSignedNDA || pitch?.isCompanyMember) && (
+            {activeTab === 'team' && canSeeWorkspace && (
               <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-6 sm:p-8">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-2.5">
@@ -1075,7 +1081,7 @@ const ProductionPitchView: React.FC = () => {
               </div>
             )}
 
-            {activeTab === 'notes' && (isOwner || pitch?.hasSignedNDA || pitch?.isCompanyMember) && (
+            {activeTab === 'notes' && canSeeWorkspace && (
               <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-6 sm:p-8">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-2.5">
@@ -1177,6 +1183,19 @@ const ProductionPitchView: React.FC = () => {
 
           {/* Right Column - Sidebar */}
           <div className="space-y-6">
+            {/* Unified "Interested?" box — like / follow creator / save (shared across portals) */}
+            {!isOwner && pitch && (
+              <InterestedCard
+                pitchId={pitch.id}
+                creatorId={pitch.userId ? parseInt(String(pitch.userId)) : undefined}
+                initialLiked={isLiked}
+                initialSaved={isShortlisted}
+                isAuthenticated={isAuthenticated}
+                isOwner={isOwner}
+                fromPath={`/production/pitch/${id}`}
+              />
+            )}
+
             {/* Access — the NDA is the single gate that unlocks the full script,
                 pitch deck, and all production materials (no separate "request script"). */}
             {!isOwner && (
@@ -1197,7 +1216,22 @@ const ProductionPitchView: React.FC = () => {
                     <Clock className="h-5 w-5 shrink-0 text-amber-600" />
                     <p className="text-sm font-medium leading-snug">NDA request pending — you'll get access once the creator approves it.</p>
                   </div>
-                ) : pitch?.isCompanyMember ? (
+                ) : isCompanyMemberPending ? (
+                  <div className="mt-3 rounded-lg bg-amber-50 px-3.5 py-3 text-amber-900">
+                    <div className="flex items-start gap-2.5">
+                      <Shield className="h-5 w-5 shrink-0 text-amber-600" />
+                      <p className="text-sm font-medium leading-snug">
+                        Sign the {pitch?.creator?.name || 'company'} NDA to start collaborating on this project.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setSignCompanyNda(true)}
+                      className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2.5 font-medium text-white shadow-sm transition hover:bg-purple-700"
+                    >
+                      <Shield className="h-4 w-4" /> Sign NDA to collaborate
+                    </button>
+                  </div>
+                ) : isCompanyMemberSigned ? (
                   <div className="mt-3 flex items-start gap-2.5 rounded-lg bg-indigo-50 px-3.5 py-3 text-indigo-800">
                     <Users className="h-5 w-5 shrink-0 text-indigo-600" />
                     <p className="text-sm font-medium leading-snug">You're collaborating on this project as a company member.</p>
@@ -1354,6 +1388,16 @@ const ProductionPitchView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {signCompanyNda && pitch?.companyTeamId && (
+        <CollaborationNdaModal
+          teamId={pitch.companyTeamId}
+          company={pitch?.creator?.name || 'the company'}
+          defaultName={(authUser as any)?.name || (authUser as any)?.username || ''}
+          onClose={() => setSignCompanyNda(false)}
+          onSigned={() => { setSignCompanyNda(false); fetchPitchData(); }}
+        />
+      )}
     </div>
   );
 };

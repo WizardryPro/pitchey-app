@@ -228,8 +228,10 @@ describe('ProductionPitchView', () => {
     await waitFor(() => {
       expect(screen.getByText('Contact')).toBeInTheDocument()
     })
-    expect(screen.getByText('Shortlist')).toBeInTheDocument()
     expect(screen.getByText('Share')).toBeInTheDocument()
+    // Like + Save moved from the header into the unified InterestedCard (sidebar).
+    expect(screen.getByText('Save for later')).toBeInTheDocument()
+    expect(screen.getByText('Like this pitch')).toBeInTheDocument()
   })
 
   it('navigates when Contact button is clicked', async () => {

@@ -68,21 +68,24 @@ export async function productionStatsHandler(
   }
 
   try {
-    // Check if production_pipeline table exists
-    const tableCheck = await sql`
+    // Check if production_pipeline table exists. report:false — a missing table
+    // is an expected branch here, not a Sentry-worthy error.
+    const tableCheckResult = await safeQuery<{ exists: boolean }>(() => sql`
       SELECT EXISTS (
         SELECT FROM information_schema.tables
         WHERE table_schema = 'public' AND table_name = 'production_pipeline'
       ) AS exists
-    `.catch((err: unknown) => { console.error('Production table check error:', err); return [{ exists: false }]; });
+    `, { fallback: [{ exists: false }], context: 'production-sidebar.stats.table-check', report: false });
+    const tableExists = !!tableCheckResult.rows[0]?.exists;
+    let degraded = tableCheckResult.errored;
 
     let totalProjects = 0;
     let activeProjects = 0;
     let completedProjects = 0;
     let totalBudgetAllocated = 0;
 
-    if (tableCheck[0]?.exists) {
-      const projectStats = await sql`
+    if (tableExists) {
+      const projectStats = await safeQuery<{ total_projects: number; active_projects: number; completed_projects: number; total_budget_allocated: number }>(() => sql`
         SELECT
           COUNT(*)::int AS total_projects,
           COUNT(*) FILTER (WHERE status = 'active')::int AS active_projects,
@@ -90,13 +93,14 @@ export async function productionStatsHandler(
           COALESCE(SUM(budget_allocated), 0) AS total_budget_allocated
         FROM production_pipeline
         WHERE production_company_id::text = ${String(userId)}
-      `.catch((err: unknown) => { console.error('Production project stats error:', err); return []; });
+      `, { fallback: [], context: 'production-sidebar.stats.project-stats' });
+      degraded = degraded || projectStats.errored;
 
-      if (projectStats.length > 0) {
-        totalProjects = Number(projectStats[0].total_projects) || 0;
-        activeProjects = Number(projectStats[0].active_projects) || 0;
-        completedProjects = Number(projectStats[0].completed_projects) || 0;
-        totalBudgetAllocated = Number(projectStats[0].total_budget_allocated) || 0;
+      if (projectStats.rows.length > 0) {
+        totalProjects = Number(projectStats.rows[0].total_projects) || 0;
+        activeProjects = Number(projectStats.rows[0].active_projects) || 0;
+        completedProjects = Number(projectStats.rows[0].completed_projects) || 0;
+        totalBudgetAllocated = Number(projectStats.rows[0].total_budget_allocated) || 0;
       }
     }
 
@@ -104,8 +108,8 @@ export async function productionStatsHandler(
     let totalRevenue = 0;
     let monthlyRevenue = 0;
 
-    if (tableCheck[0]?.exists) {
-      const revenueStats = await sql`
+    if (tableExists) {
+      const revenueStats = await safeQuery<{ total_revenue: number; monthly_revenue: number }>(() => sql`
         SELECT
           COALESCE(SUM(i.amount), 0) AS total_revenue,
           COALESCE(SUM(
@@ -115,28 +119,31 @@ export async function productionStatsHandler(
         JOIN production_pipeline pp ON i.pitch_id = pp.pitch_id
         WHERE pp.production_company_id::text = ${String(userId)}
           AND i.status IN ('active', 'funded', 'committed', 'completed')
-      `.catch((err: unknown) => { console.error('Production revenue stats error:', err); return []; });
+      `, { fallback: [], context: 'production-sidebar.stats.revenue' });
+      degraded = degraded || revenueStats.errored;
 
-      if (revenueStats.length > 0) {
-        totalRevenue = Number(revenueStats[0].total_revenue) || 0;
-        monthlyRevenue = Number(revenueStats[0].monthly_revenue) || 0;
+      if (revenueStats.rows.length > 0) {
+        totalRevenue = Number(revenueStats.rows[0].total_revenue) || 0;
+        monthlyRevenue = Number(revenueStats.rows[0].monthly_revenue) || 0;
       }
     }
 
     // Count published pitches as "submissions" visible to this production user
-    const submissionStats = await sql`
+    const submissionStats = await safeQuery<{ total_submissions: number; pending_submissions: number }>(() => sql`
       SELECT
         COUNT(*)::int AS total_submissions,
         COUNT(*) FILTER (WHERE status = 'pending' OR status = 'submitted')::int AS pending_submissions
       FROM pitches
       WHERE status IN ('published', 'pending', 'submitted')
-    `.catch((err: unknown) => { console.error('Production submission stats error:', err); return [{ total_submissions: 0, pending_submissions: 0 }]; });
+    `, { fallback: [{ total_submissions: 0, pending_submissions: 0 }], context: 'production-sidebar.stats.submissions' });
+    degraded = degraded || submissionStats.errored;
 
-    const totalSubmissions = Number(submissionStats[0]?.total_submissions) || 0;
-    const pendingSubmissions = Number(submissionStats[0]?.pending_submissions) || 0;
+    const totalSubmissions = Number(submissionStats.rows[0]?.total_submissions) || 0;
+    const pendingSubmissions = Number(submissionStats.rows[0]?.pending_submissions) || 0;
 
     return jsonResponse({
       success: true,
+      degraded,
       data: {
         totalProjects,
         activeProjects,

@@ -12,6 +12,7 @@ import { useBetterAuthStore } from '@/store/betterAuthStore';
 import FormatDisplay from '@/components/FormatDisplay';
 import FeedbackDisplay from '@/components/feedback/FeedbackDisplay';
 import FollowButton from '@features/browse/components/FollowButton';
+import InterestedCard from '@features/pitches/components/InterestedCard';
 
 interface Pitch {
   id: string;
@@ -292,7 +293,7 @@ const CreatorPitchView: React.FC = () => {
                 because this portal view lacked it. */}
             {!isOwner && pitch.userId && (
               <div className="flex items-center gap-3">
-                <FollowButton creatorId={parseInt(pitch.userId)} />
+                {/* Follow now lives in the unified InterestedCard in the sidebar */}
                 <button
                   onClick={() => navigate(`/creator/messages?recipient=${pitch.userId}&pitch=${id}`)}
                   className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
@@ -593,6 +594,17 @@ const CreatorPitchView: React.FC = () => {
 
           {/* Right Column - Sidebar */}
           <div className="space-y-6">
+            {/* Unified "Interested?" box — like / follow creator / save (shared across portals) */}
+            {!isOwner && pitch.userId && (
+              <InterestedCard
+                pitchId={pitch.id}
+                creatorId={parseInt(pitch.userId)}
+                isAuthenticated={isAuthenticated}
+                isOwner={isOwner}
+                fromPath={`/creator/pitch/${id}`}
+              />
+            )}
+
             {/* Quick Stats */}
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Stats</h3>

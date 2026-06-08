@@ -1177,6 +1177,7 @@ export async function getCreatorCollaborationsHandler(request: Request, env: Env
       } catch { /* pre-migration */ }
       companies.push({
         teamId: t.team_id, name: t.team_name, company: t.company, ownerId: t.owner_id, ndaSigned,
+        documentUrl: ndaSigned ? `/api/teams/${t.team_id}/collaboration-nda/document` : null,
         pitches: pitches.map((p: any) => ({ id: p.id, title: p.title, poster: p.poster, genre: p.genre, format: p.format, status: p.status })),
       });
     }
@@ -1276,6 +1277,7 @@ export async function getCompanyNdaStatusHandler(request: Request, env: Env): Pr
       signed: !!sig,
       signedAt: sig?.signed_at ?? null,
       ndaVersion: sig?.nda_version ?? COLLAB_NDA_VERSION,
+      documentUrl: sig ? `/api/teams/${teamId}/collaboration-nda/document` : null,
     } });
   } catch {
     return json({ success: true, data: { signed: false } });
@@ -1316,14 +1318,194 @@ export async function signCompanyNdaHandler(request: Request, env: Env): Promise
     const ua = request.headers.get('User-Agent') || null;
     const sigData = JSON.stringify({ agreed: true });
 
+    // document_url is the canonical download path for the signed record. The HTML
+    // record is generated on demand (deterministic from this immutable row), so we
+    // just persist the path — no R2 write / backfill needed.
+    const docUrl = `/api/teams/${teamId}/collaboration-nda/document`;
     const [row] = await sql`
       INSERT INTO company_nda_signatures
-        (team_id, signer_id, nda_version, signed_name, signed_address, ip_address, user_agent, signature_data)
-      VALUES (${teamId}, ${auth.user.id}, ${COLLAB_NDA_VERSION}, ${signedName}, ${body.address || null}, ${ip}, ${ua}, ${sigData}::jsonb)
-      ON CONFLICT (team_id, signer_id) DO UPDATE SET status = 'signed'
+        (team_id, signer_id, nda_version, signed_name, signed_address, ip_address, user_agent, signature_data, document_url)
+      VALUES (${teamId}, ${auth.user.id}, ${COLLAB_NDA_VERSION}, ${signedName}, ${body.address || null}, ${ip}, ${ua}, ${sigData}::jsonb, ${docUrl})
+      ON CONFLICT (team_id, signer_id) DO UPDATE SET status = 'signed', document_url = ${docUrl}
       RETURNING signed_at`;
 
-    return json({ success: true, data: { signed: true, signedAt: row?.signed_at } });
+    return json({ success: true, data: { signed: true, signedAt: row?.signed_at, documentUrl: docUrl } });
+  } catch (err) {
+    const e = err instanceof Error ? err : new Error(String(err));
+    return json({ success: false, error: e.message }, 500);
+  }
+}
+
+/**
+ * GET /api/teams/:id/collaboration-nda/members
+ * Producer-facing per-seat NDA status for the join-code card: each seated member
+ * (creators who joined via a code) + whether they've signed the company NDA.
+ * Owner (production) only.
+ */
+export async function getCompanyNdaMembersHandler(request: Request, env: Env): Promise<Response> {
+  const corsHeaders = getCorsHeaders(request.headers.get('Origin'));
+  const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+  try {
+    const auth = await verifyAuth(request, env);
+    if (!auth.success || !auth.user) return json({ success: false, error: 'Unauthorized' }, 401);
+    const sql = getDb(env) as any;
+    if (!sql) return json({ success: true, data: { members: [] } });
+
+    const parts = new URL(request.url).pathname.split('/');
+    const teamId = parseInt(parts[3] || '0', 10);
+    if (!teamId) return json({ success: false, error: 'Invalid team ID' }, 400);
+
+    const [team] = await sql`SELECT id, owner_id FROM teams WHERE id = ${teamId}`;
+    if (!team) return json({ success: false, error: 'Team not found' }, 404);
+    if (String(team.owner_id) !== String(auth.user.id)) {
+      return json({ success: false, error: 'Only the team owner can view NDA status' }, 403);
+    }
+
+    // Seated members (role 'member' = joined creators) LEFT JOIN their signature.
+    const rows = await sql`
+      SELECT u.id AS user_id,
+             COALESCE(u.name, u.username, u.email) AS name,
+             u.email,
+             tm.joined_at,
+             s.status AS nda_status, s.signed_at, s.signed_name
+      FROM team_members tm
+      JOIN users u ON u.id = tm.user_id
+      LEFT JOIN company_nda_signatures s
+        ON s.team_id = tm.team_id AND s.signer_id = tm.user_id AND s.status = 'signed'
+      WHERE tm.team_id = ${teamId} AND tm.role = 'member'
+      ORDER BY tm.joined_at ASC NULLS LAST`;
+
+    const members = rows.map((r: any) => ({
+      userId: r.user_id,
+      name: r.name,
+      email: r.email,
+      joinedAt: r.joined_at,
+      ndaStatus: r.nda_status === 'signed' ? 'signed' : 'pending',
+      signedAt: r.signed_at ?? null,
+      documentUrl: r.nda_status === 'signed'
+        ? `/api/teams/${teamId}/collaboration-nda/document?signerId=${r.user_id}`
+        : null,
+    }));
+    return json({ success: true, data: { members } });
+  } catch (err) {
+    const e = err instanceof Error ? err : new Error(String(err));
+    return json({ success: false, error: e.message }, 500);
+  }
+}
+
+/** Fill {{placeholder}} tokens from ctx; unmatched → a blank line (mirrors the
+ *  worker's renderNdaTemplate so the record reads like the signed text). */
+function fillNdaTemplate(content: string, ctx: Record<string, string | undefined>): string {
+  const blank = '________________';
+  return (content || '').replace(/\{\{(\w+)\}\}/g, (_m, key) => {
+    const v = ctx[key];
+    return v && String(v).trim() ? String(v) : blank;
+  });
+}
+
+const esc = (s: unknown): string =>
+  String(s ?? '').replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+
+/**
+ * GET /api/teams/:id/collaboration-nda/document[?signerId=]
+ * Returns a self-contained HTML record of a signed collaboration NDA (the standard
+ * NDA text + an execution/signature block). Printable to PDF by the browser.
+ * Access: the signer themselves (own record) or the team owner (any member's).
+ * Generated on demand from the immutable signature row — no storage/backfill.
+ */
+export async function getCompanyNdaDocumentHandler(request: Request, env: Env): Promise<Response> {
+  const corsHeaders = getCorsHeaders(request.headers.get('Origin'));
+  const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+  try {
+    const auth = await verifyAuth(request, env);
+    if (!auth.success || !auth.user) return json({ success: false, error: 'Unauthorized' }, 401);
+    const sql = getDb(env) as any;
+    if (!sql) return json({ success: false, error: 'Database unavailable' }, 503);
+
+    const url = new URL(request.url);
+    const parts = url.pathname.split('/');
+    const teamId = parseInt(parts[3] || '0', 10);
+    if (!teamId) return json({ success: false, error: 'Invalid team ID' }, 400);
+    const signerId = parseInt(url.searchParams.get('signerId') || String(auth.user.id), 10);
+
+    const [team] = await sql`
+      SELECT t.id, t.name AS team_name, t.owner_id,
+             COALESCE(NULLIF(u.company_name, ''), u.name, u.username, u.email) AS company,
+             COALESCE(NULLIF(u.company_address, ''), NULLIF(u.location, '')) AS company_address
+      FROM teams t JOIN users u ON u.id = t.owner_id WHERE t.id = ${teamId}`;
+    if (!team) return json({ success: false, error: 'Team not found' }, 404);
+
+    // Access: the signer themselves, or the team owner.
+    const isOwner = String(team.owner_id) === String(auth.user.id);
+    const isSelf = String(signerId) === String(auth.user.id);
+    if (!isOwner && !isSelf) return json({ success: false, error: 'Not authorized to view this document' }, 403);
+
+    const [sig] = await sql`
+      SELECT signed_name, signed_address, signed_at, nda_version, ip_address, status
+      FROM company_nda_signatures
+      WHERE team_id = ${teamId} AND signer_id = ${signerId} AND status = 'signed' LIMIT 1`;
+    if (!sig) return json({ success: false, error: 'No signed NDA on record' }, 404);
+
+    // Standard NDA text (default template), rendered with company/creator context.
+    let bodyText = '';
+    let tplName = 'Pitchey Standard NDA';
+    try {
+      const [tpl] = await sql`SELECT name, template_content FROM nda_templates WHERE is_default = true ORDER BY id ASC LIMIT 1`;
+      tplName = tpl?.name || tplName;
+      bodyText = fillNdaTemplate(tpl?.template_content || '', {
+        date: new Date(sig.signed_at).toISOString().slice(0, 10),
+        recipient_name: sig.signed_name,
+        recipient_address: sig.signed_address || undefined,
+        disclosing_party_name: team.company,
+        disclosing_party_address: team.company_address || undefined,
+        project_name: `all ${team.company} projects`,
+      });
+    } catch { /* template table drift → render the certificate without the body */ }
+
+    const signedAtFmt = new Date(sig.signed_at).toLocaleString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
+    });
+
+    const html = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>${esc(tplName)} — ${esc(team.company)}</title>
+<style>
+  body { font-family: Georgia, 'Times New Roman', serif; color: #1f2937; max-width: 760px; margin: 2rem auto; padding: 0 1.5rem; line-height: 1.6; }
+  h1 { font-size: 1.4rem; border-bottom: 2px solid #6d28d9; padding-bottom: .5rem; }
+  .meta { font-size: .85rem; color: #6b7280; margin-bottom: 1.5rem; }
+  pre { white-space: pre-wrap; font-family: inherit; font-size: .95rem; }
+  .cert { margin-top: 2rem; border: 1px solid #e5e7eb; border-radius: 10px; padding: 1.25rem 1.5rem; background: #faf5ff; page-break-inside: avoid; }
+  .cert h2 { font-size: 1rem; margin: 0 0 .75rem; color: #6d28d9; }
+  .cert dl { display: grid; grid-template-columns: 11rem 1fr; gap: .35rem .75rem; font-size: .9rem; margin: 0; }
+  .cert dt { color: #6b7280; }
+  .cert dd { margin: 0; font-weight: 600; }
+  @media print { body { margin: 0; } .noprint { display: none; } }
+</style></head>
+<body>
+  <h1>${esc(tplName)}</h1>
+  <p class="meta">Collaboration agreement between <strong>${esc(team.company)}</strong> (Disclosing Party) and <strong>${esc(sig.signed_name)}</strong> (Recipient), covering all of ${esc(team.company)}'s projects.</p>
+  <pre>${esc(bodyText)}</pre>
+  <section class="cert">
+    <h2>Certificate of Electronic Execution</h2>
+    <dl>
+      <dt>Recipient (signed)</dt><dd>${esc(sig.signed_name)}</dd>
+      ${sig.signed_address ? `<dt>Address</dt><dd>${esc(sig.signed_address)}</dd>` : ''}
+      <dt>Disclosing Party</dt><dd>${esc(team.company)}</dd>
+      <dt>Signed at</dt><dd>${esc(signedAtFmt)}</dd>
+      <dt>Agreement version</dt><dd>${esc(sig.nda_version)}</dd>
+      ${sig.ip_address ? `<dt>IP address</dt><dd>${esc(sig.ip_address)}</dd>` : ''}
+      <dt>Method</dt><dd>Click-to-sign (electronic acceptance)</dd>
+    </dl>
+  </section>
+  <p class="meta noprint" style="margin-top:1.5rem">Tip: use your browser's Print → Save as PDF to keep a copy.</p>
+</body></html>`;
+
+    return new Response(html, {
+      status: 200,
+      headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders },
+    });
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
     return json({ success: false, error: e.message }, 500);

@@ -284,7 +284,7 @@ export default function Homepage() {
           rails below it intentionally read as the marquee turning the lights up.
           -mt-16 pulls the hero up behind the sticky nav so the nav's backdrop is the hero
           itself (not the light page background). */}
-      <section ref={heroRef} className="relative -mt-16 overflow-hidden bg-[#0a0a12] text-white">
+      <section ref={heroRef} className="relative -mt-16 overflow-hidden bg-gradient-to-b from-[#3a2f5c] via-[#2c2547] to-[#1f1934] text-white">
         {/* Spotlight glows */}
         <div aria-hidden className="absolute -top-48 left-1/2 -translate-x-1/2 w-[64rem] h-[44rem] rounded-full blur-[80px] bg-[radial-gradient(ellipse_at_center,rgba(132,45,168,0.45),transparent_62%)]" />
         <div aria-hidden className="absolute top-1/4 -right-24 w-[34rem] h-[34rem] rounded-full blur-[90px] bg-[radial-gradient(circle,rgba(245,158,11,0.20),transparent_60%)]" />
@@ -324,12 +324,15 @@ export default function Homepage() {
           <h1 className="font-display font-black tracking-tight leading-[0.92] text-5xl sm:text-7xl lg:text-8xl mb-6">
             Where stories
             <br />
-            <span className="italic font-semibold bg-gradient-to-r from-violet-300 via-fuchsia-300 to-purple-300 bg-clip-text text-transparent">
+            {/* inline-block + roomier leading + padding so the italic gradient "f"
+                ascender/overhang isn't clipped by WebKit bg-clip-text under the
+                tight 0.92 line-height (Karl: "the F in find is messy"). */}
+            <span className="inline-block italic font-semibold leading-[1.15] pb-1 pr-2 bg-gradient-to-r from-violet-300 via-fuchsia-300 to-purple-300 bg-clip-text text-transparent">
               find life
             </span>
           </h1>
 
-          <p className="max-w-2xl mx-auto text-lg sm:text-xl leading-relaxed text-white/60 mb-10">
+          <p className="max-w-2xl mx-auto text-lg sm:text-xl leading-relaxed text-white/80 mb-10">
             Share your vision, discover original stories, and connect directly with the producers
             and investors shaping the future of film, television, and new media.
           </p>

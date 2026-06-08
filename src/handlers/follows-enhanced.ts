@@ -1,11 +1,22 @@
 import type { Env } from '../worker-integrated';
 import postgres from 'postgres';
 import { z } from 'zod';
-import { getAuthUser } from '../utils/auth';
 import { corsHeaders, getCorsHeaders } from '../utils/response';
 import { getDb } from '../db/connection';
 import type { Env as DbEnv } from '../db/connection';
-import { getUserId } from '../utils/auth-extract';
+import { getUserId, getAuthenticatedUser } from '../utils/auth-extract';
+
+// Authenticate via auth-extract (getAuthenticatedUser) — the same reliable path
+// like/save use. The previous getAuthUser (utils/auth → verifyAuth) 401'd on a KV
+// cache miss because its DB fallback diverged from auth-extract's, making follow
+// intermittently fail for users whose session wasn't warm in KV. verifyAuth's
+// DB-fallback fragility is broader (other handlers use it) and wants a separate audit.
+async function resolveFollowUser(request: Request, env: Env) {
+  const auth = await getAuthenticatedUser(request, env);
+  if (!auth.authenticated || !auth.user) return null;
+  // Normalize id to number so downstream int-column SQL comparisons stay valid.
+  return { ...auth.user, id: toIntId(auth.user.id) };
+}
 import { sendNewFollowerEmail } from '../services/email/index';
 import * as Sentry from '@sentry/cloudflare';
 
@@ -41,7 +52,7 @@ function toIntId(id: string | number | null | undefined): number {
  */
 export async function followActionHandler(request: Request, env: Env): Promise<Response> {
   try {
-    const user = await getAuthUser(request, env);
+    const user = await resolveFollowUser(request, env);
     if (!user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
@@ -218,7 +229,7 @@ export async function getFollowListHandler(request: Request, env: Env): Promise<
     const params = Object.fromEntries(url.searchParams);
     const query = FollowListSchema.parse(params);
     
-    const currentUser = await getAuthUser(request, env);
+    const currentUser = await resolveFollowUser(request, env);
     const rawTargetId = query.userId || (currentUser?.id != null ? String(currentUser.id) : null);
 
     if (!rawTargetId) {
@@ -327,7 +338,7 @@ export async function getFollowStatsHandler(request: Request, env: Env): Promise
     const userId = url.searchParams.get('userId');
     const username = url.searchParams.get('username');
 
-    const currentUser = await getAuthUser(request, env);
+    const currentUser = await resolveFollowUser(request, env);
     const sql = postgres(env.DATABASE_URL);
 
     // Resolve target: explicit userId > username lookup > current user.
@@ -444,7 +455,7 @@ export async function getFollowStatsHandler(request: Request, env: Env): Promise
  */
 export async function getFollowSuggestionsHandler(request: Request, env: Env): Promise<Response> {
   try {
-    const user = await getAuthUser(request, env);
+    const user = await resolveFollowUser(request, env);
     if (!user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
@@ -618,7 +629,7 @@ export async function mutualFollowersHandler(request: Request, env: DbEnv): Prom
  */
 export async function checkPitchFollowStatusHandler(request: Request, env: Env): Promise<Response> {
   try {
-    const user = await getAuthUser(request, env);
+    const user = await resolveFollowUser(request, env);
     if (!user) {
       return new Response(JSON.stringify({ success: true, data: { isFollowing: false, followerCount: 0 } }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

@@ -13,6 +13,7 @@ import EnhancedNDARequest from '@features/ndas/components/NDA/EnhancedNDARequest
 import { ndaService } from '@features/ndas/services/nda.service';
 import FormatDisplay from '../components/FormatDisplay';
 import FollowButton from '@features/browse/components/FollowButton';
+import InterestedCard from '@features/pitches/components/InterestedCard';
 import SocialProofBadge from '@shared/components/SocialProofBadge';
 import { formatCurrency } from '@shared/utils/formatters';
 import FeedbackSection from '../components/feedback/FeedbackSection';
@@ -452,9 +453,7 @@ export default function PitchDetail() {
                       {pitch.creator?.name || pitch.creator?.username || 'Unknown Creator'}
                     </span>
                     <VerificationBadge tier={(pitch as any).creator_verification_tier || (pitch.creator as any)?.verificationTier} />
-                    {isAuthenticated && !isOwner && pitch.creator?.id && (
-                      <FollowButton creatorId={pitch.creator.id} variant="small" />
-                    )}
+                    {/* Follow lives in the unified InterestedCard below — no inline duplicate */}
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5">
@@ -462,9 +461,7 @@ export default function PitchDetail() {
                     <span className="text-gray-500 italic">Creator info hidden — NDA required</span>
                     {/* Following is a public action — allow it pre-NDA without
                         revealing the creator's name (button only needs the id). */}
-                    {isAuthenticated && !isOwner && pitch.creator?.id && (
-                      <FollowButton creatorId={pitch.creator.id} variant="small" />
-                    )}
+                    {/* Follow lives in the unified InterestedCard below — no inline duplicate */}
                   </div>
                 )}
                 <div className="flex items-center gap-1.5">
@@ -962,46 +959,30 @@ export default function PitchDetail() {
               />
             )}
 
-            {/* Engagement Actions */}
+            {/* Engagement Actions — unified "Interested?" box (shared across portals) */}
             {!isOwner && (
-              <div className="bg-white rounded-xl shadow-sm p-4 flex flex-col gap-2">
-                {/* Like — visible to all (anon click → sign-in) */}
-                <button
-                  onClick={handleLike}
-                  className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition ${
-                    isLiked
-                      ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
-                  {isLiked ? 'Liked' : 'Like'}
-                </button>
-
-                {/* Save — auth-only */}
-                {isAuthenticated && (
-                  <button
-                    onClick={handleSave}
-                    className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition ${
-                      isSaved
-                        ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-current' : ''}`} />
-                    {isSaved ? 'Saved' : 'Save'}
-                  </button>
-                )}
+              <>
+                <InterestedCard
+                  pitchId={pitch.id}
+                  creatorId={pitch.creator?.id}
+                  initialLiked={isLiked}
+                  initialSaved={isSaved}
+                  isAuthenticated={isAuthenticated}
+                  isOwner={isOwner}
+                  fromPath={`/pitch/${id}`}
+                />
 
                 {/* Share — visible to all */}
-                <button
-                  onClick={handleShare}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium bg-gray-50 text-gray-600 hover:bg-gray-100 transition"
-                >
-                  <Share2 className="w-5 h-5" />
-                  {shareCopied ? 'Link copied!' : 'Share'}
-                </button>
-              </div>
+                <div className="bg-white rounded-xl shadow-sm p-4">
+                  <button
+                    onClick={handleShare}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium bg-gray-50 text-gray-600 hover:bg-gray-100 transition"
+                  >
+                    <Share2 className="w-5 h-5" />
+                    {shareCopied ? 'Link copied!' : 'Share'}
+                  </button>
+                </div>
+              </>
             )}
 
             {/* Project Info */}
