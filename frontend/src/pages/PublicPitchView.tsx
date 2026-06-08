@@ -568,6 +568,20 @@ export default function PublicPitchView() {
                 "Rate this Pitch" widget is available to all viewers. This is
                 what makes the feedback feature visible on the guest/public view
                 instead of disappearing for users served PublicPitchView. */}
+            {/* Engagement Actions — unified "Interested?" box, placed ABOVE the
+                feedback so the like/follow/save controls are seen first. */}
+            {pitch && !isOwner && (
+              <InterestedCard
+                pitchId={pitch.id}
+                creatorId={pitch.creator?.id}
+                initialLiked={(pitch as any).isLiked}
+                initialSaved={(pitch as any).isSaved}
+                isAuthenticated={isAuthenticated}
+                isOwner={isOwner}
+                fromPath={`/pitch/${id}`}
+              />
+            )}
+
             {pitch && (
               <div className="bg-white rounded-xl shadow-sm p-6">
                 <FeedbackSection
@@ -728,17 +742,7 @@ export default function PublicPitchView() {
               </div>
             </div>
 
-            {/* Engagement Actions — unified "Interested?" box (shared across portals).
-                Anonymous → sign-in prompts; authenticated → live like/follow/save. */}
-            <InterestedCard
-              pitchId={pitch.id}
-              creatorId={pitch.creator?.id}
-              initialLiked={(pitch as any).isLiked}
-              initialSaved={(pitch as any).isSaved}
-              isAuthenticated={isAuthenticated}
-              isOwner={isOwner}
-              fromPath={`/pitch/${id}`}
-            />
+            {/* Interested box moved above the feedback in the main column. */}
 
             {/* Actions */}
             <div className="bg-white rounded-xl shadow-sm p-6">

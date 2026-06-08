@@ -926,6 +926,20 @@ export default function PitchDetail() {
               );
             })()}
 
+            {/* Engagement Actions — unified "Interested?" box, placed ABOVE the
+                feedback so the like/follow/save controls are seen first. */}
+            {!isOwner && (
+              <InterestedCard
+                pitchId={pitch.id}
+                creatorId={pitch.creator?.id}
+                initialLiked={isLiked}
+                initialSaved={isSaved}
+                isAuthenticated={isAuthenticated}
+                isOwner={isOwner}
+                fromPath={`/pitch/${id}`}
+              />
+            )}
+
             {/* Feedback & Ratings — visible to all viewers (anon included).
                 Quick-rate (1-5 stars) is open to anyone except the owner;
                 structured feedback form is auth-gated inside the component
@@ -959,30 +973,17 @@ export default function PitchDetail() {
               />
             )}
 
-            {/* Engagement Actions — unified "Interested?" box (shared across portals) */}
+            {/* Share — visible to all (the Interested box moved above the feedback) */}
             {!isOwner && (
-              <>
-                <InterestedCard
-                  pitchId={pitch.id}
-                  creatorId={pitch.creator?.id}
-                  initialLiked={isLiked}
-                  initialSaved={isSaved}
-                  isAuthenticated={isAuthenticated}
-                  isOwner={isOwner}
-                  fromPath={`/pitch/${id}`}
-                />
-
-                {/* Share — visible to all */}
-                <div className="bg-white rounded-xl shadow-sm p-4">
-                  <button
-                    onClick={handleShare}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium bg-gray-50 text-gray-600 hover:bg-gray-100 transition"
-                  >
-                    <Share2 className="w-5 h-5" />
-                    {shareCopied ? 'Link copied!' : 'Share'}
-                  </button>
-                </div>
-              </>
+              <div className="bg-white rounded-xl shadow-sm p-4">
+                <button
+                  onClick={handleShare}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium bg-gray-50 text-gray-600 hover:bg-gray-100 transition"
+                >
+                  <Share2 className="w-5 h-5" />
+                  {shareCopied ? 'Link copied!' : 'Share'}
+                </button>
+              </div>
             )}
 
             {/* Project Info */}
