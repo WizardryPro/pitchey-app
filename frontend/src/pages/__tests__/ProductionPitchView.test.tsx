@@ -291,7 +291,10 @@ describe('ProductionPitchView', () => {
 
   // ─── Tabs ────────────────────────────────────────────────────────
 
-  it('renders all five tabs', async () => {
+  it('hides the private Team/Notes workspace on an unsaved creator-owned pitch', async () => {
+    // Evaluation mode: a producer viewing a pitch they didn't create. The private
+    // workspace stays hidden until they opt in by saving the pitch — only Overview
+    // + Feasibility show, plus the opt-in hint.
     mockPitchGetPublicById.mockResolvedValue(mockPitch)
 
     render(
@@ -304,10 +307,9 @@ describe('ProductionPitchView', () => {
       expect(screen.getByText('overview')).toBeInTheDocument()
     })
     expect(screen.getByText('Feasibility')).toBeInTheDocument()
-    // Creator-owned pitch viewed by a producer = evaluation mode: the Team/Notes
-    // tabs are relabelled as the producer's own private space.
-    expect(screen.getByText(/My Team Plan/i)).toBeInTheDocument()
-    expect(screen.getByText(/My Notes/i)).toBeInTheDocument()
+    expect(screen.queryByText(/My Team Plan/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/My Notes/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/Save this pitch to open a private/i)).toBeInTheDocument()
   })
 
   it('shows NDA credit cost when NDA not signed', async () => {

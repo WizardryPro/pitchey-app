@@ -178,6 +178,10 @@ const ProductionPitchView: React.FC = () => {
   const workspaceScopeNote = ownerIsProduction
     ? (canEditWorkspace ? 'Shared workspace — visible to your whole company team.' : 'Read-only access granted by your signed NDA.')
     : 'Private to your company — the creator can’t see any of this. Use it to plan as if you were producing this pitch.';
+  // In evaluation mode (a creator-owned pitch you didn't create), the private
+  // Team/Notes workspace stays HIDDEN until you opt in by saving the pitch to
+  // your slate. Your own production pitches always have it.
+  const workspaceUnlocked = !evaluationMode || isShortlisted;
   const teamStatusMeta: Record<string, { label: string; cls: string }> = {
     confirmed:   { label: 'Confirmed',   cls: 'bg-emerald-100 text-emerald-700 ring-emerald-200' },
     considering: { label: 'Considering', cls: 'bg-amber-100 text-amber-700 ring-amber-200' },
@@ -189,6 +193,14 @@ const ProductionPitchView: React.FC = () => {
   const [autoFillLoading, setAutoFillLoading] = useState(false);
   const [ndaRequested, setNdaRequested] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // If the workspace gets locked again (e.g. you un-save an evaluation pitch)
+  // while you're on a hidden tab, fall back to Overview so nothing strands.
+  useEffect(() => {
+    if (!workspaceUnlocked && (activeTab === 'team' || activeTab === 'notes')) {
+      setActiveTab('overview');
+    }
+  }, [workspaceUnlocked, activeTab]);
 
   useEffect(() => {
     if (id) {
@@ -707,7 +719,7 @@ const ProductionPitchView: React.FC = () => {
             {/* Tabs */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6">
               <div className="flex border-b">
-                {['overview', 'production', 'team', 'notes'].map((tab) => {
+                {(workspaceUnlocked ? ['overview', 'production', 'team', 'notes'] : ['overview', 'production']).map((tab) => {
                   const ndaRequired = tab === 'team' || tab === 'notes';
                   // Seated company members (B3) reach Team/Notes once they've
                   // signed the company collaboration NDA — matches the tab-content
@@ -870,7 +882,18 @@ const ProductionPitchView: React.FC = () => {
                   isAuthenticated={isAuthenticated}
                   isOwner={isOwner}
                   fromPath={`/production/pitch/${id}`}
+                  // Saving an evaluation pitch is the opt-in that unlocks the
+                  // private Team/Notes workspace (kept in sync without a reload).
+                  onSavedChange={evaluationMode ? setIsShortlisted : undefined}
                 />
+              )}
+
+              {/* Opt-in hint — only when this is someone else's pitch you haven't
+                  saved yet: saving opens a private planning workspace. */}
+              {evaluationMode && !isShortlisted && (
+                <p className="text-sm text-gray-500 bg-indigo-50/50 ring-1 ring-inset ring-indigo-100 rounded-lg px-4 py-3">
+                  💡 Save this pitch to open a private <span className="font-medium text-gray-700">Team&nbsp;Plan</span> &amp; <span className="font-medium text-gray-700">Notes</span> workspace — your space to plan it as a production. The creator never sees it.
+                </p>
               )}
 
               {/* Feedback & rating — production cos can rate + leave structured
@@ -994,7 +1017,7 @@ const ProductionPitchView: React.FC = () => {
               </div>
             )}
 
-            {activeTab === 'team' && canSeeWorkspace && (
+            {activeTab === 'team' && canSeeWorkspace && workspaceUnlocked && (
               <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-6 sm:p-8">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-2.5">
@@ -1106,7 +1129,7 @@ const ProductionPitchView: React.FC = () => {
               </div>
             )}
 
-            {activeTab === 'notes' && canSeeWorkspace && (
+            {activeTab === 'notes' && canSeeWorkspace && workspaceUnlocked && (
               <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-6 sm:p-8">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-2.5">
