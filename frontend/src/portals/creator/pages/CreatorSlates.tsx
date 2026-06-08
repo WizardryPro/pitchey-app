@@ -207,7 +207,10 @@ export default function CreatorSlates() {
             {slates.length === 0 ? 'No slates yet' : 'No slates match your filters'}
           </p>
           {slates.length === 0 && (
-            <p className="text-gray-500 mt-1">Create a slate to curate and share collections of pitches</p>
+            <p className="text-gray-500 mt-1 max-w-md mx-auto">
+              A slate is a shareable, curated collection — bundle several of your pitches into one
+              link to send to investors, festivals, or collaborators. Create your first to get started.
+            </p>
           )}
         </div>
       ) : (

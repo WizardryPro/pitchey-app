@@ -19,6 +19,7 @@ import { toast } from 'react-hot-toast';
 import { ProductionService } from '../services/production.service';
 import type { ProductionNoteResponse, ProductionTeamMember } from '../services/production.service';
 import FollowButton from '@features/browse/components/FollowButton';
+import InterestedCard from '@features/pitches/components/InterestedCard';
 import { pitchService } from '@features/pitches/services/pitch.service';
 import PitchDocuments from '@features/pitches/components/PitchDocuments';
 import SocialProofBadge from '@shared/components/SocialProofBadge';
@@ -662,32 +663,7 @@ const ProductionPitchView: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-2 sm:space-x-3">
-          {!isOwner && (
-            <button
-              onClick={handleLike}
-              className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                isLiked
-                  ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              <Heart className={`h-4 w-4 sm:mr-1.5 ${isLiked ? 'fill-current' : ''}`} />
-              <span className="hidden sm:inline">{isLiked ? 'Liked' : 'Like'}</span>
-            </button>
-          )}
-
-          <button
-            onClick={handleShortlistToggle}
-            className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${
-              isShortlisted
-                ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            {isShortlisted ? <BookmarkCheck className="h-4 w-4 sm:mr-1.5" /> : <Bookmark className="h-4 w-4 sm:mr-1.5" />}
-            <span className="hidden sm:inline">{isShortlisted ? 'Shortlisted' : 'Shortlist'}</span>
-          </button>
-
+          {/* Like + Save now live in the unified InterestedCard in the sidebar */}
           {!isOwner && (
             <button
               onClick={handleContactCreator}
@@ -1207,6 +1183,19 @@ const ProductionPitchView: React.FC = () => {
 
           {/* Right Column - Sidebar */}
           <div className="space-y-6">
+            {/* Unified "Interested?" box — like / follow creator / save (shared across portals) */}
+            {!isOwner && pitch && (
+              <InterestedCard
+                pitchId={pitch.id}
+                creatorId={pitch.userId ? parseInt(String(pitch.userId)) : undefined}
+                initialLiked={isLiked}
+                initialSaved={isShortlisted}
+                isAuthenticated={isAuthenticated}
+                isOwner={isOwner}
+                fromPath={`/production/pitch/${id}`}
+              />
+            )}
+
             {/* Access — the NDA is the single gate that unlocks the full script,
                 pitch deck, and all production materials (no separate "request script"). */}
             {!isOwner && (

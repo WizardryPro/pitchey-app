@@ -9,6 +9,7 @@ import PortalTopNav from '@shared/components/layout/PortalTopNav';
 import { ndaService } from '@features/ndas/services/nda.service';
 import NDAWizard from '@features/ndas/components/NDAWizard';
 import PitchDocuments from '@features/pitches/components/PitchDocuments';
+import InterestedCard from '@features/pitches/components/InterestedCard';
 import FormatDisplay from '../components/FormatDisplay';
 import FeedbackSection from '../components/feedback/FeedbackSection';
 import { viewService } from '@features/analytics/services/view.service';
@@ -727,40 +728,17 @@ export default function PublicPitchView() {
               </div>
             </div>
 
-            {/* Engagement Actions — prompt signup for unauthenticated users */}
-            {!isAuthenticated && (
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Interested?</h3>
-                <p className="text-sm text-gray-500 mb-4">Sign in to engage with this pitch and its creator. New here? You can create an account on the sign-in page.</p>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => { void navigate('/login', { state: { from: `/pitch/${id}` } }); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 bg-gray-50 hover:bg-red-50 text-gray-700 hover:text-red-600 rounded-lg transition group"
-                  >
-                    <Heart className="w-4 h-4 group-hover:fill-red-200" />
-                    <span className="flex-1 text-left text-sm font-medium">Like this pitch</span>
-                    <span className="text-xs text-gray-400">Free</span>
-                  </button>
-                  <button
-                    onClick={() => { void navigate('/login', { state: { from: `/pitch/${id}` } }); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 bg-gray-50 hover:bg-purple-50 text-gray-700 hover:text-purple-600 rounded-lg transition group"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    <span className="flex-1 text-left text-sm font-medium">Follow this creator</span>
-                    <span className="text-xs text-gray-400">Free</span>
-                  </button>
-                  <button
-                    onClick={() => { void navigate('/login', { state: { from: `/pitch/${id}` } }); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 bg-gray-50 hover:bg-blue-50 text-gray-700 hover:text-blue-600 rounded-lg transition group"
-                  >
-                    <Bookmark className="w-4 h-4" />
-                    <span className="flex-1 text-left text-sm font-medium">Save for later</span>
-                    <span className="text-xs text-gray-400">Free</span>
-                  </button>
-                </div>
-                <p className="text-xs text-gray-400 mt-3 text-center">No credit card required</p>
-              </div>
-            )}
+            {/* Engagement Actions — unified "Interested?" box (shared across portals).
+                Anonymous → sign-in prompts; authenticated → live like/follow/save. */}
+            <InterestedCard
+              pitchId={pitch.id}
+              creatorId={pitch.creator?.id}
+              initialLiked={(pitch as any).isLiked}
+              initialSaved={(pitch as any).isSaved}
+              isAuthenticated={isAuthenticated}
+              isOwner={isOwner}
+              fromPath={`/pitch/${id}`}
+            />
 
             {/* Actions */}
             <div className="bg-white rounded-xl shadow-sm p-6">

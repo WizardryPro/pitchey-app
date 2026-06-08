@@ -120,7 +120,7 @@ export default function ProductionSlateBoard() {
           </span>
           <div>
             <h2 className="text-lg font-bold tracking-tight text-gray-900">Your Slate</h2>
-            <p className="text-xs text-gray-500">Owned & saved projects by readiness — derived from each project's workspace.</p>
+            <p className="text-xs text-gray-500">Your production pipeline — every project you own or saved, grouped by how close it is to being made. Move projects forward as you complete each one's workspace.</p>
           </div>
         </div>
         <button onClick={() => navigate('/production/browse')} className="hidden items-center gap-1 text-sm font-medium text-indigo-600 hover:text-indigo-700 sm:inline-flex">

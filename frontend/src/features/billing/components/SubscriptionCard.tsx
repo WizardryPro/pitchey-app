@@ -327,8 +327,8 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
                   : isFree
                   ? 'Free Forever'
                   : isDowngrade
-                  ? `Downgrade to ${plan.name}`
-                  : `Upgrade to ${plan.name}`}
+                  ? 'Downgrade'
+                  : 'Upgrade'}
               </button>
             </div>
           );
