@@ -26,6 +26,8 @@ export interface InterestedCardProps {
   isOwner?: boolean;
   /** Path to return to after sign-in for anonymous users. Defaults to current location. */
   fromPath?: string;
+  /** Fired after a successful save/unsave so a parent can react (e.g. unlock a workspace). */
+  onSavedChange?: (saved: boolean) => void;
   className?: string;
 }
 
@@ -37,6 +39,7 @@ const InterestedCard: React.FC<InterestedCardProps> = ({
   isAuthenticated,
   isOwner = false,
   fromPath,
+  onSavedChange,
   className = '',
 }) => {
   const navigate = useNavigate();
@@ -101,13 +104,14 @@ const InterestedCard: React.FC<InterestedCardProps> = ({
         credentials: 'include',
       });
       if (!res.ok) throw new Error(`Save failed: ${res.status}`);
+      onSavedChange?.(next);
     } catch (err) {
       console.error('InterestedCard save error:', err);
       setIsSaved(!next); // revert
     } finally {
       setBusy(null);
     }
-  }, [isAuthenticated, busy, isSaved, pitchId, goToLogin]);
+  }, [isAuthenticated, busy, isSaved, pitchId, goToLogin, onSavedChange]);
 
   const toggleFollow = useCallback(async () => {
     if (!numericCreatorId) return;
