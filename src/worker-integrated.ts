@@ -21493,7 +21493,8 @@ const websocketSafeHandler = {
         case "0 * * * *": // Hourly
           await Promise.all([
             sendDigestEmails(env, ctx),
-            aggregateMetrics(env, ctx)
+            aggregateMetrics(env, ctx),
+            checkMoneyPathSLOs(env, ctx)
           ]);
           break;
 
@@ -21687,6 +21688,100 @@ async function reconcileStripeSubscriptions(env: any, _ctx: ExecutionContext): P
     }));
     try { Sentry.captureException(e, { tags: { cron: 'stripe_reconcile' } }); } catch { /* noop */ }
   }
+}
+
+// ── Money-path SLOs ──────────────────────────────────────────────────────
+// The research bar: don't just monitor availability (is the DB up?) — monitor
+// RELIABILITY on the paths that make money. These are SLIs over the trailing
+// window: server-error rate (5xx) on signup, checkout, and pitch creation.
+// 4xx are client errors (validation/auth) and do NOT count against the budget.
+// Source: the Axiom request logs the worker already emits (type="request",
+// request.path, request.method, response.status). No new bindings.
+const MONEY_PATH_SLOS: Array<{
+  key: string;
+  predicate: string;   // APL predicate over the request-log fields
+  target: number;      // success-rate target (e.g. 0.99 = 99%)
+  minVolume: number;   // skip the check below this request count (sample too small)
+  minErrors: number;   // require at least this many 5xx to alert (blip suppression)
+}> = [
+  { key: 'checkout',     predicate: `['request.path'] startswith "/api/payments"`, target: 0.99, minVolume: 5, minErrors: 2 },
+  { key: 'signup',       predicate: `['request.path'] contains "register"`,        target: 0.99, minVolume: 5, minErrors: 2 },
+  { key: 'pitch_upload', predicate: `['request.method'] == "POST" and ['request.path'] startswith "/api/pitches"`, target: 0.99, minVolume: 5, minErrors: 2 },
+];
+
+// Hourly money-path SLO check. Queries Axiom for the trailing hour, computes the
+// 5xx error rate per money path, and reports a breach to Sentry (error level) +
+// a structured `slo_breach` log so the existing alerting path surfaces it. Pure
+// read; defensive — a missing token or a failed/odd-shaped query logs and skips,
+// never pages falsely.
+async function checkMoneyPathSLOs(env: any, _ctx: ExecutionContext): Promise<void> {
+  const token = env.AXIOM_TOKEN;
+  const dataset = env.AXIOM_DATASET || 'pitchey-logs';
+  if (!token) {
+    console.warn(JSON.stringify({ level: 'warn', category: 'slo', action: 'skipped', reason: 'no_axiom_token' }));
+    return;
+  }
+  const startedAt = Date.now();
+  const endTime = new Date().toISOString();
+  const startTime = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
+  let axiom: any;
+  try {
+    const { AxiomClient } = await import('./lib/observability');
+    axiom = new AxiomClient(token, dataset);
+  } catch (err) {
+    const e = err instanceof Error ? err : new Error(String(err));
+    console.error(JSON.stringify({ level: 'error', category: 'slo', action: 'init_failed', error: e.message }));
+    return;
+  }
+
+  const summary: Array<Record<string, unknown>> = [];
+  for (const slo of MONEY_PATH_SLOS) {
+    try {
+      const apl = `['${dataset}'] | where ['type'] == "request" and (${slo.predicate}) | summarize total = count(), errors = countif(['response.status'] >= 500)`;
+      const res = await axiom.query(apl, startTime, endTime);
+      // Aggregation result: tables[0].fields names the columns, columns[i][0] holds the value.
+      const table = res?.tables?.[0];
+      const fields: string[] = (table?.fields || []).map((f: any) => f?.name);
+      const cols: any[] = table?.columns || [];
+      const valueOf = (name: string): number => {
+        const i = fields.indexOf(name);
+        return i >= 0 ? Number(cols[i]?.[0] ?? 0) : 0;
+      };
+      const total = valueOf('total');
+      const errors = valueOf('errors');
+      const errorRate = total > 0 ? errors / total : 0;
+      const breached = total >= slo.minVolume && errors >= slo.minErrors && errorRate > (1 - slo.target);
+
+      summary.push({ key: slo.key, total, errors, error_rate: Number(errorRate.toFixed(4)), breached });
+
+      if (breached) {
+        const msg = `Money-path SLO breach: ${slo.key} — ${errors}/${total} 5xx (${(errorRate * 100).toFixed(1)}%) over 1h, target ${(slo.target * 100).toFixed(1)}%`;
+        console.error(JSON.stringify({
+          level: 'error', category: 'slo', action: 'slo_breach',
+          path_key: slo.key, total, errors, error_rate: errorRate, target: slo.target,
+        }));
+        try {
+          Sentry.captureMessage(msg, {
+            level: 'error',
+            tags: { 'slo.breach': slo.key },
+            extra: { total, errors, error_rate: errorRate, target: slo.target, window: '1h' },
+          });
+        } catch { /* Sentry hub not initialized */ }
+      }
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      // Query failure is non-fatal — don't let one path's APL error abort the rest.
+      console.error(JSON.stringify({ level: 'error', category: 'slo', action: 'query_failed', path_key: slo.key, error: e.message }));
+    }
+  }
+
+  const breaches = summary.filter((s) => s.breached).length;
+  console.log(JSON.stringify({
+    level: breaches > 0 ? 'warn' : 'info',
+    category: 'slo', action: 'check_complete',
+    breaches, results: summary, duration_ms: Date.now() - startedAt,
+  }));
 }
 
 async function monitorJobQueues(env: any, ctx: ExecutionContext): Promise<void> {
