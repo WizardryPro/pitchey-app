@@ -848,6 +848,20 @@ const ProductionPitchView: React.FC = () => {
                 </div>
               </div>
 
+              {/* Engagement Actions — unified "Interested?" box, placed ABOVE the
+                  feedback so the like/follow/save controls are seen first. */}
+              {!isOwner && (
+                <InterestedCard
+                  pitchId={pitch.id}
+                  creatorId={pitch.userId ? parseInt(String(pitch.userId)) : undefined}
+                  initialLiked={isLiked}
+                  initialSaved={isShortlisted}
+                  isAuthenticated={isAuthenticated}
+                  isOwner={isOwner}
+                  fromPath={`/production/pitch/${id}`}
+                />
+              )}
+
               {/* Feedback & rating — production cos can rate + leave structured
                   feedback, same as other viewers on PitchDetail. */}
               <FeedbackSection
@@ -1183,18 +1197,7 @@ const ProductionPitchView: React.FC = () => {
 
           {/* Right Column - Sidebar */}
           <div className="space-y-6">
-            {/* Unified "Interested?" box — like / follow creator / save (shared across portals) */}
-            {!isOwner && pitch && (
-              <InterestedCard
-                pitchId={pitch.id}
-                creatorId={pitch.userId ? parseInt(String(pitch.userId)) : undefined}
-                initialLiked={isLiked}
-                initialSaved={isShortlisted}
-                isAuthenticated={isAuthenticated}
-                isOwner={isOwner}
-                fromPath={`/production/pitch/${id}`}
-              />
-            )}
+            {/* Interested box moved above the feedback in the main column. */}
 
             {/* Access — the NDA is the single gate that unlocks the full script,
                 pitch deck, and all production materials (no separate "request script"). */}
