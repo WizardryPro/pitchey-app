@@ -132,6 +132,23 @@ The authoritative list is always `wrangler.toml`. After recreating, update the I
    disaster's RTO is dominated by manually re-obtaining ~10 credentials. *Owner action.*
 2. **Enable R2 versioning** (or a periodic R2→external sync) on the data buckets
    (`pitchey-pitches`, `-ndas`, `-media`) so overwrites/deletes are recoverable.
+   `wrangler` has no versioning subcommand — use the dashboard (bucket → Settings →
+   Object versioning → Enable) or the S3-compatible `PutBucketVersioning` API with
+   R2 S3 credentials:
+   ```bash
+   # Requires an R2 API token's Access Key ID / Secret configured for aws-cli.
+   # account_id = 002bd5c0e90ae753a387c60546cf6869 (ndlovucavelle)
+   for b in pitchey-pitches pitchey-ndas pitchey-media; do
+     aws s3api put-bucket-versioning \
+       --endpoint-url https://002bd5c0e90ae753a387c60546cf6869.r2.cloudflarestorage.com \
+       --bucket "$b" \
+       --versioning-configuration Status=Enabled
+   done
+   ```
+   **Cost note:** versions accumulate on overwrite/delete (rare for documents, so
+   modest), but the org runs a cost-sensitive shared quota (#65) — confirm before
+   enabling, and consider an R2 lifecycle rule to expire noncurrent versions after
+   N days (`wrangler r2 bucket lifecycle`). *Owner action (credentials + billing).*
 3. **Verify Neon retention** in the dashboard and confirm it matches the RPO you want; upgrade
    the plan if the window is too short.
 4. **Audit + fix or delete the local backup scripts** (`database-backup.sh` → AWS S3 not R2;
@@ -140,6 +157,23 @@ The authoritative list is always `wrangler.toml`. After recreating, update the I
    non-functional.
 5. **Test a restore** — branch Neon to a point in time and bring a throwaway worker up against
    it. An untested restore is the same "prayer" the rollback drill exposed.
+
+   **Non-destructive restore drill** (no impact on the live `main` branch; uses brief
+   branch compute — modest, but counts against the shared Neon quota #65, so run
+   deliberately):
+   1. Create a branch from a recent timestamp (Neon dashboard, neonctl, or the Neon MCP
+      `create_branch` with a `point_in_time`). Name it `dr-drill-<date>`.
+   2. Get its connection string and run the smoke queries: `SELECT NOW();`,
+      `SELECT count(*) FROM users;`, `SELECT count(*) FROM pitches;`,
+      `SELECT count(*) FROM subscription_history WHERE status='active';` — confirm
+      counts look sane vs. production.
+   3. (Optional, fuller drill) point a local `wrangler dev` at the branch
+      (`DATABASE_URL=<branch-conn> wrangler dev`) and exercise login + a pitch view +
+      `/api/health`.
+   4. **Delete the branch** (`delete_branch`) to release compute. Record the date +
+      outcome in this file's verification log so the quarterly cadence has evidence.
+
+   A passing drill closes the "untested restore" gap until the next quarterly run.
 
 ---
 
