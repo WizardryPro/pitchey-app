@@ -161,23 +161,35 @@ const ProductionPitchView: React.FC = () => {
   // A quiet "who am I here" system shared across the Feasibility/Team/Notes
   // tabs, so the edit-vs-view split reads as intentional rather than as a
   // disabled form.
-  const accessChip = canEditWorkspace ? (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-200">
-      <Edit3 className="h-3.5 w-3.5" /> Editor
-    </span>
-  ) : (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500 ring-1 ring-inset ring-slate-200">
-      <Eye className="h-3.5 w-3.5" /> View only
-    </span>
-  );
   // Evaluation mode = a producer looking at someone else's (creator-owned) pitch.
   // The Team/Notes here are a PRIVATE scratchpad scoped to this company — NOT the
-  // creator's project workspace. We keep that logic but relabel so it never reads
-  // as if you're managing the creator's pitch.
+  // creator's project workspace. We keep that logic but relabel + badge so it never
+  // reads as if you own or are managing the creator's pitch.
   const evaluationMode = !ownerIsProduction;
+  const evalCreatorName = pitch?.creatorName || pitch?.creatorCompany || 'the creator';
+  // Access chip — in evaluation mode we lead with an unmissable "not your pitch"
+  // badge so the editable workspace can't be mistaken for owning the project.
+  const accessChip = (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      {evaluationMode && (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-200">
+          <Eye className="h-3.5 w-3.5" /> Evaluating · not your pitch
+        </span>
+      )}
+      {canEditWorkspace ? (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-200">
+          <Edit3 className="h-3.5 w-3.5" /> Editor
+        </span>
+      ) : (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500 ring-1 ring-inset ring-slate-200">
+          <Eye className="h-3.5 w-3.5" /> View only
+        </span>
+      )}
+    </div>
+  );
   const workspaceScopeNote = ownerIsProduction
     ? (canEditWorkspace ? 'Shared workspace — visible to your whole company team.' : 'Read-only access granted by your signed NDA.')
-    : 'Private to your company — the creator can’t see any of this. Use it to plan as if you were producing this pitch.';
+    : `You're planning ${evalCreatorName}'s pitch as a possible production — it isn't your project. Private to your company: ${evalCreatorName} can’t see any of this.`;
   // In evaluation mode (a creator-owned pitch you didn't create), the private
   // Team/Notes workspace stays HIDDEN until you opt in by saving the pitch to
   // your slate. Your own production pitches always have it.
