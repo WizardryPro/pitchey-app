@@ -18326,6 +18326,10 @@ Signatures: [To be completed upon signing]
       if (!authCheck.authorized) return authCheck.response;
 
       const origin = request.headers.get('Origin');
+      // Must set Content-Type: application/json — the frontend apiClient rejects any
+      // response whose content-type isn't application/json (treats it as an error).
+      // Without this the check silently failed and the "saved" state never hydrated.
+      const jsonHeaders = { ...getCorsHeaders(origin), 'Content-Type': 'application/json' };
       const url = new URL(request.url);
       const pathParts = url.pathname.split('/');
       const pitchId = pathParts[pathParts.length - 1];
@@ -18336,7 +18340,7 @@ Signatures: [To be completed upon signing]
           error: { message: 'Pitch ID is required' }
         }), {
           status: 400,
-          headers: getCorsHeaders(origin)
+          headers: jsonHeaders
         });
       }
 
@@ -18349,13 +18353,13 @@ Signatures: [To be completed upon signing]
         return new Response(JSON.stringify({
           success: true,
           data: { isSaved: true, savedPitchId: rows[0].id, savedAt: rows[0].created_at }
-        }), { headers: getCorsHeaders(origin) });
+        }), { headers: jsonHeaders });
       }
 
       return new Response(JSON.stringify({
         success: true,
         data: { isSaved: false }
-      }), { headers: getCorsHeaders(origin) });
+      }), { headers: jsonHeaders });
 
     } catch (error) {
       return errorHandler(error, request);
