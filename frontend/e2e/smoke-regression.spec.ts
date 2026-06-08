@@ -94,8 +94,9 @@ test.describe('smoke-regression: silent-failure guards', () => {
     await login(page, 'investor');
     await openPitch(page);
 
+    // Engagement actions now live in the shared InterestedCard ("Like this pitch" / "Liked").
     const liked = page.getByRole('button', { name: /^Liked$/ });
-    const like = page.getByRole('button', { name: /^Like$/ });
+    const like = page.getByRole('button', { name: /Like this pitch/i });
 
     if (await like.isVisible().catch(() => false)) await like.click();
     await expect(liked).toBeVisible();
@@ -113,8 +114,9 @@ test.describe('smoke-regression: silent-failure guards', () => {
     await login(page, 'investor');
     await openPitch(page);
 
-    const saved = page.getByRole('button', { name: /^Saved$/ });
-    const save = page.getByRole('button', { name: /^Save$/ });
+    // Engagement actions now live in the shared InterestedCard ("Save for later" / "Saved for later").
+    const saved = page.getByRole('button', { name: /^Saved for later$/ });
+    const save = page.getByRole('button', { name: /^Save for later$/ });
 
     if (await save.isVisible().catch(() => false)) await save.click();
     await expect(saved).toBeVisible();
