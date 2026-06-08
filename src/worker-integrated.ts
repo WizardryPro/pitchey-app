@@ -4725,13 +4725,21 @@ class RouteRegistry {
 
       // Check Stripe API reachability (non-blocking)
       let stripeStatus = 'not configured';
-      if (this.env.STRIPE_SECRET_KEY) {
-        try {
-          const stripeResp = await fetch('https://api.stripe.com/v1/balance', {
-            headers: { Authorization: `Bearer ${this.env.STRIPE_SECRET_KEY}` }
-          });
-          stripeStatus = stripeResp.ok ? 'connected' : 'auth_error';
-        } catch { stripeStatus = 'unreachable'; }
+      const stripeKey = this.env.STRIPE_SECRET_KEY;
+      if (stripeKey) {
+        if (this.env.ENVIRONMENT === 'production' && !stripeKey.startsWith('sk_live_')) {
+          // A test-mode key in production means real charges never land in the
+          // live balance — the classic silent go-live misconfig. Surface as a
+          // non-healthy status so the per-service CI health gate fires.
+          stripeStatus = 'test_key_in_prod';
+        } else {
+          try {
+            const stripeResp = await fetch('https://api.stripe.com/v1/balance', {
+              headers: { Authorization: `Bearer ${stripeKey}` }
+            });
+            stripeStatus = stripeResp.ok ? 'connected' : 'auth_error';
+          } catch { stripeStatus = 'unreachable'; }
+        }
       }
 
       // Check Resend API reachability (non-blocking)
@@ -4745,7 +4753,8 @@ class RouteRegistry {
         } catch { resendStatus = 'unreachable'; }
       }
 
-      const allConnected = dbStatus === 'connected' && redisStatus !== 'error' && stripeStatus !== 'unreachable';
+      const allConnected = dbStatus === 'connected' && redisStatus !== 'error'
+        && stripeStatus !== 'unreachable' && stripeStatus !== 'test_key_in_prod';
 
       return builder.success({
         status: allConnected ? 'ok' : 'degraded',
@@ -10646,6 +10655,22 @@ pitchey_analytics_datapoints_per_minute 1250
       return new ApiResponseBuilder(request).error(ErrorCode.INTERNAL_ERROR, 'Stripe webhook not configured');
     }
 
+    // Go-live guard: a test-mode secret deployed to production means live events
+    // will fail signature verification (test secret can't sign live deliveries)
+    // and real payments are silently dropped. Log loudly + report so the misconfig
+    // is caught immediately rather than via a customer "I paid but no access" email.
+    if ((this.env as any).ENVIRONMENT === 'production' && !stripeKey.startsWith('sk_live_')) {
+      console.error(JSON.stringify({
+        level: 'error',
+        category: 'stripe_webhook',
+        action: 'test_key_in_production',
+        message: 'STRIPE_SECRET_KEY is not a live key (sk_live_*) in a production environment',
+      }));
+      try {
+        Sentry.captureMessage('Stripe test key deployed to production', { level: 'error' });
+      } catch { /* Sentry hub not initialized */ }
+    }
+
     const signature = request.headers.get('stripe-signature');
     if (!signature) {
       return new ApiResponseBuilder(request).error(ErrorCode.BAD_REQUEST, 'Missing stripe-signature header');
@@ -10907,37 +10932,96 @@ pitchey_analytics_datapoints_per_minute 1250
         case 'customer.subscription.deleted': {
           const sub = event.data.object;
           const subId = sub.id;
-          await sql`
+          const canceled = await sql`
             UPDATE subscription_history SET status = 'canceled'
             WHERE stripe_subscription_id = ${subId} AND status IN ('active', 'cancelling')
+            RETURNING id
           `;
-          console.log(JSON.stringify({
-            level: 'info',
-            category: 'stripe_webhook',
-            event_id: event.id,
-            event_type: event.type,
-            stripe_subscription_id: subId,
-            action: 'subscription_canceled',
-          }));
+          if (canceled.length > 0) {
+            console.log(JSON.stringify({
+              level: 'info',
+              category: 'stripe_webhook',
+              event_id: event.id,
+              event_type: event.type,
+              stripe_subscription_id: subId,
+              action: 'subscription_canceled',
+            }));
+          } else {
+            // 0 rows matched. Disambiguate: a row that exists but is already
+            // terminal is a benign re-delivery (stay quiet — avoid alert
+            // fatigue); NO row at all means the .deleted arrived before the
+            // creating event (Stripe does not guarantee ordering) and the
+            // cancellation would have been silently lost. Surface the latter —
+            // the reconciliation cron (1C) is the eventual backstop.
+            const existing = await sql`
+              SELECT 1 FROM subscription_history WHERE stripe_subscription_id = ${subId} LIMIT 1
+            `;
+            const outOfOrder = existing.length === 0;
+            console.warn(JSON.stringify({
+              level: 'warn',
+              category: 'stripe_webhook',
+              event_id: event.id,
+              event_type: event.type,
+              stripe_subscription_id: subId,
+              action: outOfOrder ? 'subscription_deleted_unmapped' : 'subscription_deleted_noop_already_terminal',
+            }));
+            if (outOfOrder) {
+              try {
+                Sentry.captureException(new Error(`subscription.deleted matched no local row: ${subId}`), {
+                  tags: { 'stripe.webhook': 'subscription_deleted_unmapped' },
+                  extra: { stripe_subscription_id: subId, customer: sub.customer ?? null, event_id: event.id },
+                });
+              } catch { /* Sentry hub not initialized */ }
+            }
+          }
           break;
         }
 
         case 'customer.subscription.updated': {
           const sub = event.data.object;
           const subId = sub.id;
+          let stateTouched = 0;
           if (sub.cancel_at_period_end) {
-            await sql`
+            const flagged = await sql`
               UPDATE subscription_history SET status = 'cancelling'
               WHERE stripe_subscription_id = ${subId} AND status = 'active'
+              RETURNING id
             `;
+            stateTouched += flagged.length;
           }
           // Update period end (API drift: also check items.data[0]).
           const updPeriodEnd = sub?.current_period_end ?? sub?.items?.data?.[0]?.current_period_end ?? null;
           if (updPeriodEnd) {
-            await sql`
+            const dated = await sql`
               UPDATE subscription_history SET period_end = ${new Date(updPeriodEnd * 1000).toISOString()}
               WHERE stripe_subscription_id = ${subId}
+              RETURNING id
             `;
+            stateTouched += dated.length;
+          }
+          // A meaningful update (cancellation flag or period end) that matched no
+          // local row and where no row exists at all = out-of-order arrival; the
+          // state change was silently lost. Flag it so drift is visible.
+          if (stateTouched === 0 && (sub.cancel_at_period_end || updPeriodEnd)) {
+            const existing = await sql`
+              SELECT 1 FROM subscription_history WHERE stripe_subscription_id = ${subId} LIMIT 1
+            `;
+            if (existing.length === 0) {
+              console.warn(JSON.stringify({
+                level: 'warn',
+                category: 'stripe_webhook',
+                event_id: event.id,
+                event_type: event.type,
+                stripe_subscription_id: subId,
+                action: 'subscription_updated_unmapped',
+              }));
+              try {
+                Sentry.captureException(new Error(`subscription.updated matched no local row: ${subId}`), {
+                  tags: { 'stripe.webhook': 'subscription_updated_unmapped' },
+                  extra: { stripe_subscription_id: subId, customer: sub.customer ?? null, event_id: event.id },
+                });
+              } catch { /* Sentry hub not initialized */ }
+            }
           }
           break;
         }
@@ -21426,6 +21510,10 @@ const websocketSafeHandler = {
           await cleanupDatabase(env, ctx);
           break;
 
+        case "0 3 * * *": // Daily 3 AM
+          await reconcileStripeSubscriptions(env, ctx);
+          break;
+
         case "*/15 * * * *": // Every 15 minutes
           await updateTrendingAlgorithm(env, ctx);
           break;
@@ -21486,6 +21574,118 @@ async function keepDatabaseWarm(env: any, _ctx: ExecutionContext): Promise<void>
     // Non-fatal: the retry-wrapped getDb already handles cold-start drops; a
     // failure here just means the warm-ping missed, the next real request retries.
     console.warn(JSON.stringify({ level: 'warn', category: 'keep_warm', action: 'db_ping', outcome: 'failed', error: e.message }));
+  }
+}
+
+// Daily Stripe<->DB subscription reconciliation. The webhook path always returns
+// 200 — even on a swallowed processing error — and Stripe can drop a delivery, so
+// a paying customer can end up with no active local subscription row and nobody
+// notices. This is the backstop: page Stripe's active subscriptions, diff against
+// the local subscription_history active set, and report drift to Sentry. LOG ONLY,
+// no mutation — visibility first (the money-path-safety plan). Remediation (re-grant
+// access / reverse stale access) is deliberate follow-up, not an automated cron.
+async function reconcileStripeSubscriptions(env: any, _ctx: ExecutionContext): Promise<void> {
+  const startedAt = Date.now();
+  const stripeKey = env.STRIPE_SECRET_KEY;
+  if (!stripeKey) {
+    console.warn(JSON.stringify({ level: 'warn', category: 'stripe_reconcile', action: 'skipped', reason: 'no_stripe_key' }));
+    return;
+  }
+  try {
+    const { getDb } = await import('./db');
+    const sql = getDb(env);
+    if (!sql) {
+      console.error(JSON.stringify({ level: 'error', category: 'stripe_reconcile', action: 'skipped', reason: 'no_db' }));
+      return;
+    }
+    const { StripeService } = await import('./services/stripe.service');
+    const stripe = new StripeService(stripeKey);
+
+    // Local active subscription ids.
+    const localRows = await sql`
+      SELECT stripe_subscription_id FROM subscription_history
+      WHERE status = 'active' AND stripe_subscription_id IS NOT NULL
+    ` as { stripe_subscription_id: string }[];
+    const localActive = new Set(localRows.map((r) => r.stripe_subscription_id));
+
+    // Stripe active subscription ids (paged, capped to bound a runaway scan).
+    const stripeActive = new Map<string, any>(); // id -> sub (metadata used on drift)
+    let startingAfter: string | undefined;
+    let pages = 0;
+    const MAX_PAGES = 20; // 100/page → up to 2000 active subs; flagged if hit
+    let capped = false;
+    do {
+      const page = await stripe.listSubscriptions('active', startingAfter);
+      for (const sub of (page.data || [])) stripeActive.set(sub.id, sub);
+      pages++;
+      startingAfter = (page.has_more && page.data?.length)
+        ? page.data[page.data.length - 1].id
+        : undefined;
+      if (pages >= MAX_PAGES && startingAfter) { capped = true; break; }
+    } while (startingAfter);
+
+    // Stripe→DB: paid in Stripe, no active local row (the existential case —
+    // "I paid but I'm still locked out").
+    const paidNoAccess: string[] = [];
+    for (const [id, sub] of stripeActive) {
+      if (!localActive.has(id)) {
+        paidNoAccess.push(id);
+        try {
+          Sentry.captureException(new Error(`Stripe active subscription has no active local row: ${id}`), {
+            tags: { 'stripe.reconcile.drift': 'paid_no_access' },
+            extra: {
+              stripe_subscription_id: id,
+              customer: sub.customer ?? null,
+              user_id: sub.metadata?.userId ?? null,
+              tier: sub.metadata?.tier ?? null,
+            },
+          });
+        } catch { /* Sentry hub not initialized */ }
+      }
+    }
+
+    // DB→Stripe: local active but Stripe doesn't list it active (missed
+    // cancellation / revenue leak). Skipped when capped — the Stripe set is then
+    // incomplete and every unseen id would be a false positive.
+    const accessNoActiveSub: string[] = [];
+    if (!capped) {
+      for (const id of localActive) {
+        if (!stripeActive.has(id)) {
+          accessNoActiveSub.push(id);
+          try {
+            Sentry.captureException(new Error(`Local active subscription not active in Stripe: ${id}`), {
+              tags: { 'stripe.reconcile.drift': 'access_no_active_sub' },
+              extra: { stripe_subscription_id: id },
+            });
+          } catch { /* Sentry hub not initialized */ }
+        }
+      }
+    }
+
+    const driftCount = paidNoAccess.length + accessNoActiveSub.length;
+    console.log(JSON.stringify({
+      level: driftCount > 0 ? 'warn' : 'info',
+      category: 'stripe_reconcile',
+      action: 'reconcile_complete',
+      stripe_active: stripeActive.size,
+      local_active: localActive.size,
+      paid_no_access: paidNoAccess.length,
+      access_no_active_sub: accessNoActiveSub.length,
+      drift_count: driftCount,
+      paged: pages,
+      capped,
+      duration_ms: Date.now() - startedAt,
+    }));
+  } catch (err) {
+    const e = err instanceof Error ? err : new Error(String(err));
+    console.error(JSON.stringify({
+      level: 'error',
+      category: 'stripe_reconcile',
+      action: 'failed',
+      error: e.message,
+      duration_ms: Date.now() - startedAt,
+    }));
+    try { Sentry.captureException(e, { tags: { cron: 'stripe_reconcile' } }); } catch { /* noop */ }
   }
 }
 

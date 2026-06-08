@@ -73,13 +73,23 @@ export async function creatorDashboardHandler(request: Request, env: Env): Promi
     
     // Fetch dashboard metrics with inline SQL for reliability
     // (query modules use WhereBuilder patterns incompatible with neon tagged templates)
-    const results = await Promise.allSettled([
-      sql`
+    // safeQuery: a query that explodes (schema drift, etc.) now reports to Sentry
+    // and is distinguishable from "returned empty" via .errored — instead of
+    // silently rendering as zero data. Fallbacks keep the page rendering.
+    const [
+      statsResult,
+      recentPitchesResult,
+      analyticsResult,
+      ndaResult,
+      investmentsResult,
+      notificationsResult,
+    ] = await Promise.all([
+      safeQuery<{ totalPitches: number; totalFollowers: number }>(() => sql`
         SELECT
           (SELECT COUNT(*)::int FROM pitches WHERE creator_id::text = ${userId} OR user_id::text = ${userId}) as "totalPitches",
           (SELECT COUNT(*)::int FROM follows WHERE following_id::text = ${userId}) as "totalFollowers"
-      `.catch((err: unknown) => { console.error('Dashboard stats query error:', err); return [{ totalPitches: 0, totalFollowers: 0 }]; }),
-      sql`
+      `, { fallback: [{ totalPitches: 0, totalFollowers: 0 }], context: 'creator-dashboard.stats' }),
+      safeQuery(() => sql`
         SELECT id, title, logline, genre, status,
                view_count as views, like_count as likes,
                title_image as thumbnail, created_at, updated_at,
@@ -90,37 +100,46 @@ export async function creatorDashboardHandler(request: Request, env: Env): Promi
         WHERE creator_id::text = ${userId} OR user_id::text = ${userId}
         ORDER BY updated_at DESC
         LIMIT 5
-      `.catch((err: unknown) => { console.error('Dashboard recent pitches query error:', err); return []; }),
-      sql`
+      `, { fallback: [], context: 'creator-dashboard.recent-pitches' }),
+      safeQuery<{ total_views: number; avg_engagement: number }>(() => sql`
         SELECT
           COALESCE(SUM(view_count), 0)::int as total_views,
           COALESCE(AVG(CASE WHEN view_count > 0 THEN (like_count::float / view_count * 100) ELSE 0 END), 0) as avg_engagement
         FROM pitches
         WHERE creator_id::text = ${userId} OR user_id::text = ${userId}
-      `.catch((err: unknown) => { console.error('Dashboard analytics query error:', err); return [{ total_views: 0, avg_engagement: 0 }]; }),
-      documentQueries.getUserNDARequests(sql as any, userId, 'received').catch((err: unknown) => { console.error('Dashboard NDA query error:', err); return []; }),
-      investmentQueries.getInvestorPortfolio(sql as any, userId, {}).catch((err: unknown) => { console.error('Dashboard investments query error:', err); return []; }),
-      notificationQueries.getUserNotifications(sql as any, userId, { limit: 5 }).catch((err: unknown) => { console.error('Dashboard notifications query error:', err); return []; })
+      `, { fallback: [{ total_views: 0, avg_engagement: 0 }], context: 'creator-dashboard.analytics' }),
+      safeQuery<documentQueries.NDARequest>(() => documentQueries.getUserNDARequests(sql as any, userId, 'received'), { fallback: [], context: 'creator-dashboard.ndas' }),
+      safeQuery<investmentQueries.Investment>(() => investmentQueries.getInvestorPortfolio(sql as any, userId, {}), { fallback: [], context: 'creator-dashboard.investments' }),
+      safeQuery<notificationQueries.Notification>(() => notificationQueries.getUserNotifications(sql as any, userId, { limit: 5 }), { fallback: [], context: 'creator-dashboard.notifications' }),
     ]);
 
-    const userStats = results[0].status === 'fulfilled' ? (results[0].value as any[])[0] || { totalPitches: 0, totalFollowers: 0 } : { totalPitches: 0, totalFollowers: 0 };
-    const recentPitches = results[1].status === 'fulfilled' ? results[1].value as any[] : [];
-    const analytics = results[2].status === 'fulfilled' ? (results[2].value as any[])[0] || { total_views: 0, avg_engagement: 0 } : { total_views: 0, avg_engagement: 0 };
-    const pendingNDAs = results[3].status === 'fulfilled' ? results[3].value as documentQueries.NDARequest[] : [];
-    const recentInvestments = results[4].status === 'fulfilled' ? results[4].value as investmentQueries.Investment[] : [];
-    const notifications = results[5].status === 'fulfilled' ? results[5].value as notificationQueries.Notification[] : [];
+    const userStats = statsResult.rows[0] || { totalPitches: 0, totalFollowers: 0 };
+    const recentPitches = recentPitchesResult.rows as any[];
+    const analytics = analyticsResult.rows[0] || { total_views: 0, avg_engagement: 0 };
+    const pendingNDAs = ndaResult.rows as documentQueries.NDARequest[];
+    const recentInvestments = investmentsResult.rows as investmentQueries.Investment[];
+    const notifications = notificationsResult.rows as notificationQueries.Notification[];
 
-    // Calculate revenue metrics with error handling
-    const revenueData = await getRevenueMetrics(sql, userId).catch((err: unknown) => { console.error('Dashboard revenue metrics error:', err); return {
-      totalRevenue: 0,
-      committedFunds: 0,
-      pipelineValue: 0,
-      activeInvestors: 0,
-      avgDealSize: 0
-    }; });
+    // Revenue metrics return an object — wrap in an array so safeQuery's
+    // error-reporting path (Sentry + .errored) covers it too.
+    const revenueResult = await safeQuery(() => getRevenueMetrics(sql, userId).then((r) => [r]), {
+      fallback: [{ totalRevenue: 0, committedFunds: 0, pipelineValue: 0, activeInvestors: 0, avgDealSize: 0 }],
+      context: 'creator-dashboard.revenue',
+    });
+    const revenueData = revenueResult.rows[0];
     
+    const viewTrendResult = await safeQuery(() => getViewTrend(sql, userId), { fallback: [], context: 'creator-dashboard.view-trend' });
+
+    // True when any query errored (vs. legitimately empty) — lets the frontend
+    // show "some data couldn't load" instead of a false zero state.
+    const degraded = [
+      statsResult, recentPitchesResult, analyticsResult, ndaResult,
+      investmentsResult, notificationsResult, revenueResult, viewTrendResult,
+    ].some((r) => r.errored);
+
     return new Response(JSON.stringify({
       success: true,
+      degraded,
       data: {
         overview: {
           totalPitches: userStats.totalPitches || 0,
@@ -139,7 +158,7 @@ export async function creatorDashboardHandler(request: Request, env: Env): Promi
           notifications: notifications
         },
         analytics: {
-          viewTrend: await getViewTrend(sql, userId).catch((err: unknown) => { console.error('Dashboard view trend error:', err); return []; }),
+          viewTrend: viewTrendResult.rows,
           engagementRate: analytics.avg_engagement || 0,
           topPerformingPitch: recentPitches.length > 0 ? recentPitches[0] : null
         }

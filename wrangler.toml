@@ -150,6 +150,7 @@ crons = [
   "0 * * * *",      # Hourly: Send digest emails and metrics aggregation
   "0 0 * * *",      # Daily: Export audit logs and archive jobs
   "0 2 * * 1",      # Weekly: Database cleanup (Mondays at 2 AM)
+  "0 3 * * *",      # Daily 3 AM: Stripe<->DB subscription reconciliation (drift detection)
   "*/15 * * * *"    # Every 15 min: Update trending algorithm
 ]
 

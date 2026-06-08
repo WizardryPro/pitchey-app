@@ -5,6 +5,7 @@
 import { getDb } from '../db/connection';
 import type { Env } from '../db/connection';
 import { requireRole } from '../utils/auth-extract';
+import { safeQuery } from '../db/safe-query';
 
 export async function investorDashboardHandler(request: Request, env: Env): Promise<Response> {
   // Require investor role
@@ -74,27 +75,33 @@ export async function investorDashboardHandler(request: Request, env: Env): Prom
       return [{ active_ndas: 0 }];
     })();
 
-    // Simple queries for free tier
-    const [investmentStats, ndaStats, savedStats] = await Promise.all([
-      sql`
+    // Simple queries for free tier. safeQuery so a schema-drift error reports to
+    // Sentry and flips `degraded` instead of silently zeroing the portfolio.
+    const [investmentResult, ndaStats, savedResult] = await Promise.all([
+      safeQuery<{ total_investments: number; portfolio_value: number; avg_investment: number }>(() => sql`
         SELECT
           COUNT(DISTINCT i.id) as total_investments,
           COALESCE(SUM(i.amount), 0) as portfolio_value,
           COALESCE(AVG(i.amount), 0) as avg_investment
         FROM investments i
         WHERE i.investor_id = ${userId}
-      `.catch((err: unknown) => { console.error('Investor dashboard investments query error:', err); return [{ total_investments: 0, portfolio_value: 0, avg_investment: 0 }]; }),
+      `, { fallback: [{ total_investments: 0, portfolio_value: 0, avg_investment: 0 }], context: 'investor-dashboard.investments' }),
       ndaStatsP,
-      sql`
+      safeQuery<{ saved_count: number }>(() => sql`
         SELECT
           COUNT(*) as saved_count
         FROM saved_pitches
         WHERE user_id = ${userId}
-      `.catch((err: unknown) => { console.error('Investor dashboard saved_pitches query error:', err); return [{ saved_count: 0 }]; })
+      `, { fallback: [{ saved_count: 0 }], context: 'investor-dashboard.saved-pitches' })
     ]);
-    
+
+    const investmentStats = investmentResult.rows;
+    const savedStats = savedResult.rows;
+    const degraded = investmentResult.errored || savedResult.errored;
+
     return new Response(JSON.stringify({
       success: true,
+      degraded,
       data: {
         totalInvestments: Number(investmentStats[0]?.total_investments) || 0,
         portfolioValue: Number(investmentStats[0]?.portfolio_value) || 0,

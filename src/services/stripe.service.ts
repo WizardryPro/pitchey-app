@@ -127,6 +127,19 @@ export class StripeService {
     return this.request('GET', endpoint);
   }
 
+  // ── Reconciliation ──
+
+  // Page subscriptions by status so a daily cron can cross-check Stripe's truth
+  // against the local subscription_history table (catches dropped invoice.paid /
+  // subscription.* webhooks). `metadata.userId`/`metadata.tier` are stamped on
+  // the subscription at checkout creation, so the id + metadata are enough to
+  // detect "paid in Stripe, no active local row".
+  async listSubscriptions(status: string = 'active', startingAfter?: string): Promise<{ data: any[]; has_more: boolean }> {
+    let endpoint = `/subscriptions?status=${encodeURIComponent(status)}&limit=100`;
+    if (startingAfter) endpoint += `&starting_after=${encodeURIComponent(startingAfter)}`;
+    return this.request('GET', endpoint);
+  }
+
   // ── Payment Methods ──
 
   async createSetupIntent(customerId: string): Promise<{ client_secret: string }> {
