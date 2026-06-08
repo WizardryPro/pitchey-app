@@ -170,9 +170,14 @@ const ProductionPitchView: React.FC = () => {
       <Eye className="h-3.5 w-3.5" /> View only
     </span>
   );
+  // Evaluation mode = a producer looking at someone else's (creator-owned) pitch.
+  // The Team/Notes here are a PRIVATE scratchpad scoped to this company — NOT the
+  // creator's project workspace. We keep that logic but relabel so it never reads
+  // as if you're managing the creator's pitch.
+  const evaluationMode = !ownerIsProduction;
   const workspaceScopeNote = ownerIsProduction
     ? (canEditWorkspace ? 'Shared workspace — visible to your whole company team.' : 'Read-only access granted by your signed NDA.')
-    : 'Private workspace — only you can see these notes.';
+    : 'Private to your company — the creator can’t see any of this. Use it to plan as if you were producing this pitch.';
   const teamStatusMeta: Record<string, { label: string; cls: string }> = {
     confirmed:   { label: 'Confirmed',   cls: 'bg-emerald-100 text-emerald-700 ring-emerald-200' },
     considering: { label: 'Considering', cls: 'bg-amber-100 text-amber-700 ring-amber-200' },
@@ -723,7 +728,13 @@ const ProductionPitchView: React.FC = () => {
                       }`}
                       title={locked ? 'NDA required to view' : undefined}
                     >
-                      {tab === 'production' ? 'Feasibility' : tab}
+                      {tab === 'production'
+                        ? 'Feasibility'
+                        : tab === 'team'
+                        ? (evaluationMode ? 'My Team Plan' : 'Team')
+                        : tab === 'notes'
+                        ? (evaluationMode ? 'My Notes' : 'Notes')
+                        : tab}
                       {locked && ' 🔒'}
                     </button>
                   );
@@ -990,7 +1001,7 @@ const ProductionPitchView: React.FC = () => {
                     <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-inset ring-indigo-100">
                       <Users className="h-5 w-5" />
                     </span>
-                    <h2 className="text-xl font-bold tracking-tight text-gray-900">Team Assembly</h2>
+                    <h2 className="text-xl font-bold tracking-tight text-gray-900">{evaluationMode ? 'Your Team Plan' : 'Team Assembly'}</h2>
                   </div>
                   {accessChip}
                 </div>
@@ -1102,7 +1113,7 @@ const ProductionPitchView: React.FC = () => {
                     <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-inset ring-indigo-100">
                       <FileText className="h-5 w-5" />
                     </span>
-                    <h2 className="text-xl font-bold tracking-tight text-gray-900">Production Notes</h2>
+                    <h2 className="text-xl font-bold tracking-tight text-gray-900">{evaluationMode ? 'Your Private Notes' : 'Production Notes'}</h2>
                   </div>
                   {accessChip}
                 </div>

@@ -304,8 +304,10 @@ describe('ProductionPitchView', () => {
       expect(screen.getByText('overview')).toBeInTheDocument()
     })
     expect(screen.getByText('Feasibility')).toBeInTheDocument()
-    expect(screen.getByText(/^team/)).toBeInTheDocument()
-    expect(screen.getByText(/^notes/)).toBeInTheDocument()
+    // Creator-owned pitch viewed by a producer = evaluation mode: the Team/Notes
+    // tabs are relabelled as the producer's own private space.
+    expect(screen.getByText(/My Team Plan/i)).toBeInTheDocument()
+    expect(screen.getByText(/My Notes/i)).toBeInTheDocument()
   })
 
   it('shows NDA credit cost when NDA not signed', async () => {
