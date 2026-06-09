@@ -34,6 +34,11 @@ export interface DocumentFile {
   // Byte size for persisted docs where the File isn't available (the backend
   // may send it); used as the fallback for the size readout. Unknown is fine.
   size?: number;
+  // Whether viewers must sign an NDA to see this document. When undefined it
+  // defaults from the type (lookbook = public, everything else = NDA-gated) —
+  // but the uploader can now set it explicitly per document instead of having
+  // it silently derived from the type name.
+  requiresNda?: boolean;
   title: string;
   description?: string;
   uploadProgress?: number;
@@ -372,7 +377,7 @@ export default function DocumentUpload({
         document.type,
         {
           pitchId,
-          requiresNda: document.type !== 'lookbook',
+          requiresNda: document.requiresNda ?? (document.type !== 'lookbook'),
           signal: controller.signal,
           onProgress: (progress) => {
             const stats = uploadStats.current.get(document.id);
@@ -910,7 +915,32 @@ export default function DocumentUpload({
                           ))}
                         </select>
                       </div>
-                      
+
+                      {/* Per-document NDA control — makes the protection
+                          consequence explicit and overridable. Previously this was
+                          derived silently from the type name (a "lookbook" defaulted
+                          to public without telling the uploader), which surprised
+                          real creators. Default still follows the type; the creator
+                          can change it knowingly. */}
+                      {(() => {
+                        const ndaOn = document.requiresNda ?? (document.type !== 'lookbook');
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => updateDocument(document.id, { requiresNda: !ndaOn })}
+                            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset transition ${
+                              ndaOn
+                                ? 'bg-red-50 text-red-700 ring-red-200 hover:bg-red-100'
+                                : 'bg-emerald-50 text-emerald-700 ring-emerald-200 hover:bg-emerald-100'
+                            }`}
+                            title="Click to change who can view this document"
+                          >
+                            {ndaOn ? <Shield className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                            {ndaOn ? 'NDA required to view' : 'Public — anyone can view'}
+                          </button>
+                        );
+                      })()}
+
                       {/* Description (only in list view) */}
                       {currentViewMode === 'list' && (
                         <textarea

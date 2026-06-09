@@ -435,7 +435,7 @@ export default function CreatePitch() {
             try {
               await uploadService.uploadDocument((doc as any).file, (doc as any).type, {
                 pitchId,
-                requiresNda: (doc as any).type !== 'lookbook',
+                requiresNda: (doc as any).requiresNda ?? ((doc as any).type !== 'lookbook'),
               });
             } catch (docErr) {
               console.error('Document upload failed:', (doc as any).title, docErr);
