@@ -143,7 +143,13 @@ const CreatorPitchView: React.FC = () => {
       }
       
       setPitch(response);
-      
+      // Set ownership from the loaded pitch (the mount-time checkOwnership() runs
+      // before the fetch resolves, so pitch is still null there). Trust the
+      // backend's computed isOwner, falling back to an id comparison.
+      const ownsIt = !!(response as any).isOwner
+        || (authUser?.id ? String(authUser.id) === String(response.userId) || String(authUser.id) === String(response.creator?.id) : false);
+      setIsOwner(ownsIt);
+
       // Fetch analytics if owner
       if (authUser?.id && (String(authUser.id) === String(response.userId) || String(authUser.id) === String(response.creator?.id))) {
         try {
