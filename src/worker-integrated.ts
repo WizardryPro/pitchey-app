@@ -6097,7 +6097,8 @@ pitchey_analytics_datapoints_per_minute 1250
           // user's pending/active collaboration on this pitch so both portals can
           // render the propose / waiting / co-developing states.
           try {
-            const meId = Number(authUserId); // collaborations.*_id are INTEGER
+            const meId = Number(authUserId);   // collaborations.*_id are INTEGER
+            const pid = Number(pitchId);        // collaborations.pitch_id is INTEGER (pitchId is a string param)
             const collabRows = await sql`
               SELECT c.id, c.status, c.role, c.requester_id, c.collaborator_id,
                      ru.username AS requester_name, ru.company_name AS requester_company,
@@ -6105,7 +6106,7 @@ pitchey_analytics_datapoints_per_minute 1250
               FROM collaborations c
               JOIN users ru ON ru.id = c.requester_id
               JOIN users cu ON cu.id = c.collaborator_id
-              WHERE c.pitch_id = ${pitchId}
+              WHERE c.pitch_id = ${pid}
                 AND (c.requester_id = ${meId} OR c.collaborator_id = ${meId})
                 AND c.status IN ('pending', 'accepted')
               ORDER BY (c.status = 'accepted') DESC, c.updated_at DESC
