@@ -241,6 +241,8 @@ export default function PitchEdit() {
             title: d.fileName ?? d.file_name ?? d.originalFileName ?? d.original_file_name ?? d.title ?? 'Document',
             url: d.fileUrl ?? d.file_url ?? d.url,
             size: d.fileSize ?? d.file_size ?? d.size ?? undefined,
+            // Reflect the saved NDA state so the toggle shows reality on edit.
+            requiresNda: d.requiresNda ?? d.requires_nda ?? undefined,
             uploadStatus: 'completed',
             uploadProgress: 100,
             // No File for already-persisted docs — the component null-guards on this.
@@ -453,7 +455,7 @@ export default function PitchEdit() {
         try {
           await uploadService.uploadDocument(file, doc.type, {
             pitchId: parseInt(id!),
-            requiresNda: doc.type !== 'lookbook',
+            requiresNda: doc.requiresNda ?? (doc.type !== 'lookbook'),
           });
         } catch (docErr) {
           console.error('Document upload failed:', doc.title, docErr);
