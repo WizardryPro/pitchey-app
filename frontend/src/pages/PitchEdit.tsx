@@ -455,7 +455,7 @@ export default function PitchEdit() {
         try {
           await uploadService.uploadDocument(file, doc.type, {
             pitchId: parseInt(id!),
-            requiresNda: doc.requiresNda ?? (doc.type !== 'lookbook'),
+            requiresNda: doc.requiresNda ?? true,
           });
         } catch (docErr) {
           console.error('Document upload failed:', doc.title, docErr);
@@ -866,6 +866,10 @@ export default function PitchEdit() {
               maxFiles={15}
               maxFileSize={10}
               disabled={isSubmitting}
+              // Single upload path: stage here, upload once on Save (the save loop).
+              // With autoUpload=true the component ALSO uploaded on-add, racing the
+              // save loop and causing the same file to upload twice. Karl R3.
+              autoUpload={false}
               showProgress={true}
               enableDragDrop={true}
               showPreview={true}

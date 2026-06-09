@@ -216,7 +216,7 @@ export default function DocumentUpload({
     if (duplicate) {
       return {
         valid: false,
-        error: `File ${file.name} has already been added.`
+        error: `“${file.name}” is already in your list — it’ll upload when you save. No need to add it again.`
       };
     }
 
@@ -377,7 +377,7 @@ export default function DocumentUpload({
         document.type,
         {
           pitchId,
-          requiresNda: document.requiresNda ?? (document.type !== 'lookbook'),
+          requiresNda: document.requiresNda ?? true,
           signal: controller.signal,
           onProgress: (progress) => {
             const stats = uploadStats.current.get(document.id);
@@ -923,7 +923,10 @@ export default function DocumentUpload({
                           real creators. Default still follows the type; the creator
                           can change it knowingly. */}
                       {(() => {
-                        const ndaOn = document.requiresNda ?? (document.type !== 'lookbook');
+                        // Default ALL documents (incl. lookbooks) to NDA-required —
+                        // the old lookbook=public default surprised creators by exposing
+                        // material they assumed was protected. Toggle to make it public.
+                        const ndaOn = document.requiresNda ?? true;
                         return (
                           <button
                             type="button"
@@ -1000,6 +1003,17 @@ export default function DocumentUpload({
                         {document.uploadStatus === 'completed' && (
                           <div className="text-xs text-green-600 bg-green-50 p-2 rounded">
                             Upload completed successfully
+                          </div>
+                        )}
+
+                        {/* Staged (not yet uploaded). Without this, a captured-but-
+                            not-uploaded file looked like nothing happened, so creators
+                            re-added it and hit the "already added" wall. Make it clear
+                            the file is held and will upload on save. */}
+                        {document.uploadStatus === 'idle' && document.file && (
+                          <div className="flex items-center gap-1.5 text-xs text-blue-700 bg-blue-50 p-2 rounded">
+                            <CheckCircle className="h-3.5 w-3.5" />
+                            Ready — uploads when you save your pitch
                           </div>
                         )}
                       </div>
