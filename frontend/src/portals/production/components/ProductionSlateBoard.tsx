@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutGrid, CheckCircle, Users, FileText, ShieldCheck, ArrowRight } from 'lucide-react';
+import { LayoutGrid, CheckCircle, Users, FileText, ShieldCheck, ArrowRight, Handshake } from 'lucide-react';
 import apiClient from '../../../lib/api-client';
 
 interface SlateItem {
@@ -18,6 +18,7 @@ interface SlateItem {
   rolesFilled: number;
   notesCount: number;
   hasNda: boolean;
+  collaboration?: 'none' | 'pending' | 'accepted';
 }
 
 // The funnel a producer actually runs their slate on. Stages are derived from
@@ -80,6 +81,8 @@ function SlateCard({ item, onOpen }: { item: SlateItem; onOpen: () => void }) {
         )}
         {item.hasNda && <Badge tone="blue"><ShieldCheck className="h-3 w-3" /> NDA</Badge>}
         {item.notesCount > 0 && <Badge tone="slate"><FileText className="h-3 w-3" /> {item.notesCount}</Badge>}
+        {item.collaboration === 'accepted' && <Badge tone="emerald"><Handshake className="h-3 w-3" /> Collaborating</Badge>}
+        {item.collaboration === 'pending' && <Badge tone="indigo"><Handshake className="h-3 w-3" /> Proposed</Badge>}
       </div>
     </button>
   );

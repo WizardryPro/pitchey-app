@@ -146,6 +146,50 @@ export async function createCollaborationHandler(request: Request, env: Env): Pr
       }, 409, origin);
     }
 
+    // Notify the creator (best-effort — never block the proposal). The creator's
+    // accept surface (Phase 2) reads the collaborations table directly, so a
+    // missing notification/email is cosmetic, not load-bearing.
+    try {
+      let producerName = 'A production company';
+      let pitchTitle = 'your pitch';
+      let creatorEmail: string | null = null;
+      try {
+        const [info] = await sql`
+          SELECT u.username AS producer_name, u.company_name AS producer_company,
+                 cu.email AS creator_email,
+                 (SELECT title FROM pitches WHERE id = ${pitchId || null}) AS pitch_title
+          FROM users u, users cu
+          WHERE u.id = ${userId} AND cu.id = ${collaboratorId}`;
+        if (info) {
+          producerName = info.producer_company || info.producer_name || producerName;
+          pitchTitle = info.pitch_title || pitchTitle;
+          creatorEmail = info.creator_email || null;
+        }
+      } catch { /* lookup drift — use defaults */ }
+
+      const title = 'New collaboration request';
+      const msg = `${producerName} wants to collaborate with you on "${pitchTitle}".`;
+      try {
+        await sql`INSERT INTO notifications (user_id, type, title, message)
+                  VALUES (${collaboratorId}, 'collaboration_invite', ${title}, ${msg})`;
+      } catch (e) { console.warn('collab notify insert failed (non-fatal):', e); }
+
+      const resendKey = (env as any).RESEND_API_KEY as string | undefined;
+      if (creatorEmail && resendKey) {
+        try {
+          const { sendCollaboratorInviteEmail } = await import('../services/email/index');
+          const base = (env as any).FRONTEND_URL || 'https://pitchey-5o8.pages.dev';
+          await sendCollaboratorInviteEmail(creatorEmail, {
+            inviterName: producerName,
+            companyName: producerName,
+            role: role || 'co_development',
+            projectTitle: pitchTitle,
+            acceptUrl: `${base}/creator/collaborations`,
+          }, resendKey);
+        } catch (e) { console.warn('collab invite email failed (non-fatal):', e); }
+      }
+    } catch (e) { console.warn('collab notify block failed (non-fatal):', e); }
+
     return jsonResponse({
       success: true,
       data: result[0],
@@ -248,6 +292,23 @@ export async function updateCollaborationHandler(request: Request, env: Env): Pr
       }, 403, origin);
     }
 
+    // One ACTIVE collaboration per pitch (MVP): block accepting a second while
+    // another is already accepted on the same pitch. Close the first to switch.
+    if (status === 'accepted' && collaboration.pitch_id) {
+      try {
+        const [other] = await sql`
+          SELECT id FROM collaborations
+          WHERE pitch_id = ${collaboration.pitch_id} AND status = 'accepted' AND id <> ${collaborationId}
+          LIMIT 1`;
+        if (other) {
+          return jsonResponse({
+            success: false,
+            error: 'This pitch already has an active collaboration. Close it before accepting another.'
+          }, 409, origin);
+        }
+      } catch { /* collaborations drift — allow */ }
+    }
+
     // Perform the update
     const updated = status === 'closed'
       ? await sql`
@@ -265,6 +326,21 @@ export async function updateCollaborationHandler(request: Request, env: Env): Pr
 
     if (!updated || updated.length === 0) {
       return jsonResponse({ success: false, error: 'Failed to update collaboration' }, 500, origin);
+    }
+
+    // Notify the producer (requester) when the creator accepts (best-effort).
+    if (status === 'accepted') {
+      try {
+        const [info] = await sql`
+          SELECT cu.username AS creator_name,
+                 (SELECT title FROM pitches WHERE id = ${collaboration.pitch_id || null}) AS pitch_title
+          FROM users cu WHERE cu.id = ${userId}`;
+        const cname = info?.creator_name || 'The creator';
+        const ptitle = info?.pitch_title || 'your pitch';
+        await sql`INSERT INTO notifications (user_id, type, title, message)
+          VALUES (${collaboration.requester_id}, 'collaboration_accepted', 'Collaboration accepted',
+                  ${`${cname} accepted your collaboration on "${ptitle}".`})`;
+      } catch (e) { console.warn('collab accept notify failed (non-fatal):', e); }
     }
 
     return jsonResponse({

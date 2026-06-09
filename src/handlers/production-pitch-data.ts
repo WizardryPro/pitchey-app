@@ -100,6 +100,29 @@ async function resolveWorkspace(sql: any, actingUserId: number, pitchId: number)
   let myType: string | undefined;
   try { const [me] = await sql`SELECT user_type FROM users WHERE id = ${actingUserId}`; myType = me?.user_type; } catch { /* default below */ }
 
+  // Pitch-scoped collaboration: an ACCEPTED collaborations row between a producer
+  // (requester) and the creator (collaborator) turns this creator-owned pitch into
+  // a SHARED workspace. Both sides resolve to the producer's existing evaluation
+  // rows (workspaceUserId = requester) so the producer's plan carries straight over
+  // and both co-edit. Runs before the private-per-producer fallback below.
+  if (!isProductionPitch) {
+    try {
+      const [collab] = await sql`
+        SELECT requester_id, collaborator_id FROM collaborations
+        WHERE pitch_id = ${pitchId} AND status = 'accepted'
+          AND (requester_id = ${actingUserId} OR collaborator_id = ${actingUserId})
+        ORDER BY updated_at DESC LIMIT 1`;
+      if (collab) {
+        const producerId = Number(collab.requester_id);
+        const creatorId = Number(collab.collaborator_id);
+        return {
+          ownerId, isProductionPitch: false, workspaceUserId: producerId,
+          teamUserIds: [producerId, creatorId], canEdit: true, canView: true,
+        };
+      }
+    } catch { /* collaborations table drift — fall through to private workspace */ }
+  }
+
   if (isProductionPitch) {
     let teamUserIds = [ownerId];
     try {
@@ -545,7 +568,7 @@ function buildSlateItem(r: any): {
   poster: string | null; source: string; stage: SlateStage;
   completeness: { score: number; total: number };
   checklistPct: number; rolesConfirmed: number; rolesTotal: number; rolesFilled: number;
-  notesCount: number; hasNda: boolean;
+  notesCount: number; hasNda: boolean; collaboration: 'none' | 'pending' | 'accepted';
 } {
   // Mirror the Feasibility tab's 9-field completeness (ProductionPitchView.calculateCompleteness).
   const team = Array.isArray(r.team) ? r.team : [];
@@ -574,6 +597,8 @@ function buildSlateItem(r: any): {
 
   const notesCount = Number(r.notes_count) || 0;
   const hasNda = r.has_nda === true;
+  const collaboration: 'none' | 'pending' | 'accepted' =
+    r.collab_status === 'accepted' ? 'accepted' : r.collab_status === 'pending' ? 'pending' : 'none';
 
   // Derived stage — default thresholds (tunable). Pure function of the signals.
   let stage: SlateStage = 'evaluating';
@@ -586,7 +611,7 @@ function buildSlateItem(r: any): {
     poster: r.poster ?? null, source: r.source, stage,
     completeness: { score: completenessScore, total: present.length },
     checklistPct, rolesConfirmed, rolesTotal, rolesFilled,
-    notesCount, hasNda,
+    notesCount, hasNda, collaboration,
   };
 }
 
@@ -638,7 +663,11 @@ export async function getProductionSlate(request: Request, env: Env): Promise<Re
       )
       SELECT sp.*, c.checklist, t.team,
         COALESCE((SELECT COUNT(*)::int FROM production_notes n WHERE n.pitch_id = sp.id AND n.user_id = ${me}), 0) AS notes_count,
-        EXISTS (SELECT 1 FROM ndas nd WHERE nd.pitch_id = sp.id AND nd.signer_id = ${me} AND (nd.status = 'approved' OR nd.status = 'signed')) AS has_nda
+        EXISTS (SELECT 1 FROM ndas nd WHERE nd.pitch_id = sp.id AND nd.signer_id = ${me} AND (nd.status = 'approved' OR nd.status = 'signed')) AS has_nda,
+        (SELECT co.status FROM collaborations co
+           WHERE co.pitch_id = sp.id AND co.requester_id = ${me}
+             AND co.status IN ('pending','accepted')
+           ORDER BY (co.status = 'accepted') DESC LIMIT 1) AS collab_status
       FROM slate_pitches sp
       LEFT JOIN production_checklists c ON c.user_id = ${me} AND c.pitch_id = sp.id
       LEFT JOIN production_team_assignments t ON t.user_id = ${me} AND t.pitch_id = sp.id
