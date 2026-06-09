@@ -207,18 +207,12 @@ const ProductionPitchView: React.FC = () => {
   const workspaceScopeNote = ownerIsProduction
     ? (canEditWorkspace ? 'Shared workspace — visible to your whole company team.' : 'Read-only access granted by your signed NDA.')
     : isCollaborating
-    ? `Shared with ${evalCreatorName} — you're co-developing this pitch together. Both of you can edit the Team Plan and Notes.`
+    ? `Shared with ${evalCreatorName} — you're co-developing this pitch together. Both of you can edit the Attached Creatives and Notes.`
     : `You're planning ${evalCreatorName}'s pitch as a possible production — it isn't your project. Private to your company: ${evalCreatorName} can’t see any of this.`;
   // In evaluation mode (a creator-owned pitch you didn't create), the private
   // Team/Notes workspace stays HIDDEN until you opt in by saving the pitch to
   // your slate. Your own production pitches always have it.
   const workspaceUnlocked = !evaluationMode || isShortlisted;
-  const teamStatusMeta: Record<string, { label: string; cls: string }> = {
-    confirmed:   { label: 'Confirmed',   cls: 'bg-emerald-100 text-emerald-700 ring-emerald-200' },
-    considering: { label: 'Considering', cls: 'bg-amber-100 text-amber-700 ring-amber-200' },
-    pending:     { label: 'Open',        cls: 'bg-slate-100 text-slate-500 ring-slate-200' },
-  };
-
   const [isLiked, setIsLiked] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [autoFillLoading, setAutoFillLoading] = useState(false);
@@ -372,9 +366,9 @@ const ProductionPitchView: React.FC = () => {
     const filledRoles = teamMembers.filter(m => m.name && m.name.trim() !== '').length;
     const hasTeam = filledRoles > 0;
     fields.push({
-      label: `Team (${filledRoles}/${teamMembers.length} roles)`,
+      label: `Creatives (${filledRoles}/${teamMembers.length} roles)`,
       present: hasTeam,
-      hint: 'Assign key crew — pitches with attached talent signal production readiness',
+      hint: 'Attach key creative names — pitches with attached talent read as more bankable',
     });
 
     const presentCount = fields.filter(f => f.present).length;
@@ -800,7 +794,7 @@ const ProductionPitchView: React.FC = () => {
                       {tab === 'production'
                         ? 'Feasibility'
                         : tab === 'team'
-                        ? (evaluationMode ? 'My Team Plan' : 'Team')
+                        ? (evaluationMode ? 'My Creatives' : 'Creatives')
                         : tab === 'notes'
                         ? (evaluationMode ? 'My Notes' : 'Notes')
                         : tab}
@@ -1122,7 +1116,7 @@ const ProductionPitchView: React.FC = () => {
                     <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-inset ring-indigo-100">
                       <Users className="h-5 w-5" />
                     </span>
-                    <h2 className="text-xl font-bold tracking-tight text-gray-900">{evaluationMode ? 'Your Team Plan' : 'Team Assembly'}</h2>
+                    <h2 className="text-xl font-bold tracking-tight text-gray-900">{evaluationMode ? 'Your Attached Creatives' : 'Attached Creatives'}</h2>
                   </div>
                   {accessChip}
                 </div>
@@ -1154,7 +1148,6 @@ const ProductionPitchView: React.FC = () => {
                 <p className="mb-2 pl-0.5 text-[0.68rem] font-semibold uppercase tracking-wide text-gray-400">Creative roster</p>
                 <div className="space-y-2.5">
                   {teamMembers.map((member, index) => {
-                    const meta = teamStatusMeta[member.status] || teamStatusMeta.pending;
                     const initials = member.name
                       ? member.name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()
                       : '';
@@ -1162,8 +1155,8 @@ const ProductionPitchView: React.FC = () => {
                       <div
                         key={index}
                         className={`flex items-center gap-4 rounded-xl border p-3.5 transition ${
-                          member.status === 'confirmed' && member.name
-                            ? 'border-emerald-200 bg-emerald-50/60'
+                          member.name
+                            ? 'border-indigo-200 bg-indigo-50/40'
                             : 'border-gray-100 bg-gray-50/60'
                         }`}
                       >
@@ -1188,21 +1181,8 @@ const ProductionPitchView: React.FC = () => {
                             </p>
                           )}
                         </div>
-                        {canEditWorkspace ? (
-                          <select
-                            value={member.status}
-                            onChange={(e) => handleTeamUpdate(index, 'status', e.target.value)}
-                            className={`shrink-0 cursor-pointer appearance-none rounded-full border-0 px-3 py-1 text-xs font-semibold ring-1 ring-inset focus:outline-none focus:ring-2 focus:ring-indigo-400 ${meta.cls}`}
-                          >
-                            <option value="pending">Open</option>
-                            <option value="considering">Considering</option>
-                            <option value="confirmed">Confirmed</option>
-                          </select>
-                        ) : (
-                          <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset ${meta.cls}`}>
-                            {meta.label}
-                          </span>
-                        )}
+                        {/* No status/workflow chrome — these are just names attached to
+                            the pitch as metadata, not a crew-confirmation pipeline. */}
                       </div>
                     );
                   })}
@@ -1213,7 +1193,7 @@ const ProductionPitchView: React.FC = () => {
                     onClick={async () => {
                       try {
                         await ProductionService.updatePitchTeam(parseInt(id!, 10), teamMembers);
-                        toast.success('Team configuration saved');
+                        toast.success('Attached creatives saved');
                       } catch (err) {
                         const e = err instanceof Error ? err : new Error(String(err));
                         toast.error(e.message);
@@ -1221,7 +1201,7 @@ const ProductionPitchView: React.FC = () => {
                     }}
                     className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
                   >
-                    <CheckCircle className="h-4 w-4" /> Save Team Configuration
+                    <CheckCircle className="h-4 w-4" /> Save Creatives
                   </button>
                 )}
               </div>

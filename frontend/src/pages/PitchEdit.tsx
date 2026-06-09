@@ -211,7 +211,11 @@ export default function PitchEdit() {
         worldDescription: pitch.worldDescription || '',
         longSynopsis: (pitch as any).longSynopsis ?? (pitch as any).long_synopsis ?? '',
         budgetRange: (pitch as any).budgetRange ?? (pitch as any).budget_range ?? pitch.budget ?? '',
-        estimatedBudget: (pitch as any).estimatedBudget ?? (pitch as any).estimated_budget ?? '',
+        // Numeric USD budget — load the structured column only (the legacy free-text
+        // estimated_budget may be "£400K"/ranges that don't fit a numeric input).
+        estimatedBudget: (pitch as any).estimated_budget_usd != null
+          ? String((pitch as any).estimated_budget_usd)
+          : ((pitch as any).estimatedBudgetUsd != null ? String((pitch as any).estimatedBudgetUsd) : ''),
         targetAudience: (pitch as any).targetAudience ?? (pitch as any).target_audience ?? '',
         productionTimeline: (pitch as any).productionTimeline ?? (pitch as any).production_timeline ?? '',
         targetReleaseDate: (pitch as any).targetReleaseDate ?? (pitch as any).target_release_date ?? '',
@@ -379,6 +383,7 @@ export default function PitchEdit() {
         worldDescription: formData.worldDescription,
         longSynopsis: formData.longSynopsis || undefined,
         budgetRange: formData.budgetRange || undefined,
+        estimatedBudgetUsd: formData.estimatedBudget ? Number(formData.estimatedBudget) : undefined,
         targetAudience: formData.targetAudience || undefined,
         productionTimeline: formData.productionTimeline || undefined,
         targetReleaseDate: formData.targetReleaseDate || undefined,
@@ -767,24 +772,33 @@ export default function PitchEdit() {
             </div>
           </div>
 
-          {/* Budget Section */}
+          {/* Budget Section — numeric USD, capped at $1B (Karl P4) */}
           <div className="bg-white rounded-xl shadow-sm p-6">
-            <label htmlFor="budgetRange" className="block text-sm font-medium text-gray-700 mb-2">
-              Budget
+            <label htmlFor="estimatedBudget" className="block text-sm font-medium text-gray-700 mb-2">
+              Budget <span className="text-gray-400 font-normal">(USD)</span>
             </label>
-            <input
-              type="text"
-              id="budgetRange"
-              name="budgetRange"
-              value={formData.budgetRange}
-              onChange={handleInputChange}
-              disabled={isSubmitting}
-              maxLength={100}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none"
-              placeholder="Set your budget — e.g. $2.5M, £400K, or a range you're comfortable sharing"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Enter the budget you want to share with investors. Free text — set whatever's right for your project.
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                id="estimatedBudget"
+                name="estimatedBudget"
+                value={formData.estimatedBudget ? Number(formData.estimatedBudget).toLocaleString('en-US') : ''}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/[^0-9]/g, '');
+                  const capped = digits ? String(Math.min(Number(digits), 1000000000)) : '';
+                  setFormData((prev) => ({ ...prev, estimatedBudget: capped }));
+                }}
+                disabled={isSubmitting}
+                className="w-full pl-7 pr-14 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none truncate"
+                placeholder="50,000,000"
+                aria-describedby="budget-help-edit"
+              />
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-gray-400">USD</span>
+            </div>
+            <p id="budget-help-edit" className="text-xs text-gray-500 mt-1">
+              Shown in US dollars so budgets are comparable globally (payments are still processed in EUR). Max $1,000,000,000.
             </p>
           </div>
 

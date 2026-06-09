@@ -287,6 +287,17 @@ function parseVisibilitySettings(raw: unknown): Record<string, boolean> | null {
   return null;
 }
 
+// Normalize a client-supplied USD budget to a clean integer in [0, $1B], or null.
+// Backstop for the DB CHECK (pitches_estimated_budget_usd_range). Rejects junk,
+// negatives, and the "ton of 000s" overflow by clamping to the $1B cap.
+const MAX_BUDGET_USD = 1_000_000_000;
+function normalizeBudgetUsd(raw: unknown): number | null {
+  if (raw === null || raw === undefined || raw === '') return null;
+  const n = typeof raw === 'string' ? Number(raw.replace(/[^0-9.]/g, '')) : Number(raw);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.min(Math.round(n), MAX_BUDGET_USD);
+}
+
 function getOrCreateRouter(env: Env): RouteRegistry {
   const currentHash = getEnvHash(env);
 
@@ -2463,7 +2474,9 @@ class RouteRegistry {
     this.register('GET', '/api/media/user/:userId', this.getUserMedia.bind(this));
 
     // === PHASE 3: SEARCH AND FILTER ROUTES ===
-    this.register('GET', '/api/search', this.search.bind(this));
+    // NB: GET /api/search is registered to searchPitches below (~:2537). The
+    // route map is keyed by path, so the later registration wins — this line
+    // (→ this.search) was dead. Removed to kill the duplicate-route confusion.
     this.register('GET', '/api/search/advanced', this.advancedSearch.bind(this));
     this.register('GET', '/api/filters', this.getFilters.bind(this));
     this.register('POST', '/api/search/save', this.saveSearch.bind(this));
@@ -5544,6 +5557,7 @@ pitchey_analytics_datapoints_per_minute 1250
       budgetRange?: string;
       budgetBracket?: string;
       estimatedBudget?: string;
+      estimatedBudgetUsd?: number | string | null;
       productionTimeline?: string;
       targetReleaseDate?: string;
       comparableTitles?: string;
@@ -5616,6 +5630,10 @@ pitchey_analytics_datapoints_per_minute 1250
       );
     }
 
+    // Structured USD budget (0..$1B, integer) — the source of truth for
+    // comparison/averaging. Server clamps; the DB CHECK is the hard backstop.
+    const estBudgetUsd = normalizeBudgetUsd(data.estimatedBudgetUsd);
+
     try {
       const [pitch] = await this.db.query(`
         INSERT INTO pitches (
@@ -5629,12 +5647,12 @@ pitchey_analytics_datapoints_per_minute 1250
           themes, world_description, characters,
           ai_disclosure, ai_used,
           estimated_budget, budget_bracket, production_timeline,
-          target_release_date, visibility_settings
+          target_release_date, visibility_settings, estimated_budget_usd
         ) VALUES (
           $1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'draft', 'private', NOW(), NOW(), $13,
           $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25,
           $26, $27,
-          $28, $29, $30, $31, $32
+          $28, $29, $30, $31, $32, $33
         ) RETURNING *
       `, [
         authResult.user.id,
@@ -5664,11 +5682,12 @@ pitchey_analytics_datapoints_per_minute 1250
         JSON.stringify(data.characters || []),
         aiDisclosure,
         aiDisclosure !== 'none',
-        data.estimatedBudget ?? null,
+        data.estimatedBudget ?? (estBudgetUsd != null ? String(estBudgetUsd) : null),
         data.budgetBracket ?? null,
         data.productionTimeline ?? null,
         data.targetReleaseDate ?? null,
-        data.visibilitySettings ? JSON.stringify(data.visibilitySettings) : null
+        data.visibilitySettings ? JSON.stringify(data.visibilitySettings) : null,
+        estBudgetUsd
       ]) as unknown as DatabaseRow[];
 
       // Handle creative attachments if provided
@@ -6345,6 +6364,7 @@ pitchey_analytics_datapoints_per_minute 1250
       budgetRange?: string;
       budgetBracket?: string;
       estimatedBudget?: string;
+      estimatedBudgetUsd?: number | string | null;
       productionTimeline?: string;
       targetReleaseDate?: string;
       comparableTitles?: string;
@@ -6442,6 +6462,7 @@ pitchey_analytics_datapoints_per_minute 1250
           target_release_date = COALESCE($31, target_release_date),
           visibility_settings = COALESCE($32, visibility_settings),
           require_nda = COALESCE($33, require_nda),
+          estimated_budget_usd = COALESCE($34, estimated_budget_usd),
           updated_at = NOW()
         WHERE id = $1
         RETURNING *
@@ -6478,7 +6499,8 @@ pitchey_analytics_datapoints_per_minute 1250
         data.productionTimeline ?? null,
         data.targetReleaseDate ?? null,
         data.visibilitySettings ? JSON.stringify(data.visibilitySettings) : null,
-        (data.requireNDA ?? data.require_nda) ?? null
+        (data.requireNDA ?? data.require_nda) ?? null,
+        data.estimatedBudgetUsd !== undefined ? normalizeBudgetUsd(data.estimatedBudgetUsd) : null
       ]);
 
       // Handle creative attachments if provided
@@ -9145,7 +9167,7 @@ pitchey_analytics_datapoints_per_minute 1250
     const result = await safeQuery(
       () => this.db.query(`
         SELECT p.id, p.title, p.logline, p.genre, p.format,
-               p.budget_range, p.estimated_budget,
+               p.budget_range, p.estimated_budget, p.estimated_budget_usd,
                COALESCE(p.heat_score, 0) AS heat_score
         FROM pitches p
         WHERE p.status = 'published'
@@ -12105,28 +12127,14 @@ pitchey_analytics_datapoints_per_minute 1250
    */
   private async invalidateBrowseCache(): Promise<void> {
     try {
-      // Delete known cache key prefixes for browse endpoints
-      // Upstash doesn't support wildcard DEL, so we clear the most common keys
-      const keysToDelete: string[] = [];
-      const tabs = ['trending', 'new', 'popular', 'default'];
-      const genres = ['all', 'Drama', 'Comedy', 'Action', 'Thriller', 'Horror', 'Sci-Fi', 'Romance', 'Documentary'];
-
-      for (const tab of tabs) {
-        for (let page = 1; page <= 3; page++) {
-          keysToDelete.push(`browse:pitches:${tab}:p${page}:l20`);
-          keysToDelete.push(`browse:pitches:${tab}:p${page}:l10`);
-        }
-      }
-      for (const genre of genres) {
-        for (let page = 1; page <= 3; page++) {
-          keysToDelete.push(`browse:top-rated:${genre}:p${page}:l20`);
-          keysToDelete.push(`browse:top-rated:${genre}:p${page}:l10`);
-        }
-      }
-
-      if (keysToDelete.length > 0) {
-        await this.cache.del(...keysToDelete);
-      }
+      // SCAN-sweep every browse cache key by prefix. The old approach enumerated
+      // a fixed tab×page×limit permutation list, so any key outside it (other
+      // tab, page ≥ 4, other limit) stayed stale up to the 3-min TTL — a silent
+      // "published but not visible" window. Prefix sweep covers them all.
+      await Promise.all([
+        this.cache.delByPrefix('browse:pitches:'),
+        this.cache.delByPrefix('browse:top-rated:'),
+      ]);
     } catch (err) {
       console.warn('invalidateBrowseCache failed (non-blocking):', err);
     }
@@ -20501,36 +20509,9 @@ Signatures: [To be completed upon signing]
 
   // ======= PHASE 3: SEARCH AND FILTER ENDPOINTS IMPLEMENTATION =======
 
-  private async search(request: Request): Promise<Response> {
-    try {
-      const authCheck = await this.requireAuth(request);
-      if (!authCheck.authorized) return authCheck.response;
-
-      const url = new URL(request.url);
-      const query = url.searchParams.get('q') || '';
-      const filters = {
-        type: url.searchParams.get('type'),
-        genre: url.searchParams.get('genre'),
-        minBudget: url.searchParams.get('minBudget'),
-        maxBudget: url.searchParams.get('maxBudget'),
-        status: url.searchParams.get('status'),
-        sortBy: url.searchParams.get('sortBy'),
-        limit: parseInt(url.searchParams.get('limit') || '20'),
-        offset: parseInt(url.searchParams.get('offset') || '0')
-      };
-
-      const handler = new (await import('./handlers/search-filters')).SearchFiltersHandler(this.db);
-      const result = await handler.search(authCheck.user.id, query, filters);
-
-      const origin = request.headers.get('Origin');
-      return new Response(JSON.stringify(result), {
-        headers: getCorsHeaders(origin),
-        status: 200
-      });
-    } catch (error) {
-      return errorHandler(error, request);
-    }
-  }
+  // (removed) private async search() — was registered to GET /api/search but
+  // overwritten by searchPitches in the route map; dead. The live marketplace
+  // search is searchPitches. See the route-registration note in PHASE 3.
 
   private async advancedSearch(request: Request): Promise<Response> {
     try {
