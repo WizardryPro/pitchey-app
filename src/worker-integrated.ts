@@ -2463,7 +2463,9 @@ class RouteRegistry {
     this.register('GET', '/api/media/user/:userId', this.getUserMedia.bind(this));
 
     // === PHASE 3: SEARCH AND FILTER ROUTES ===
-    this.register('GET', '/api/search', this.search.bind(this));
+    // NB: GET /api/search is registered to searchPitches below (~:2537). The
+    // route map is keyed by path, so the later registration wins — this line
+    // (→ this.search) was dead. Removed to kill the duplicate-route confusion.
     this.register('GET', '/api/search/advanced', this.advancedSearch.bind(this));
     this.register('GET', '/api/filters', this.getFilters.bind(this));
     this.register('POST', '/api/search/save', this.saveSearch.bind(this));
@@ -12105,28 +12107,14 @@ pitchey_analytics_datapoints_per_minute 1250
    */
   private async invalidateBrowseCache(): Promise<void> {
     try {
-      // Delete known cache key prefixes for browse endpoints
-      // Upstash doesn't support wildcard DEL, so we clear the most common keys
-      const keysToDelete: string[] = [];
-      const tabs = ['trending', 'new', 'popular', 'default'];
-      const genres = ['all', 'Drama', 'Comedy', 'Action', 'Thriller', 'Horror', 'Sci-Fi', 'Romance', 'Documentary'];
-
-      for (const tab of tabs) {
-        for (let page = 1; page <= 3; page++) {
-          keysToDelete.push(`browse:pitches:${tab}:p${page}:l20`);
-          keysToDelete.push(`browse:pitches:${tab}:p${page}:l10`);
-        }
-      }
-      for (const genre of genres) {
-        for (let page = 1; page <= 3; page++) {
-          keysToDelete.push(`browse:top-rated:${genre}:p${page}:l20`);
-          keysToDelete.push(`browse:top-rated:${genre}:p${page}:l10`);
-        }
-      }
-
-      if (keysToDelete.length > 0) {
-        await this.cache.del(...keysToDelete);
-      }
+      // SCAN-sweep every browse cache key by prefix. The old approach enumerated
+      // a fixed tab×page×limit permutation list, so any key outside it (other
+      // tab, page ≥ 4, other limit) stayed stale up to the 3-min TTL — a silent
+      // "published but not visible" window. Prefix sweep covers them all.
+      await Promise.all([
+        this.cache.delByPrefix('browse:pitches:'),
+        this.cache.delByPrefix('browse:top-rated:'),
+      ]);
     } catch (err) {
       console.warn('invalidateBrowseCache failed (non-blocking):', err);
     }
@@ -20501,36 +20489,9 @@ Signatures: [To be completed upon signing]
 
   // ======= PHASE 3: SEARCH AND FILTER ENDPOINTS IMPLEMENTATION =======
 
-  private async search(request: Request): Promise<Response> {
-    try {
-      const authCheck = await this.requireAuth(request);
-      if (!authCheck.authorized) return authCheck.response;
-
-      const url = new URL(request.url);
-      const query = url.searchParams.get('q') || '';
-      const filters = {
-        type: url.searchParams.get('type'),
-        genre: url.searchParams.get('genre'),
-        minBudget: url.searchParams.get('minBudget'),
-        maxBudget: url.searchParams.get('maxBudget'),
-        status: url.searchParams.get('status'),
-        sortBy: url.searchParams.get('sortBy'),
-        limit: parseInt(url.searchParams.get('limit') || '20'),
-        offset: parseInt(url.searchParams.get('offset') || '0')
-      };
-
-      const handler = new (await import('./handlers/search-filters')).SearchFiltersHandler(this.db);
-      const result = await handler.search(authCheck.user.id, query, filters);
-
-      const origin = request.headers.get('Origin');
-      return new Response(JSON.stringify(result), {
-        headers: getCorsHeaders(origin),
-        status: 200
-      });
-    } catch (error) {
-      return errorHandler(error, request);
-    }
-  }
+  // (removed) private async search() — was registered to GET /api/search but
+  // overwritten by searchPitches in the route map; dead. The live marketplace
+  // search is searchPitches. See the route-registration note in PHASE 3.
 
   private async advancedSearch(request: Request): Promise<Response> {
     try {

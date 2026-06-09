@@ -490,7 +490,13 @@ export default function CreatePitch() {
         // Announce success to screen readers
         a11y.validation.announceSuccess(SUCCESS_MESSAGES.PITCH_CREATED || 'Pitch created successfully');
 
-        success(SUCCESS_MESSAGES.PITCH_CREATED || 'Pitch created successfully', 'Your pitch has been created and is ready for review.');
+        // A new pitch is saved as a DRAFT — it does NOT appear on the marketplace
+        // until it's published. Say so explicitly so creators don't wait for it to
+        // show up on its own (the "takes a while to appear" confusion).
+        success(
+          'Pitch saved as a draft',
+          'It won\'t appear on the marketplace until you publish it — open it from "My Pitches" and hit Publish.'
+        );
 
         // PHASE 4: Navigate only after everything completes
         navigate(isProduction ? '/production/pitches' : '/creator/pitches');

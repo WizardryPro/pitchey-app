@@ -1103,21 +1103,6 @@ function ProductionDashboard() {
                     <div className="mb-4">
                       <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Uploaded Media</h4>
                       <div className="grid grid-cols-3 gap-2">
-                        {/* Lookbook */}
-                        <div className={`flex flex-col items-center p-2 rounded-lg ${
-                          pitch.mediaFiles?.find(m => m.type === 'lookbook' && m.uploaded)
-                            ? 'bg-green-50 text-green-600'
-                            : 'bg-gray-50 text-gray-400'
-                        }`}>
-                          <BookOpen className="w-4 h-4" />
-                          <span className="text-xs mt-1">Lookbook</span>
-                          {pitch.mediaFiles?.find(m => m.type === 'lookbook') && (
-                            <span className="text-xs font-semibold">
-                              {pitch.mediaFiles.find(m => m.type === 'lookbook')?.count || 0}
-                            </span>
-                          )}
-                        </div>
-
                         {/* Script */}
                         <div className={`flex flex-col items-center p-2 rounded-lg ${
                           pitch.mediaFiles?.find(m => m.type === 'script' && m.uploaded)
@@ -1148,17 +1133,20 @@ function ProductionDashboard() {
                           )}
                         </div>
 
-                        {/* Pitch Deck */}
+                        {/* Pitch Deck / Lookbook — treated as one concept (industry
+                            synonyms). Present if either a pitch_deck or a lookbook was
+                            uploaded; count is the sum. */}
                         <div className={`flex flex-col items-center p-2 rounded-lg ${
-                          pitch.mediaFiles?.find(m => m.type === 'pitch_deck' && m.uploaded)
+                          pitch.mediaFiles?.find(m => (m.type === 'pitch_deck' || m.type === 'lookbook') && m.uploaded)
                             ? 'bg-purple-50 text-purple-600'
                             : 'bg-gray-50 text-gray-400'
                         }`}>
                           <BarChart3 className="w-4 h-4" />
-                          <span className="text-xs mt-1">Pitch Deck</span>
-                          {pitch.mediaFiles?.find(m => m.type === 'pitch_deck') && (
+                          <span className="text-xs mt-1">Pitch Deck / Lookbook</span>
+                          {pitch.mediaFiles?.find(m => m.type === 'pitch_deck' || m.type === 'lookbook') && (
                             <span className="text-xs font-semibold">
-                              {pitch.mediaFiles.find(m => m.type === 'pitch_deck')?.count || 0}
+                              {(pitch.mediaFiles.find(m => m.type === 'pitch_deck')?.count || 0) +
+                               (pitch.mediaFiles.find(m => m.type === 'lookbook')?.count || 0)}
                             </span>
                           )}
                         </div>

@@ -75,6 +75,30 @@ export class UpstashCacheService {
   }
 
   /**
+   * Delete every key matching a prefix (e.g. "browse:pitches:"). Uses SCAN so a
+   * single publish/overwrite can invalidate all cached permutations without
+   * enumerating them by hand. Returns the number of keys deleted; no-op (0) if
+   * Redis isn't configured. Best-effort — failures are logged, not thrown.
+   */
+  async delByPrefix(prefix: string): Promise<number> {
+    if (!this.redis) return 0;
+    try {
+      let cursor = '0';
+      const toDelete: string[] = [];
+      do {
+        const [next, keys] = await this.redis.scan(cursor, { match: `${prefix}*`, count: 200 });
+        cursor = String(next);
+        if (keys.length) toDelete.push(...keys);
+      } while (cursor !== '0');
+      if (toDelete.length) await this.redis.del(...toDelete);
+      return toDelete.length;
+    } catch (err) {
+      console.warn(`Redis SCAN/DEL error for prefix "${prefix}":`, err);
+      return 0;
+    }
+  }
+
+  /**
    * Increment a counter (useful for rate limiting).
    * Returns the new value, or -1 on failure.
    */
