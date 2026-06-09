@@ -261,6 +261,29 @@ export class NotificationsService {
           type: 'primary'
         });
         break;
+
+      case 'collaboration_invite': {
+        // Producer proposed a pitch-scoped collaboration → take the creator to their
+        // pitch, where the accept/decline banner lives.
+        const pid = (notification as any).relatedId ?? notification.data?.pitchId;
+        actions.push({
+          label: 'View request',
+          action: () => { window.location.href = pid ? `/creator/pitch/${pid}` : '/creator/pitches'; },
+          type: 'primary'
+        });
+        break;
+      }
+
+      case 'collaboration_accepted': {
+        // Creator accepted → take the producer to the (now shared) workspace.
+        const pid = (notification as any).relatedId ?? notification.data?.pitchId;
+        actions.push({
+          label: 'Open workspace',
+          action: () => { window.location.href = pid ? `/production/pitch/${pid}` : '/production/dashboard'; },
+          type: 'primary'
+        });
+        break;
+      }
     }
 
     return actions;

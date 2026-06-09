@@ -169,10 +169,17 @@ export async function createCollaborationHandler(request: Request, env: Env): Pr
 
       const title = 'New collaboration request';
       const msg = `${producerName} wants to collaborate with you on "${pitchTitle}".`;
+      // Prefer an insert carrying related_pitch_id (deep-link); fall back to the
+      // minimal columns if that column/type isn't present in this env.
       try {
-        await sql`INSERT INTO notifications (user_id, type, title, message)
-                  VALUES (${collaboratorId}, 'collaboration_invite', ${title}, ${msg})`;
-      } catch (e) { console.warn('collab notify insert failed (non-fatal):', e); }
+        await sql`INSERT INTO notifications (user_id, type, title, message, related_pitch_id, related_user_id)
+                  VALUES (${collaboratorId}, 'collaboration_invite', ${title}, ${msg}, ${pitchId || null}, ${userId})`;
+      } catch {
+        try {
+          await sql`INSERT INTO notifications (user_id, type, title, message)
+                    VALUES (${collaboratorId}, 'collaboration_invite', ${title}, ${msg})`;
+        } catch (e) { console.warn('collab notify insert failed (non-fatal):', e); }
+      }
 
       const resendKey = (env as any).RESEND_API_KEY as string | undefined;
       if (creatorEmail && resendKey) {
@@ -342,9 +349,14 @@ export async function updateCollaborationHandler(request: Request, env: Env): Pr
           FROM users cu WHERE cu.id = ${userId}`;
         const cname = info?.creator_name || 'The creator';
         const ptitle = info?.pitch_title || 'your pitch';
-        await sql`INSERT INTO notifications (user_id, type, title, message)
-          VALUES (${collaboration.requester_id}, 'collaboration_accepted', 'Collaboration accepted',
-                  ${`${cname} accepted your collaboration on "${ptitle}".`})`;
+        const acceptMsg = `${cname} accepted your collaboration on "${ptitle}".`;
+        try {
+          await sql`INSERT INTO notifications (user_id, type, title, message, related_pitch_id, related_user_id)
+            VALUES (${collaboration.requester_id}, 'collaboration_accepted', 'Collaboration accepted', ${acceptMsg}, ${collaboration.pitch_id || null}, ${userId})`;
+        } catch {
+          await sql`INSERT INTO notifications (user_id, type, title, message)
+            VALUES (${collaboration.requester_id}, 'collaboration_accepted', 'Collaboration accepted', ${acceptMsg})`;
+        }
       } catch (e) { console.warn('collab accept notify failed (non-fatal):', e); }
     }
 
