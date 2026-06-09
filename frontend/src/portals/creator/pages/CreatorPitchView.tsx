@@ -13,11 +13,20 @@ import FormatDisplay from '@/components/FormatDisplay';
 import FeedbackDisplay from '@/components/feedback/FeedbackDisplay';
 import FollowButton from '@features/browse/components/FollowButton';
 import InterestedCard from '@features/pitches/components/InterestedCard';
+import CollaborationWorkspace from '@features/pitches/components/CollaborationWorkspace';
+import { toast } from 'react-hot-toast';
 
 interface Pitch {
   id: string;
   userId: string;
   title: string;
+  collaboration?: {
+    id: number;
+    status: string;             // 'pending' | 'accepted'
+    role: string | null;
+    withUserId: number;
+    withName: string | null;    // the production company
+  } | null;
   logline: string;
   genre: string;
   format: string;
@@ -97,7 +106,8 @@ const CreatorPitchView: React.FC = () => {
   const [ndaRequests, setNdaRequests] = useState<NDARequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'ndas' | 'conversations' | 'feedback'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'ndas' | 'conversations' | 'feedback' | 'collaboration'>('overview');
+  const [collabBusy, setCollabBusy] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [feedback, setFeedback] = useState<ProductionFeedback[]>([]);
 
@@ -174,6 +184,29 @@ const CreatorPitchView: React.FC = () => {
 
   const handleEdit = () => {
     navigate(`/creator/pitches/${id}/edit`);
+  };
+
+  // Respond to a producer's pitch-scoped collaboration proposal. On accept, the
+  // producer's Team Plan + Notes become a shared workspace both can co-edit.
+  const respondToCollaboration = async (status: 'accepted' | 'rejected') => {
+    const collabId = pitch?.collaboration?.id;
+    if (!collabId || collabBusy) return;
+    setCollabBusy(true);
+    try {
+      const res = await apiClient.put(`/api/collaborations/${collabId}/status`, { status });
+      if (res.success) {
+        toast.success(status === 'accepted' ? 'Collaboration accepted — workspace is now shared.' : 'Collaboration declined.');
+        if (status === 'accepted') setActiveTab('collaboration');
+        await fetchPitchData();
+      } else {
+        toast.error(res.error?.message || 'Could not update the collaboration.');
+      }
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      toast.error(e.message);
+    } finally {
+      setCollabBusy(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -311,11 +344,60 @@ const CreatorPitchView: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Pitch Details */}
           <div className="lg:col-span-2">
+            {/* Collaboration proposal banner — a producer wants to co-develop this
+                pitch. Pending → accept/decline; accepted → jump to the shared workspace. */}
+            {isOwner && pitch.collaboration?.status === 'pending' && (
+              <div className="mb-6 rounded-xl bg-indigo-50 ring-1 ring-inset ring-indigo-200 p-5">
+                <div className="flex items-start gap-3">
+                  <Users className="h-5 w-5 shrink-0 text-indigo-600" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-indigo-900">
+                      {pitch.collaboration.withName || 'A production company'} wants to co-develop this pitch
+                    </p>
+                    <p className="mt-0.5 text-sm text-indigo-700">
+                      Accept to open a shared Team Plan &amp; Notes workspace you'll both edit. You can close it anytime; your pitch stays yours.
+                    </p>
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        onClick={() => respondToCollaboration('accepted')}
+                        disabled={collabBusy}
+                        className="rounded-lg bg-indigo-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                      >
+                        {collabBusy ? 'Working…' : 'Accept collaboration'}
+                      </button>
+                      <button
+                        onClick={() => respondToCollaboration('rejected')}
+                        disabled={collabBusy}
+                        className="rounded-lg bg-white px-3.5 py-2 text-sm font-medium text-gray-600 ring-1 ring-inset ring-gray-200 hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {isOwner && pitch.collaboration?.status === 'accepted' && activeTab !== 'collaboration' && (
+              <button
+                onClick={() => setActiveTab('collaboration')}
+                className="mb-6 flex w-full items-center gap-3 rounded-xl bg-emerald-50 ring-1 ring-inset ring-emerald-200 p-4 text-left transition hover:bg-emerald-100"
+              >
+                <Users className="h-5 w-5 shrink-0 text-emerald-600" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-emerald-800">Co-developing with {pitch.collaboration.withName || 'a production company'}</p>
+                  <p className="mt-0.5 text-sm text-emerald-700">Open the shared Team Plan &amp; Notes workspace →</p>
+                </div>
+              </button>
+            )}
+
             {/* Tabs for Owner */}
             {isOwner && (
               <div className="bg-white rounded-xl shadow-lg mb-6">
                 <div className="flex border-b">
-                  {['overview', 'analytics', 'ndas', 'conversations', 'feedback'].map((tab) => (
+                  {[
+                    'overview', 'analytics', 'ndas', 'conversations', 'feedback',
+                    ...(pitch.collaboration?.status === 'accepted' ? ['collaboration'] : []),
+                  ].map((tab) => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab as any)}
@@ -325,11 +407,18 @@ const CreatorPitchView: React.FC = () => {
                           : 'text-gray-500 hover:text-gray-700'
                       }`}
                     >
-                      {tab === 'ndas' ? 'NDAs' : tab}
+                      {tab === 'ndas' ? 'NDAs' : tab === 'collaboration' ? 'Collaboration' : tab}
                     </button>
                   ))}
                 </div>
               </div>
+            )}
+
+            {activeTab === 'collaboration' && isOwner && pitch.collaboration?.status === 'accepted' && (
+              <CollaborationWorkspace
+                pitchId={Number(pitch.id)}
+                partnerName={pitch.collaboration.withName || undefined}
+              />
             )}
 
             {/* Tab Content */}
