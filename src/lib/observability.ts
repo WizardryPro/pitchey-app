@@ -150,7 +150,9 @@ export class AxiomClient {
     if (startTime) body.startTime = startTime;
     if (endTime) body.endTime = endTime;
 
-    const response = await fetch('https://api.axiom.co/v1/datasets/_apl', {
+    // `format=tabular` is required to get the { tables: [{ fields, columns }] }
+    // response shape callers parse; without it the API 422s / returns legacy shape.
+    const response = await fetch('https://api.axiom.co/v1/datasets/_apl?format=tabular', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${this.token}`,
@@ -160,7 +162,8 @@ export class AxiomClient {
     });
 
     if (!response.ok) {
-      throw new Error(`Axiom query failed: ${response.status}`);
+      const detail = await response.text().catch(() => '');
+      throw new Error(`Axiom query failed: ${response.status}${detail ? ` — ${detail.slice(0, 200)}` : ''}`);
     }
 
     return response.json();

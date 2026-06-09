@@ -21605,7 +21605,7 @@ async function checkContainerHealth(env: any, ctx: ExecutionContext): Promise<vo
 async function keepDatabaseWarm(env: any, _ctx: ExecutionContext): Promise<void> {
   if (env.KEEP_WARM_DB !== 'true') return; // default off — see #65 quota note above
   try {
-    const { getDb } = await import('./db');
+    const { getDb } = await import('./db/connection');
     const sql = getDb(env);
     if (!sql) return;
     await sql`SELECT 1`;
@@ -21633,7 +21633,7 @@ async function reconcileStripeSubscriptions(env: any, _ctx: ExecutionContext): P
     return;
   }
   try {
-    const { getDb } = await import('./db');
+    const { getDb } = await import('./db/connection');
     const sql = getDb(env);
     if (!sql) {
       console.error(JSON.stringify({ level: 'error', category: 'stripe_reconcile', action: 'skipped', reason: 'no_db' }));
@@ -21891,7 +21891,7 @@ async function updateTrendingAlgorithm(env: any, _ctx: ExecutionContext): Promis
   // produced.
   const startedAt = Date.now();
   try {
-    const { getDb } = await import('./db');
+    const { getDb } = await import('./db/connection');
     const sql = getDb(env);
     if (!sql) {
       console.log(JSON.stringify({
@@ -21958,7 +21958,7 @@ async function topUpDemoAccountCredits(env: any, ctx: ExecutionContext): Promise
   const BASELINE = 500;
 
   try {
-    const { getDb } = await import('./db');
+    const { getDb } = await import('./db/connection');
     const sql = getDb(env);
     if (!sql) {
       console.log(JSON.stringify({
@@ -22022,7 +22022,7 @@ async function topUpDemoAccountCredits(env: any, ctx: ExecutionContext): Promise
 async function sweepExpiredSubscriptionGrants(env: any, ctx: ExecutionContext): Promise<void> {
   const startedAt = Date.now();
   try {
-    const { getDb } = await import('./db');
+    const { getDb } = await import('./db/connection');
     const sql = getDb(env);
     if (!sql) {
       console.log(JSON.stringify({
