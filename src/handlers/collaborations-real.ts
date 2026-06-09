@@ -219,10 +219,15 @@ export async function updateCollaborationHandler(request: Request, env: Env): Pr
     return jsonResponse({ success: false, error: 'Database unavailable' }, 503, origin);
   }
 
-  // Extract collaboration ID from URL path
+  // Extract collaboration ID from URL path. Route is /api/collaborations/:id/status,
+  // so the id is the segment right after "collaborations" — NOT the last segment
+  // (which is "status").
   const url = new URL(request.url);
   const pathParts = url.pathname.split('/');
-  const collaborationId = pathParts[pathParts.length - 1];
+  const collabIdx = pathParts.indexOf('collaborations');
+  const collaborationId = collabIdx >= 0 && pathParts[collabIdx + 1]
+    ? pathParts[collabIdx + 1]
+    : pathParts[pathParts.length - 1];
 
   if (!collaborationId || isNaN(Number(collaborationId))) {
     return jsonResponse({ success: false, error: 'Invalid collaboration ID' }, 400, origin);
