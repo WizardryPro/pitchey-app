@@ -26,7 +26,14 @@ import { uploadService } from '../../services/upload.service';
 export interface DocumentFile {
   id: string;
   type: 'script' | 'treatment' | 'pitch_deck' | 'nda' | 'supporting_materials' | 'lookbook' | 'budget';
-  file: File;
+  // Present for freshly-selected files (browser File objects). ABSENT for
+  // already-persisted documents rehydrated on the edit flow — those come from
+  // the DB as { url, title, ... } with no File. Anything reading `file.size` /
+  // `file.name` MUST null-guard (see uploadStatistics + the list render).
+  file?: File;
+  // Byte size for persisted docs where the File isn't available (the backend
+  // may send it); used as the fallback for the size readout. Unknown is fine.
+  size?: number;
   title: string;
   description?: string;
   uploadProgress?: number;
@@ -71,8 +78,8 @@ interface DocumentUploadProps {
 const DOCUMENT_TYPES = [
   { value: 'script', label: 'Script', icon: FileText, color: 'blue' },
   { value: 'treatment', label: 'Treatment', icon: FileText, color: 'green' },
-  { value: 'pitch_deck', label: 'Pitch Deck', icon: FileIcon, color: 'purple' },
-  { value: 'lookbook', label: 'Visual Lookbook', icon: ImageIcon, color: 'pink' },
+  { value: 'pitch_deck', label: 'Pitch Deck / Lookbook', icon: FileIcon, color: 'purple' },
+  { value: 'lookbook', label: 'Lookbook (Visual Pitch Deck)', icon: ImageIcon, color: 'pink' },
   { value: 'budget', label: 'Budget Breakdown', icon: FileText, color: 'yellow' },
   { value: 'nda', label: 'NDA Document', icon: Shield, color: 'red' },
   { value: 'supporting_materials', label: 'Supporting Materials', icon: FileIcon, color: 'gray' }
@@ -153,10 +160,13 @@ export default function DocumentUpload({
     const uploading = documents.filter(d => d.uploadStatus === 'uploading').length;
     const failed = documents.filter(d => d.uploadStatus === 'error').length;
     const pending = documents.filter(d => d.uploadStatus === 'idle').length;
-    const totalSize = documents.reduce((sum, d) => sum + d.file.size, 0);
+    // Persisted docs (edit flow) have no `file`; fall back to a known byte size
+    // or 0. Reading `d.file.size` directly here was the PitchEdit white-screen.
+    const sizeOf = (d: DocumentFile) => d.file?.size ?? d.size ?? 0;
+    const totalSize = documents.reduce((sum, d) => sum + sizeOf(d), 0);
     const uploadedSize = documents
       .filter(d => d.uploadStatus === 'completed')
-      .reduce((sum, d) => sum + d.file.size, 0);
+      .reduce((sum, d) => sum + sizeOf(d), 0);
     
     return {
       total,
@@ -193,10 +203,10 @@ export default function DocumentUpload({
     }
 
     // Check for duplicate files
-    const duplicate = documents.find(d => 
-      d.file.name === file.name && 
-      d.file.size === file.size && 
-      d.file.lastModified === file.lastModified
+    const duplicate = documents.find(d =>
+      d.file?.name === file.name &&
+      d.file?.size === file.size &&
+      d.file?.lastModified === file.lastModified
     );
     if (duplicate) {
       return {
@@ -334,6 +344,11 @@ export default function DocumentUpload({
 
   // Upload document to server with enhanced features
   const uploadDocument = useCallback(async (document: DocumentFile) => {
+    // Persisted docs (edit flow) carry no File and are already 'completed' —
+    // they must never be re-uploaded. Bail defensively; also narrows the
+    // optional `file` for the size math below.
+    const file = document.file;
+    if (!file) return;
     const controller = new AbortController();
     abortControllers.current.set(document.id, controller);
     
@@ -353,7 +368,7 @@ export default function DocumentUpload({
     
     try {
       const result = await uploadService.uploadDocument(
-        document.file,
+        file,
         document.type,
         {
           pitchId,
@@ -367,8 +382,8 @@ export default function DocumentUpload({
               const progressDiff = progress.percentage - stats.lastProgress;
               
               if (timeDiff > 0 && progressDiff > 0) {
-                const speed = (progressDiff / 100 * document.file.size) / timeDiff; // bytes per second
-                const remainingBytes = document.file.size * (1 - progress.percentage / 100);
+                const speed = (progressDiff / 100 * file.size) / timeDiff; // bytes per second
+                const remainingBytes = file.size * (1 - progress.percentage / 100);
                 const estimatedTimeRemaining = remainingBytes / speed; // seconds
                 
                 updateDocument(document.id, { 
@@ -664,6 +679,11 @@ export default function DocumentUpload({
           multiple
           accept={allowedTypes.join(',')}
           onChange={handleFileSelect}
+          // The programmatic fileInputRef.click() dispatches a click ON this
+          // input, which would bubble up to the wrapper div's onClick and call
+          // .click() AGAIN — opening the picker twice so the first selection is
+          // swallowed (Karl's "had to upload twice"). Stop it bubbling.
+          onClick={(e) => e.stopPropagation()}
           className="hidden"
           disabled={disabled}
         />
@@ -700,7 +720,9 @@ export default function DocumentUpload({
           {!disabled && (
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              // stopPropagation so this doesn't ALSO fire the wrapper div's
+              // onClick (which opens the picker) → single picker per click.
+              onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
               className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
             >
               <Plus className="w-4 h-4" />
@@ -903,8 +925,12 @@ export default function DocumentUpload({
                       {/* File Info */}
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-sm text-gray-500">
-                          <span className="truncate">{document.file.name}</span>
-                          <span>{formatFileSize(document.file.size)}</span>
+                          {/* Persisted docs (edit flow) have no File — fall back
+                              to the stored title and hide the size if unknown. */}
+                          <span className="truncate">{document.file?.name ?? document.title}</span>
+                          {(document.file?.size ?? document.size) != null && (
+                            <span>{formatFileSize((document.file?.size ?? document.size) as number)}</span>
+                          )}
                         </div>
                         
                         {/* Upload Status Details */}
@@ -968,7 +994,7 @@ export default function DocumentUpload({
                           onClick={() => {
                             const link = window.document.createElement('a');
                             link.href = document.url!;
-                            link.download = document.file.name;
+                            link.download = document.file?.name ?? document.title;
                             link.click();
                           }}
                           className="p-2 text-gray-500 hover:text-green-600 transition-colors rounded"

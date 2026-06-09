@@ -197,7 +197,6 @@ export default function MarketplaceEnhanced() {
   // Statistics
   const [stats, setStats] = useState({
     totalPitches: 0,
-    totalInvestment: 0,
     avgBudget: 0,
     activeCreators: 0
   });
@@ -410,17 +409,12 @@ export default function MarketplaceEnhanced() {
       console.warn('calculateStats received non-array data:', pitchData);
       setStats({
         totalPitches: 0,
-        totalInvestment: 0,
         avgBudget: 0,
         activeCreators: 0
       });
       return;
     }
-    
-    const totalInvestment = pitchData.reduce((sum, p) => {
-      const pp = p as unknown as Record<string, unknown>;
-      return sum + (Number(pp.totalInvestment) || Number(pp.total_investment) || 0);
-    }, 0);
+
     // Use estimatedBudget (camelCase from interface) with fallbacks for API snake_case
     const avgBudget = pitchData.reduce((sum, p) => {
       const pp = p as unknown as Record<string, unknown>;
@@ -434,7 +428,6 @@ export default function MarketplaceEnhanced() {
     
     setStats({
       totalPitches: pitchData.length,
-      totalInvestment,
       avgBudget,
       activeCreators
     });
@@ -818,8 +811,8 @@ export default function MarketplaceEnhanced() {
               <p className="text-sm sm:text-base text-purple-200/80">Discover and back the next big story.</p>
             </div>
 
-            {/* Quick stats — 2x2 on mobile, 4 across on tablet+ */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 w-full md:w-auto">
+            {/* Quick stats — 3 across (Total Invested removed per Karl feedback) */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 w-full md:w-auto">
               <div className="rounded-xl border border-white/10 bg-white/[0.06] backdrop-blur px-4 py-3">
                 <div className="text-xl sm:text-2xl font-bold tabular-nums">{filteredPitches.length}</div>
                 <div className="text-[10px] sm:text-xs uppercase tracking-wider text-purple-200/70">Active Pitches</div>
@@ -827,12 +820,6 @@ export default function MarketplaceEnhanced() {
               <div className="rounded-xl border border-white/10 bg-white/[0.06] backdrop-blur px-4 py-3">
                 <div className="text-xl sm:text-2xl font-bold tabular-nums">{stats.activeCreators}</div>
                 <div className="text-[10px] sm:text-xs uppercase tracking-wider text-purple-200/70">Creators</div>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.06] backdrop-blur px-4 py-3">
-                <div className="text-xl sm:text-2xl font-bold tabular-nums">
-                  {stats.totalInvestment > 0 ? formatBudgetCompact(stats.totalInvestment) : '$0'}
-                </div>
-                <div className="text-[10px] sm:text-xs uppercase tracking-wider text-purple-200/70">Total Invested</div>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/[0.06] backdrop-blur px-4 py-3">
                 <div className="text-xl sm:text-2xl font-bold tabular-nums">
