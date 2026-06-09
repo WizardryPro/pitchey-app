@@ -58,6 +58,13 @@ interface Pitch {
   isCompanyMember?: boolean;
   companyTeamId?: number | null;     // team to sign the collaboration NDA for
   companyNdaSigned?: boolean;        // member has signed the company NDA (B3 Phase 2)
+  collaboration?: {                  // pitch-scoped producer↔creator collaboration
+    id: number;
+    status: string;                  // 'pending' | 'accepted'
+    role: string | null;
+    withUserId: number;
+    withName: string | null;
+  } | null;
   requiresNDA?: boolean;           // pitch was created with NDA protection
   require_nda?: boolean;           // snake-case fallback
   creatorType?: string;            // owner's user_type — selects workspace mode
@@ -167,14 +174,24 @@ const ProductionPitchView: React.FC = () => {
   // reads as if you own or are managing the creator's pitch.
   const evaluationMode = !ownerIsProduction;
   const evalCreatorName = pitch?.creatorName || pitch?.creatorCompany || 'the creator';
-  // Access chip — in evaluation mode we lead with an unmissable "not your pitch"
-  // badge so the editable workspace can't be mistaken for owning the project.
+  // Pitch-scoped collaboration state (producer↔creator).
+  const collab = pitch?.collaboration ?? null;
+  const isCollaborating = collab?.status === 'accepted';
+  const collabPending = collab?.status === 'pending';
+  // Access chip — in evaluation mode we lead with an unmissable status badge.
+  // Once the creator accepts, it flips from "not your pitch" to "Collaborating".
   const accessChip = (
     <div className="flex flex-wrap items-center justify-end gap-2">
       {evaluationMode && (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-200">
-          <Eye className="h-3.5 w-3.5" /> Evaluating · not your pitch
-        </span>
+        isCollaborating ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
+            <Users className="h-3.5 w-3.5" /> Collaborating with {evalCreatorName}
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-200">
+            <Eye className="h-3.5 w-3.5" /> Evaluating · not your pitch
+          </span>
+        )
       )}
       {canEditWorkspace ? (
         <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-200">
@@ -189,6 +206,8 @@ const ProductionPitchView: React.FC = () => {
   );
   const workspaceScopeNote = ownerIsProduction
     ? (canEditWorkspace ? 'Shared workspace — visible to your whole company team.' : 'Read-only access granted by your signed NDA.')
+    : isCollaborating
+    ? `Shared with ${evalCreatorName} — you're co-developing this pitch together. Both of you can edit the Team Plan and Notes.`
     : `You're planning ${evalCreatorName}'s pitch as a possible production — it isn't your project. Private to your company: ${evalCreatorName} can’t see any of this.`;
   // In evaluation mode (a creator-owned pitch you didn't create), the private
   // Team/Notes workspace stays HIDDEN until you opt in by saving the pitch to
@@ -402,6 +421,32 @@ const ProductionPitchView: React.FC = () => {
 
   const handleContactCreator = () => {
     navigate(`/production/messages?recipient=${pitch?.userId}&pitch=${id}`);
+  };
+
+  // Propose a pitch-scoped collaboration to the creator. On accept (their side)
+  // the producer's private Team Plan + Notes become the shared workspace.
+  const [proposingCollab, setProposingCollab] = useState(false);
+  const handleProposeCollaboration = async () => {
+    if (!pitch?.userId || proposingCollab) return;
+    setProposingCollab(true);
+    try {
+      const res = await apiClient.post('/api/collaborations', {
+        collaboratorId: parseInt(String(pitch.userId), 10),
+        pitchId: parseInt(String(pitch.id), 10),
+        role: 'co_development',
+      });
+      if (res.success) {
+        toast.success(`Collaboration proposed to ${pitch.creatorName || 'the creator'}.`);
+        await fetchPitchData(); // refresh → pitch.collaboration becomes 'pending'
+      } else {
+        toast.error(res.error?.message || 'Could not propose collaboration.');
+      }
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      toast.error(e.message);
+    } finally {
+      setProposingCollab(false);
+    }
   };
 
   // Like — production cos can like a pitch they're evaluating (mirrors PitchDetail).
@@ -906,6 +951,47 @@ const ProductionPitchView: React.FC = () => {
                 <p className="text-sm text-gray-500 bg-indigo-50/50 ring-1 ring-inset ring-indigo-100 rounded-lg px-4 py-3">
                   💡 Save this pitch to open a private <span className="font-medium text-gray-700">Team&nbsp;Plan</span> &amp; <span className="font-medium text-gray-700">Notes</span> workspace — your space to plan it as a production. The creator never sees it.
                 </p>
+              )}
+
+              {/* Collaboration bridge — once you've opted in (saved) and built a
+                  plan, propose co-developing the pitch with its creator. On accept,
+                  your private Team Plan + Notes become the shared workspace. */}
+              {evaluationMode && workspaceUnlocked && (
+                isCollaborating ? (
+                  <div className="flex items-start gap-3 rounded-xl bg-emerald-50 ring-1 ring-inset ring-emerald-200 px-4 py-3.5">
+                    <Users className="h-5 w-5 shrink-0 text-emerald-600" />
+                    <div className="text-sm">
+                      <p className="font-semibold text-emerald-800">Collaborating with {pitch?.creatorName || 'the creator'}</p>
+                      <p className="mt-0.5 text-emerald-700">Your Team Plan &amp; Notes are now shared — you're both co-developing this pitch.</p>
+                    </div>
+                  </div>
+                ) : collabPending ? (
+                  <div className="flex items-start gap-3 rounded-xl bg-indigo-50 ring-1 ring-inset ring-indigo-200 px-4 py-3.5">
+                    <Clock className="h-5 w-5 shrink-0 text-indigo-500" />
+                    <div className="text-sm">
+                      <p className="font-semibold text-indigo-800">Collaboration proposed</p>
+                      <p className="mt-0.5 text-indigo-700">Waiting for {pitch?.creatorName || 'the creator'} to accept. Once they do, your plan becomes a shared workspace.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-xl bg-white ring-1 ring-inset ring-gray-200 px-4 py-3.5 shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <Users className="h-5 w-5 shrink-0 text-indigo-500" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-gray-900">Ready to develop this together?</p>
+                        <p className="mt-0.5 text-sm text-gray-500">Propose a collaboration to {pitch?.creatorName || 'the creator'}. If they accept, your Team Plan &amp; Notes become a shared workspace you co-develop.</p>
+                        <button
+                          onClick={handleProposeCollaboration}
+                          disabled={proposingCollab}
+                          className="mt-3 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-indigo-700 disabled:opacity-50"
+                        >
+                          <Users className="h-4 w-4" />
+                          {proposingCollab ? 'Proposing…' : 'Propose collaboration'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
               )}
 
               {/* Feedback & rating — production cos can rate + leave structured

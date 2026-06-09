@@ -6010,6 +6010,7 @@ pitchey_analytics_datapoints_per_minute 1250
       let isCompanyMember = false;
       let companyTeamId: number | null = null;
       let companyNdaSigned = false;
+      let collaboration: { id: number; status: string; role: string | null; withUserId: number; withName: string | null } | null = null;
       try {
         const authResult = await this.validateAuth(request);
         if (authResult.valid && authResult.user) {
@@ -6091,6 +6092,38 @@ pitchey_analytics_datapoints_per_minute 1250
               } catch { /* company_nda_signatures may not exist pre-migration */ }
             }
           } catch { /* teams tables may not exist in all envs */ }
+
+          // Pitch-scoped collaboration (producer ↔ creator). Surface the acting
+          // user's pending/active collaboration on this pitch so both portals can
+          // render the propose / waiting / co-developing states.
+          try {
+            const collabRows = await sql`
+              SELECT c.id, c.status, c.role, c.requester_id, c.collaborator_id,
+                     ru.username AS requester_name, ru.company_name AS requester_company,
+                     cu.username AS collaborator_name
+              FROM collaborations c
+              JOIN users ru ON ru.id = c.requester_id
+              JOIN users cu ON cu.id = c.collaborator_id
+              WHERE c.pitch_id = ${pitchId}
+                AND (c.requester_id = ${authUserId} OR c.collaborator_id = ${authUserId})
+                AND c.status IN ('pending', 'accepted')
+              ORDER BY (c.status = 'accepted') DESC, c.updated_at DESC
+              LIMIT 1
+            `;
+            if (collabRows.length > 0) {
+              const c = collabRows[0];
+              const iAmRequester = Number(c.requester_id) === Number(authUserId);
+              collaboration = {
+                id: Number(c.id),
+                status: String(c.status),
+                role: c.role ?? null,
+                withUserId: iAmRequester ? Number(c.collaborator_id) : Number(c.requester_id),
+                withName: iAmRequester
+                  ? (c.collaborator_name ?? null)
+                  : (c.requester_company || c.requester_name || null),
+              };
+            }
+          } catch { /* collaborations table may not exist in all envs */ }
         }
       } catch {
         // Auth check is optional for public pitch viewing
@@ -6185,6 +6218,7 @@ pitchey_analytics_datapoints_per_minute 1250
         isCompanyMember,
         companyTeamId,
         companyNdaSigned,
+        collaboration,
         hasProtectedContent,
         view_count: parseInt(String(pitch.view_count || '0')),
         investment_count: investmentCount,
