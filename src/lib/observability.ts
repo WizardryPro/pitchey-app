@@ -162,7 +162,9 @@ export class AxiomClient {
     });
 
     if (!response.ok) {
-      const detail = await response.text().catch(() => '');
+      // Best-effort: include the response body in the error for debuggability.
+      let detail = '';
+      try { detail = await response.text(); } catch { /* body not readable */ }
       throw new Error(`Axiom query failed: ${response.status}${detail ? ` — ${detail.slice(0, 200)}` : ''}`);
     }
 
