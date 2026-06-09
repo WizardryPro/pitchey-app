@@ -459,7 +459,7 @@ export interface CreatePitchInput {
   budgetBracket?: string;
   budgetRange?: string;
   estimatedBudget?: number;
-  estimatedBudgetUsd?: number;
+  estimatedBudgetUsd?: number | null;
   productionTimeline?: string;
   titleImage?: string;
   lookbookUrl?: string;

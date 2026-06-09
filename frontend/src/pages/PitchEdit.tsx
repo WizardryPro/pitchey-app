@@ -383,7 +383,10 @@ export default function PitchEdit() {
         worldDescription: formData.worldDescription,
         longSynopsis: formData.longSynopsis || undefined,
         budgetRange: formData.budgetRange || undefined,
-        estimatedBudgetUsd: formData.estimatedBudget ? Number(formData.estimatedBudget) : undefined,
+        // Always send the key (number or null) so the server can tell "cleared"
+        // (null → clears) from "not edited" (key absent → preserved). undefined
+        // would drop the key and make the budget unclearable.
+        estimatedBudgetUsd: formData.estimatedBudget ? Number(formData.estimatedBudget) : null,
         targetAudience: formData.targetAudience || undefined,
         productionTimeline: formData.productionTimeline || undefined,
         targetReleaseDate: formData.targetReleaseDate || undefined,

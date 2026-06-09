@@ -293,7 +293,17 @@ function parseVisibilitySettings(raw: unknown): Record<string, boolean> | null {
 const MAX_BUDGET_USD = 1_000_000_000;
 function normalizeBudgetUsd(raw: unknown): number | null {
   if (raw === null || raw === undefined || raw === '') return null;
-  const n = typeof raw === 'string' ? Number(raw.replace(/[^0-9.]/g, '')) : Number(raw);
+  if (typeof raw === 'string') {
+    // Reject ambiguous strings (k/m/b suffixes, ranges, currency words) rather
+    // than silently mangling them — e.g. "£400K" must NOT become 400. Only a
+    // plain number (digits, optional separators/decimal/currency symbol) is
+    // accepted; anything with a letter or a dash is unparseable → null.
+    if (/[^\d.,\s$€£]/.test(raw)) return null;
+    const cleaned = raw.replace(/[^0-9.]/g, '');
+    if (cleaned === '') return null;
+    raw = cleaned;
+  }
+  const n = Number(raw);
   if (!Number.isFinite(n) || n < 0) return null;
   return Math.min(Math.round(n), MAX_BUDGET_USD);
 }
@@ -6462,7 +6472,10 @@ pitchey_analytics_datapoints_per_minute 1250
           target_release_date = COALESCE($31, target_release_date),
           visibility_settings = COALESCE($32, visibility_settings),
           require_nda = COALESCE($33, require_nda),
-          estimated_budget_usd = COALESCE($34, estimated_budget_usd),
+          -- Presence-aware: when the client sends the field ($35 true) we set it
+          -- to $34 — INCLUDING null, so a cleared budget actually clears. COALESCE
+          -- alone preserved the old value on null, making the field unclearable.
+          estimated_budget_usd = CASE WHEN $35 THEN $34 ELSE estimated_budget_usd END,
           updated_at = NOW()
         WHERE id = $1
         RETURNING *
@@ -6500,7 +6513,11 @@ pitchey_analytics_datapoints_per_minute 1250
         data.targetReleaseDate ?? null,
         data.visibilitySettings ? JSON.stringify(data.visibilitySettings) : null,
         (data.requireNDA ?? data.require_nda) ?? null,
-        data.estimatedBudgetUsd !== undefined ? normalizeBudgetUsd(data.estimatedBudgetUsd) : null
+        // $34: the value to set when present (null clears). $35: was the field
+        // sent at all — only then do we touch the column (other callers that omit
+        // it leave the budget untouched).
+        ('estimatedBudgetUsd' in (data as Record<string, unknown>)) ? normalizeBudgetUsd(data.estimatedBudgetUsd) : null,
+        ('estimatedBudgetUsd' in (data as Record<string, unknown>))
       ]);
 
       // Handle creative attachments if provided
