@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Eye, Edit3, Trash2, BarChart3, Search, Filter, RefreshCw, Send } from 'lucide-react';
+import { Plus, Eye, Edit3, Trash2, BarChart3, Search, Filter, RefreshCw } from 'lucide-react';
 import { pitchService } from '@features/pitches/services/pitch.service';
 import type { Pitch } from '@shared/types/api';
 import FormatDisplay from '../components/FormatDisplay';
@@ -164,23 +164,9 @@ export default function ManagePitches() {
     }
   };
 
-  const submitForReview = async (pitchId: number) => {
-    setLoadingState(pitchId, 'submitting');
-
-    try {
-      const updatedPitch = await pitchService.update(pitchId, { status: 'under_review' });
-      setPitches(prev => prev.map(pitch =>
-        pitch.id === pitchId ? { ...pitch, ...updatedPitch, status: 'under_review' } : pitch
-      ));
-      addNotification('Pitch submitted for review', 'success');
-    } catch (err: unknown) {
-      const error = err instanceof Error ? err : new Error(String(err));
-      console.error('Failed to submit pitch for review:', error);
-      addNotification(error.message || 'Failed to submit for review', 'error');
-    } finally {
-      clearLoadingState(pitchId);
-    }
-  };
+  // (removed) submitForReview → status 'under_review'. There is no review process;
+  // it was a dead-end state that hid pitches from the only path to the marketplace.
+  // Creators now have a single action on a draft: Publish (see toggleStatus). Karl R3 P2.
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -454,24 +440,6 @@ export default function ManagePitches() {
                       <BarChart3 className="w-4 h-4" />
                     </button>
 
-                    {pitch.status === 'draft' && (
-                      <button
-                        onClick={() => void submitForReview(pitch.id)}
-                        disabled={loadingStates[pitch.id] === 'submitting'}
-                        className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition text-sm ${
-                          loadingStates[pitch.id] === 'submitting'
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
-                        }`}
-                        title="Submit for review"
-                      >
-                        {loadingStates[pitch.id] === 'submitting' ? (
-                          <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                        ) : (
-                          <Send className="w-4 h-4" />
-                        )}
-                      </button>
-                    )}
 
                     <button
                       onClick={() => void toggleStatus(pitch.id, pitch.status)}
