@@ -53,13 +53,18 @@ client actually sends the field.
   string. The numeric input only ever emits digit strings, so this is permissive-but-safe;
   the real enforcement is `normalizeBudgetUsd` + the DB CHECK. Left as-is.
 
-## Post-deploy re-verification
+## Post-deploy re-verification — ✅ CONFIRMED (worker `a17e5de4`, frontend `index-DHryHLuS.js`)
 
-After PR #230 merges + deploys, re-run steps 3 and 5 on prod:
-- Clear → `estimated_budget_usd` becomes NULL.
-- `"£400K"` → rejected (column unchanged / NULL, not 400).
+Re-ran the two failing cases on prod (pitch 2551, then deleted it):
+- **Clear**: set 60,000,000 → send `null` → DB `estimated_budget_usd` = **NULL**. ✅ (was: stayed 60M)
+- **Junk**: set 80,000,000 → send `"£400K"` → DB = **NULL** (rejected, not 400). ✅ (was: 400)
 
-(Results appended below once the fix is live.)
+Note: junk-via-API now resolves to `null` (rejected) and, because the field was *present* in
+the payload, that clears the column rather than preserving it. This only matters for direct API
+calls — the UI input emits digits only — and reject→null is strictly better than mangling to a
+wrong number. Acceptable.
+
+Throwaway pitch 2551 deleted (HTTP 204, confirmed absent in DB). Budget path is safe to retest.
 
 ## Karl-facing summary
 
