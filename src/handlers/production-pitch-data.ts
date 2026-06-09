@@ -174,21 +174,16 @@ export async function getProductionNotes(request: Request, env: Env): Promise<Re
     const ws = await resolveWorkspace(sql, Number(userId), pitchId);
     if (!ws || !ws.canView) return jsonResponse({ success: true, data: { notes: [] } }, origin);
 
-    // Production pitch → the team's shared notes (scoped to team authors so
-    // external producers' private notes never leak). Creator pitch → my own.
-    const notesResult = ws.isProductionPitch
-      ? await safeQuery(() => sql`
-          SELECT id, content, category, author, shared, user_id, created_at, updated_at
-          FROM production_notes
-          WHERE pitch_id = ${pitchId} AND user_id = ANY(${ws.teamUserIds})
-          ORDER BY created_at ASC
-        `, { fallback: [], context: 'production-pitch-data.notes.list' })
-      : await safeQuery(() => sql`
-          SELECT id, content, category, author, shared, user_id, created_at, updated_at
-          FROM production_notes
-          WHERE pitch_id = ${pitchId} AND user_id = ${Number(userId)}
-          ORDER BY created_at ASC
-        `, { fallback: [], context: 'production-pitch-data.notes.list' });
+    // Notes are read across the workspace's authors (`teamUserIds`): a private
+    // creator-evaluation workspace = [me]; a production team = owner+members; a
+    // producer↔creator collaboration = [producer, creator]. Writes keep their own
+    // author user_id, so authorship is preserved while everyone sees the shared set.
+    const notesResult = await safeQuery(() => sql`
+      SELECT id, content, category, author, shared, user_id, created_at, updated_at
+      FROM production_notes
+      WHERE pitch_id = ${pitchId} AND user_id = ANY(${ws.teamUserIds})
+      ORDER BY created_at ASC
+    `, { fallback: [], context: 'production-pitch-data.notes.list' });
 
     return jsonResponse({ success: true, data: { notes: notesResult.rows } }, origin);
   } catch (err) {
