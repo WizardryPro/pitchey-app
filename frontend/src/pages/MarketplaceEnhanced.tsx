@@ -415,12 +415,18 @@ export default function MarketplaceEnhanced() {
       return;
     }
 
-    // Use estimatedBudget (camelCase from interface) with fallbacks for API snake_case
-    const avgBudget = pitchData.reduce((sum, p) => {
-      const pp = p as unknown as Record<string, unknown>;
-      const budget = Number(p.estimatedBudget) || Number(pp.estimated_budget) || 0;
-      return sum + budget;
-    }, 0) / (pitchData.length || 1);
+    // Average the structured USD budget (estimated_budget_usd) over only the pitches
+    // that have one — averaging over all pitches (incl. budget-less ones) understates
+    // it, and the legacy free-text estimated_budget can't be summed reliably.
+    const budgets = pitchData
+      .map((p) => {
+        const pp = p as unknown as Record<string, unknown>;
+        return Number(pp.estimatedBudgetUsd ?? pp.estimated_budget_usd ?? 0) || 0;
+      })
+      .filter((b) => b > 0);
+    const avgBudget = budgets.length
+      ? Math.round(budgets.reduce((s, b) => s + b, 0) / budgets.length)
+      : 0;
     const activeCreators = new Set(pitchData.map(p => {
       const pp = p as unknown as Record<string, unknown>;
       return p.creator?.id || (pp.creator_id as string | undefined) || p.userId;

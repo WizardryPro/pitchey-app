@@ -287,6 +287,17 @@ function parseVisibilitySettings(raw: unknown): Record<string, boolean> | null {
   return null;
 }
 
+// Normalize a client-supplied USD budget to a clean integer in [0, $1B], or null.
+// Backstop for the DB CHECK (pitches_estimated_budget_usd_range). Rejects junk,
+// negatives, and the "ton of 000s" overflow by clamping to the $1B cap.
+const MAX_BUDGET_USD = 1_000_000_000;
+function normalizeBudgetUsd(raw: unknown): number | null {
+  if (raw === null || raw === undefined || raw === '') return null;
+  const n = typeof raw === 'string' ? Number(raw.replace(/[^0-9.]/g, '')) : Number(raw);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.min(Math.round(n), MAX_BUDGET_USD);
+}
+
 function getOrCreateRouter(env: Env): RouteRegistry {
   const currentHash = getEnvHash(env);
 
@@ -5546,6 +5557,7 @@ pitchey_analytics_datapoints_per_minute 1250
       budgetRange?: string;
       budgetBracket?: string;
       estimatedBudget?: string;
+      estimatedBudgetUsd?: number | string | null;
       productionTimeline?: string;
       targetReleaseDate?: string;
       comparableTitles?: string;
@@ -5618,6 +5630,10 @@ pitchey_analytics_datapoints_per_minute 1250
       );
     }
 
+    // Structured USD budget (0..$1B, integer) — the source of truth for
+    // comparison/averaging. Server clamps; the DB CHECK is the hard backstop.
+    const estBudgetUsd = normalizeBudgetUsd(data.estimatedBudgetUsd);
+
     try {
       const [pitch] = await this.db.query(`
         INSERT INTO pitches (
@@ -5631,12 +5647,12 @@ pitchey_analytics_datapoints_per_minute 1250
           themes, world_description, characters,
           ai_disclosure, ai_used,
           estimated_budget, budget_bracket, production_timeline,
-          target_release_date, visibility_settings
+          target_release_date, visibility_settings, estimated_budget_usd
         ) VALUES (
           $1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'draft', 'private', NOW(), NOW(), $13,
           $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25,
           $26, $27,
-          $28, $29, $30, $31, $32
+          $28, $29, $30, $31, $32, $33
         ) RETURNING *
       `, [
         authResult.user.id,
@@ -5666,11 +5682,12 @@ pitchey_analytics_datapoints_per_minute 1250
         JSON.stringify(data.characters || []),
         aiDisclosure,
         aiDisclosure !== 'none',
-        data.estimatedBudget ?? null,
+        data.estimatedBudget ?? (estBudgetUsd != null ? String(estBudgetUsd) : null),
         data.budgetBracket ?? null,
         data.productionTimeline ?? null,
         data.targetReleaseDate ?? null,
-        data.visibilitySettings ? JSON.stringify(data.visibilitySettings) : null
+        data.visibilitySettings ? JSON.stringify(data.visibilitySettings) : null,
+        estBudgetUsd
       ]) as unknown as DatabaseRow[];
 
       // Handle creative attachments if provided
@@ -6347,6 +6364,7 @@ pitchey_analytics_datapoints_per_minute 1250
       budgetRange?: string;
       budgetBracket?: string;
       estimatedBudget?: string;
+      estimatedBudgetUsd?: number | string | null;
       productionTimeline?: string;
       targetReleaseDate?: string;
       comparableTitles?: string;
@@ -6444,6 +6462,7 @@ pitchey_analytics_datapoints_per_minute 1250
           target_release_date = COALESCE($31, target_release_date),
           visibility_settings = COALESCE($32, visibility_settings),
           require_nda = COALESCE($33, require_nda),
+          estimated_budget_usd = COALESCE($34, estimated_budget_usd),
           updated_at = NOW()
         WHERE id = $1
         RETURNING *
@@ -6480,7 +6499,8 @@ pitchey_analytics_datapoints_per_minute 1250
         data.productionTimeline ?? null,
         data.targetReleaseDate ?? null,
         data.visibilitySettings ? JSON.stringify(data.visibilitySettings) : null,
-        (data.requireNDA ?? data.require_nda) ?? null
+        (data.requireNDA ?? data.require_nda) ?? null,
+        data.estimatedBudgetUsd !== undefined ? normalizeBudgetUsd(data.estimatedBudgetUsd) : null
       ]);
 
       // Handle creative attachments if provided
@@ -9147,7 +9167,7 @@ pitchey_analytics_datapoints_per_minute 1250
     const result = await safeQuery(
       () => this.db.query(`
         SELECT p.id, p.title, p.logline, p.genre, p.format,
-               p.budget_range, p.estimated_budget,
+               p.budget_range, p.estimated_budget, p.estimated_budget_usd,
                COALESCE(p.heat_score, 0) AS heat_score
         FROM pitches p
         WHERE p.status = 'published'

@@ -390,6 +390,7 @@ export default function CreatePitch() {
           budgetRange: validatedData.budgetRange || undefined,
           budgetBracket: validatedData.budgetRange || undefined,
           estimatedBudget: validatedData.estimatedBudget || undefined,
+          estimatedBudgetUsd: validatedData.estimatedBudget ? Number(validatedData.estimatedBudget) : undefined,
           productionTimeline: validatedData.productionTimeline || undefined,
           targetAudience: validatedData.targetAudience || undefined,
           targetReleaseDate: validatedData.targetReleaseDate || undefined,
@@ -1221,23 +1222,34 @@ export default function CreatePitch() {
                 </div>
               </div>
 
-              {/* Budget — free-form, set by the creator (no fixed ranges) */}
+              {/* Budget — numeric USD, capped at $1B (Karl P4). Stored as a clean
+                  integer; the "$"/"USD" affordances + comma formatting keep it readable
+                  and inside the box at max length. */}
               <div>
                 <label htmlFor="estimatedBudget" className="block text-sm font-medium text-gray-700 mb-2">
-                  Budget <span className="text-gray-400 font-normal">(optional)</span>
+                  Budget <span className="text-gray-400 font-normal">(optional, USD)</span>
                 </label>
-                <input
-                  type="text"
-                  id="estimatedBudget"
-                  name="estimatedBudget"
-                  value={formData.estimatedBudget || ''}
-                  onChange={handleInputChange}
-                  maxLength={100}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  placeholder="Set your budget — e.g. $2.5M, £400K, or a range you're comfortable sharing"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Free text — set whatever's right for your project.
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    id="estimatedBudget"
+                    name="estimatedBudget"
+                    value={formData.estimatedBudget ? Number(formData.estimatedBudget).toLocaleString('en-US') : ''}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/[^0-9]/g, '');
+                      const capped = digits ? String(Math.min(Number(digits), 1000000000)) : '';
+                      setValue('estimatedBudget', capped);
+                    }}
+                    className="w-full pl-7 pr-14 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 truncate"
+                    placeholder="50,000,000"
+                    aria-describedby="budget-help"
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-gray-400">USD</span>
+                </div>
+                <p id="budget-help" className="text-xs text-gray-500 mt-1">
+                  Shown in US dollars so budgets are comparable globally (payments are still processed in EUR). Max $1,000,000,000.
                 </p>
               </div>
             </div>
