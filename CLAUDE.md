@@ -29,6 +29,13 @@ See `docs/roadmap-post-launch-2026-04-20.md` for the post-launch execution plan.
 | Run tests | `cd frontend && npx vitest run` |
 | Type check | `cd frontend && npx tsc --noEmit -p tsconfig.app.json` |
 
+## Deployment facts (stop re-deriving these)
+
+- **`pitchey-5o8.pages.dev` IS the canonical production frontend.** The `-5o8` suffix is **permanent** (Cloudflare assigns it for the project's lifetime; it is not a preview/orphan). Verify live via the bundle hash `curl -s https://pitchey-5o8.pages.dev/ | grep -oE 'index-[A-Za-z0-9_]+\.js'`.
+- The former duplicate `pitchey.pages.dev` was **deleted 2026-04-21** and now **NXDOMAINs**. Issue #18's "orphan" wording predates this and refers to that dead domain, **not** `pitchey-5o8` — don't re-flag `-5o8` as an orphan.
+- **Production worker** is `pitchey-api-prod` (`npx wrangler deploy` from repo root).
+- **Frontend deploy** must run from `frontend/`: `npx wrangler pages deploy dist/ --project-name=pitchey --branch=main` (the `--branch=main` makes it canonical, not a preview).
+
 ## Demo Accounts (Password: Demo123)
 - Creator: alex.creator@demo.com
 - Investor: sarah.investor@demo.com
