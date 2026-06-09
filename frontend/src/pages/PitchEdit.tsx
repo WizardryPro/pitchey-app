@@ -236,9 +236,11 @@ export default function PitchEdit() {
             type: (d.documentType ?? d.document_type ?? d.type ?? 'supporting_materials') as DocumentFile['type'],
             title: d.fileName ?? d.file_name ?? d.originalFileName ?? d.original_file_name ?? d.title ?? 'Document',
             url: d.fileUrl ?? d.file_url ?? d.url,
+            size: d.fileSize ?? d.file_size ?? d.size ?? undefined,
             uploadStatus: 'completed',
             uploadProgress: 100,
-            file: undefined as unknown as File,
+            // No File for already-persisted docs — the component null-guards on this.
+            file: undefined,
           })
         ),
         ndaConfig: {
@@ -438,14 +440,16 @@ export default function PitchEdit() {
       // collected rather than aborting the whole save.
       const pendingDocs = formData.documents.filter((d) => d.file && !d.url);
       for (const doc of pendingDocs) {
+        const file = doc.file;
+        if (!file) continue; // already guaranteed by the filter; narrows the optional type
         try {
-          await uploadService.uploadDocument(doc.file, doc.type, {
+          await uploadService.uploadDocument(file, doc.type, {
             pitchId: parseInt(id!),
             requiresNda: doc.type !== 'lookbook',
           });
         } catch (docErr) {
           console.error('Document upload failed:', doc.title, docErr);
-          failedDocs.push(doc.title || doc.file.name);
+          failedDocs.push(doc.title || file.name);
         }
       }
 
