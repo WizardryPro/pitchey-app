@@ -63,6 +63,14 @@ jobs:
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
           NODE_ENV: production
 
+      - name: 🧹 Strip source maps from the public bundle
+        # The build step already uploaded them to Sentry (debug IDs). Remove the
+        # .map files before the public deploy so source isn't fetchable from
+        # pitchey-5o8.pages.dev. Deterministic — doesn't rely on the vite plugin's
+        # filesToDeleteAfterUpload glob (which didn't fire). No-op if none exist.
+        working-directory: frontend
+        run: find dist -name '*.map' -type f -delete -print | wc -l | xargs echo "stripped source maps:"
+
       - name: 🚀 Deploy to Cloudflare Pages (using Wrangler)
         working-directory: frontend
         run: |
