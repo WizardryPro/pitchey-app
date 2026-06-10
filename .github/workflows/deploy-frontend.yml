@@ -55,6 +55,12 @@ jobs:
           # Commit SHA becomes the Sentry `release` + the /debug "Client build" so a
           # user's screenshot/events identify exactly which deploy they're on.
           VITE_APP_VERSION: ${{ github.sha }}
+          # Source-map upload to Sentry (de-minifies frontend stack traces). The
+          # vite plugin only runs when SENTRY_AUTH_TOKEN is set; if the secret is
+          # absent it's a clean no-op (build still succeeds, traces stay minified).
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
           NODE_ENV: production
 
       - name: 🚀 Deploy to Cloudflare Pages (using Wrangler)
