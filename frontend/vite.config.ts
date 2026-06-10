@@ -1,6 +1,28 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { sentryVitePlugin } from '@sentry/vite-plugin'
 import path from 'path'
+
+// Upload source maps to Sentry so frontend stack traces de-minify (otherwise
+// every Sentry error is unreadable). Injects debug IDs → no fragile release-name
+// matching. Only active when SENTRY_AUTH_TOKEN is present (CI builds); a local
+// build without it is a clean no-op. `filesToDeleteAfterUpload` strips the .map
+// files from the deployed output so they're NOT served publicly from
+// pitchey-5o8.pages.dev (they were fetchable = a minor source leak) while Sentry
+// still keeps them privately.
+const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN
+const sentryPlugins = sentryAuthToken
+  ? [
+      sentryVitePlugin({
+        org: process.env.SENTRY_ORG,
+        project: process.env.SENTRY_PROJECT,
+        authToken: sentryAuthToken,
+        release: { name: process.env.VITE_APP_VERSION || process.env.GITHUB_SHA || undefined },
+        sourcemaps: { filesToDeleteAfterUpload: ['./dist/**/*.map'] },
+        telemetry: false,
+      }),
+    ]
+  : []
 
 // SIMPLIFIED CONFIG WITH PWA SUPPORT
 export default defineConfig(() => {
@@ -18,6 +40,8 @@ export default defineConfig(() => {
           minified: true,
         },
       }),
+      // Must come after other plugins so it sees the final build output.
+      ...sentryPlugins,
     ],
   resolve: {
     alias: {

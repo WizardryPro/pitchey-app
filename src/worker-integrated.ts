@@ -21567,7 +21567,27 @@ const websocketSafeHandler = {
   }
 };
 
-export default websocketSafeHandler;
+// Instrument the scheduled (cron) handler with Sentry so cron-time
+// captureException / captureMessage actually REACH Sentry. Previously only
+// `fetch` was Sentry-wrapped (per-request, inside the method), so every Sentry
+// call from a cron silently no-op'd against an uninitialised hub — including the
+// money-path SLO-breach and Stripe reconcile-drift ("paid but no access") alerts,
+// which is exactly where you'd want to be paged. `fetch` is left untouched (it's
+// already wrapped + WebSocket-bypassed + Axiom-logged internally).
+const sentryScheduled = Sentry.withSentry(
+  (env: Env) => ({
+    dsn: env.SENTRY_DSN,
+    release: env.CF_VERSION_METADATA?.id,
+    environment: env.SENTRY_ENVIRONMENT || env.ENVIRONMENT || 'production',
+    tracesSampleRate: parseFloat(env.SENTRY_TRACES_SAMPLE_RATE || '0.1'),
+  }),
+  { scheduled: websocketSafeHandler.scheduled } as any,
+);
+
+export default {
+  fetch: websocketSafeHandler.fetch,
+  scheduled: (sentryScheduled as any).scheduled,
+};
 
 // Export Durable Objects
 export { WebSocketDurableObject };
