@@ -3,9 +3,23 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { 
   ArrowLeft, Eye, Heart, Share2, Edit, Trash2, BarChart3, 
   Shield, MessageSquare, Clock, Calendar, User, Tag, 
-  Film, DollarSign, Briefcase, TrendingUp, Users,
-  FileText, Download, Lock, Unlock
+  DollarSign, Briefcase, TrendingUp, Users,
+  FileText, Download, Lock, Unlock, BookOpen, Image as ImageIcon
 } from 'lucide-react';
+
+// Per-document-type display metadata for the grouped Attachments list. Mirrors the
+// types the uploader offers (DocumentUpload DOCUMENT_TYPES); the type a creator picks
+// on upload drives the icon + group here. Order controls group sequence.
+const DOC_TYPE_META: Record<string, { label: string; Icon: typeof FileText; color: string; order: number }> = {
+  pitch_deck:           { label: 'Pitch Deck / Lookbook', Icon: BarChart3,  color: 'text-purple-600', order: 1 },
+  lookbook:             { label: 'Lookbooks',             Icon: BookOpen,   color: 'text-pink-600',   order: 2 },
+  script:               { label: 'Scripts',               Icon: FileText,   color: 'text-blue-600',   order: 3 },
+  treatment:            { label: 'Treatments',            Icon: FileText,   color: 'text-emerald-600',order: 4 },
+  budget:               { label: 'Budget',                Icon: DollarSign, color: 'text-amber-600',  order: 5 },
+  nda:                  { label: 'NDA Documents',         Icon: Shield,     color: 'text-red-600',    order: 6 },
+  supporting_materials: { label: 'Supporting Materials',  Icon: ImageIcon,  color: 'text-gray-500',   order: 7 },
+};
+const DOC_TYPE_FALLBACK = { label: 'Other', Icon: FileText, color: 'text-gray-500', order: 99 };
 import { pitchAPI } from '@/lib/api';
 import apiClient from '@/lib/api-client';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
@@ -752,67 +766,53 @@ const CreatorPitchView: React.FC = () => {
             </div>
 
             {/* Attachments */}
-            {(pitch.pitchDeck || pitch.script || pitch.trailer || (pitch.documents && pitch.documents.length > 0)) && (
+            {pitch.documents && pitch.documents.length > 0 && (
               <div className="bg-white rounded-xl shadow-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Attachments</h3>
                 <div className="space-y-2">
-                  {pitch.documents && pitch.documents.map((doc) => (
-                    <a
-                      key={doc.id}
-                      href={doc.file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between p-2 hover:bg-gray-50 rounded"
-                    >
-                      <span className="flex items-center text-blue-600">
-                        <FileText className="h-4 w-4 mr-2 shrink-0" />
-                        <span className="truncate">{doc.original_file_name || doc.file_name}</span>
-                      </span>
-                      <Download className="h-4 w-4 text-gray-400 shrink-0" />
-                    </a>
-                  ))}
-                  {pitch.pitchDeck && (
-                    <a
-                      href={pitch.pitchDeck}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between p-2 hover:bg-gray-50 rounded"
-                    >
-                      <span className="flex items-center text-blue-600">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Pitch Deck
-                      </span>
-                      <Download className="h-4 w-4 text-gray-400" />
-                    </a>
-                  )}
-                  {pitch.script && (
-                    <a
-                      href={pitch.script}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between p-2 hover:bg-gray-50 rounded"
-                    >
-                      <span className="flex items-center text-blue-600">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Script
-                      </span>
-                      <Download className="h-4 w-4 text-gray-400" />
-                    </a>
-                  )}
-                  {pitch.trailer && (
-                    <a
-                      href={pitch.trailer}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between p-2 hover:bg-gray-50 rounded"
-                    >
-                      <span className="flex items-center text-blue-600">
-                        <Film className="h-4 w-4 mr-2" />
-                        Trailer
-                      </span>
-                      <Download className="h-4 w-4 text-gray-400" />
-                    </a>
-                  )}
+                  {/* Group documents by their type so like files sit together, each
+                      with the icon for that type and a lock when NDA-gated. */}
+                  {pitch.documents && pitch.documents.length > 0 && (() => {
+                    const groups = new Map<string, PitchDocument[]>();
+                    for (const d of pitch.documents) {
+                      const t = d.document_type || 'other';
+                      if (!groups.has(t)) groups.set(t, []);
+                      groups.get(t)!.push(d);
+                    }
+                    return [...groups.entries()]
+                      .sort((a, b) => (DOC_TYPE_META[a[0]]?.order ?? 99) - (DOC_TYPE_META[b[0]]?.order ?? 99))
+                      .map(([type, docs]) => {
+                        const meta = DOC_TYPE_META[type] || DOC_TYPE_FALLBACK;
+                        const Icon = meta.Icon;
+                        return (
+                          <div key={type} className="mb-3 last:mb-0">
+                            <p className="flex items-center gap-1.5 mb-1.5 text-[0.68rem] font-semibold uppercase tracking-wide text-gray-400">
+                              <Icon className={`h-3.5 w-3.5 ${meta.color}`} /> {meta.label}
+                            </p>
+                            <div className="space-y-1">
+                              {docs.map((doc) => (
+                                <a
+                                  key={doc.id}
+                                  href={doc.file_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center justify-between p-2 hover:bg-gray-50 rounded"
+                                >
+                                  <span className="flex items-center min-w-0 text-blue-600">
+                                    <Icon className={`h-4 w-4 mr-2 shrink-0 ${meta.color}`} />
+                                    <span className="truncate">{doc.original_file_name || doc.file_name}</span>
+                                    {doc.requires_nda && (
+                                      <Lock className="h-3 w-3 ml-2 shrink-0 text-gray-400" aria-label="NDA required to view" />
+                                    )}
+                                  </span>
+                                  <Download className="h-4 w-4 text-gray-400 shrink-0" />
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      });
+                  })()}
                 </div>
               </div>
             )}

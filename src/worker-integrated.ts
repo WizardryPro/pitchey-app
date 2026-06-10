@@ -308,6 +308,15 @@ function normalizeBudgetUsd(raw: unknown): number | null {
   return Math.min(Math.round(n), MAX_BUDGET_USD);
 }
 
+// Rewrite an absolute /api/media/file URL (legacy rows stored the full
+// workers.dev origin) to a same-origin relative path, so document links route
+// through the Pages proxy and carry the session cookie. New uploads are already
+// relative (generateSignedUrl). No-op for already-relative or non-media URLs.
+function toRelativeMediaUrl<T>(url: T): T {
+  if (typeof url !== 'string') return url;
+  return url.replace(/^https?:\/\/[^/]+(\/api\/media\/file\/)/, '$1') as unknown as T;
+}
+
 function getOrCreateRouter(env: Env): RouteRegistry {
   const currentHash = getEnvHash(env);
 
@@ -5887,7 +5896,7 @@ pitchey_analytics_datapoints_per_minute 1250
           `, [pitchId]);
           documents = (docRows || []).filter((d: any) =>
             isOwner || d.is_public === true || (hasNDAAccess && d.requires_nda)
-          );
+          ).map((d: any) => ({ ...d, file_url: toRelativeMediaUrl(d.file_url) }));
         } catch (_e) { /* pitch_documents may not exist in all envs */ }
         const findDoc = (...types: string[]): string | undefined => {
           const hit = documents.find((d: any) =>
@@ -6194,7 +6203,7 @@ pitchey_analytics_datapoints_per_minute 1250
         `;
         documents = (docRows || []).filter((d: any) =>
           isOwner || d.is_public === true || (hasNDAAccess && d.requires_nda)
-        );
+        ).map((d: any) => ({ ...d, file_url: toRelativeMediaUrl(d.file_url) }));
       } catch { /* pitch_documents may not exist in all envs */ }
       const findDoc = (...types: string[]): string | undefined => {
         const hit = documents.find((d: any) =>
