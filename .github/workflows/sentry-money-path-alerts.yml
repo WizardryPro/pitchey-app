@@ -59,7 +59,7 @@ jobs:
               { "id": "sentry.rules.conditions.reappeared_event.ReappearedEventCondition" }
             ],
             "filters": [
-              { "id": "sentry.rules.filters.tagged_event.TaggedEventFilter", "key": "$tagkey", "match": "is_set", "value": "" }
+              { "id": "sentry.rules.filters.tagged_event.TaggedEventFilter", "key": "$tagkey", "match": "is" }
             ],
             "actions": [
               { "id": "sentry.mail.actions.NotifyEmailAction", "targetType": "IssueOwners", "targetIdentifier": "", "fallthroughType": "ActiveMembers" }
