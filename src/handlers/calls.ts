@@ -303,6 +303,24 @@ export async function updateCallHandler(request: Request, env: Env): Promise<Res
 
 const SUBMISSION_STATUSES = ['new', 'shortlisted', 'declined', 'accepted'];
 
+// Fire-and-forget in-app notification. Uses ONLY columns present in the live
+// `notifications` table — the shared createNotification() helper references
+// drifted columns (category/related_entity_*) that 500 against prod.
+async function notify(
+  sql: ReturnType<typeof getDb>,
+  n: { userId: number | string; type: string; title: string; message: string; pitchId?: number | null; fromUserId?: number | string | null; actionUrl?: string },
+): Promise<void> {
+  if (!sql) return;
+  try {
+    await sql`
+      INSERT INTO notifications (user_id, type, title, message, related_pitch_id, related_user_id, action_url, priority, is_read, created_at)
+      VALUES (${n.userId}, ${n.type}, ${n.title}, ${n.message}, ${n.pitchId ?? null}, ${n.fromUserId ?? null}, ${n.actionUrl ?? '/opportunities'}, 'normal', false, NOW())
+    `;
+  } catch (err) {
+    console.error('notify error:', err instanceof Error ? err.message : String(err));
+  }
+}
+
 // POST /api/calls/:id/submissions — a creator attaches one of their pitches.
 export async function submitToCallHandler(request: Request, env: Env): Promise<Response> {
   const origin = request.headers.get('Origin');
@@ -321,15 +339,20 @@ export async function submitToCallHandler(request: Request, env: Env): Promise<R
     if (!Number.isFinite(pitchId)) return errorResponse('A pitch is required', origin, 400);
     const message = String(body.message ?? '').trim();
 
-    const [call] = await sql`SELECT poster_user_id, status FROM open_calls WHERE id = ${callId}`;
+    const [call] = await sql`SELECT poster_user_id, status, title, deadline FROM open_calls WHERE id = ${callId}`;
     if (!call) return errorResponse('Call not found', origin, 404);
     if (call.status !== 'open') return errorResponse('This call is closed', origin, 400);
+    // Deadline enforcement — block once the deadline date has passed (YYYY-MM-DD
+    // string compare is correct for ISO dates).
+    if (call.deadline && String(call.deadline).slice(0, 10) < new Date().toISOString().slice(0, 10)) {
+      return errorResponse('This call has closed (deadline passed)', origin, 400);
+    }
     if (String(call.poster_user_id) === String(userId)) {
       return errorResponse('You cannot submit to your own call', origin, 403);
     }
 
     const [pitch] = await sql`
-      SELECT id FROM pitches WHERE id = ${pitchId} AND (user_id = ${userId} OR creator_id = ${userId})
+      SELECT id, title FROM pitches WHERE id = ${pitchId} AND (user_id = ${userId} OR creator_id = ${userId})
     `;
     if (!pitch) return errorResponse('You can only submit a pitch you own', origin, 403);
 
@@ -340,6 +363,16 @@ export async function submitToCallHandler(request: Request, env: Env): Promise<R
       RETURNING id
     `;
     if (!row) return errorResponse('You have already submitted that pitch to this call', origin, 409);
+
+    // Notify the call owner of the new submission (fire-and-forget).
+    await notify(sql, {
+      userId: call.poster_user_id,
+      type: 'call_submission',
+      title: 'New submission',
+      message: `“${pitch.title || 'A pitch'}” was submitted to your call “${call.title}”.`,
+      pitchId,
+      fromUserId: userId,
+    });
     return jsonResponse({ id: row.id, submitted: true }, origin, 201);
   } catch (err) {
     console.error('submitToCallHandler error:', err instanceof Error ? err.message : String(err));
@@ -436,7 +469,7 @@ export async function updateSubmissionHandler(request: Request, env: Env): Promi
     if (!SUBMISSION_STATUSES.includes(status)) return errorResponse('Invalid status', origin, 400);
 
     const [row] = await sql`
-      SELECT oc.poster_user_id
+      SELECT oc.poster_user_id, oc.title AS call_title, s.creator_user_id, s.pitch_id
       FROM call_submissions s
       JOIN open_calls oc ON oc.id = s.call_id
       WHERE s.id = ${id}
@@ -447,6 +480,19 @@ export async function updateSubmissionHandler(request: Request, env: Env): Promi
     }
 
     await sql`UPDATE call_submissions SET status = ${status}, updated_at = NOW() WHERE id = ${id}`;
+
+    // Notify the creator of a meaningful status change (skip 'new').
+    const verb: Record<string, string> = { shortlisted: 'shortlisted', accepted: 'accepted', declined: 'declined' };
+    if (verb[status]) {
+      await notify(sql, {
+        userId: row.creator_user_id,
+        type: 'call_submission_status',
+        title: status === 'accepted' ? 'Your pitch was accepted!' : `Submission ${verb[status]}`,
+        message: `Your pitch was ${verb[status]} for the call “${row.call_title}”.`,
+        pitchId: row.pitch_id,
+        fromUserId: userId,
+      });
+    }
     return jsonResponse({ updated: true, status }, origin);
   } catch (err) {
     console.error('updateSubmissionHandler error:', err instanceof Error ? err.message : String(err));
