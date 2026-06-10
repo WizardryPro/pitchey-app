@@ -4,7 +4,7 @@ import {
   BarChart3, Plus, X, Search, Loader2, Flame, Eye, Heart, Star, BadgeCheck, Crown, Layers,
 } from 'lucide-react';
 import PortalTopNav from '@shared/components/layout/PortalTopNav';
-import { compareService, type CreatorSubject, type CreatorOption } from '../services/compare.service';
+import { compareService, type CompareSubject, type CreatorOption } from '../services/compare.service';
 
 const MAX_SUBJECTS = 4;
 
@@ -21,7 +21,7 @@ function formatUsd(n: number | null): string {
   return `$${n}`;
 }
 
-function budgetRange(s: CreatorSubject): string {
+function budgetRange(s: CompareSubject): string {
   const lo = formatUsd(num(s.budget_min));
   const hi = formatUsd(num(s.budget_max));
   if (lo === '—' && hi === '—') return '—';
@@ -41,11 +41,11 @@ interface MetricRow {
   key: string;
   label: string;
   icon?: React.ComponentType<{ className?: string }>;
-  value: (s: CreatorSubject) => string;        // display
-  score?: (s: CreatorSubject) => number | null; // for leader highlight (higher = better)
+  value: (s: CompareSubject) => string;        // display
+  score?: (s: CompareSubject) => number | null; // for leader highlight (higher = better)
 }
 
-const METRIC_ROWS: MetricRow[] = [
+const CREATOR_ROWS: MetricRow[] = [
   { key: 'pitches', label: 'Published pitches', icon: Layers, value: (s) => String(num(s.pitch_count) ?? 0), score: (s) => num(s.pitch_count) },
   { key: 'heat', label: 'Avg heat', icon: Flame, value: (s) => (num(s.avg_heat) != null ? num(s.avg_heat)!.toFixed(1) : '—'), score: (s) => num(s.avg_heat) },
   { key: 'pitchey', label: 'Avg Pitchey score', icon: Star, value: (s) => (num(s.avg_pitchey) != null ? `${num(s.avg_pitchey)!.toFixed(1)}/10` : '—'), score: (s) => num(s.avg_pitchey) },
@@ -53,6 +53,16 @@ const METRIC_ROWS: MetricRow[] = [
   { key: 'likes', label: 'Total likes', icon: Heart, value: (s) => String(num(s.total_likes) ?? 0), score: (s) => num(s.total_likes) },
   { key: 'budget', label: 'Budget range', value: (s) => budgetRange(s) },
   { key: 'newest', label: 'Latest pitch', value: (s) => monthYear(s.newest_at) },
+];
+
+const PITCH_ROWS: MetricRow[] = [
+  { key: 'heat', label: 'Heat', icon: Flame, value: (s) => (num(s.avg_heat) != null ? num(s.avg_heat)!.toFixed(1) : '—'), score: (s) => num(s.avg_heat) },
+  { key: 'pitchey', label: 'Pitchey score', icon: Star, value: (s) => (num(s.avg_pitchey) != null ? `${num(s.avg_pitchey)!.toFixed(1)}/10` : '—'), score: (s) => num(s.avg_pitchey) },
+  { key: 'views', label: 'Views', icon: Eye, value: (s) => String(num(s.total_views) ?? 0), score: (s) => num(s.total_views) },
+  { key: 'likes', label: 'Likes', icon: Heart, value: (s) => String(num(s.total_likes) ?? 0), score: (s) => num(s.total_likes) },
+  { key: 'budget', label: 'Budget', value: (s) => budgetRange(s) },
+  { key: 'format', label: 'Format', value: (s) => s.format || '—' },
+  { key: 'newest', label: 'Created', value: (s) => monthYear(s.newest_at) },
 ];
 
 // ---------------------------------------------------------------------------
@@ -126,27 +136,30 @@ function CreatorPicker({ onAdd, disabled, existing }: { onAdd: (id: number) => v
 
 export default function ComparePage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const type: 'creator' | 'pitch' = searchParams.get('type') === 'pitch' ? 'pitch' : 'creator';
+  const isPitch = type === 'pitch';
+  const rows = isPitch ? PITCH_ROWS : CREATOR_ROWS;
   const ids = useMemo(() => (
     (searchParams.get('ids') || '')
       .split(',').map((s) => parseInt(s, 10)).filter(Number.isFinite).slice(0, MAX_SUBJECTS)
   ), [searchParams]);
 
-  const [subjects, setSubjects] = useState<CreatorSubject[]>([]);
+  const [subjects, setSubjects] = useState<CompareSubject[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (ids.length === 0) { setSubjects([]); return; }
     setLoading(true);
-    compareService.creators(ids)
+    compareService.subjects(type, ids)
       .then(setSubjects)
       .catch(() => setSubjects([]))
       .finally(() => setLoading(false));
-  }, [ids.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [type, ids.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setIds = (next: number[]) => {
     const uniq = Array.from(new Set(next)).slice(0, MAX_SUBJECTS);
-    if (uniq.length) setSearchParams({ ids: uniq.join(',') });
-    else setSearchParams({});
+    if (uniq.length) setSearchParams(isPitch ? { type, ids: uniq.join(',') } : { ids: uniq.join(',') });
+    else setSearchParams(isPitch ? { type } : {});
   };
   const addId = (id: number) => setIds([...ids, id]);
   const removeId = (id: number) => setIds(ids.filter((x) => x !== id));
@@ -154,7 +167,7 @@ export default function ComparePage() {
   // Per-row leader index (highest score; ties highlight all).
   const leaders = useMemo(() => {
     const map: Record<string, Set<number>> = {};
-    for (const row of METRIC_ROWS) {
+    for (const row of rows) {
       if (!row.score) continue;
       const scores = subjects.map((s) => row.score!(s));
       const max = Math.max(...scores.map((v) => (v ?? -Infinity)));
@@ -162,7 +175,7 @@ export default function ComparePage() {
       map[row.key] = new Set(scores.map((v, i) => (v === max ? i : -1)).filter((i) => i >= 0));
     }
     return map;
-  }, [subjects]);
+  }, [subjects, rows]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-stone-50 via-white to-stone-50">
@@ -174,25 +187,33 @@ export default function ComparePage() {
           <div className="inline-flex items-center gap-2 px-3 py-1 mb-3 rounded-full bg-white/10 border border-white/20 text-[11px] font-semibold tracking-[0.18em] uppercase">
             <BarChart3 className="w-3.5 h-3.5" /> Compare
           </div>
-          <h1 className="font-display font-black text-4xl sm:text-5xl tracking-tight mb-2">Compare Creators</h1>
+          <h1 className="font-display font-black text-4xl sm:text-5xl tracking-tight mb-2">{isPitch ? 'Compare Pitches' : 'Compare Creators'}</h1>
           <p className="text-white/85 max-w-2xl text-lg">
-            Put creators’ bodies of work side by side — heat, score, traction, range — to decide who to back.
+            {isPitch
+              ? 'These pitches side by side — heat, score, traction, budget — to decide which to take forward.'
+              : 'Put creators’ bodies of work side by side — heat, score, traction, range — to decide who to back.'}
           </p>
         </div>
       </section>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <CreatorPicker onAdd={addId} disabled={ids.length >= MAX_SUBJECTS} existing={ids} />
-        </div>
+        {!isPitch && (
+          <div className="mb-6">
+            <CreatorPicker onAdd={addId} disabled={ids.length >= MAX_SUBJECTS} existing={ids} />
+          </div>
+        )}
 
         {loading ? (
           <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 text-purple-500 animate-spin" /></div>
         ) : subjects.length === 0 ? (
           <div className="text-center py-20">
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-purple-50 text-purple-500 mb-4"><BarChart3 className="w-7 h-7" /></div>
-            <h3 className="font-display font-bold text-xl text-gray-900 mb-1">Add creators to compare</h3>
-            <p className="text-gray-500 max-w-md mx-auto">Search above to add 2–{MAX_SUBJECTS} creators and see their work side by side.</p>
+            <h3 className="font-display font-bold text-xl text-gray-900 mb-1">{isPitch ? 'Nothing to compare' : 'Add creators to compare'}</h3>
+            <p className="text-gray-500 max-w-md mx-auto">
+              {isPitch
+                ? 'Select submissions from a call’s inbox and choose “Compare” to see them here.'
+                : `Search above to add 2–${MAX_SUBJECTS} creators and see their work side by side.`}
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -204,21 +225,27 @@ export default function ComparePage() {
                     <th key={s.subject_id} className="p-3 align-bottom">
                       <div className="relative rounded-2xl border border-gray-200 bg-white p-4 text-center shadow-sm">
                         <button onClick={() => removeId(s.subject_id)} className="absolute top-2 right-2 text-gray-300 hover:text-gray-600" aria-label="Remove"><X className="w-4 h-4" /></button>
-                        <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-gray-100 flex items-center justify-center text-base font-bold text-gray-500 overflow-hidden">
-                          {s.avatar ? <img src={s.avatar} alt="" className="w-full h-full object-cover" /> : (s.name[0] || '?')}
-                        </div>
+                        {isPitch ? (
+                          <div className="w-full h-20 mb-2 rounded-lg bg-gray-900 overflow-hidden flex items-center justify-center">
+                            {s.thumbnail ? <img src={s.thumbnail} alt="" className="w-full h-full object-cover" /> : <span className="text-gray-500 text-xs">{s.genre || 'Pitch'}</span>}
+                          </div>
+                        ) : (
+                          <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-gray-100 flex items-center justify-center text-base font-bold text-gray-500 overflow-hidden">
+                            {s.avatar ? <img src={s.avatar} alt="" className="w-full h-full object-cover" /> : (s.name[0] || '?')}
+                          </div>
+                        )}
                         <div className="flex items-center justify-center gap-1">
                           <span className="font-bold text-gray-900 text-sm truncate">{s.name}</span>
                           {(s.verification_tier === 'gold' || s.verification_tier === 'silver') && <BadgeCheck className="w-4 h-4 text-amber-500 flex-shrink-0" />}
                         </div>
-                        <div className="text-[11px] text-gray-400 capitalize">{s.user_type}</div>
+                        <div className="text-[11px] text-gray-400 capitalize truncate">{isPitch ? (s.subtitle || '') : s.user_type}</div>
                       </div>
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {METRIC_ROWS.map((row, ri) => (
+                {rows.map((row, ri) => (
                   <tr key={row.key} className={ri % 2 ? 'bg-gray-50/60' : ''}>
                     <td className="px-3 py-3 text-sm font-medium text-gray-500">
                       <span className="inline-flex items-center gap-1.5">{row.icon && <row.icon className="w-3.5 h-3.5 text-gray-400" />}{row.label}</span>
