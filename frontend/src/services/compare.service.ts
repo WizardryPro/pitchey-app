@@ -51,6 +51,21 @@ function unwrap<T>(res: { success: boolean; data?: unknown }, key: string, fallb
   return ((inner?.[key] as T) ?? fallback);
 }
 
+function errMessage(res: { error?: unknown }, def: string): string {
+  const e = res.error as { message?: string } | string | undefined;
+  if (typeof e === 'string') return e || def;
+  return e?.message || def;
+}
+
+export interface SavedComparison {
+  id: number;
+  title: string;
+  subject_type: 'creator' | 'pitch' | 'slate';
+  subject_ids: string;
+  share_token: string;
+  created_at: string;
+}
+
 class CompareService {
   async subjects(type: 'creator' | 'pitch' | 'slate', ids: number[]): Promise<CompareSubject[]> {
     if (ids.length === 0) return [];
@@ -73,6 +88,35 @@ class CompareService {
       sub: u.user_type as string | undefined,
       image: (u.avatar as string | null | undefined) ?? null,
     })).filter((u) => Number.isFinite(u.id));
+  }
+
+  async shared(token: string): Promise<{ title: string; type: 'creator' | 'pitch' | 'slate'; subjects: CompareSubject[] }> {
+    const res = await apiClient.get<{ title: string; type: string; subjects: CompareSubject[] }>(`/api/compare/shared/${encodeURIComponent(token)}`);
+    if (!res.success) throw new Error(errMessage(res, 'Comparison not found'));
+    const d = (res.data as Record<string, unknown>) || {};
+    const inner = (d.data as Record<string, unknown> | undefined) ?? d;
+    return {
+      title: String(inner.title ?? 'Comparison'),
+      type: (inner.type as 'creator' | 'pitch' | 'slate') ?? 'creator',
+      subjects: (inner.subjects as CompareSubject[]) ?? [],
+    };
+  }
+
+  async save(title: string, type: string, ids: number[]): Promise<{ id: number; share_token: string }> {
+    const res = await apiClient.post<{ id: number; share_token: string }>('/api/compare/saved', { title, type, ids: ids.join(',') });
+    if (!res.success) throw new Error(errMessage(res, 'Failed to save'));
+    const d = (res.data as Record<string, unknown>) || {};
+    const inner = (d.data as Record<string, unknown> | undefined) ?? d;
+    return { id: Number(inner.id), share_token: String(inner.share_token) };
+  }
+
+  async listSaved(): Promise<SavedComparison[]> {
+    const res = await apiClient.get<{ comparisons: SavedComparison[] }>('/api/compare/saved');
+    return unwrap<SavedComparison[]>(res, 'comparisons', []);
+  }
+
+  async deleteSaved(id: number): Promise<void> {
+    await apiClient.delete(`/api/compare/saved/${id}`);
   }
 
   async searchSlates(q: string): Promise<PickerItem[]> {

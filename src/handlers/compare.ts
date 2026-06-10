@@ -98,6 +98,86 @@ export async function searchSlatesHandler(request: Request, env: Env): Promise<R
   }
 }
 
+// Aggregate the metric bundle per subject. Shared by the live compare endpoint
+// and the public shared-token view so the matrix always reflects current data.
+async function computeSubjects(sql: ReturnType<typeof getDb>, type: string, unique: number[]): Promise<unknown[]> {
+  if (!sql || unique.length === 0) return [];
+  const placeholders = unique.map((_, i) => `$${i + 1}`).join(',');
+  let query: string;
+
+  if (type === 'pitch') {
+    query = `
+      SELECT
+        p.id AS subject_id, p.title AS name,
+        COALESCE(u.company_name, NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.username) AS subtitle,
+        p.title_image AS thumbnail, u.verification_tier, NULL::int AS pitch_count,
+        ROUND(COALESCE(p.heat_score, 0), 1) AS avg_heat,
+        ROUND(NULLIF(p.pitchey_score_avg, 0), 1) AS avg_pitchey,
+        COALESCE(p.view_count, 0) AS total_views, COALESCE(p.like_count, 0) AS total_likes,
+        NULLIF(p.estimated_budget_usd, 0) AS budget_min, NULLIF(p.estimated_budget_usd, 0) AS budget_max,
+        p.created_at AS newest_at, p.genre, p.format,
+        ARRAY_REMOVE(ARRAY[p.genre], NULL) AS genres
+      FROM pitches p
+      LEFT JOIN users u ON (u.id = p.user_id OR u.id = p.creator_id)
+      WHERE p.id IN (${placeholders})
+    `;
+  } else if (type === 'slate') {
+    query = `
+      SELECT
+        s.id AS subject_id, s.title AS name,
+        COALESCE(u.company_name, NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.username) AS subtitle,
+        s.cover_image AS thumbnail, u.verification_tier,
+        COUNT(p.id) AS pitch_count,
+        ROUND(AVG(p.heat_score), 1) AS avg_heat,
+        ROUND(AVG(NULLIF(p.pitchey_score_avg, 0)), 1) AS avg_pitchey,
+        COALESCE(SUM(p.view_count), 0) AS total_views, COALESCE(SUM(p.like_count), 0) AS total_likes,
+        MIN(p.estimated_budget_usd) FILTER (WHERE p.estimated_budget_usd > 0) AS budget_min,
+        MAX(p.estimated_budget_usd) AS budget_max, MAX(p.created_at) AS newest_at,
+        ARRAY_REMOVE(ARRAY_AGG(DISTINCT p.genre), NULL) AS genres
+      FROM slates s
+      LEFT JOIN users u ON u.id = s.user_id
+      LEFT JOIN slate_pitches sp ON sp.slate_id = s.id
+      LEFT JOIN pitches p ON p.id = sp.pitch_id AND p.status = 'published'
+      WHERE s.id IN (${placeholders})
+      GROUP BY s.id, u.id
+    `;
+  } else {
+    query = `
+      SELECT
+        u.id AS subject_id,
+        COALESCE(u.company_name, NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.username) AS name,
+        u.username, u.user_type, u.verification_tier,
+        COALESCE(u.profile_image_url, u.profile_image, u.avatar_url, u.image) AS avatar,
+        COUNT(p.id) AS pitch_count,
+        ROUND(AVG(p.heat_score), 1) AS avg_heat,
+        ROUND(AVG(NULLIF(p.pitchey_score_avg, 0)), 1) AS avg_pitchey,
+        COALESCE(SUM(p.view_count), 0) AS total_views, COALESCE(SUM(p.like_count), 0) AS total_likes,
+        MIN(p.estimated_budget_usd) FILTER (WHERE p.estimated_budget_usd > 0) AS budget_min,
+        MAX(p.estimated_budget_usd) AS budget_max, MAX(p.created_at) AS newest_at,
+        ARRAY_REMOVE(ARRAY_AGG(DISTINCT p.genre), NULL) AS genres
+      FROM users u
+      LEFT JOIN pitches p ON (p.user_id = u.id OR p.creator_id = u.id) AND p.status = 'published'
+      WHERE u.id IN (${placeholders})
+      GROUP BY u.id
+    `;
+  }
+
+  const rows = await sql.query(query, unique);
+  // Preserve the requested order so UI columns line up.
+  const byId = new Map((rows as Array<Record<string, unknown>>).map((r) => [Number(r.subject_id), r]));
+  return unique.map((id) => byId.get(id)).filter(Boolean);
+}
+
+function parseIds(raw: string): number[] {
+  const ids = raw.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => Number.isFinite(n));
+  return Array.from(new Set(ids)).slice(0, 4);
+}
+
+function lastSegment(request: Request): string {
+  const segs = new URL(request.url).pathname.split('/').filter(Boolean);
+  return segs[segs.length - 1] || '';
+}
+
 export async function compareHandler(request: Request, env: Env): Promise<Response> {
   const origin = request.headers.get('Origin');
   const userId = await getUserId(request, env);
@@ -105,117 +185,116 @@ export async function compareHandler(request: Request, env: Env): Promise<Respon
 
   const url = new URL(request.url);
   const type = (url.searchParams.get('type') || 'creator').toLowerCase();
-  const ids = (url.searchParams.get('ids') || '')
-    .split(',')
-    .map((s) => parseInt(s.trim(), 10))
-    .filter((n) => Number.isFinite(n));
-  const unique = Array.from(new Set(ids)).slice(0, 4);
-
   if (type !== 'creator' && type !== 'pitch' && type !== 'slate') return errorResponse('Unsupported comparison type', origin, 400);
+  const unique = parseIds(url.searchParams.get('ids') || '');
   if (unique.length === 0) return jsonResponse({ type, subjects: [] }, origin);
 
   const sql = getDb(env);
   if (!sql) return jsonResponse({ type, subjects: [] }, origin);
 
   try {
-    const placeholders = unique.map((_, i) => `$${i + 1}`).join(',');
-
-    // type=pitch — single-pitch metrics, mapped onto the same bundle field names
-    // so the frontend matrix is shared (it picks metric rows by `type`).
-    if (type === 'pitch') {
-      const pitchQuery = `
-        SELECT
-          p.id AS subject_id,
-          p.title AS name,
-          COALESCE(u.company_name, NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.username) AS subtitle,
-          p.title_image AS thumbnail,
-          u.verification_tier,
-          NULL::int AS pitch_count,
-          ROUND(COALESCE(p.heat_score, 0), 1) AS avg_heat,
-          ROUND(NULLIF(p.pitchey_score_avg, 0), 1) AS avg_pitchey,
-          COALESCE(p.view_count, 0) AS total_views,
-          COALESCE(p.like_count, 0) AS total_likes,
-          NULLIF(p.estimated_budget_usd, 0) AS budget_min,
-          NULLIF(p.estimated_budget_usd, 0) AS budget_max,
-          p.created_at AS newest_at,
-          p.genre,
-          p.format,
-          ARRAY_REMOVE(ARRAY[p.genre], NULL) AS genres
-        FROM pitches p
-        LEFT JOIN users u ON (u.id = p.user_id OR u.id = p.creator_id)
-        WHERE p.id IN (${placeholders})
-      `;
-      const pitchRows = await sql.query(pitchQuery, unique);
-      const byPitch = new Map((pitchRows as Array<Record<string, unknown>>).map((r) => [Number(r.subject_id), r]));
-      const subjects = unique.map((id) => byPitch.get(id)).filter(Boolean);
-      return jsonResponse({ type, subjects }, origin);
-    }
-
-    // type=slate — aggregate each slate's published pitches (via slate_pitches).
-    // GROUP BY both PKs (s.id, u.id) so slate + owner columns are dependent.
-    if (type === 'slate') {
-      const slateQuery = `
-        SELECT
-          s.id AS subject_id,
-          s.title AS name,
-          COALESCE(u.company_name, NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.username) AS subtitle,
-          s.cover_image AS thumbnail,
-          u.verification_tier,
-          COUNT(p.id) AS pitch_count,
-          ROUND(AVG(p.heat_score), 1) AS avg_heat,
-          ROUND(AVG(NULLIF(p.pitchey_score_avg, 0)), 1) AS avg_pitchey,
-          COALESCE(SUM(p.view_count), 0) AS total_views,
-          COALESCE(SUM(p.like_count), 0) AS total_likes,
-          MIN(p.estimated_budget_usd) FILTER (WHERE p.estimated_budget_usd > 0) AS budget_min,
-          MAX(p.estimated_budget_usd) AS budget_max,
-          MAX(p.created_at) AS newest_at,
-          ARRAY_REMOVE(ARRAY_AGG(DISTINCT p.genre), NULL) AS genres
-        FROM slates s
-        LEFT JOIN users u ON u.id = s.user_id
-        LEFT JOIN slate_pitches sp ON sp.slate_id = s.id
-        LEFT JOIN pitches p ON p.id = sp.pitch_id AND p.status = 'published'
-        WHERE s.id IN (${placeholders})
-        GROUP BY s.id, u.id
-      `;
-      const slateRows = await sql.query(slateQuery, unique);
-      const bySlate = new Map((slateRows as Array<Record<string, unknown>>).map((r) => [Number(r.subject_id), r]));
-      const subjects = unique.map((id) => bySlate.get(id)).filter(Boolean);
-      return jsonResponse({ type, subjects }, origin);
-    }
-
-    // type=creator — aggregate each creator's published pitches. LEFT JOIN keeps
-    // creators with no published pitches (zero/null metrics). u.id is the PK so the
-    // other u.* columns are functionally dependent — GROUP BY u.id is sufficient.
-    const query = `
-      SELECT
-        u.id AS subject_id,
-        COALESCE(u.company_name, NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.username) AS name,
-        u.username,
-        u.user_type,
-        u.verification_tier,
-        COALESCE(u.profile_image_url, u.profile_image, u.avatar_url, u.image) AS avatar,
-        COUNT(p.id) AS pitch_count,
-        ROUND(AVG(p.heat_score), 1) AS avg_heat,
-        ROUND(AVG(NULLIF(p.pitchey_score_avg, 0)), 1) AS avg_pitchey,
-        COALESCE(SUM(p.view_count), 0) AS total_views,
-        COALESCE(SUM(p.like_count), 0) AS total_likes,
-        MIN(p.estimated_budget_usd) FILTER (WHERE p.estimated_budget_usd > 0) AS budget_min,
-        MAX(p.estimated_budget_usd) AS budget_max,
-        MAX(p.created_at) AS newest_at,
-        ARRAY_REMOVE(ARRAY_AGG(DISTINCT p.genre), NULL) AS genres
-      FROM users u
-      LEFT JOIN pitches p
-        ON (p.user_id = u.id OR p.creator_id = u.id) AND p.status = 'published'
-      WHERE u.id IN (${placeholders})
-      GROUP BY u.id
-    `;
-    const rows = await sql.query(query, unique);
-    // Return in the requested order so the UI columns line up with the picker.
-    const byId = new Map((rows as Array<Record<string, unknown>>).map((r) => [Number(r.subject_id), r]));
-    const subjects = unique.map((id) => byId.get(id)).filter(Boolean);
+    const subjects = await computeSubjects(sql, type, unique);
     return jsonResponse({ type, subjects }, origin);
   } catch (err) {
     console.error('compareHandler error:', err instanceof Error ? err.message : String(err));
     return errorResponse('Failed to build comparison', origin, 500);
+  }
+}
+
+// ===========================================================================
+// Saved & shareable comparisons (Phase 3)
+// ===========================================================================
+
+// POST /api/compare/saved — save the current comparison, returns a share token.
+export async function saveComparisonHandler(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin');
+  const userId = await getUserId(request, env);
+  if (!userId) return errorResponse('Authentication required', origin, 401);
+
+  const sql = getDb(env);
+  if (!sql) return errorResponse('Database unavailable', origin, 503);
+
+  try {
+    const body = (await request.json()) as Record<string, unknown>;
+    const type = String(body.type ?? 'creator').toLowerCase();
+    if (type !== 'creator' && type !== 'pitch' && type !== 'slate') return errorResponse('Unsupported comparison type', origin, 400);
+    const unique = parseIds(Array.isArray(body.ids) ? body.ids.join(',') : String(body.ids ?? ''));
+    if (unique.length < 2) return errorResponse('Add at least 2 to save a comparison', origin, 400);
+    const title = (String(body.title ?? '').trim() || 'Comparison').slice(0, 160);
+    const token = crypto.randomUUID().replace(/-/g, '');
+
+    const [row] = await sql`
+      INSERT INTO saved_comparisons (user_id, title, subject_type, subject_ids, share_token)
+      VALUES (${userId}, ${title}, ${type}, ${unique.join(',')}, ${token})
+      RETURNING id, share_token
+    `;
+    return jsonResponse({ id: row?.id, share_token: row?.share_token }, origin, 201);
+  } catch (err) {
+    console.error('saveComparisonHandler error:', err instanceof Error ? err.message : String(err));
+    return errorResponse('Failed to save comparison', origin, 500);
+  }
+}
+
+// GET /api/compare/saved — the user's saved comparisons.
+export async function listSavedComparisonsHandler(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin');
+  const userId = await getUserId(request, env);
+  if (!userId) return errorResponse('Authentication required', origin, 401);
+
+  const sql = getDb(env);
+  if (!sql) return jsonResponse({ comparisons: [] }, origin);
+
+  try {
+    const rows = await sql`
+      SELECT id, title, subject_type, subject_ids, share_token, created_at
+      FROM saved_comparisons WHERE user_id = ${userId}
+      ORDER BY created_at DESC LIMIT 50
+    `;
+    return jsonResponse({ comparisons: rows }, origin);
+  } catch (err) {
+    console.error('listSavedComparisonsHandler error:', err instanceof Error ? err.message : String(err));
+    return jsonResponse({ comparisons: [] }, origin);
+  }
+}
+
+// DELETE /api/compare/saved/:id — delete one of the user's saved comparisons.
+export async function deleteSavedComparisonHandler(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin');
+  const userId = await getUserId(request, env);
+  if (!userId) return errorResponse('Authentication required', origin, 401);
+
+  const id = parseInt(lastSegment(request), 10);
+  if (!Number.isFinite(id)) return errorResponse('Invalid id', origin, 400);
+
+  const sql = getDb(env);
+  if (!sql) return errorResponse('Database unavailable', origin, 503);
+
+  try {
+    await sql`DELETE FROM saved_comparisons WHERE id = ${id} AND user_id = ${userId}`;
+    return jsonResponse({ deleted: true }, origin);
+  } catch (err) {
+    console.error('deleteSavedComparisonHandler error:', err instanceof Error ? err.message : String(err));
+    return errorResponse('Failed to delete', origin, 500);
+  }
+}
+
+// GET /api/compare/shared/:token — PUBLIC read-only view (recomputed live).
+export async function sharedComparisonHandler(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin');
+  const token = lastSegment(request);
+  if (!token) return errorResponse('Invalid link', origin, 400);
+
+  const sql = getDb(env);
+  if (!sql) return errorResponse('Database unavailable', origin, 503);
+
+  try {
+    const [saved] = await sql`SELECT title, subject_type, subject_ids FROM saved_comparisons WHERE share_token = ${token}`;
+    if (!saved) return errorResponse('Comparison not found', origin, 404);
+    const unique = parseIds(String(saved.subject_ids));
+    const subjects = await computeSubjects(sql, String(saved.subject_type), unique);
+    return jsonResponse({ title: saved.title, type: saved.subject_type, subjects }, origin);
+  } catch (err) {
+    console.error('sharedComparisonHandler error:', err instanceof Error ? err.message : String(err));
+    return errorResponse('Failed to load comparison', origin, 500);
   }
 }
