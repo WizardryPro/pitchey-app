@@ -6086,7 +6086,7 @@ pitchey_analytics_datapoints_per_minute 1250
             try {
               const ndaFallback = await sql`
                 SELECT 1 FROM ndas
-                WHERE pitch_id = ${pitchId} AND requester_id = ${authUserId}
+                WHERE pitch_id = ${pitchId} AND user_id = ${authUserId}
                   AND (status = 'approved' OR status = 'signed')
                 LIMIT 1
               `;
@@ -8137,14 +8137,14 @@ pitchey_analytics_datapoints_per_minute 1250
 
     try {
       const ndas = await this.db.query(`
-        SELECT 
+        SELECT
           n.*,
           p.title as pitch_title,
           u.name as requester_name
         FROM ndas n
         JOIN pitches p ON n.pitch_id = p.id
-        JOIN users u ON n.requester_id = u.id
-        WHERE n.requester_id = $1 OR n.pitch_id IN (
+        JOIN users u ON n.signer_id = u.id
+        WHERE n.signer_id = $1 OR n.pitch_id IN (
           SELECT id FROM pitches WHERE user_id = $1
         )
         ORDER BY n.created_at DESC
@@ -9385,7 +9385,7 @@ pitchey_analytics_datapoints_per_minute 1250
           COUNT(DISTINCT sp.pitch_id) as saved_pitches
         FROM users u
         LEFT JOIN investments i ON i.investor_id = u.id
-        LEFT JOIN ndas n ON n.requester_id = u.id AND n.status = 'approved'
+        LEFT JOIN ndas n ON n.signer_id = u.id AND n.status = 'approved'
         LEFT JOIN saved_pitches sp ON sp.user_id = u.id
         WHERE u.id = $1
       `, [authResult.user.id]);
@@ -16031,14 +16031,14 @@ pitchey_analytics_datapoints_per_minute 1250
       // Try to get from database first
       try {
         const query = `
-          SELECT n.*, p.title as pitch_title, 
+          SELECT n.*, p.title as pitch_title,
                  u1.first_name || ' ' || u1.last_name as requester_name,
                  u2.first_name || ' ' || u2.last_name as creator_name
           FROM ndas n
           LEFT JOIN pitches p ON n.pitch_id = p.id
-          LEFT JOIN users u1 ON n.requester_id = u1.id  
-          LEFT JOIN users u2 ON n.creator_id = u2.id
-          WHERE n.id = $1 AND (n.requester_id = $2 OR n.creator_id = $2)
+          LEFT JOIN users u1 ON n.signer_id = u1.id
+          LEFT JOIN users u2 ON p.user_id = u2.id
+          WHERE n.id = $1 AND (n.signer_id = $2 OR p.user_id = $2)
         `;
 
         const results = await this.db.query(query, [ndaId, authResult.user.id]);
@@ -16832,7 +16832,7 @@ Signatures: [To be completed upon signing]
           `SELECT n.*, p.title as pitch_title
            FROM ndas n
            LEFT JOIN pitches p ON n.pitch_id = p.id
-           WHERE n.requester_id = $1 OR n.creator_id = $1
+           WHERE n.signer_id = $1 OR p.user_id = $1
            ORDER BY n.created_at DESC
            LIMIT $2 OFFSET $3`,
           [authResult.user.id, limit, offset]
@@ -17058,10 +17058,14 @@ Signatures: [To be completed upon signing]
       // Try database first
       try {
         const results = await this.db.query(
+          // ndas has signer_id (the person who signed), not requester_id/creator_id.
+          // Access = you signed it, OR you own the pitch (checked via subquery).
           `SELECT n.*, u.first_name, u.last_name, u.email
            FROM ndas n
-           LEFT JOIN users u ON n.requester_id = u.id
-           WHERE n.id = $1 AND (n.requester_id = $2 OR n.creator_id = $2)`,
+           LEFT JOIN users u ON n.signer_id = u.id
+           WHERE n.id = $1 AND (n.signer_id = $2 OR n.pitch_id IN (
+             SELECT id FROM pitches WHERE user_id = $2
+           ))`,
           [ndaId, authResult.user.id]
         );
 
@@ -17358,7 +17362,11 @@ Signatures: [To be completed upon signing]
       // For NDAs, users can only see audit trails for their own NDAs
       if (entityType === 'nda') {
         const ndaCheck = await this.db.query(
-          'SELECT id FROM ndas WHERE id = $1 AND (requester_id = $2 OR creator_id = $2)',
+          // ndas has signer_id, not requester_id/creator_id. Access = you signed it,
+          // or you own the pitch it's against.
+          `SELECT id FROM ndas WHERE id = $1 AND (signer_id = $2 OR pitch_id IN (
+             SELECT id FROM pitches WHERE user_id = $2
+           ))`,
           [entityId, authResult.user.id]
         );
 
