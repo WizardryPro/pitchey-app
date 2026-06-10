@@ -337,10 +337,12 @@ export default function Homepage() {
           <h1 className="font-display font-black tracking-tight leading-[0.92] text-5xl sm:text-7xl lg:text-8xl mb-6">
             Where stories
             <br />
-            {/* inline-block + roomier leading + padding so the italic gradient "f"
-                ascender/overhang isn't clipped by WebKit bg-clip-text under the
-                tight 0.92 line-height (Karl: "the F in find is messy"). */}
-            <span className="inline-block italic font-semibold leading-[1.15] pb-1 pr-2 bg-gradient-to-r from-violet-300 via-fuchsia-300 to-purple-300 bg-clip-text text-transparent">
+            {/* Upright Fraunces for "find life". The messy "f" (Karl) was NOT
+                clipping — it's Fraunces' italic calligraphic swash (long curling
+                descender); the loaded font URL has no WONK axis so CSS can't tame
+                it. Upright keeps the editorial serif + gradient with a clean f.
+                Do NOT re-add `italic` here. */}
+            <span className="inline-block font-semibold leading-[1.15] bg-gradient-to-r from-violet-300 via-fuchsia-300 to-purple-300 bg-clip-text text-transparent">
               find life
             </span>
           </h1>
