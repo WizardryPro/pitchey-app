@@ -2,9 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   BarChart3, Plus, X, Search, Loader2, Flame, Eye, Heart, Star, BadgeCheck, Crown, Layers,
+  Share2, Bookmark, Trash2, Copy, Check,
 } from 'lucide-react';
 import PortalTopNav from '@shared/components/layout/PortalTopNav';
-import { compareService, type CompareSubject, type PickerItem } from '../services/compare.service';
+import { useToast } from '@shared/components/feedback/ToastProvider';
+import { compareService, type CompareSubject, type PickerItem, type SavedComparison } from '../services/compare.service';
 
 const MAX_SUBJECTS = 4;
 
@@ -141,16 +143,208 @@ function Picker({ onAdd, disabled, existing, noun, search }: { onAdd: (id: numbe
 }
 
 // ---------------------------------------------------------------------------
+// Matrix (shared by the live page and the public shared view)
+// ---------------------------------------------------------------------------
+
+export function ComparisonMatrix({ type, subjects, onRemove }: { type: 'creator' | 'pitch' | 'slate'; subjects: CompareSubject[]; onRemove?: (id: number) => void }) {
+  const isSlate = type === 'slate';
+  const rows = type === 'pitch' ? PITCH_ROWS : isSlate ? SLATE_ROWS : CREATOR_ROWS;
+  const leaders = useMemo(() => {
+    const map: Record<string, Set<number>> = {};
+    for (const row of rows) {
+      if (!row.score) continue;
+      const scores = subjects.map((s) => row.score!(s));
+      const max = Math.max(...scores.map((v) => (v ?? -Infinity)));
+      if (!Number.isFinite(max) || max <= 0) continue;
+      map[row.key] = new Set(scores.map((v, i) => (v === max ? i : -1)).filter((i) => i >= 0));
+    }
+    return map;
+  }, [subjects, rows]);
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full border-separate border-spacing-0 min-w-[640px]">
+        <thead>
+          <tr>
+            <th className="w-44 align-bottom" />
+            {subjects.map((s) => (
+              <th key={s.subject_id} className="p-3 align-bottom">
+                <div className="relative rounded-2xl border border-gray-200 bg-white p-4 text-center shadow-sm">
+                  {onRemove && <button onClick={() => onRemove(s.subject_id)} className="absolute top-2 right-2 text-gray-300 hover:text-gray-600" aria-label="Remove"><X className="w-4 h-4" /></button>}
+                  {type === 'creator' ? (
+                    <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-gray-100 flex items-center justify-center text-base font-bold text-gray-500 overflow-hidden">
+                      {s.avatar ? <img src={s.avatar} alt="" className="w-full h-full object-cover" /> : (s.name[0] || '?')}
+                    </div>
+                  ) : (
+                    <div className="w-full h-20 mb-2 rounded-lg bg-gray-900 overflow-hidden flex items-center justify-center">
+                      {s.thumbnail ? <img src={s.thumbnail} alt="" className="w-full h-full object-cover" /> : <span className="text-gray-500 text-xs">{(isSlate ? 'Slate' : s.genre) || 'Pitch'}</span>}
+                    </div>
+                  )}
+                  <div className="flex items-center justify-center gap-1">
+                    <span className="font-bold text-gray-900 text-sm truncate">{s.name}</span>
+                    {(s.verification_tier === 'gold' || s.verification_tier === 'silver') && <BadgeCheck className="w-4 h-4 text-amber-500 flex-shrink-0" />}
+                  </div>
+                  <div className="text-[11px] text-gray-400 capitalize truncate">{type === 'creator' ? s.user_type : (s.subtitle || '')}</div>
+                </div>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, ri) => (
+            <tr key={row.key} className={ri % 2 ? 'bg-gray-50/60' : ''}>
+              <td className="px-3 py-3 text-sm font-medium text-gray-500">
+                <span className="inline-flex items-center gap-1.5">{row.icon && <row.icon className="w-3.5 h-3.5 text-gray-400" />}{row.label}</span>
+              </td>
+              {subjects.map((s, si) => {
+                const isLeader = leaders[row.key]?.has(si);
+                return (
+                  <td key={s.subject_id} className="px-3 py-3 text-center">
+                    <span className={`inline-flex items-center gap-1 text-sm ${isLeader ? 'font-bold text-purple-700' : 'text-gray-800'}`}>
+                      {isLeader && <Crown className="w-3.5 h-3.5 text-amber-500" />}
+                      {row.value(s)}
+                    </span>
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+          <tr>
+            <td className="px-3 py-3 text-sm font-medium text-gray-500 align-top">Genres</td>
+            {subjects.map((s) => (
+              <td key={s.subject_id} className="px-3 py-3 align-top">
+                <div className="flex flex-wrap justify-center gap-1">
+                  {(s.genres || []).slice(0, 5).map((g) => (
+                    <span key={g} className="inline-flex rounded-full bg-purple-50 text-purple-700 ring-1 ring-purple-100 px-2 py-0.5 text-[11px] font-medium">{g}</span>
+                  ))}
+                  {(!s.genres || s.genres.length === 0) && <span className="text-sm text-gray-400">—</span>}
+                </div>
+              </td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Save & share
+// ---------------------------------------------------------------------------
+
+function SaveModal({ type, ids, onClose }: { type: string; ids: number[]; onClose: () => void }) {
+  const toast = useToast();
+  const [title, setTitle] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [link, setLink] = useState<string | null>(null);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const { share_token } = await compareService.save(title.trim() || 'Comparison', type, ids);
+      const url = `${window.location.origin}/compare/s/${share_token}`;
+      setLink(url);
+      try { await navigator.clipboard.writeText(url); } catch { /* clipboard blocked */ }
+      toast.success('Saved · link copied');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save');
+    } finally { setSaving(false); }
+  };
+  const copy = async () => { if (link) { try { await navigator.clipboard.writeText(link); toast.success('Link copied'); } catch { /* blocked */ } } };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-5 border-b border-gray-100">
+          <h2 className="font-display font-bold text-lg text-gray-900">Save &amp; share</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-5">
+          {!link ? (
+            <>
+              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Name this comparison</label>
+              <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Sci-fi finalists" maxLength={160}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
+              <p className="text-xs text-gray-400 mt-2">Anyone with the link can view this comparison (read-only, recomputed live).</p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-gray-600 mb-2">Shareable link (copied to your clipboard):</p>
+              <div className="flex items-center gap-2">
+                <input readOnly value={link} className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700" />
+                <button onClick={copy} className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition"><Copy className="w-4 h-4" /></button>
+              </div>
+            </>
+          )}
+        </div>
+        <div className="p-5 border-t border-gray-100 flex justify-end gap-2">
+          {!link ? (
+            <>
+              <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition">Cancel</button>
+              <button onClick={save} disabled={saving} className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-semibold shadow-lg shadow-purple-500/25 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-60 transition">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />} Save
+              </button>
+            </>
+          ) : (
+            <button onClick={onClose} className="px-5 py-2 rounded-lg bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 transition">Done</button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SavedMenu({ onLoad }: { onLoad: (c: SavedComparison) => void }) {
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState<SavedComparison[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const toggle = async () => {
+    const next = !open; setOpen(next);
+    if (next) { setLoading(true); try { setItems(await compareService.listSaved()); } catch { setItems([]); } finally { setLoading(false); } }
+  };
+  const del = async (e: React.MouseEvent, id: number) => {
+    e.stopPropagation();
+    try { await compareService.deleteSaved(id); setItems((prev) => prev.filter((x) => x.id !== id)); }
+    catch { toast.error('Failed to delete'); }
+  };
+
+  return (
+    <div className="relative">
+      <button onClick={toggle} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 ring-1 ring-gray-200 bg-white hover:ring-purple-300 transition">
+        <Bookmark className="w-4 h-4" /> Saved
+      </button>
+      {open && (
+        <div className="absolute right-0 z-30 mt-1 w-72 bg-white rounded-xl border border-gray-200 shadow-lg max-h-72 overflow-y-auto">
+          {loading ? <div className="p-4 flex justify-center"><Loader2 className="w-5 h-5 text-purple-400 animate-spin" /></div>
+            : items.length === 0 ? <div className="p-4 text-sm text-gray-400 text-center">No saved comparisons yet.</div>
+              : items.map((c) => (
+                <div key={c.id} className="flex items-center gap-2 px-3 py-2 hover:bg-purple-50 transition">
+                  <button onClick={() => { onLoad(c); setOpen(false); }} className="flex-1 min-w-0 text-left">
+                    <span className="block text-sm font-semibold text-gray-900 truncate">{c.title}</span>
+                    <span className="block text-[11px] text-gray-400 capitalize">{c.subject_type} · {c.subject_ids.split(',').length}</span>
+                  </button>
+                  <button onClick={(e) => del(e, c.id)} className="text-gray-300 hover:text-red-500 flex-shrink-0" aria-label="Delete"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
 export default function ComparePage() {
+  const [saveOpen, setSaveOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const rawType = searchParams.get('type');
   const type: 'creator' | 'pitch' | 'slate' = rawType === 'pitch' ? 'pitch' : rawType === 'slate' ? 'slate' : 'creator';
   const isPitch = type === 'pitch';
   const isSlate = type === 'slate';
-  const rows = isPitch ? PITCH_ROWS : isSlate ? SLATE_ROWS : CREATOR_ROWS;
   const ids = useMemo(() => (
     (searchParams.get('ids') || '')
       .split(',').map((s) => parseInt(s, 10)).filter(Number.isFinite).slice(0, MAX_SUBJECTS)
@@ -182,19 +376,11 @@ export default function ComparePage() {
   };
   const addId = (id: number) => setIds([...ids, id]);
   const removeId = (id: number) => setIds(ids.filter((x) => x !== id));
-
-  // Per-row leader index (highest score; ties highlight all).
-  const leaders = useMemo(() => {
-    const map: Record<string, Set<number>> = {};
-    for (const row of rows) {
-      if (!row.score) continue;
-      const scores = subjects.map((s) => row.score!(s));
-      const max = Math.max(...scores.map((v) => (v ?? -Infinity)));
-      if (!Number.isFinite(max) || max <= 0) continue;
-      map[row.key] = new Set(scores.map((v, i) => (v === max ? i : -1)).filter((i) => i >= 0));
-    }
-    return map;
-  }, [subjects, rows]);
+  const loadSaved = (c: SavedComparison) => {
+    const params: Record<string, string> = { ids: c.subject_ids };
+    if (c.subject_type !== 'creator') params.type = c.subject_type;
+    setSearchParams(params);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-stone-50 via-white to-stone-50">
@@ -218,6 +404,15 @@ export default function ComparePage() {
       </section>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Save / Saved controls */}
+        <div className="flex items-center justify-end gap-2 mb-4">
+          <SavedMenu onLoad={loadSaved} />
+          {subjects.length >= 2 && (
+            <button onClick={() => setSaveOpen(true)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-semibold shadow shadow-purple-500/25 hover:from-purple-500 hover:to-indigo-500 transition">
+              <Share2 className="w-4 h-4" /> Save &amp; share
+            </button>
+          )}
+        </div>
         {!isPitch && (
           <>
             {/* Creators / Slates toggle */}
@@ -257,72 +452,13 @@ export default function ComparePage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-separate border-spacing-0 min-w-[640px]">
-              <thead>
-                <tr>
-                  <th className="w-44 align-bottom" />
-                  {subjects.map((s) => (
-                    <th key={s.subject_id} className="p-3 align-bottom">
-                      <div className="relative rounded-2xl border border-gray-200 bg-white p-4 text-center shadow-sm">
-                        <button onClick={() => removeId(s.subject_id)} className="absolute top-2 right-2 text-gray-300 hover:text-gray-600" aria-label="Remove"><X className="w-4 h-4" /></button>
-                        {type === 'creator' ? (
-                          <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-gray-100 flex items-center justify-center text-base font-bold text-gray-500 overflow-hidden">
-                            {s.avatar ? <img src={s.avatar} alt="" className="w-full h-full object-cover" /> : (s.name[0] || '?')}
-                          </div>
-                        ) : (
-                          <div className="w-full h-20 mb-2 rounded-lg bg-gray-900 overflow-hidden flex items-center justify-center">
-                            {s.thumbnail ? <img src={s.thumbnail} alt="" className="w-full h-full object-cover" /> : <span className="text-gray-500 text-xs">{(isSlate ? 'Slate' : s.genre) || 'Pitch'}</span>}
-                          </div>
-                        )}
-                        <div className="flex items-center justify-center gap-1">
-                          <span className="font-bold text-gray-900 text-sm truncate">{s.name}</span>
-                          {(s.verification_tier === 'gold' || s.verification_tier === 'silver') && <BadgeCheck className="w-4 h-4 text-amber-500 flex-shrink-0" />}
-                        </div>
-                        <div className="text-[11px] text-gray-400 capitalize truncate">{type === 'creator' ? s.user_type : (s.subtitle || '')}</div>
-                      </div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, ri) => (
-                  <tr key={row.key} className={ri % 2 ? 'bg-gray-50/60' : ''}>
-                    <td className="px-3 py-3 text-sm font-medium text-gray-500">
-                      <span className="inline-flex items-center gap-1.5">{row.icon && <row.icon className="w-3.5 h-3.5 text-gray-400" />}{row.label}</span>
-                    </td>
-                    {subjects.map((s, si) => {
-                      const isLeader = leaders[row.key]?.has(si);
-                      if (row.key === 'genres') return null;
-                      return (
-                        <td key={s.subject_id} className="px-3 py-3 text-center">
-                          <span className={`inline-flex items-center gap-1 text-sm ${isLeader ? 'font-bold text-purple-700' : 'text-gray-800'}`}>
-                            {isLeader && <Crown className="w-3.5 h-3.5 text-amber-500" />}
-                            {row.value(s)}
-                          </span>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-                <tr>
-                  <td className="px-3 py-3 text-sm font-medium text-gray-500 align-top">Genres</td>
-                  {subjects.map((s) => (
-                    <td key={s.subject_id} className="px-3 py-3 align-top">
-                      <div className="flex flex-wrap justify-center gap-1">
-                        {(s.genres || []).slice(0, 5).map((g) => (
-                          <span key={g} className="inline-flex rounded-full bg-purple-50 text-purple-700 ring-1 ring-purple-100 px-2 py-0.5 text-[11px] font-medium">{g}</span>
-                        ))}
-                        {(!s.genres || s.genres.length === 0) && <span className="text-sm text-gray-400">—</span>}
-                      </div>
-                    </td>
-                  ))}
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <ComparisonMatrix type={type} subjects={subjects} onRemove={removeId} />
         )}
       </div>
+
+      {saveOpen && (
+        <SaveModal type={type} ids={ids} onClose={() => setSaveOpen(false)} />
+      )}
     </div>
   );
 }

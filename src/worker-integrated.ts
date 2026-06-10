@@ -2630,6 +2630,24 @@ class RouteRegistry {
       const { searchSlatesHandler } = await import('./handlers/compare');
       return searchSlatesHandler(req, this.env);
     });
+    // Saved & shareable comparisons. Static `saved`/`shared` registered before
+    // the bare `/api/compare`. The shared-token view is public (publicEndpoints).
+    this.register('GET', '/api/compare/saved', async (req) => {
+      const { listSavedComparisonsHandler } = await import('./handlers/compare');
+      return listSavedComparisonsHandler(req, this.env);
+    });
+    this.register('POST', '/api/compare/saved', async (req) => {
+      const { saveComparisonHandler } = await import('./handlers/compare');
+      return saveComparisonHandler(req, this.env);
+    });
+    this.register('DELETE', '/api/compare/saved/:id', async (req) => {
+      const { deleteSavedComparisonHandler } = await import('./handlers/compare');
+      return deleteSavedComparisonHandler(req, this.env);
+    });
+    this.register('GET', '/api/compare/shared/:token', async (req) => {
+      const { sharedComparisonHandler } = await import('./handlers/compare');
+      return sharedComparisonHandler(req, this.env);
+    });
     this.register('GET', '/api/compare', async (req) => {
       const { compareHandler } = await import('./handlers/compare');
       return compareHandler(req, this.env);
@@ -4107,6 +4125,7 @@ class RouteRegistry {
       '/api/search/facets',
       '/api/browse',
       '/api/calls',
+      '/api/compare/shared',
       '/api/pitches',
       '/api/pitches/public',
       '/api/pitches/public/trending',
