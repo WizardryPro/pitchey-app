@@ -2626,6 +2626,10 @@ class RouteRegistry {
       const { searchCreatorsHandler } = await import('./handlers/compare');
       return searchCreatorsHandler(req, this.env);
     });
+    this.register('GET', '/api/compare/slates', async (req) => {
+      const { searchSlatesHandler } = await import('./handlers/compare');
+      return searchSlatesHandler(req, this.env);
+    });
     this.register('GET', '/api/compare', async (req) => {
       const { compareHandler } = await import('./handlers/compare');
       return compareHandler(req, this.env);

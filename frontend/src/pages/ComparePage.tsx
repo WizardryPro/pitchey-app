@@ -4,7 +4,7 @@ import {
   BarChart3, Plus, X, Search, Loader2, Flame, Eye, Heart, Star, BadgeCheck, Crown, Layers,
 } from 'lucide-react';
 import PortalTopNav from '@shared/components/layout/PortalTopNav';
-import { compareService, type CompareSubject, type CreatorOption } from '../services/compare.service';
+import { compareService, type CompareSubject, type PickerItem } from '../services/compare.service';
 
 const MAX_SUBJECTS = 4;
 
@@ -65,13 +65,23 @@ const PITCH_ROWS: MetricRow[] = [
   { key: 'newest', label: 'Created', value: (s) => monthYear(s.newest_at) },
 ];
 
+const SLATE_ROWS: MetricRow[] = [
+  { key: 'pitches', label: 'Pitches', icon: Layers, value: (s) => String(num(s.pitch_count) ?? 0), score: (s) => num(s.pitch_count) },
+  { key: 'heat', label: 'Avg heat', icon: Flame, value: (s) => (num(s.avg_heat) != null ? num(s.avg_heat)!.toFixed(1) : '—'), score: (s) => num(s.avg_heat) },
+  { key: 'pitchey', label: 'Avg Pitchey score', icon: Star, value: (s) => (num(s.avg_pitchey) != null ? `${num(s.avg_pitchey)!.toFixed(1)}/10` : '—'), score: (s) => num(s.avg_pitchey) },
+  { key: 'views', label: 'Total views', icon: Eye, value: (s) => String(num(s.total_views) ?? 0), score: (s) => num(s.total_views) },
+  { key: 'likes', label: 'Total likes', icon: Heart, value: (s) => String(num(s.total_likes) ?? 0), score: (s) => num(s.total_likes) },
+  { key: 'budget', label: 'Budget range', value: (s) => budgetRange(s) },
+  { key: 'newest', label: 'Latest pitch', value: (s) => monthYear(s.newest_at) },
+];
+
 // ---------------------------------------------------------------------------
 // Creator picker
 // ---------------------------------------------------------------------------
 
-function CreatorPicker({ onAdd, disabled, existing }: { onAdd: (id: number) => void; disabled: boolean; existing: number[] }) {
+function Picker({ onAdd, disabled, existing, noun, search }: { onAdd: (id: number) => void; disabled: boolean; existing: number[]; noun: string; search: (q: string) => Promise<PickerItem[]> }) {
   const [q, setQ] = useState('');
-  const [results, setResults] = useState<CreatorOption[]>([]);
+  const [results, setResults] = useState<PickerItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -81,12 +91,12 @@ function CreatorPicker({ onAdd, disabled, existing }: { onAdd: (id: number) => v
     if (!q.trim()) { setResults([]); return; }
     setLoading(true);
     timer.current = setTimeout(async () => {
-      try { setResults(await compareService.searchCreators(q)); }
+      try { setResults(await search(q)); }
       catch { setResults([]); }
       finally { setLoading(false); setOpen(true); }
     }, 300);
     return () => { if (timer.current) clearTimeout(timer.current); };
-  }, [q]);
+  }, [q, search]);
 
   return (
     <div className="relative max-w-md">
@@ -97,7 +107,7 @@ function CreatorPicker({ onAdd, disabled, existing }: { onAdd: (id: number) => v
           onChange={(e) => setQ(e.target.value)}
           onFocus={() => results.length && setOpen(true)}
           disabled={disabled}
-          placeholder={disabled ? `Up to ${MAX_SUBJECTS} creators` : 'Search creators to add…'}
+          placeholder={disabled ? `Up to ${MAX_SUBJECTS} ${noun}s` : `Search ${noun}s to add…`}
           className="flex-1 py-2.5 text-sm bg-transparent focus:outline-none disabled:opacity-50"
         />
         {loading && <Loader2 className="w-4 h-4 text-purple-400 animate-spin" />}
@@ -113,12 +123,12 @@ function CreatorPicker({ onAdd, disabled, existing }: { onAdd: (id: number) => v
                 onClick={() => { onAdd(r.id); setQ(''); setResults([]); setOpen(false); }}
                 className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-purple-50 disabled:opacity-40 transition"
               >
-                <span className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500 overflow-hidden">
-                  {r.avatar ? <img src={r.avatar} alt="" className="w-full h-full object-cover" /> : (r.name[0] || '?')}
+                <span className="w-7 h-7 rounded bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500 overflow-hidden">
+                  {r.image ? <img src={r.image} alt="" className="w-full h-full object-cover" /> : (r.name[0] || '?')}
                 </span>
                 <span className="min-w-0">
                   <span className="block text-sm font-semibold text-gray-900 truncate">{r.name}</span>
-                  {r.userType && <span className="block text-[11px] text-gray-400 capitalize">{r.userType}</span>}
+                  {r.sub && <span className="block text-[11px] text-gray-400 capitalize truncate">{r.sub}</span>}
                 </span>
                 {added ? <span className="ml-auto text-[11px] text-gray-400">Added</span> : <Plus className="ml-auto w-4 h-4 text-purple-500" />}
               </button>
@@ -136,9 +146,11 @@ function CreatorPicker({ onAdd, disabled, existing }: { onAdd: (id: number) => v
 
 export default function ComparePage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const type: 'creator' | 'pitch' = searchParams.get('type') === 'pitch' ? 'pitch' : 'creator';
+  const rawType = searchParams.get('type');
+  const type: 'creator' | 'pitch' | 'slate' = rawType === 'pitch' ? 'pitch' : rawType === 'slate' ? 'slate' : 'creator';
   const isPitch = type === 'pitch';
-  const rows = isPitch ? PITCH_ROWS : CREATOR_ROWS;
+  const isSlate = type === 'slate';
+  const rows = isPitch ? PITCH_ROWS : isSlate ? SLATE_ROWS : CREATOR_ROWS;
   const ids = useMemo(() => (
     (searchParams.get('ids') || '')
       .split(',').map((s) => parseInt(s, 10)).filter(Number.isFinite).slice(0, MAX_SUBJECTS)
@@ -158,8 +170,15 @@ export default function ComparePage() {
 
   const setIds = (next: number[]) => {
     const uniq = Array.from(new Set(next)).slice(0, MAX_SUBJECTS);
-    if (uniq.length) setSearchParams(isPitch ? { type, ids: uniq.join(',') } : { ids: uniq.join(',') });
-    else setSearchParams(isPitch ? { type } : {});
+    const params: Record<string, string> = {};
+    if (type !== 'creator') params.type = type;
+    if (uniq.length) params.ids = uniq.join(',');
+    setSearchParams(params);
+  };
+  const switchType = (next: 'creator' | 'slate') => {
+    const params: Record<string, string> = {};
+    if (next !== 'creator') params.type = next;
+    setSearchParams(params);
   };
   const addId = (id: number) => setIds([...ids, id]);
   const removeId = (id: number) => setIds(ids.filter((x) => x !== id));
@@ -187,20 +206,42 @@ export default function ComparePage() {
           <div className="inline-flex items-center gap-2 px-3 py-1 mb-3 rounded-full bg-white/10 border border-white/20 text-[11px] font-semibold tracking-[0.18em] uppercase">
             <BarChart3 className="w-3.5 h-3.5" /> Compare
           </div>
-          <h1 className="font-display font-black text-4xl sm:text-5xl tracking-tight mb-2">{isPitch ? 'Compare Pitches' : 'Compare Creators'}</h1>
+          <h1 className="font-display font-black text-4xl sm:text-5xl tracking-tight mb-2">{isPitch ? 'Compare Pitches' : isSlate ? 'Compare Slates' : 'Compare Creators'}</h1>
           <p className="text-white/85 max-w-2xl text-lg">
             {isPitch
               ? 'These pitches side by side — heat, score, traction, budget — to decide which to take forward.'
-              : 'Put creators’ bodies of work side by side — heat, score, traction, range — to decide who to back.'}
+              : isSlate
+                ? 'Curated slates side by side — depth, heat, score and range — to see which collection lands hardest.'
+                : 'Put creators’ bodies of work side by side — heat, score, traction, range — to decide who to back.'}
           </p>
         </div>
       </section>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {!isPitch && (
-          <div className="mb-6">
-            <CreatorPicker onAdd={addId} disabled={ids.length >= MAX_SUBJECTS} existing={ids} />
-          </div>
+          <>
+            {/* Creators / Slates toggle */}
+            <div className="inline-flex items-center gap-1 p-1 mb-5 rounded-full bg-gray-100">
+              {(['creator', 'slate'] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => switchType(t)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-semibold transition ${type === t ? 'bg-white text-purple-700 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
+                >
+                  {t === 'creator' ? 'Creators' : 'Slates'}
+                </button>
+              ))}
+            </div>
+            <div className="mb-6">
+              <Picker
+                onAdd={addId}
+                disabled={ids.length >= MAX_SUBJECTS}
+                existing={ids}
+                noun={isSlate ? 'slate' : 'creator'}
+                search={isSlate ? compareService.searchSlates.bind(compareService) : compareService.searchCreators.bind(compareService)}
+              />
+            </div>
+          </>
         )}
 
         {loading ? (
@@ -208,11 +249,11 @@ export default function ComparePage() {
         ) : subjects.length === 0 ? (
           <div className="text-center py-20">
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-purple-50 text-purple-500 mb-4"><BarChart3 className="w-7 h-7" /></div>
-            <h3 className="font-display font-bold text-xl text-gray-900 mb-1">{isPitch ? 'Nothing to compare' : 'Add creators to compare'}</h3>
+            <h3 className="font-display font-bold text-xl text-gray-900 mb-1">{isPitch ? 'Nothing to compare' : isSlate ? 'Add slates to compare' : 'Add creators to compare'}</h3>
             <p className="text-gray-500 max-w-md mx-auto">
               {isPitch
                 ? 'Select submissions from a call’s inbox and choose “Compare” to see them here.'
-                : `Search above to add 2–${MAX_SUBJECTS} creators and see their work side by side.`}
+                : `Search above to add 2–${MAX_SUBJECTS} ${isSlate ? 'slates' : 'creators'} and see them side by side.`}
             </p>
           </div>
         ) : (
@@ -225,20 +266,20 @@ export default function ComparePage() {
                     <th key={s.subject_id} className="p-3 align-bottom">
                       <div className="relative rounded-2xl border border-gray-200 bg-white p-4 text-center shadow-sm">
                         <button onClick={() => removeId(s.subject_id)} className="absolute top-2 right-2 text-gray-300 hover:text-gray-600" aria-label="Remove"><X className="w-4 h-4" /></button>
-                        {isPitch ? (
-                          <div className="w-full h-20 mb-2 rounded-lg bg-gray-900 overflow-hidden flex items-center justify-center">
-                            {s.thumbnail ? <img src={s.thumbnail} alt="" className="w-full h-full object-cover" /> : <span className="text-gray-500 text-xs">{s.genre || 'Pitch'}</span>}
-                          </div>
-                        ) : (
+                        {type === 'creator' ? (
                           <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-gray-100 flex items-center justify-center text-base font-bold text-gray-500 overflow-hidden">
                             {s.avatar ? <img src={s.avatar} alt="" className="w-full h-full object-cover" /> : (s.name[0] || '?')}
+                          </div>
+                        ) : (
+                          <div className="w-full h-20 mb-2 rounded-lg bg-gray-900 overflow-hidden flex items-center justify-center">
+                            {s.thumbnail ? <img src={s.thumbnail} alt="" className="w-full h-full object-cover" /> : <span className="text-gray-500 text-xs">{(isSlate ? 'Slate' : s.genre) || 'Pitch'}</span>}
                           </div>
                         )}
                         <div className="flex items-center justify-center gap-1">
                           <span className="font-bold text-gray-900 text-sm truncate">{s.name}</span>
                           {(s.verification_tier === 'gold' || s.verification_tier === 'silver') && <BadgeCheck className="w-4 h-4 text-amber-500 flex-shrink-0" />}
                         </div>
-                        <div className="text-[11px] text-gray-400 capitalize truncate">{isPitch ? (s.subtitle || '') : s.user_type}</div>
+                        <div className="text-[11px] text-gray-400 capitalize truncate">{type === 'creator' ? s.user_type : (s.subtitle || '')}</div>
                       </div>
                     </th>
                   ))}
