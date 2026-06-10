@@ -5651,7 +5651,9 @@ pitchey_analytics_datapoints_per_minute 1250
 
     // Structured USD budget (0..$1B, integer) — the source of truth for
     // comparison/averaging. Server clamps; the DB CHECK is the hard backstop.
-    const estBudgetUsd = normalizeBudgetUsd(data.estimatedBudgetUsd);
+    // Fall back to the free-text estimatedBudget when no structured value was
+    // sent (legacy / direct API callers), so the column can't be left unparsed.
+    const estBudgetUsd = normalizeBudgetUsd(data.estimatedBudgetUsd ?? data.estimatedBudget);
 
     try {
       const [pitch] = await this.db.query(`
@@ -5701,7 +5703,10 @@ pitchey_analytics_datapoints_per_minute 1250
         JSON.stringify(data.characters || []),
         aiDisclosure,
         aiDisclosure !== 'none',
-        data.estimatedBudget ?? (estBudgetUsd != null ? String(estBudgetUsd) : null),
+        // Store the canonical normalized figure, never the raw client text —
+        // this is what blocks garbage like "1e35"/"20000000k"/"€14,000" from
+        // ever reaching the column. Free-form bracket labels live in budget_range.
+        estBudgetUsd != null ? String(estBudgetUsd) : null,
         data.budgetBracket ?? null,
         data.productionTimeline ?? null,
         data.targetReleaseDate ?? null,
@@ -6436,6 +6441,18 @@ pitchey_analytics_datapoints_per_minute 1250
       ? (data.aiDisclosure as string)
       : null;
 
+    // Budget update is presence-aware and kept in lockstep across both columns:
+    // when either budget field is sent we recompute the normalized figure (USD
+    // falls back to the free text) and write BOTH estimated_budget_usd and the
+    // text column from it, so they can never drift and raw garbage never lands.
+    const updBudgetPresent =
+      'estimatedBudgetUsd' in (data as Record<string, unknown>) ||
+      'estimatedBudget' in (data as Record<string, unknown>);
+    const updBudgetUsd = updBudgetPresent
+      ? normalizeBudgetUsd(data.estimatedBudgetUsd ?? data.estimatedBudget)
+      : null;
+    const updBudgetText = updBudgetUsd != null ? String(updBudgetUsd) : null;
+
     try {
       // Verify ownership
       const [existing] = await this.db.query(
@@ -6475,14 +6492,17 @@ pitchey_analytics_datapoints_per_minute 1250
           title_image = COALESCE($25, title_image),
           ai_disclosure = COALESCE($26, ai_disclosure),
           ai_used = COALESCE($27, ai_used),
-          estimated_budget = COALESCE($28, estimated_budget),
+          -- Presence-aware ($35), in lockstep with estimated_budget_usd below:
+          -- only touched when a budget field was sent, and always the normalized
+          -- numeric string (or null) — never the raw client text.
+          estimated_budget = CASE WHEN $35 THEN $28 ELSE estimated_budget END,
           budget_bracket = COALESCE($29, budget_bracket),
           production_timeline = COALESCE($30, production_timeline),
           target_release_date = COALESCE($31, target_release_date),
           visibility_settings = COALESCE($32, visibility_settings),
           require_nda = COALESCE($33, require_nda),
-          -- Presence-aware: when the client sends the field ($35 true) we set it
-          -- to $34 — INCLUDING null, so a cleared budget actually clears. COALESCE
+          -- Presence-aware: when the client sends a budget field ($35 true) we set
+          -- it to $34 — INCLUDING null, so a cleared budget actually clears. COALESCE
           -- alone preserved the old value on null, making the field unclearable.
           estimated_budget_usd = CASE WHEN $35 THEN $34 ELSE estimated_budget_usd END,
           updated_at = NOW()
@@ -6516,17 +6536,18 @@ pitchey_analytics_datapoints_per_minute 1250
         data.titleImage,
         updAiDisclosure,
         updAiDisclosure === null ? null : updAiDisclosure !== 'none',
-        data.estimatedBudget ?? null,
+        updBudgetText,
         data.budgetBracket ?? null,
         data.productionTimeline ?? null,
         data.targetReleaseDate ?? null,
         data.visibilitySettings ? JSON.stringify(data.visibilitySettings) : null,
         (data.requireNDA ?? data.require_nda) ?? null,
-        // $34: the value to set when present (null clears). $35: was the field
-        // sent at all — only then do we touch the column (other callers that omit
-        // it leave the budget untouched).
-        ('estimatedBudgetUsd' in (data as Record<string, unknown>)) ? normalizeBudgetUsd(data.estimatedBudgetUsd) : null,
-        ('estimatedBudgetUsd' in (data as Record<string, unknown>))
+        // $34: the normalized USD to set when present (null clears). $35: was a
+        // budget field sent at all — only then do we touch either budget column
+        // (callers that omit it leave the budget untouched). $28 (text) rides the
+        // same flag so the two columns stay consistent.
+        updBudgetUsd,
+        updBudgetPresent
       ]);
 
       // Handle creative attachments if provided

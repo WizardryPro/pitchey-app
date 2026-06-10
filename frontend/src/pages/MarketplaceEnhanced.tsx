@@ -98,6 +98,36 @@ function getPitchBudgetDisplay(pitch: Pitch): string {
   return '';
 }
 
+// Default upper bound of the budget filter. While the range sits at [0, this],
+// the budget filter is considered inactive and must not exclude any pitch.
+const DEFAULT_BUDGET_MAX = 500000000;
+// Anything above this is treated as unreliable/garbage data (e.g. a free-text
+// `estimated_budget` of "100000000000000000000000000000000000"), not a real
+// budget — parsePitchBudget returns null so it never silently hides a pitch.
+const MAX_REASONABLE_BUDGET = 10000000000; // $10B
+
+// Parse a pitch's budget to a USD number, preferring the structured
+// `estimated_budget_usd` column and falling back to the legacy free-text field.
+// Returns null when no usable/sane budget is present (callers treat null as
+// "unknown budget" and must not exclude the pitch on its account).
+function parsePitchBudget(pitch: Pitch): number | null {
+  const pp = pitch as unknown as Record<string, unknown>;
+  const usd = Number(pp.estimatedBudgetUsd ?? pp.estimated_budget_usd);
+  if (Number.isFinite(usd) && usd > 0) {
+    return usd <= MAX_REASONABLE_BUDGET ? usd : null;
+  }
+  const raw = String(pitch.estimatedBudget || pitch.budgetBracket || '');
+  if (!raw) return null;
+  // Strip grouping separators so "€14,000" parses as 14000, not 14.
+  const match = raw.replace(/[,\s]/g, '').match(/\d+/);
+  if (!match) return null;
+  const n = parseInt(match[0], 10);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  // Short-form values ("5", "25") are millions; large values are absolute.
+  const value = n >= 100000 ? n : n * 1000000;
+  return value <= MAX_REASONABLE_BUDGET ? value : null;
+}
+
 function getCreatorDisplay(pitch: Pitch): string {
   const pp = pitch as unknown as Record<string, unknown>;
   return pitch.creator?.name || pitch.creator?.username
@@ -184,7 +214,7 @@ export default function MarketplaceEnhanced() {
     formats: searchParams.get('formats')?.split(',').filter(Boolean) || [],
     budgetRange: { 
       min: parseInt(searchParams.get('budgetMin') || '0'), 
-      max: parseInt(searchParams.get('budgetMax') || '500000000')
+      max: parseInt(searchParams.get('budgetMax') || String(DEFAULT_BUDGET_MAX))
     },
     status: searchParams.get('status')?.split(',').filter(Boolean) || [],
     hasNDA: searchParams.get('hasNDA') === 'true' ? true : searchParams.get('hasNDA') === 'false' ? false : null,
@@ -253,7 +283,7 @@ export default function MarketplaceEnhanced() {
       formats: searchParams.get('formats')?.split(',').filter(Boolean) || [],
       status: searchParams.get('status')?.split(',').filter(Boolean) || [],
       budgetMin: parseInt(searchParams.get('budgetMin') || '0'),
-      budgetMax: parseInt(searchParams.get('budgetMax') || '500000000'),
+      budgetMax: parseInt(searchParams.get('budgetMax') || String(DEFAULT_BUDGET_MAX)),
       hasNDA: searchParams.get('hasNDA') === 'true' ? true : searchParams.get('hasNDA') === 'false' ? false : null,
       hasInvestment: searchParams.get('hasInvestment') === 'true' ? true : searchParams.get('hasInvestment') === 'false' ? false : null,
     };
@@ -292,7 +322,7 @@ export default function MarketplaceEnhanced() {
     if (filters.formats.length) params.set('formats', filters.formats.join(','));
     if (filters.status.length) params.set('status', filters.status.join(','));
     if (filters.budgetRange.min > 0) params.set('budgetMin', filters.budgetRange.min.toString());
-    if (filters.budgetRange.max < 500000000) params.set('budgetMax', filters.budgetRange.max.toString());
+    if (filters.budgetRange.max < DEFAULT_BUDGET_MAX) params.set('budgetMax', filters.budgetRange.max.toString());
     if (filters.hasNDA !== null) params.set('hasNDA', filters.hasNDA.toString());
     if (filters.hasInvestment !== null) params.set('hasInvestment', filters.hasInvestment.toString());
 
@@ -346,7 +376,7 @@ export default function MarketplaceEnhanced() {
       if (debouncedSearch) params.set('q', debouncedSearch);
       if (filters.searchType !== 'all') params.set('type', filters.searchType);
       if (filters.genres.length > 0) params.set('genres', filters.genres.join(','));
-      if (filters.budgetRange.max < 500000000) params.set('maxBudget', String(filters.budgetRange.max));
+      if (filters.budgetRange.max < DEFAULT_BUDGET_MAX) params.set('maxBudget', String(filters.budgetRange.max));
       if (filters.budgetRange.min > 0) params.set('minBudget', String(filters.budgetRange.min));
       if (filters.location) params.set('location', filters.location);
       params.set('limit', '50');
@@ -472,25 +502,21 @@ export default function MarketplaceEnhanced() {
       );
     }
 
-    // Budget range filter
-    filtered = filtered.filter(pitch => {
-      let budgetValue = 0;
-      const budgetStr = pitch.estimatedBudget || pitch.budgetBracket || '';
-      if (budgetStr) {
-        const match = String(budgetStr).match(/(\d+)/);
-        if (match) {
-          const raw = parseInt(match[1], 10);
-          // If the value is already a large number (e.g. 45000000), use as-is.
-          // Only multiply by 1M for short-form values like "5" or "25" (millions).
-          budgetValue = raw >= 100000 ? raw : raw * 1000000;
-        }
-      }
-
-      // If no budget specified, don't filter it out
-      if (!budgetStr) return true;
-
-      return budgetValue >= filters.budgetRange.min && budgetValue <= filters.budgetRange.max;
-    });
+    // Budget range filter — only applied once the user has actually narrowed it.
+    // While the range sits at its defaults [0, DEFAULT_BUDGET_MAX] it must never
+    // exclude anything; otherwise pitches with a budget above the default ceiling
+    // (incl. garbage values like 1e35) silently vanish from the marketplace while
+    // still showing on the home page, which has no budget filter.
+    const budgetFilterActive =
+      filters.budgetRange.min > 0 || filters.budgetRange.max < DEFAULT_BUDGET_MAX;
+    if (budgetFilterActive) {
+      filtered = filtered.filter(pitch => {
+        const budgetValue = parsePitchBudget(pitch);
+        // Unknown / unparseable / out-of-range budget — don't hide the pitch.
+        if (budgetValue === null) return true;
+        return budgetValue >= filters.budgetRange.min && budgetValue <= filters.budgetRange.max;
+      });
+    }
 
     // Status filter
     if (filters.status.length > 0) {
@@ -530,14 +556,7 @@ export default function MarketplaceEnhanced() {
       const pp = p as unknown as Record<string, unknown>;
       return p.createdAt || (pp.created_at as string) || '';
     };
-    const getBudgetNum = (p: Pitch) => {
-      const budgetStr = p.estimatedBudget || p.budgetBracket || '';
-      if (!budgetStr) return 0;
-      const match = String(budgetStr).match(/(\d+)/);
-      if (!match) return 0;
-      const raw = parseInt(match[1], 10);
-      return raw >= 100000 ? raw : raw * 1000000;
-    };
+    const getBudgetNum = (p: Pitch) => parsePitchBudget(p) ?? 0;
     const getInvestmentGoal = (p: Pitch) => {
       const pp = p as unknown as Record<string, unknown>;
       return Number(pp.investmentGoal) || Number(pp.investment_goal) || 0;
@@ -606,7 +625,7 @@ export default function MarketplaceEnhanced() {
     setFilters({
       genres: [],
       formats: [],
-      budgetRange: { min: 0, max: 500000000 },
+      budgetRange: { min: 0, max: DEFAULT_BUDGET_MAX },
       status: [],
       hasNDA: null,
       hasInvestment: null,
@@ -622,7 +641,7 @@ export default function MarketplaceEnhanced() {
     filters.formats.length > 0 || 
     filters.status.length > 0 ||
     filters.budgetRange.min > 0 || 
-    filters.budgetRange.max < 500000000 ||
+    filters.budgetRange.max < DEFAULT_BUDGET_MAX ||
     filters.hasNDA !== null ||
     filters.hasInvestment !== null ||
     searchQuery !== '';
@@ -1166,7 +1185,7 @@ export default function MarketplaceEnhanced() {
                         aria-label="Budget range slider"
                         type="range"
                         min="0"
-                        max="500000000"
+                        max={DEFAULT_BUDGET_MAX}
                         step="100000"
                         value={filters.budgetRange.max}
                         onChange={(e) => setFilters(f => ({ ...f, budgetRange: { ...f.budgetRange, max: parseInt(e.target.value) } }))}
