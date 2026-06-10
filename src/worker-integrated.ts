@@ -2621,6 +2621,16 @@ class RouteRegistry {
       return listCallSubmissionsHandler(req, this.env);
     });
 
+    // Comparison matrix — authenticated only (not in publicEndpoints).
+    this.register('GET', '/api/compare/creators', async (req) => {
+      const { searchCreatorsHandler } = await import('./handlers/compare');
+      return searchCreatorsHandler(req, this.env);
+    });
+    this.register('GET', '/api/compare', async (req) => {
+      const { compareHandler } = await import('./handlers/compare');
+      return compareHandler(req, this.env);
+    });
+
     // Advanced Search — primary route via this.advancedSearch()
     // Saved search routes available in ./handlers/advanced-search.ts (future feature)
 
