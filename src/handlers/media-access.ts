@@ -222,9 +222,14 @@ export class MediaAccessHandler {
 
   // Helper: Generate access URL for download (serves via worker endpoint)
   public async generateSignedUrl(storagePath: string, fileName: string): Promise<string> {
-    const baseUrl = this.env?.BACKEND_URL || 'https://pitchey-api-prod.ndlovucavelle.workers.dev';
+    // SAME-ORIGIN (relative) on purpose. An absolute BACKEND_URL (workers.dev) is
+    // a DIFFERENT origin from the app (pages.dev), so the browser does not forward
+    // the `pitchey-session` cookie to it — which made NDA-protected documents 403
+    // even for their own owner (serveMediaFile couldn't identify the requester).
+    // A relative path routes through the Pages Functions proxy, which forwards the
+    // session, so owner + NDA-signer access works. Public assets are unaffected.
     const token = btoa(`${storagePath}:${Date.now()}`);
-    return `${baseUrl}/api/media/file/${encodeURIComponent(storagePath)}?token=${token}&filename=${encodeURIComponent(fileName)}`;
+    return `/api/media/file/${encodeURIComponent(storagePath)}?token=${token}&filename=${encodeURIComponent(fileName)}`;
   }
 
   // Helper: Generate upload URL (serves via worker endpoint)
