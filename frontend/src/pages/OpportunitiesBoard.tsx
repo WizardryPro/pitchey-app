@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Briefcase, Building2, Wallet, Plus, X, MapPin, CalendarDays, DollarSign,
-  BadgeCheck, Loader2, Pencil, Megaphone, ArrowRight, Send, Inbox, Check, Star,
+  BadgeCheck, Loader2, Pencil, Megaphone, ArrowRight, Send, Inbox, Check, Star, BarChart3,
 } from 'lucide-react';
 import PortalTopNav from '@shared/components/layout/PortalTopNav';
 import { useBetterAuthStore } from '../store/betterAuthStore';
@@ -441,6 +441,7 @@ function SubmissionsModal({ call, onClose }: { call: OpenCall; onClose: () => vo
   const navigate = useNavigate();
   const [subs, setSubs] = useState<CallSubmission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     callsService.submissions(call.id).then(setSubs).catch(() => setSubs([])).finally(() => setLoading(false));
@@ -452,6 +453,13 @@ function SubmissionsModal({ call, onClose }: { call: OpenCall; onClose: () => vo
     catch (err) { toast.error(err instanceof Error ? err.message : 'Failed to update'); }
   };
 
+  const toggleSelect = (pitchId: number) => setSelected((prev) => {
+    const n = new Set(prev);
+    if (n.has(pitchId)) n.delete(pitchId); else n.add(pitchId);
+    return n;
+  });
+  const compareSelected = () => navigate(`/compare?type=pitch&ids=${Array.from(selected).join(',')}`);
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -460,7 +468,14 @@ function SubmissionsModal({ call, onClose }: { call: OpenCall; onClose: () => vo
             <h2 className="font-display font-bold text-lg text-gray-900">Submissions</h2>
             <p className="text-xs text-gray-500">“{call.title}”</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+          <div className="flex items-center gap-3">
+            {selected.size >= 2 && (
+              <button onClick={compareSelected} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-semibold shadow shadow-purple-500/25 hover:from-purple-500 hover:to-indigo-500 transition">
+                <BarChart3 className="w-3.5 h-3.5" /> Compare {selected.size}
+              </button>
+            )}
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+          </div>
         </div>
         <div className="p-5 overflow-y-auto">
           {loading ? (
@@ -473,9 +488,16 @@ function SubmissionsModal({ call, onClose }: { call: OpenCall; onClose: () => vo
           ) : (
             <div className="space-y-3">
               {subs.map((s) => (
-                <div key={s.id} className="rounded-xl border border-gray-200 p-4">
-                  <div className="flex items-start justify-between gap-3 mb-1">
-                    <div className="min-w-0">
+                <div key={s.id} className={`rounded-xl border p-4 transition ${selected.has(s.pitch_id) ? 'border-purple-300 ring-1 ring-purple-200 bg-purple-50/40' : 'border-gray-200'}`}>
+                  <div className="flex items-start gap-3 mb-1">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(s.pitch_id)}
+                      onChange={() => toggleSelect(s.pitch_id)}
+                      className="mt-1 w-4 h-4 accent-purple-600 cursor-pointer flex-shrink-0"
+                      aria-label="Select for comparison"
+                    />
+                    <div className="min-w-0 flex-1">
                       <button onClick={() => navigate(`/pitch/${s.pitch_id}`)} className="text-sm font-bold text-gray-900 hover:text-purple-700 transition text-left">
                         {s.pitch_title || `Pitch #${s.pitch_id}`}
                       </button>

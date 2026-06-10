@@ -75,7 +75,7 @@ export async function compareHandler(request: Request, env: Env): Promise<Respon
     .filter((n) => Number.isFinite(n));
   const unique = Array.from(new Set(ids)).slice(0, 4);
 
-  if (type !== 'creator') return errorResponse('Only creator comparison is available', origin, 400);
+  if (type !== 'creator' && type !== 'pitch') return errorResponse('Unsupported comparison type', origin, 400);
   if (unique.length === 0) return jsonResponse({ type, subjects: [] }, origin);
 
   const sql = getDb(env);
@@ -83,8 +83,40 @@ export async function compareHandler(request: Request, env: Env): Promise<Respon
 
   try {
     const placeholders = unique.map((_, i) => `$${i + 1}`).join(',');
-    // Aggregate each creator's published pitches. LEFT JOIN keeps creators with
-    // no published pitches (they return zero/null metrics). u.id is the PK so the
+
+    // type=pitch — single-pitch metrics, mapped onto the same bundle field names
+    // so the frontend matrix is shared (it picks metric rows by `type`).
+    if (type === 'pitch') {
+      const pitchQuery = `
+        SELECT
+          p.id AS subject_id,
+          p.title AS name,
+          COALESCE(u.company_name, NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.username) AS subtitle,
+          p.title_image AS thumbnail,
+          u.verification_tier,
+          NULL::int AS pitch_count,
+          ROUND(COALESCE(p.heat_score, 0), 1) AS avg_heat,
+          ROUND(NULLIF(p.pitchey_score_avg, 0), 1) AS avg_pitchey,
+          COALESCE(p.view_count, 0) AS total_views,
+          COALESCE(p.like_count, 0) AS total_likes,
+          NULLIF(p.estimated_budget_usd, 0) AS budget_min,
+          NULLIF(p.estimated_budget_usd, 0) AS budget_max,
+          p.created_at AS newest_at,
+          p.genre,
+          p.format,
+          ARRAY_REMOVE(ARRAY[p.genre], NULL) AS genres
+        FROM pitches p
+        LEFT JOIN users u ON (u.id = p.user_id OR u.id = p.creator_id)
+        WHERE p.id IN (${placeholders})
+      `;
+      const pitchRows = await sql.query(pitchQuery, unique);
+      const byPitch = new Map((pitchRows as Array<Record<string, unknown>>).map((r) => [Number(r.subject_id), r]));
+      const subjects = unique.map((id) => byPitch.get(id)).filter(Boolean);
+      return jsonResponse({ type, subjects }, origin);
+    }
+
+    // type=creator — aggregate each creator's published pitches. LEFT JOIN keeps
+    // creators with no published pitches (zero/null metrics). u.id is the PK so the
     // other u.* columns are functionally dependent — GROUP BY u.id is sufficient.
     const query = `
       SELECT
