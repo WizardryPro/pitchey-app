@@ -110,6 +110,8 @@ const OnboardingPage = lazyRetry(() => import('@portals/creator/pages/CreatorOnb
 
 // Public Pages
 const Marketplace = lazyRetry(() => import('./pages/MarketplaceEnhanced'));
+const OpportunitiesBoard = lazyRetry(() => import('./pages/OpportunitiesBoard'));
+const ComparePage = lazyRetry(() => import('./pages/ComparePage'));
 const PublicPitchView = lazyRetry(() => import('./pages/PublicPitchView'));
 
 // Creator Pages
@@ -423,6 +425,8 @@ function App() {
           
           {/* Marketplace */}
           <Route path="/marketplace" element={<Marketplace />} />
+          <Route path="/opportunities" element={<OpportunitiesBoard />} />
+          <Route path="/compare" element={<ComparePage />} />
           <Route path="/marketplace-old" element={<Marketplace />} />
           
           {/* Browse Route */}

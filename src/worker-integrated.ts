@@ -2580,6 +2580,57 @@ class RouteRegistry {
     this.register('GET', '/api/browse/top-rated', this.handleBrowseTopRated.bind(this));
     this.register('GET', '/api/browse/top-rated/stats', this.handleBrowseTopRatedStats.bind(this));
 
+    // Opportunities board — production/investor "open calls" (mandates).
+    // Reads are public (listed in publicEndpoints); writes self-gate via getUserId.
+    // Register static `/mine` before the `:id` param route so it isn't captured.
+    this.register('GET', '/api/calls/mine', async (req) => {
+      const { myCallsHandler } = await import('./handlers/calls');
+      return myCallsHandler(req, this.env);
+    });
+    this.register('GET', '/api/calls', async (req) => {
+      const { listCallsHandler } = await import('./handlers/calls');
+      return listCallsHandler(req, this.env);
+    });
+    this.register('POST', '/api/calls', async (req) => {
+      const { createCallHandler } = await import('./handlers/calls');
+      return createCallHandler(req, this.env);
+    });
+    this.register('GET', '/api/calls/:id', async (req) => {
+      const { getCallHandler } = await import('./handlers/calls');
+      return getCallHandler(req, this.env);
+    });
+    this.register('PATCH', '/api/calls/:id', async (req) => {
+      const { updateCallHandler } = await import('./handlers/calls');
+      return updateCallHandler(req, this.env);
+    });
+    // Submissions (Phase 2). Static `submissions/*` registered before `:id/submissions`.
+    this.register('GET', '/api/calls/submissions/mine', async (req) => {
+      const { mySubmissionsHandler } = await import('./handlers/calls');
+      return mySubmissionsHandler(req, this.env);
+    });
+    this.register('PATCH', '/api/calls/submissions/:submissionId', async (req) => {
+      const { updateSubmissionHandler } = await import('./handlers/calls');
+      return updateSubmissionHandler(req, this.env);
+    });
+    this.register('POST', '/api/calls/:id/submissions', async (req) => {
+      const { submitToCallHandler } = await import('./handlers/calls');
+      return submitToCallHandler(req, this.env);
+    });
+    this.register('GET', '/api/calls/:id/submissions', async (req) => {
+      const { listCallSubmissionsHandler } = await import('./handlers/calls');
+      return listCallSubmissionsHandler(req, this.env);
+    });
+
+    // Comparison matrix — authenticated only (not in publicEndpoints).
+    this.register('GET', '/api/compare/creators', async (req) => {
+      const { searchCreatorsHandler } = await import('./handlers/compare');
+      return searchCreatorsHandler(req, this.env);
+    });
+    this.register('GET', '/api/compare', async (req) => {
+      const { compareHandler } = await import('./handlers/compare');
+      return compareHandler(req, this.env);
+    });
+
     // Advanced Search — primary route via this.advancedSearch()
     // Saved search routes available in ./handlers/advanced-search.ts (future feature)
 
@@ -4051,6 +4102,7 @@ class RouteRegistry {
       '/api/search/trending',
       '/api/search/facets',
       '/api/browse',
+      '/api/calls',
       '/api/pitches',
       '/api/pitches/public',
       '/api/pitches/public/trending',

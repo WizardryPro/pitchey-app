@@ -118,7 +118,13 @@ export default function Homepage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 via-purple-50 to-white">
       {/* Navigation Header */}
-      <header className={`sticky top-0 z-50 transition-colors duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm' : 'bg-[#0a0a12]/70 backdrop-blur-md border-b border-white/5'}`}>
+      <header className={`sticky top-0 z-50 transition-colors duration-300 ${
+        scrolled
+          ? 'bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm'
+          : mobileMenuOpen
+            ? 'bg-[#1f1934] border-b border-white/10'
+            : 'bg-[#0a0a12]/70 backdrop-blur-md border-b border-white/5'
+      }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-8">
@@ -131,6 +137,12 @@ export default function Homepage() {
                   className={`text-nav-link transition ${scrolled ? 'hover:text-purple-600' : 'text-white/90 hover:text-white'}`}
                 >
                   Browse Pitches
+                </button>
+                <button
+                  onClick={() => navigate('/opportunities')}
+                  className={`text-nav-link transition ${scrolled ? 'hover:text-purple-600' : 'text-white/90 hover:text-white'}`}
+                >
+                  Opportunities
                 </button>
                 <button
                   onClick={() => navigate('/how-it-works')}
@@ -228,10 +240,11 @@ export default function Homepage() {
 
         {/* Mobile dropdown menu */}
         {mobileMenuOpen && (
-          <div className={`md:hidden border-t ${scrolled ? 'bg-white border-gray-200' : 'bg-[#0a0a12]/95 backdrop-blur border-white/10'}`}>
+          <div className={`md:hidden border-t ${scrolled ? 'bg-white border-gray-200' : 'bg-[#1f1934] border-white/10'}`}>
             <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
               {[
                 { label: 'Browse Pitches', to: '/marketplace' },
+                { label: 'Opportunities', to: '/opportunities' },
                 { label: 'How It Works', to: '/how-it-works' },
                 { label: 'About', to: '/about' },
               ].map((item) => (
@@ -248,7 +261,7 @@ export default function Homepage() {
                 <>
                   <button
                     onClick={() => { setMobileMenuOpen(false); navigate(userType ? `/${getPortalPath(userType)}/dashboard` : '/login'); }}
-                    className="px-3 py-2.5 rounded-lg bg-purple-600 text-white text-sm font-semibold text-center hover:bg-purple-700 transition"
+                    className="px-3 py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-semibold text-center shadow-lg shadow-purple-500/30 hover:from-purple-500 hover:to-indigo-500 transition"
                   >
                     Dashboard
                   </button>
@@ -269,7 +282,7 @@ export default function Homepage() {
                   </button>
                   <button
                     onClick={() => { setMobileMenuOpen(false); navigate('/register'); }}
-                    className="px-3 py-2.5 rounded-lg bg-purple-600 text-white text-sm font-semibold text-center hover:bg-purple-700 transition"
+                    className="px-3 py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-semibold text-center shadow-lg shadow-purple-500/30 hover:from-purple-500 hover:to-indigo-500 transition"
                   >
                     Get Started
                   </button>
@@ -350,17 +363,19 @@ export default function Homepage() {
             <Search className="w-5 h-5 ml-3 text-white/40 flex-shrink-0" />
             <input
               type="text"
-              placeholder="Search pitches by title, genre, or keyword…"
+              placeholder="Search pitches, genres, keywords"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 bg-transparent px-1 py-2.5 text-white placeholder-white/40 focus:outline-none"
+              className="flex-1 min-w-0 bg-transparent px-1 py-2.5 text-sm sm:text-base text-white placeholder-white/40 focus:outline-none"
             />
             <button
               type="submit"
               disabled={!searchQuery.trim()}
-              className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 transition hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-label="Search"
+              className="flex-shrink-0 inline-flex items-center justify-center rounded-full bg-white w-11 h-11 sm:w-auto sm:h-auto sm:px-5 sm:py-2.5 text-sm font-semibold text-gray-900 transition hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Search
+              <ArrowRight className="w-4 h-4 sm:hidden" />
+              <span className="hidden sm:inline">Search</span>
             </button>
           </form>
 
@@ -397,10 +412,19 @@ export default function Homepage() {
       {/* Hottest Pitches — top 3 by Bayesian + role-weighted heat score.
           Replaces the old "How Pitchey Works" tri-card; we'd rather surface real
           traction than explain the product in the abstract. */}
-      <section className="py-20 bg-gradient-to-b from-gray-50 via-white to-gray-50 border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-50 border border-violet-100 text-violet-700 text-[11px] font-semibold tracking-[0.18em] uppercase mb-4">
+      <section className="relative overflow-hidden py-24 bg-gradient-to-b from-stone-50 via-white to-stone-50 border-y border-gray-100">
+        {/* Warm gallery light — a soft amber wash from the top, plus a faint grain
+            so the bright canvas still reads as a premium printed program. */}
+        <div aria-hidden className="absolute inset-0 bg-[radial-gradient(55%_45%_at_50%_0%,rgba(245,158,11,0.08),transparent_60%)]" />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.025] mix-blend-multiply"
+          style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")" }}
+        />
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200/70 text-amber-700 text-[11px] font-semibold tracking-[0.18em] uppercase mb-5">
               <Flame className="w-3.5 h-3.5 text-amber-500" />
               Hottest right now
             </div>
@@ -412,57 +436,78 @@ export default function Homepage() {
 
           {loading ? (
             <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
             </div>
           ) : hotPitches.length === 0 ? (
             <p className="text-center text-gray-500">No hot pitches yet — check back soon.</p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-7">
               {hotPitches.map((pitch, idx) => {
                 const pitchRecord = pitch as unknown as Record<string, unknown>;
                 const heat = getHeatScore(pitchRecord);
                 const score = getPitcheyScore(pitchRecord);
                 const cover = (pitch as any).cover_image || (pitch as any).title_image || pitch.titleImage || pitch.thumbnailUrl;
+                const isTop = idx === 0;
                 return (
                   <div
                     key={pitch.id}
                     onClick={() => navigate(`/pitch/${pitch.id}`)}
-                    className="group relative bg-white rounded-2xl overflow-hidden border border-gray-200/70 shadow-sm transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:border-violet-200"
+                    className={`group relative bg-white rounded-2xl overflow-hidden cursor-pointer border transition-all duration-500 hover:-translate-y-1.5 ${
+                      isTop
+                        ? 'border-amber-200 ring-1 ring-amber-300/40 shadow-[0_16px_44px_-16px_rgba(217,119,6,0.35)] hover:shadow-[0_28px_60px_-18px_rgba(217,119,6,0.45)]'
+                        : 'border-gray-200/70 shadow-[0_12px_40px_-16px_rgba(17,12,46,0.18)] hover:shadow-[0_26px_56px_-18px_rgba(17,12,46,0.26)] hover:border-gray-300'
+                    }`}
                   >
-                    {/* Poster — poster-forward, with a legibility scrim */}
-                    <div className="relative h-56 overflow-hidden bg-gray-900">
+                    {/* Poster frame — cinematic widescreen still */}
+                    <div className="relative aspect-[16/10] overflow-hidden bg-gray-900">
                       {cover ? (
                         <img
                           src={cover}
                           alt={pitch.title}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
                         />
                       ) : (
                         <GenrePlaceholder genre={pitch.genre} />
                       )}
-                      <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/10" />
-                      {/* Rank medallion — violet, editorial numeral */}
-                      <div className="absolute top-3 left-3 w-9 h-9 rounded-full bg-brand-anchor text-white shadow-lg flex items-center justify-center font-display font-bold text-base">
+                      {/* Top scrim so the rank + heat chips stay legible on any cover */}
+                      <div aria-hidden className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/45 via-black/10 to-transparent" />
+
+                      {/* Rank medallion — gold for #1, light glass for the rest */}
+                      <div
+                        className={`absolute top-3 left-3 w-9 h-9 rounded-full flex items-center justify-center font-display font-bold text-base shadow-lg ${
+                          isTop
+                            ? 'bg-gradient-to-br from-amber-300 to-amber-500 text-white ring-2 ring-white/70'
+                            : 'bg-white/90 text-gray-900 ring-1 ring-black/10 backdrop-blur'
+                        }`}
+                      >
                         {idx + 1}
                       </div>
-                      {/* Subtle heat chip */}
+
+                      {/* Heat ember */}
                       {heat > 0 && (
-                        <div className="absolute bottom-3 right-3 inline-flex items-center gap-1 rounded-full bg-black/55 backdrop-blur px-2 py-0.5 text-xs font-medium text-white">
-                          <Flame className="w-3 h-3 text-amber-400" />
+                        <div className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full bg-black/50 backdrop-blur px-2.5 py-1 text-xs font-semibold text-amber-200 ring-1 ring-amber-300/25 shadow-[0_0_16px_rgba(245,158,11,0.35)]">
+                          <Flame className="w-3.5 h-3.5 text-amber-400" />
                           {heat.toFixed(1)}
                         </div>
                       )}
                     </div>
 
+                    {/* Body — light */}
                     <div className="p-5">
-                      <h3 className="font-bold text-lg text-gray-900 mb-1 line-clamp-1 transition group-hover:text-brand-anchor">
+                      {isTop && (
+                        <span className="inline-flex items-center gap-1 mb-2 rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em]">
+                          <Flame className="w-3 h-3 text-amber-500" />
+                          Top heat
+                        </span>
+                      )}
+                      <h3 className="font-display font-bold text-lg text-gray-900 mb-0.5 line-clamp-1 transition group-hover:text-amber-700">
                         {pitch.title}
                       </h3>
                       <p className="text-xs text-gray-500 mb-2">
                         by {(pitch as any).creator_name || (pitch as any).creatorName || 'Unknown'}
                       </p>
                       {score > 0 && (
-                        <div className="mb-3">
+                        <div className="mb-2">
                           <PitcheyRating mode="stars" value={score} showNumber />
                         </div>
                       )}
@@ -483,7 +528,7 @@ export default function Homepage() {
           <div className="flex justify-center mt-12">
             <button
               onClick={() => navigate('/marketplace?sort=hot')}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-medium shadow-lg shadow-purple-500/20 transition"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-semibold shadow-lg shadow-amber-500/25 ring-1 ring-amber-300/40 transition"
             >
               See all hot pitches
               <ArrowRight className="w-4 h-4" />
@@ -692,39 +737,56 @@ export default function Homepage() {
 
       {/* Guest User CTA Section */}
       {!isAuthenticated && (
-        <section className="py-16 bg-gradient-to-r from-purple-600 to-indigo-600">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20">
+        <section className="relative overflow-hidden py-20 bg-gradient-to-b from-[#3a2f5c] via-[#2c2547] to-[#1f1934] text-white">
+          {/* Spotlight glows — same "Premiere Night" lighting as the hero */}
+          <div aria-hidden className="absolute -top-40 left-1/2 -translate-x-1/2 w-[56rem] h-[34rem] rounded-full blur-[80px] bg-[radial-gradient(ellipse_at_center,rgba(132,45,168,0.40),transparent_62%)]" />
+          <div aria-hidden className="absolute -bottom-32 -right-24 w-[30rem] h-[30rem] rounded-full blur-[90px] bg-[radial-gradient(circle,rgba(245,158,11,0.16),transparent_60%)]" />
+          <div aria-hidden className="absolute -bottom-28 -left-24 w-[30rem] h-[30rem] rounded-full blur-[90px] bg-[radial-gradient(circle,rgba(91,79,199,0.20),transparent_60%)]" />
+          {/* Film grain */}
+          <div
+            aria-hidden
+            className="absolute inset-0 opacity-[0.06] mix-blend-overlay pointer-events-none"
+            style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")" }}
+          />
+          {/* Letterbox accent lines */}
+          <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+          <div aria-hidden className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
+          <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div className="bg-white/[0.06] backdrop-blur-md rounded-2xl p-8 border border-white/15 shadow-[0_24px_70px_-30px_rgba(0,0,0,0.7)]">
               <h2 className="text-3xl font-bold text-white mb-4">
-                Ready to Explore More?
+                Ready to{' '}
+                <span className="bg-gradient-to-r from-violet-300 via-fuchsia-300 to-purple-300 bg-clip-text text-transparent">
+                  Explore More?
+                </span>
               </h2>
-              <p className="text-xl text-white/90 mb-8">
+              <p className="text-xl text-white/80 mb-8">
                 See who's viewing your pitch, get production feedback, and connect directly with decision-makers.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <button
                   onClick={() => navigate('/login')}
-                  className="px-8 py-4 bg-white text-purple-600 rounded-xl hover:bg-gray-100 transition transform hover:scale-105 shadow-lg font-semibold"
+                  className="px-8 py-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold shadow-lg shadow-purple-500/30 transition transform hover:scale-105 hover:from-purple-500 hover:to-indigo-500"
                 >
                   <User className="inline w-5 h-5 mr-2" />
                   Join as Creator
                 </button>
                 <button
                   onClick={() => navigate('/login')}
-                  className="px-8 py-4 bg-white/20 backdrop-blur-sm border border-white/30 text-white rounded-xl hover:bg-white/30 transition transform hover:scale-105 font-semibold"
+                  className="px-8 py-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white font-semibold transition transform hover:scale-105 hover:bg-white/20"
                 >
                   <Wallet className="inline w-5 h-5 mr-2" />
                   Join as Investor
                 </button>
                 <button
                   onClick={() => navigate('/login')}
-                  className="px-8 py-4 bg-white/20 backdrop-blur-sm border border-white/30 text-white rounded-xl hover:bg-white/30 transition transform hover:scale-105 font-semibold"
+                  className="px-8 py-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white font-semibold transition transform hover:scale-105 hover:bg-white/20"
                 >
                   <Building2 className="inline w-5 h-5 mr-2" />
                   Join as Production
                 </button>
               </div>
-              <p className="text-white/70 mt-6 text-sm">
+              <p className="text-white/55 mt-6 text-sm">
                 Free to browse • Full access with account • No credit card required
               </p>
             </div>

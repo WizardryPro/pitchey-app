@@ -29,6 +29,7 @@ const NAV_BY_ROLE: Partial<Record<UserTypeCanonical, NavItem[]>> = {
     { label: 'Dashboard', to: CREATOR_ROUTES.dashboard },
     { label: 'My Pitches', to: CREATOR_ROUTES.pitches },
     { label: 'Marketplace', to: '/marketplace' },
+    { label: 'Opportunities', to: '/opportunities' },
     HOT_LINK,
     { label: 'Messages', to: CREATOR_ROUTES.messages },
     { label: 'NDAs', to: CREATOR_ROUTES.ndas },
@@ -37,6 +38,8 @@ const NAV_BY_ROLE: Partial<Record<UserTypeCanonical, NavItem[]>> = {
   investor: [
     { label: 'Dashboard', to: INVESTOR_ROUTES.dashboard },
     { label: 'Browse', to: INVESTOR_ROUTES.browse },
+    { label: 'Opportunities', to: '/opportunities' },
+    { label: 'Compare', to: '/compare' },
     HOT_LINK,
     { label: 'Watchlist', to: INVESTOR_ROUTES.watchlist },
     { label: 'Portfolio', to: INVESTOR_ROUTES.portfolio },
@@ -46,6 +49,8 @@ const NAV_BY_ROLE: Partial<Record<UserTypeCanonical, NavItem[]>> = {
   production: [
     { label: 'Dashboard', to: PRODUCTION_ROUTES.dashboard },
     { label: 'Browse', to: '/marketplace' },
+    { label: 'Opportunities', to: '/opportunities' },
+    { label: 'Compare', to: '/compare' },
     HOT_LINK,
     { label: 'NDAs', to: '/production/ndas' },
     { label: 'Messages', to: PRODUCTION_ROUTES.messages },
@@ -62,6 +67,7 @@ const NAV_BY_ROLE: Partial<Record<UserTypeCanonical, NavItem[]>> = {
 
 const ANON_NAV: NavItem[] = [
   { label: 'Marketplace', to: '/marketplace' },
+  { label: 'Opportunities', to: '/opportunities' },
   HOT_LINK,
   { label: 'How It Works', to: '/how-it-works' },
   { label: 'About', to: '/about' },
