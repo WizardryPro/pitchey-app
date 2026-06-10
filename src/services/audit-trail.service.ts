@@ -121,14 +121,17 @@ export class AuditTrailService {
       const timestamp = new Date().toISOString();
       
       // Insert into audit_logs table
+      // `action` is NOT NULL in audit_logs but wasn't in this insert, so every
+      // logEvent() threw "null value in column action" and the audit event was
+      // dropped. Map it from eventType (the action being audited).
       const query = `
         INSERT INTO audit_logs (
           user_id, event_type, event_category, risk_level,
           description, entity_type, entity_id,
           ip_address, user_agent, session_id, location,
-          changes, metadata, timestamp
+          changes, metadata, timestamp, action
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       `;
 
       await this.db.query(query, [
@@ -145,7 +148,8 @@ export class AuditTrailService {
         entry.location ? JSON.stringify(entry.location) : null,
         entry.changes ? JSON.stringify(entry.changes) : null,
         entry.metadata ? JSON.stringify(entry.metadata) : null,
-        timestamp
+        timestamp,
+        entry.eventType || 'unknown'
       ]);
 
       // Also log to security_events table if it's a security event
