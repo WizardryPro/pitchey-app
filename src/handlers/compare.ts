@@ -62,6 +62,42 @@ export async function searchCreatorsHandler(request: Request, env: Env): Promise
   }
 }
 
+// GET /api/compare/slates?q= — typeahead for the slate comparison picker.
+// Returns published slates + the current user's own slates.
+export async function searchSlatesHandler(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin');
+  const userId = await getUserId(request, env);
+  if (!userId) return errorResponse('Authentication required', origin, 401);
+
+  const q = (new URL(request.url).searchParams.get('q') || '').trim();
+  if (q.length < 1) return jsonResponse({ slates: [] }, origin);
+
+  const sql = getDb(env);
+  if (!sql) return jsonResponse({ slates: [] }, origin);
+
+  try {
+    const rows = await sql`
+      SELECT
+        s.id,
+        s.title AS name,
+        s.cover_image AS thumbnail,
+        s.status,
+        COALESCE(u.company_name, NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.username) AS owner,
+        (SELECT COUNT(*) FROM slate_pitches sp WHERE sp.slate_id = s.id) AS pitch_count
+      FROM slates s
+      LEFT JOIN users u ON u.id = s.user_id
+      WHERE (s.status = 'published' OR s.user_id = ${userId})
+        AND s.title ILIKE ${'%' + q + '%'}
+      ORDER BY s.title
+      LIMIT 10
+    `;
+    return jsonResponse({ slates: rows }, origin);
+  } catch (err) {
+    console.error('searchSlatesHandler error:', err instanceof Error ? err.message : String(err));
+    return jsonResponse({ slates: [] }, origin);
+  }
+}
+
 export async function compareHandler(request: Request, env: Env): Promise<Response> {
   const origin = request.headers.get('Origin');
   const userId = await getUserId(request, env);
@@ -75,7 +111,7 @@ export async function compareHandler(request: Request, env: Env): Promise<Respon
     .filter((n) => Number.isFinite(n));
   const unique = Array.from(new Set(ids)).slice(0, 4);
 
-  if (type !== 'creator' && type !== 'pitch') return errorResponse('Unsupported comparison type', origin, 400);
+  if (type !== 'creator' && type !== 'pitch' && type !== 'slate') return errorResponse('Unsupported comparison type', origin, 400);
   if (unique.length === 0) return jsonResponse({ type, subjects: [] }, origin);
 
   const sql = getDb(env);
@@ -112,6 +148,38 @@ export async function compareHandler(request: Request, env: Env): Promise<Respon
       const pitchRows = await sql.query(pitchQuery, unique);
       const byPitch = new Map((pitchRows as Array<Record<string, unknown>>).map((r) => [Number(r.subject_id), r]));
       const subjects = unique.map((id) => byPitch.get(id)).filter(Boolean);
+      return jsonResponse({ type, subjects }, origin);
+    }
+
+    // type=slate — aggregate each slate's published pitches (via slate_pitches).
+    // GROUP BY both PKs (s.id, u.id) so slate + owner columns are dependent.
+    if (type === 'slate') {
+      const slateQuery = `
+        SELECT
+          s.id AS subject_id,
+          s.title AS name,
+          COALESCE(u.company_name, NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.username) AS subtitle,
+          s.cover_image AS thumbnail,
+          u.verification_tier,
+          COUNT(p.id) AS pitch_count,
+          ROUND(AVG(p.heat_score), 1) AS avg_heat,
+          ROUND(AVG(NULLIF(p.pitchey_score_avg, 0)), 1) AS avg_pitchey,
+          COALESCE(SUM(p.view_count), 0) AS total_views,
+          COALESCE(SUM(p.like_count), 0) AS total_likes,
+          MIN(p.estimated_budget_usd) FILTER (WHERE p.estimated_budget_usd > 0) AS budget_min,
+          MAX(p.estimated_budget_usd) AS budget_max,
+          MAX(p.created_at) AS newest_at,
+          ARRAY_REMOVE(ARRAY_AGG(DISTINCT p.genre), NULL) AS genres
+        FROM slates s
+        LEFT JOIN users u ON u.id = s.user_id
+        LEFT JOIN slate_pitches sp ON sp.slate_id = s.id
+        LEFT JOIN pitches p ON p.id = sp.pitch_id AND p.status = 'published'
+        WHERE s.id IN (${placeholders})
+        GROUP BY s.id, u.id
+      `;
+      const slateRows = await sql.query(slateQuery, unique);
+      const bySlate = new Map((slateRows as Array<Record<string, unknown>>).map((r) => [Number(r.subject_id), r]));
+      const subjects = unique.map((id) => bySlate.get(id)).filter(Boolean);
       return jsonResponse({ type, subjects }, origin);
     }
 

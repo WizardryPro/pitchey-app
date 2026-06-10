@@ -36,6 +36,14 @@ export interface CreatorOption {
   userType?: string;
 }
 
+// Generic picker item used by the compare page for both creators and slates.
+export interface PickerItem {
+  id: number;
+  name: string;
+  sub?: string;          // username/userType, or slate owner
+  image?: string | null; // avatar or slate cover
+}
+
 function unwrap<T>(res: { success: boolean; data?: unknown }, key: string, fallback: T): T {
   if (!res.success) return fallback;
   const d = res.data as Record<string, unknown> | undefined;
@@ -44,7 +52,7 @@ function unwrap<T>(res: { success: boolean; data?: unknown }, key: string, fallb
 }
 
 class CompareService {
-  async subjects(type: 'creator' | 'pitch', ids: number[]): Promise<CompareSubject[]> {
+  async subjects(type: 'creator' | 'pitch' | 'slate', ids: number[]): Promise<CompareSubject[]> {
     if (ids.length === 0) return [];
     const res = await apiClient.get<{ subjects: CompareSubject[] }>(`/api/compare?type=${type}&ids=${ids.join(',')}`);
     return unwrap<CompareSubject[]>(res, 'subjects', []);
@@ -55,17 +63,28 @@ class CompareService {
   }
 
   // Picker typeahead — dedicated creator/production search.
-  async searchCreators(q: string): Promise<CreatorOption[]> {
+  async searchCreators(q: string): Promise<PickerItem[]> {
     if (!q.trim()) return [];
     const res = await apiClient.get<{ creators: Array<Record<string, unknown>> }>(`/api/compare/creators?q=${encodeURIComponent(q)}`);
     const creators = unwrap<Array<Record<string, unknown>>>(res, 'creators', []);
     return creators.map((u) => ({
       id: Number(u.id),
       name: String(u.name || u.username || 'Unknown'),
-      username: u.username as string | undefined,
-      avatar: (u.avatar as string | null | undefined) ?? null,
-      userType: u.user_type as string | undefined,
+      sub: u.user_type as string | undefined,
+      image: (u.avatar as string | null | undefined) ?? null,
     })).filter((u) => Number.isFinite(u.id));
+  }
+
+  async searchSlates(q: string): Promise<PickerItem[]> {
+    if (!q.trim()) return [];
+    const res = await apiClient.get<{ slates: Array<Record<string, unknown>> }>(`/api/compare/slates?q=${encodeURIComponent(q)}`);
+    const slates = unwrap<Array<Record<string, unknown>>>(res, 'slates', []);
+    return slates.map((s) => ({
+      id: Number(s.id),
+      name: String(s.name || 'Untitled slate'),
+      sub: s.owner as string | undefined,
+      image: (s.thumbnail as string | null | undefined) ?? null,
+    })).filter((s) => Number.isFinite(s.id));
   }
 }
 
