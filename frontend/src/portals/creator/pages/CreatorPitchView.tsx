@@ -3,7 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { 
   ArrowLeft, Eye, Heart, Share2, Edit, Trash2, BarChart3, 
   Shield, MessageSquare, Clock, Calendar, User, Tag, 
-  Film, DollarSign, Briefcase, TrendingUp, Users,
+  DollarSign, Briefcase, TrendingUp, Users,
   FileText, Download, Lock, Unlock, BookOpen, Image as ImageIcon
 } from 'lucide-react';
 
@@ -766,7 +766,7 @@ const CreatorPitchView: React.FC = () => {
             </div>
 
             {/* Attachments */}
-            {(pitch.pitchDeck || pitch.script || pitch.trailer || (pitch.documents && pitch.documents.length > 0)) && (
+            {pitch.documents && pitch.documents.length > 0 && (
               <div className="bg-white rounded-xl shadow-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Attachments</h3>
                 <div className="space-y-2">
@@ -813,48 +813,6 @@ const CreatorPitchView: React.FC = () => {
                         );
                       });
                   })()}
-                  {pitch.pitchDeck && (
-                    <a
-                      href={pitch.pitchDeck}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between p-2 hover:bg-gray-50 rounded"
-                    >
-                      <span className="flex items-center text-blue-600">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Pitch Deck
-                      </span>
-                      <Download className="h-4 w-4 text-gray-400" />
-                    </a>
-                  )}
-                  {pitch.script && (
-                    <a
-                      href={pitch.script}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between p-2 hover:bg-gray-50 rounded"
-                    >
-                      <span className="flex items-center text-blue-600">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Script
-                      </span>
-                      <Download className="h-4 w-4 text-gray-400" />
-                    </a>
-                  )}
-                  {pitch.trailer && (
-                    <a
-                      href={pitch.trailer}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between p-2 hover:bg-gray-50 rounded"
-                    >
-                      <span className="flex items-center text-blue-600">
-                        <Film className="h-4 w-4 mr-2" />
-                        Trailer
-                      </span>
-                      <Download className="h-4 w-4 text-gray-400" />
-                    </a>
-                  )}
                 </div>
               </div>
             )}
