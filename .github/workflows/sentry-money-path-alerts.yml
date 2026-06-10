@@ -1,0 +1,85 @@
+name: Sentry money-path alert rules
+
+# One-shot, manually-triggered setup of Sentry issue-alert rules for the
+# money-path signals the worker already emits from crons:
+#   - tag `slo.breach`              (checkMoneyPathSLOs)
+#   - tag `stripe.reconcile.drift`  (reconcileStripeSubscriptions — "paid but no access")
+# These only reach Sentry now that the scheduled handler is Sentry-wrapped (PR #235).
+# Idempotent: skips a rule if one with the same name already exists. Uses the
+# existing SENTRY_* secrets so no token leaves CI.
+
+on:
+  workflow_dispatch:
+    inputs:
+      region_url:
+        description: "Sentry API base (EU org → https://de.sentry.io, US → https://sentry.io)"
+        required: false
+        default: "https://de.sentry.io"
+
+permissions:
+  contents: read
+
+jobs:
+  create-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create money-path issue-alert rules
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          BASE: ${{ github.event.inputs.region_url }}
+        run: |
+          set -euo pipefail
+          api="$BASE/api/0/projects/$SENTRY_ORG/$SENTRY_PROJECT/rules/"
+          auth="Authorization: Bearer $SENTRY_AUTH_TOKEN"
+
+          echo "::group::Existing rules"
+          existing=$(curl -sS -H "$auth" "$api" || echo '[]')
+          echo "$existing" | (jq -r '.[].name' 2>/dev/null || echo "(could not list — see raw below)")
+          echo "$existing" | head -c 600; echo
+          echo "::endgroup::"
+
+          create_rule () {
+            local name="$1" tagkey="$2"
+            if echo "$existing" | grep -qF "\"name\": \"$name\"" 2>/dev/null || echo "$existing" | grep -qF "\"name\":\"$name\"" 2>/dev/null; then
+              echo "✓ Rule already exists, skipping: $name"
+              return 0
+            fi
+            echo "→ Creating: $name (tag: $tagkey is_set)"
+            payload=$(cat <<JSON
+          {
+            "name": "$name",
+            "actionMatch": "all",
+            "filterMatch": "all",
+            "frequency": 30,
+            "environment": "production",
+            "conditions": [
+              { "id": "sentry.rules.conditions.first_seen_event.FirstSeenEventCondition" },
+              { "id": "sentry.rules.conditions.reappeared_event.ReappearedEventCondition" }
+            ],
+            "filters": [
+              { "id": "sentry.rules.filters.tagged_event.TaggedEventFilter", "key": "$tagkey", "match": "is_set", "value": "" }
+            ],
+            "actions": [
+              { "id": "sentry.mail.actions.NotifyEmailAction", "targetType": "IssueOwners", "targetIdentifier": "", "fallthroughType": "ActiveMembers" }
+            ]
+          }
+          JSON
+          )
+            resp=$(curl -sS -w "\n%{http_code}" -X POST -H "$auth" -H "Content-Type: application/json" -d "$payload" "$api")
+            code=$(echo "$resp" | tail -n1)
+            body=$(echo "$resp" | sed '$d')
+            echo "$body" | head -c 800; echo
+            if [ "$code" = "200" ] || [ "$code" = "201" ]; then
+              echo "✓ Created: $name"
+            else
+              echo "✗ FAILED ($code): $name"
+              echo "  If 403 → token lacks alerts:write/project:write scope. If 404 → wrong region_url (try the US base)."
+              exit 1
+            fi
+          }
+
+          create_rule "Money-path SLO breach"        "slo.breach"
+          create_rule "Stripe reconcile drift (paid but no access)" "stripe.reconcile.drift"
+          echo "Done."
