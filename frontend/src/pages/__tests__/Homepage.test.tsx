@@ -132,7 +132,7 @@ describe('Homepage', () => {
 
   it('renders search bar', () => {
     renderHomepage()
-    expect(screen.getByPlaceholderText(/search pitches by title/i)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText(/search pitches, genres, keywords/i)).toBeInTheDocument()
   })
 
   it('renders navigation links', () => {
@@ -179,7 +179,7 @@ describe('Homepage', () => {
   it('shows guest CTA section when not authenticated', () => {
     mockAuthState.isAuthenticated = false
     renderHomepage()
-    expect(screen.getByText('Ready to Explore More?')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Ready to Explore More\?/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /join as creator/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /join as investor/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /join as production/i })).toBeInTheDocument()
@@ -188,7 +188,7 @@ describe('Homepage', () => {
   it('hides guest CTA section when authenticated', () => {
     mockAuthState.isAuthenticated = true
     renderHomepage()
-    expect(screen.queryByText('Ready to Explore More?')).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /Ready to Explore More\?/i })).not.toBeInTheDocument()
   })
 
   it('shows Dashboard button and user info when authenticated', () => {
