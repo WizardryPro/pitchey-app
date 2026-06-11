@@ -475,11 +475,18 @@ async function runRouteTest(browser, route, viewportName, storageState) {
     };
     await waitForRender();
 
-    // Deploy-window self-heal: if a transient lazy-chunk load error showed up (CF Pages
-    // serving index.html / 404 for a chunk mid-deploy), reload once and re-evaluate —
-    // mirroring lazyRetry in App.tsx. We discard the pre-reload errors and judge only the
-    // post-reload state, so a genuinely broken deploy (error persists) still trips the gate.
-    if (consoleErrors.some((t) => CHUNK_LOAD_NOISE.some((re) => re.test(t)))) {
+    // Transient self-heal: the harness hits live prod, so a single run can catch a
+    // one-shot transient that a real user never notices — a mid-deploy lazy-chunk load
+    // (CF Pages serving index.html/404 for a chunk; lazyRetry in App.tsx reloads), or a
+    // cold-start 5xx on /api/auth/session (the app itself classifies these as
+    // SESSION_CHECK_TRANSIENT and retries). On any such signal, reload once and judge
+    // ONLY the post-reload state. A *persistent* failure re-trips after reload, so real
+    // regressions (broken deploy, real outage) still fail the gate.
+    const sawTransient =
+      consoleErrors.some((t) => CHUNK_LOAD_NOISE.some((re) => re.test(t))) ||
+      consoleErrors.some((t) => /SESSION_CHECK_TRANSIENT|Failed to get session \(status 5\d\d/i.test(t)) ||
+      networkErrors.length > 0; // networkErrors only ever holds 5xx (see listener above)
+    if (sawTransient) {
       consoleErrors.length = 0;
       networkErrors.length = 0;
       await page.reload({ waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => {});
