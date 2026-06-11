@@ -1347,13 +1347,23 @@ export default function CreatePitch() {
             </div>
 
 
-            {/* Video Upload */}
+          </div>
+
+          {/* Optional Extras — sizzle reel / trailer + lookbook are nice-to-have, not required (Karl feedback) */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-1">Optional Extras</h2>
+            <p className="text-sm text-gray-500 mb-6">
+              Add-ons that make your pitch stand out — none of these are required. Upload a sizzle
+              reel or trailer here, and add a lookbook (visual pitch deck) under Project Documents below.
+            </p>
+
+            {/* Video Upload (sizzle reel / trailer) */}
             <div>
-              <label 
+              <label
                 id="video-label"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Pitch Video (Optional)
+                Sizzle Reel or Trailer <span className="text-gray-400 font-normal">(optional)</span>
               </label>
               <div
                 {...a11y.fileUpload.getDropZoneAttributes({
@@ -1395,7 +1405,7 @@ export default function CreatePitch() {
                 ) : (
                   <div>
                     <Video className="w-8 h-8 text-gray-400 mx-auto mb-2" aria-hidden="true" />
-                    <p className="text-sm text-gray-600 mb-2">Upload a pitch video (MP4, MOV, AVI - Max 100MB)</p>
+                    <p className="text-sm text-gray-600 mb-2">Upload a sizzle reel or trailer (MP4, MOV, AVI - Max 100MB)</p>
                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
                       <Upload className="w-4 h-4" aria-hidden="true" />
                       Choose Video
@@ -1492,7 +1502,11 @@ export default function CreatePitch() {
                 the Edit page. Files are held in formData.documents and uploaded after
                 the pitch is created (PHASE 2b in submit), so they attach with pitchId. */}
             <div className="border-t pt-6 mt-6">
-              <h4 className="text-base font-semibold text-gray-900 mb-4">Project Documents</h4>
+              <h4 className="text-base font-semibold text-gray-900 mb-1">Project Documents</h4>
+              <p className="text-sm text-gray-500 mb-4">
+                All optional. A lookbook (visual pitch deck) is a great add-on — choose the
+                "Lookbook" type after selecting your file.
+              </p>
               <DocumentUpload
                 documents={(formData.documents ?? []) as unknown as DocumentFile[]}
                 onChange={handleDocumentChange as unknown as (docs: DocumentFile[]) => void}
