@@ -143,8 +143,6 @@ const HowItWorks: React.FC = () => {
   const [activeRole, setActiveRole] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
-  const heroRef = useRef<HTMLElement>(null);
-
   // Merge optional CMS content over the local defaults; pull real platform stats.
   useEffect(() => {
     (async () => {
@@ -187,37 +185,32 @@ const HowItWorks: React.FC = () => {
   const track = tracks[activeRole];
 
   return (
-    <div className="min-h-screen bg-[#0d0a18] text-white">
-      <PublicTopNav variant="overlay" heroRef={heroRef} />
+    <div className="min-h-screen bg-white text-gray-900">
+      <PublicTopNav variant="solid" />
 
-      {/* ===================== Hero — "Premiere Night" ===================== */}
-      <section ref={heroRef} className="relative -mt-16 overflow-hidden bg-gradient-to-b from-[#3a2f5c] via-[#2c2547] to-[#1f1934]">
-        <div aria-hidden className="absolute -top-48 left-1/2 -translate-x-1/2 w-[64rem] h-[44rem] rounded-full blur-[80px] bg-[radial-gradient(ellipse_at_center,rgba(132,45,168,0.45),transparent_62%)]" />
-        <div aria-hidden className="absolute top-1/4 -right-24 w-[34rem] h-[34rem] rounded-full blur-[90px] bg-[radial-gradient(circle,rgba(245,158,11,0.18),transparent_60%)]" />
-        <div aria-hidden className="absolute -bottom-32 -left-24 w-[34rem] h-[34rem] rounded-full blur-[90px] bg-[radial-gradient(circle,rgba(91,79,199,0.22),transparent_60%)]" />
-        <div
-          aria-hidden
-          className="absolute inset-0 opacity-[0.06] mix-blend-overlay pointer-events-none"
-          style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")" }}
-        />
-        <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
-        <div aria-hidden className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-        <div aria-hidden className="floating-decoration absolute top-20 left-10 opacity-[0.10] animate-float"><Film className="w-24 h-24 text-white" /></div>
-        <div aria-hidden className="floating-decoration absolute bottom-16 right-12 opacity-[0.10] animate-float-delayed"><Clapperboard className="w-28 h-28 text-white" /></div>
+      {/* ===================== Hero — light & airy ===================== */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#faf7ff] via-[#fdf9fb] to-white">
+        {/* Soft brand glows */}
+        <div aria-hidden className="absolute -top-40 left-1/2 -translate-x-1/2 w-[64rem] h-[40rem] rounded-full blur-[90px] bg-[radial-gradient(ellipse_at_center,rgba(132,45,168,0.12),transparent_65%)]" />
+        <div aria-hidden className="absolute top-10 -right-24 w-[30rem] h-[30rem] rounded-full blur-[90px] bg-[radial-gradient(circle,rgba(91,79,199,0.10),transparent_60%)]" />
+        <div aria-hidden className="absolute -bottom-24 -left-24 w-[30rem] h-[30rem] rounded-full blur-[90px] bg-[radial-gradient(circle,rgba(168,45,99,0.07),transparent_60%)]" />
+        {/* Faint film-strip decorations */}
+        <div aria-hidden className="absolute top-24 left-10 opacity-[0.05] animate-float"><Film className="w-24 h-24 text-purple-900" /></div>
+        <div aria-hidden className="absolute bottom-16 right-12 opacity-[0.05] animate-float-delayed"><Clapperboard className="w-28 h-28 text-purple-900" /></div>
 
-        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-36 pb-24 lg:pt-44 lg:pb-32 text-center">
-          <div className="inline-flex items-center gap-2.5 px-3 py-1 mb-8 rounded-full border border-white/15 bg-white/5 backdrop-blur text-[11px] font-medium tracking-[0.2em] uppercase text-white/70">
-            <span className="w-1.5 h-1.5 rounded-full bg-violet-400" />
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-24 lg:pt-28 lg:pb-32 text-center">
+          <div className="inline-flex items-center gap-2.5 px-3 py-1 mb-8 rounded-full border border-purple-200 bg-purple-50 text-[11px] font-medium tracking-[0.2em] uppercase text-purple-700">
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
             How Pitchey works
           </div>
-          <h1 className="font-display font-black tracking-tight leading-[0.95] text-4xl sm:text-6xl lg:text-7xl mb-6">
+          <h1 className="font-display font-black tracking-tight leading-[0.95] text-4xl sm:text-6xl lg:text-7xl mb-6 text-gray-900">
             From a single page
             <br />
-            <span className="inline-block font-semibold bg-gradient-to-r from-violet-300 via-fuchsia-300 to-purple-300 bg-clip-text text-transparent">
+            <span className="inline-block font-semibold bg-gradient-to-r from-purple-600 via-fuchsia-500 to-indigo-600 bg-clip-text text-transparent">
               to the big screen
             </span>
           </h1>
-          <p className="max-w-2xl mx-auto text-lg sm:text-xl leading-relaxed text-white/80 mb-10">
+          <p className="max-w-2xl mx-auto text-lg sm:text-xl leading-relaxed text-gray-600 mb-10">
             Pitchey connects creators, investors and production companies through a secure,
             transparent marketplace — built so great stories get found, protected, and made.
           </p>
@@ -231,7 +224,7 @@ const HowItWorks: React.FC = () => {
             </button>
             <button
               onClick={() => navigate('/marketplace')}
-              className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl border border-white/20 text-white transition hover:bg-white/10"
+              className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl border border-gray-300 text-gray-700 transition hover:border-purple-300 hover:text-purple-700 hover:bg-purple-50/50"
             >
               <Play className="w-5 h-5" />
               Browse pitches
@@ -240,11 +233,11 @@ const HowItWorks: React.FC = () => {
 
           {/* Real platform stats — only rendered when the API returns non-zero data. */}
           {stats.length > 0 && (
-            <div className="mt-16 grid grid-cols-2 sm:grid-cols-4 gap-px rounded-2xl overflow-hidden border border-white/10 bg-white/[0.04] backdrop-blur">
+            <div className="mt-16 grid grid-cols-2 sm:grid-cols-4 gap-px rounded-2xl overflow-hidden border border-gray-200 bg-gray-100 shadow-sm">
               {stats.map((s, i) => (
-                <div key={i} className="px-4 py-5 bg-white/[0.02]">
-                  <div className="font-display text-3xl sm:text-4xl font-bold text-white">{s.value}</div>
-                  <div className="mt-1 text-[11px] uppercase tracking-[0.16em] text-white/50">{s.label}</div>
+                <div key={i} className="px-4 py-5 bg-white">
+                  <div className="font-display text-3xl sm:text-4xl font-bold text-gray-900">{s.value}</div>
+                  <div className="mt-1 text-[11px] uppercase tracking-[0.16em] text-gray-400">{s.label}</div>
                 </div>
               ))}
             </div>
@@ -253,25 +246,25 @@ const HowItWorks: React.FC = () => {
       </section>
 
       {/* ===================== Role tracks (tabbed) ===================== */}
-      <section className="relative bg-[#0d0a18] py-24 overflow-hidden">
-        <div aria-hidden className="absolute inset-0 opacity-[0.4]" style={{ background: `radial-gradient(60% 50% at 50% 0%, ${track.glow}, transparent 70%)` }} />
+      <section className="relative bg-white py-24 overflow-hidden border-t border-gray-100">
+        <div aria-hidden className="absolute inset-0 opacity-90" style={{ background: `radial-gradient(55% 45% at 50% 0%, ${track.accent}12, transparent 70%)` }} />
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <Reveal className="text-center mb-12">
-            <p className="text-[11px] uppercase tracking-[0.22em] text-white/40 mb-3">Choose your path</p>
-            <h2 className="font-display text-4xl sm:text-5xl font-bold">Built for every side of the table</h2>
+            <p className="text-[11px] uppercase tracking-[0.22em] text-gray-400 mb-3">Choose your path</p>
+            <h2 className="font-display text-4xl sm:text-5xl font-bold text-gray-900">Built for every side of the table</h2>
           </Reveal>
 
           {/* Tab switcher */}
           <div className="flex justify-center mb-14">
-            <div className="inline-flex p-1 rounded-full border border-white/10 bg-white/[0.04] backdrop-blur">
+            <div className="inline-flex p-1 rounded-full border border-gray-200 bg-gray-100">
               {tracks.map((t, i) => {
                 const on = i === activeRole;
                 return (
                   <button
                     key={t.id}
                     onClick={() => setActiveRole(i)}
-                    className={`relative px-5 sm:px-7 py-2.5 rounded-full text-sm font-semibold transition ${on ? 'text-white' : 'text-white/50 hover:text-white/80'}`}
-                    style={on ? { backgroundColor: t.accent, boxShadow: `0 8px 30px -8px ${t.glow}` } : undefined}
+                    className={`relative px-5 sm:px-7 py-2.5 rounded-full text-sm font-semibold transition ${on ? 'text-white' : 'text-gray-500 hover:text-gray-800'}`}
+                    style={on ? { backgroundColor: t.accent, boxShadow: `0 8px 24px -10px ${t.accent}` } : undefined}
                   >
                     {t.label}
                   </button>
@@ -287,12 +280,12 @@ const HowItWorks: React.FC = () => {
                 <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: track.accent }} />
                 For {track.label}
               </div>
-              <h3 className="font-display text-3xl sm:text-4xl font-bold leading-tight mb-5">{track.tagline}</h3>
-              <p className="text-white/60 leading-relaxed mb-8">{track.outcome}</p>
+              <h3 className="font-display text-3xl sm:text-4xl font-bold leading-tight mb-5 text-gray-900">{track.tagline}</h3>
+              <p className="text-gray-600 leading-relaxed mb-8">{track.outcome}</p>
               <button
                 onClick={() => navigate('/register')}
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition hover:brightness-110"
-                style={{ backgroundColor: track.accent, boxShadow: `0 10px 30px -10px ${track.glow}` }}
+                style={{ backgroundColor: track.accent, boxShadow: `0 10px 30px -12px ${track.accent}` }}
               >
                 Join as {track.label.replace(/s$/, '')}
                 <ArrowRight className="w-4 h-4" />
@@ -301,15 +294,15 @@ const HowItWorks: React.FC = () => {
 
             {/* Right: numbered timeline */}
             <div className="lg:col-span-8 relative">
-              <div aria-hidden className="absolute left-[27px] top-4 bottom-4 w-px bg-gradient-to-b from-white/20 via-white/10 to-transparent" />
+              <div aria-hidden className="absolute left-[27px] top-4 bottom-4 w-px bg-gradient-to-b from-gray-200 via-gray-200 to-transparent" />
               <div className="space-y-5">
                 {track.steps.map((step, i) => (
                   <Reveal key={`${track.id}-${i}`} delay={i * 90}>
-                    <div className="group relative flex gap-5 rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6 transition hover:border-white/20 hover:bg-white/[0.05]">
+                    <div className="group relative flex gap-5 rounded-2xl border border-gray-200 bg-white p-5 sm:p-6 shadow-sm transition hover:border-gray-300 hover:shadow-md">
                       <div className="relative flex-shrink-0">
                         <div
-                          className="w-14 h-14 rounded-xl flex items-center justify-center text-white transition group-hover:scale-105"
-                          style={{ backgroundColor: `${track.accent}26`, color: track.accent }}
+                          className="w-14 h-14 rounded-xl flex items-center justify-center transition group-hover:scale-105"
+                          style={{ backgroundColor: `${track.accent}14`, color: track.accent }}
                         >
                           <Icon name={step.icon} className="w-7 h-7" />
                         </div>
@@ -321,8 +314,8 @@ const HowItWorks: React.FC = () => {
                         </span>
                       </div>
                       <div className="pt-1">
-                        <h4 className="text-lg font-semibold text-white mb-1.5">{step.title}</h4>
-                        <p className="text-sm text-white/55 leading-relaxed">{step.description}</p>
+                        <h4 className="text-lg font-semibold text-gray-900 mb-1.5">{step.title}</h4>
+                        <p className="text-sm text-gray-500 leading-relaxed">{step.description}</p>
                       </div>
                     </div>
                   </Reveal>
@@ -359,29 +352,29 @@ const HowItWorks: React.FC = () => {
       </section>
 
       {/* ===================== FAQ ===================== */}
-      <section className="bg-[#0d0a18] py-24">
+      <section className="bg-stone-50 py-24 border-t border-gray-100">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <Reveal className="text-center mb-12">
-            <p className="text-[11px] uppercase tracking-[0.22em] text-white/40 mb-3">Questions</p>
-            <h2 className="font-display text-4xl sm:text-5xl font-bold">Good to know</h2>
+            <p className="text-[11px] uppercase tracking-[0.22em] text-gray-400 mb-3">Questions</p>
+            <h2 className="font-display text-4xl sm:text-5xl font-bold text-gray-900">Good to know</h2>
           </Reveal>
           <div className="space-y-3">
             {FAQS.map((item, i) => {
               const open = openFaq === i;
               return (
                 <Reveal key={i} delay={i * 50}>
-                  <div className={`rounded-2xl border transition ${open ? 'border-white/20 bg-white/[0.05]' : 'border-white/10 bg-white/[0.03]'}`}>
+                  <div className={`rounded-2xl border bg-white transition ${open ? 'border-purple-200 shadow-sm' : 'border-gray-200'}`}>
                     <button
                       onClick={() => setOpenFaq(open ? null : i)}
                       aria-expanded={open}
                       className="w-full flex items-center justify-between gap-4 text-left px-5 sm:px-6 py-5"
                     >
-                      <span className="font-semibold text-white">{item.q}</span>
-                      <ChevronDown className={`w-5 h-5 flex-shrink-0 text-white/50 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />
+                      <span className="font-semibold text-gray-900">{item.q}</span>
+                      <ChevronDown className={`w-5 h-5 flex-shrink-0 transition-transform duration-300 ${open ? 'rotate-180 text-purple-600' : 'text-gray-400'}`} />
                     </button>
                     <div className={`grid transition-all duration-300 ease-out ${open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                       <div className="overflow-hidden">
-                        <p className="px-5 sm:px-6 pb-5 text-sm text-white/55 leading-relaxed">{item.a}</p>
+                        <p className="px-5 sm:px-6 pb-5 text-sm text-gray-600 leading-relaxed">{item.a}</p>
                       </div>
                     </div>
                   </div>
@@ -393,24 +386,24 @@ const HowItWorks: React.FC = () => {
       </section>
 
       {/* ===================== CTA ===================== */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#3a2f5c] via-[#2c2547] to-[#1f1934] py-24">
-        <div aria-hidden className="absolute -top-40 left-1/2 -translate-x-1/2 w-[60rem] h-[40rem] rounded-full blur-[90px] bg-[radial-gradient(ellipse_at_center,rgba(132,45,168,0.45),transparent_62%)]" />
+      <section className="relative overflow-hidden bg-gradient-to-br from-purple-100 via-purple-50 to-indigo-100 py-24 border-t border-purple-100">
+        <div aria-hidden className="absolute -top-40 left-1/2 -translate-x-1/2 w-[60rem] h-[40rem] rounded-full blur-[90px] bg-[radial-gradient(ellipse_at_center,rgba(132,45,168,0.14),transparent_62%)]" />
         <div className="relative max-w-4xl mx-auto px-4 text-center">
-          <h2 className="font-display text-4xl sm:text-5xl font-bold mb-5">Ready when you are</h2>
-          <p className="text-lg text-white/70 mb-10 max-w-2xl mx-auto">
+          <h2 className="font-display text-4xl sm:text-5xl font-bold mb-5 text-gray-900">Ready when you are</h2>
+          <p className="text-lg text-gray-600 mb-10 max-w-2xl mx-auto">
             Join the creators, investors and studios shaping what gets made next.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-3">
             <button
               onClick={() => navigate('/register')}
-              className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-white text-purple-800 font-semibold transition hover:bg-purple-50"
+              className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-purple-600 text-white font-semibold shadow-lg shadow-purple-500/30 transition hover:bg-purple-700"
             >
               <Users className="w-5 h-5" />
               Create your account
             </button>
             <button
               onClick={() => navigate('/marketplace')}
-              className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl border border-white/25 text-white transition hover:bg-white/10"
+              className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl border border-purple-300 text-purple-700 bg-white/60 transition hover:bg-white"
             >
               <Film className="w-5 h-5" />
               Explore the marketplace
@@ -420,12 +413,12 @@ const HowItWorks: React.FC = () => {
       </section>
 
       {/* ===================== Footer ===================== */}
-      <footer className="bg-[#0a0a12] border-t border-white/10 py-10">
+      <footer className="bg-white border-t border-gray-200 py-10">
         <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <img src="/pitchey-logotype-white.png" alt="Pitchey" className="h-6 w-auto opacity-80" />
-          <p className="text-sm text-white/40">
+          <img src="/pitchey-logotype.png" alt="Pitchey" className="h-6 w-auto opacity-80" />
+          <p className="text-sm text-gray-500">
             Have questions? Reach us at{' '}
-            <a href="mailto:support@pitchey.com" className="text-violet-300 hover:text-violet-200 transition">support@pitchey.com</a>
+            <a href="mailto:support@pitchey.com" className="text-purple-600 hover:text-purple-700 transition">support@pitchey.com</a>
           </p>
         </div>
       </footer>
