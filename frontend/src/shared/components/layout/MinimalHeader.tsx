@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronDown, CircleUser, Coins, Menu, X, LogOut, Home, Store } from 'lucide-react';
+import { ChevronDown, CircleUser, Coins, Menu, X, LogOut, LayoutDashboard, Store } from 'lucide-react';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { paymentsAPI } from '@/lib/apiServices';
 import { WebSocketStatusCompact } from '@/components/WebSocketStatus';
 import { NotificationBell } from '@features/notifications/components/NotificationBell';
 import Logo from '@/components/Logo';
-import { getPortalPath, getBrowsePath } from '@/utils/navigation';
+import { getPortalPath, getBrowsePath, getDashboardRoute } from '@/utils/navigation';
 import { getPortalTheme } from '@shared/hooks/usePortalTheme';
 
 
@@ -83,6 +83,10 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
   // Route to the in-portal browse for this portal so the marketplace keeps the
   // portal chrome instead of swapping to the standalone /marketplace (old layout).
   const browsePath = getBrowsePath(userType);
+  // "Home" for a logged-in user means their portal dashboard, not the public
+  // landing page. Pointing the logo + quick-nav here removes the detour where
+  // users had to bounce through the marketing page to get back to the dashboard.
+  const homePath = userType ? getDashboardRoute(userType) : '/';
 
   return (
     <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-4 sticky top-0 z-40">
@@ -99,7 +103,7 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
 
         {/* Logo — portal identity is carried by the role badge + main-content
             strip, not the logo color */}
-        <Link to="/" className="flex items-center" aria-label="Pitchey home">
+        <Link to={homePath} className="flex items-center" aria-label="Pitchey dashboard">
           <Logo size="md" />
         </Link>
 
@@ -120,12 +124,12 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
         {/* Quick Navigation Links — hidden on mobile (sidebar hamburger covers this) */}
         <nav className="hidden sm:flex items-center gap-1">
           <Link
-            to="/"
+            to={homePath}
             className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Home"
+            title="Dashboard"
           >
-            <Home className="w-4 h-4" />
-            <span className="hidden md:inline">Home</span>
+            <LayoutDashboard className="w-4 h-4" />
+            <span className="hidden md:inline">Dashboard</span>
           </Link>
           <Link
             to={browsePath}
@@ -184,11 +188,11 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
               {/* Quick Navigation - Mobile */}
               <div className="sm:hidden border-b border-gray-200 py-2">
                 <button
-                  onClick={() => { navigate('/'); setIsProfileOpen(false); }}
+                  onClick={() => { navigate(homePath); setIsProfileOpen(false); }}
                   className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                 >
-                  <Home className="w-4 h-4" />
-                  Home
+                  <LayoutDashboard className="w-4 h-4" />
+                  Dashboard
                 </button>
                 <button
                   onClick={() => { navigate(browsePath); setIsProfileOpen(false); }}
