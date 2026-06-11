@@ -63,7 +63,7 @@ export class UserProfileRoutes {
 
       const [user] = (await this.sql`
         SELECT
-          id, email, name, first_name as "firstName",
+          id, email, username, name, first_name as "firstName",
           last_name as "lastName", user_type as "userType",
           company_name as "companyName", company_address as "companyAddress", bio, phone,
           website, profile_image as "profileImage", location,
