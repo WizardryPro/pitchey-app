@@ -70,7 +70,7 @@ export default function Messages() {
   const [currentMessages, setCurrentMessages] = useState<EnhancedMessage[]>([]);
   const isOnline = useOnlineStatus();
   const [showNewConversation, setShowNewConversation] = useState(false);
-  const [ndaContacts, setNdaContacts] = useState<Array<{ id: number; name: string; type: string; pitchTitle?: string; signedAt?: string }>>([]);
+  const [contacts, setContacts] = useState<Array<{ id: number; name: string; type: string; companyName?: string; iFollow?: boolean; followsMe?: boolean; hasNda?: boolean; pitchTitle?: string; signedAt?: string }>>([]);
   const [contactsLoading, setContactsLoading] = useState(false);
   const [contactSearch, setContactSearch] = useState('');
 
@@ -163,46 +163,32 @@ export default function Messages() {
     }
   }, []);
 
-  // Load NDA contacts for new conversation modal
-  const loadNdaContacts = useCallback(async () => {
+  // Load the people this user can message for the new-conversation modal. The
+  // backend returns everyone connected by a follow (either direction) OR a shared
+  // signed NDA, deduped with the relationship reason attached — so the modal can
+  // explain WHY each person is messageable. (Previously this loaded NDA contacts
+  // only, which hid the follow-based path and left the picker confusingly empty.)
+  const loadContacts = useCallback(async () => {
     setContactsLoading(true);
     try {
-      // Fetch both signed and incoming-signed NDAs to cover both directions
-      const [signedRes, incomingRes] = await Promise.all([
-        apiClient.get<{ ndas?: Array<Record<string, unknown>>; ndaRequests?: Array<Record<string, unknown>> }>('/api/ndas/signed'),
-        apiClient.get<{ ndas?: Array<Record<string, unknown>>; ndaRequests?: Array<Record<string, unknown>> }>('/api/ndas/incoming-signed'),
-      ]);
+      const res = await apiClient.get<{ contacts?: Array<{
+        id: number; name: string; type?: string; companyName?: string;
+        iFollow?: boolean; followsMe?: boolean; hasNda?: boolean;
+        pitchTitle?: string; signedAt?: string;
+      }> }>('/api/messages/contacts');
 
-      const currentUserId = parseInt(getUserId() || '0');
-      const contactMap = new Map<number, { id: number; name: string; type: string; pitchTitle?: string; signedAt?: string }>();
-
-      const processNdas = (ndas: Array<Record<string, unknown>>) => {
-        for (const nda of ndas) {
-          // Get the other party's info
-          const requesterId = (nda.requester_id ?? nda.requesterId ?? nda.signer_id ?? nda.signerId) as number;
-          const ownerId = (nda.owner_id ?? nda.pitch_owner_id ?? nda.ownerId) as number;
-          const otherId = requesterId === currentUserId ? ownerId : requesterId;
-          if (!otherId || otherId === currentUserId) continue;
-
-          const otherName = requesterId === currentUserId
-            ? ((nda.creator_username ?? nda.creator_name ?? nda.pitchOwner ?? nda.owner_name) as string) || 'Unknown'
-            : ((nda.requester_username ?? nda.requester_name ?? nda.requesterName ?? nda.signer_name) as string) || 'Unknown';
-          const otherType = requesterId === currentUserId ? 'creator' : ((nda.requester_type ?? nda.signer_type) as string) || 'user';
-          const pitchTitle = (nda.pitch_title ?? nda.pitchTitle) as string | undefined;
-          const signedAt = (nda.signed_at ?? nda.signedAt ?? nda.created_at ?? nda.createdAt) as string | undefined;
-
-          if (!contactMap.has(otherId)) {
-            contactMap.set(otherId, { id: otherId, name: otherName, type: otherType, pitchTitle, signedAt });
-          }
-        }
-      };
-
-      const signedNdas = signedRes.data?.ndas ?? signedRes.data?.ndaRequests ?? [];
-      const incomingNdas = incomingRes.data?.ndas ?? incomingRes.data?.ndaRequests ?? [];
-      processNdas(signedNdas);
-      processNdas(incomingNdas);
-
-      setNdaContacts(Array.from(contactMap.values()));
+      const list = (res.data?.contacts ?? []).map((c) => ({
+        id: c.id,
+        name: c.companyName || c.name || 'Unknown',
+        type: c.type || 'user',
+        companyName: c.companyName,
+        iFollow: c.iFollow,
+        followsMe: c.followsMe,
+        hasNda: c.hasNda,
+        pitchTitle: c.pitchTitle,
+        signedAt: c.signedAt,
+      }));
+      setContacts(list);
     } catch {
       // Non-critical
     } finally {
@@ -273,7 +259,7 @@ export default function Messages() {
         }
       } catch (err) {
         const e = err instanceof Error ? err : new Error(String(err));
-        addNotification(e.message || 'Could not start conversation — a signed NDA may be required', 'error');
+        addNotification(e.message || "Could not start conversation — follow this person (or sign their NDA) first", 'error');
       }
       // Clear params to prevent re-triggering
       setSearchParams({}, { replace: true });
@@ -765,7 +751,7 @@ export default function Messages() {
                     />
                   </div>
                   <button
-                    onClick={() => { setShowNewConversation(true); void loadNdaContacts(); }}
+                    onClick={() => { setShowNewConversation(true); void loadContacts(); }}
                     className="flex items-center gap-1 px-3 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors whitespace-nowrap"
                     title="New conversation"
                   >
@@ -811,9 +797,9 @@ export default function Messages() {
                       </button>
                     ) : (
                       <>
-                        <p className="text-gray-400 text-xs mt-1 mb-4">Start a conversation with someone who has signed an NDA</p>
+                        <p className="text-gray-400 text-xs mt-1 mb-4">Message anyone you follow (or who follows you), plus people you share a signed NDA with.</p>
                         <button
-                          onClick={() => { setShowNewConversation(true); void loadNdaContacts(); }}
+                          onClick={() => { setShowNewConversation(true); void loadContacts(); }}
                           className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors"
                         >
                           <PenSquare className="w-4 h-4" />
@@ -1336,8 +1322,8 @@ export default function Messages() {
                   />
                 </div>
                 <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-                  <Shield className="w-3 h-3" />
-                  Showing users with signed NDAs
+                  <Users className="w-3 h-3" />
+                  People you follow or share a signed NDA with
                 </p>
               </div>
 
@@ -1347,15 +1333,18 @@ export default function Messages() {
                   <div className="flex justify-center py-8">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
                   </div>
-                ) : ndaContacts.length === 0 ? (
+                ) : contacts.length === 0 ? (
                   <div className="p-6 text-center">
                     <Users className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500 text-sm font-medium">No contacts available</p>
-                    <p className="text-gray-400 text-xs mt-1">You can message users once they have signed an NDA on one of your pitches, or you have signed an NDA on theirs.</p>
+                    <p className="text-gray-500 text-sm font-medium">No one to message yet</p>
+                    <p className="text-gray-400 text-xs mt-1">
+                      Follow a creator, investor, or production company — or sign an NDA on one of
+                      their pitches — and they'll show up here so you can start a conversation.
+                    </p>
                   </div>
                 ) : (
                   (() => {
-                    const filtered = ndaContacts.filter(c =>
+                    const filtered = contacts.filter(c =>
                       !contactSearch || c.name.toLowerCase().includes(contactSearch.toLowerCase()) ||
                       (c.pitchTitle && c.pitchTitle.toLowerCase().includes(contactSearch.toLowerCase()))
                     );
@@ -1366,6 +1355,15 @@ export default function Messages() {
                         </div>
                       );
                     }
+                    // Why is this person messageable? Prefer the lightest-weight reason
+                    // that's true so the label reads naturally.
+                    const reasonLabel = (c: typeof contacts[number]): string => {
+                      if (c.iFollow && c.followsMe) return 'You follow each other';
+                      if (c.iFollow) return 'You follow them';
+                      if (c.followsMe) return 'Follows you';
+                      if (c.hasNda) return c.pitchTitle ? `NDA: ${c.pitchTitle}` : 'Signed NDA';
+                      return '';
+                    };
                     return filtered.map((contact) => (
                       <button
                         key={contact.id}
@@ -1377,11 +1375,11 @@ export default function Messages() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-gray-900 text-sm">{contact.name}</p>
-                          {contact.pitchTitle && (
-                            <p className="text-xs text-purple-600 truncate">NDA: {contact.pitchTitle}</p>
-                          )}
-                          {contact.signedAt && (
-                            <p className="text-xs text-gray-400">Signed {new Date(contact.signedAt).toLocaleDateString()}</p>
+                          {reasonLabel(contact) && (
+                            <p className="text-xs text-purple-600 truncate flex items-center gap-1">
+                              {contact.hasNda && !contact.iFollow && !contact.followsMe && <Shield className="w-3 h-3 flex-shrink-0" />}
+                              {reasonLabel(contact)}
+                            </p>
                           )}
                         </div>
                         <span className={`px-2 py-0.5 text-xs rounded-full ${

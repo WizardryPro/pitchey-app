@@ -469,6 +469,14 @@ export interface CreatePitchInput {
   additionalMedia?: AdditionalMedia[];
   aiUsed?: boolean;
   requireNDA?: boolean;
+  creativeAttachments?: Array<{
+    id?: string;
+    name: string;
+    role: string;
+    bio: string;
+    imdbLink?: string;
+    websiteLink?: string;
+  }>;
 }
 
 export interface UpdatePitchInput extends Partial<CreatePitchInput> {

@@ -13,6 +13,7 @@ import type { Character } from '@shared/types/character';
 import { normalizeCharacters, serializeCharacters } from '@features/pitches/utils/characterUtils';
 import { DocumentUpload } from '@features/uploads/components/DocumentUpload';
 import type { DocumentFile } from '@features/uploads/components/DocumentUpload';
+import { CreativeAttachmentsManager, type CreativeAttachment } from '@features/pitches/components/PitchForm/EnhancedPitchFormSections';
 
 interface PitchFormData {
   title: string;
@@ -48,6 +49,7 @@ interface PitchFormData {
     customNDA: File | null;
   };
   characters: Character[];
+  creativeAttachments: CreativeAttachment[];
 }
 
 export default function PitchEdit() {
@@ -100,7 +102,8 @@ export default function PitchEdit() {
       ndaType: 'none',
       customNDA: null
     },
-    characters: []
+    characters: [],
+    creativeAttachments: []
   });
 
   const formatCategories: Record<string, string[]> = {
@@ -254,7 +257,20 @@ export default function PitchEdit() {
           ndaType: pitch.requireNDA ? 'platform' : 'none',
           customNDA: null
         },
-        characters: normalizeCharacters(pitch.characters)
+        characters: normalizeCharacters(pitch.characters),
+        // Creative-team cards. The backend getters now return these (they were
+        // saved on create but never read back), and pitchService maps them to
+        // camelCase. Ensure each has a stable id so the manager's keying works.
+        creativeAttachments: (Array.isArray((pitch as any).creativeAttachments) ? (pitch as any).creativeAttachments : []).map(
+          (c: any, i: number): CreativeAttachment => ({
+            id: String(c.id ?? `existing-${i}`),
+            name: c.name ?? '',
+            role: c.role ?? '',
+            bio: c.bio ?? '',
+            imdbLink: c.imdbLink ?? c.imdb_link ?? '',
+            websiteLink: c.websiteLink ?? c.website_link ?? '',
+          })
+        )
       });
     } catch (error) {
       console.error('Failed to fetch pitch:', error);
@@ -394,7 +410,11 @@ export default function PitchEdit() {
         targetReleaseDate: formData.targetReleaseDate || undefined,
         visibilitySettings: formData.visibilitySettings,
         requireNDA: formData.ndaConfig.requireNDA,
-        characters: serializeCharacters(formData.characters)
+        characters: serializeCharacters(formData.characters),
+        // Send the full creative-team list. The update handler deletes + re-inserts
+        // pitch_creative_attachments, so the array must always reflect the current
+        // desired state (empty array clears them).
+        creativeAttachments: formData.creativeAttachments,
       };
 
       // Collects names of any media/documents that failed to upload during this
@@ -852,6 +872,15 @@ export default function PitchEdit() {
               characters={formData.characters}
               onChange={(characters) => setFormData(prev => ({ ...prev, characters }))}
               maxCharacters={10}
+            />
+          </div>
+
+          {/* Creative Team Section */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-6">Creative Team</h2>
+            <CreativeAttachmentsManager
+              attachments={formData.creativeAttachments || []}
+              onChange={(creativeAttachments) => setFormData(prev => ({ ...prev, creativeAttachments }))}
             />
           </div>
 
