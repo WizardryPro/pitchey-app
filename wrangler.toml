@@ -145,9 +145,8 @@ bucket_name = "pitchey-trace-logs"
 # ===== CRON TRIGGERS =====
 [triggers]
 crons = [
-  "*/5 * * * *",    # Every 5 min: Check NDA expirations and container health
-  "*/10 * * * *",   # Every 10 min: Job queue monitoring
-  "0 * * * *",      # Hourly: Send digest emails and metrics aggregation
+  "*/5 * * * *",    # Every 5 min: Check NDA expirations (+ optional Neon keep-warm)
+  "0 * * * *",      # Hourly: Send digest emails + money-path SLO check
   "0 0 * * *",      # Daily: Export audit logs and archive jobs
   "0 2 * * 1",      # Weekly: Database cleanup (Mondays at 2 AM)
   "0 3 * * *",      # Daily 3 AM: Stripe<->DB subscription reconciliation (drift detection)
