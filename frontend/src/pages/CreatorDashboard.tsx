@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useNavigate } from 'react-router-dom';
-import { TrendingUp, Eye, MessageSquare, Upload, BarChart3, Calendar, Plus, Shield, CreditCard, Wifi, WifiOff, AlertTriangle, RefreshCw, Sparkles, ArrowRight, Share2 } from 'lucide-react';
+import { TrendingUp, Eye, MessageSquare, Upload, BarChart3, Calendar, Plus, Shield, CreditCard, Wifi, WifiOff, AlertTriangle, RefreshCw, Sparkles, ArrowRight, Share2, Activity, Users } from 'lucide-react';
 import QuickActionsPanel, { type QuickAction } from '../components/dashboard/QuickActionsPanel';
 import ShareLinksModal from '../components/portfolio/ShareLinksModal';
 import { useBetterAuthStore } from '../store/betterAuthStore';
@@ -51,6 +51,7 @@ function CreatorDashboard() {
   const [totalViews, setTotalViews] = useState<number>(0);
   const [followers, setFollowers] = useState<number>(0);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'pitches' | 'ndas' | 'network'>('overview');
 
   const quickActions: QuickAction[] = [
     { label: 'Create Pitch', icon: Plus, accent: 'purple', onClick: () => { void navigate('/creator/pitch/new'); } },
@@ -367,6 +368,12 @@ function CreatorDashboard() {
       <div className="w-full animate-pulse">
         {/* Skeleton hero zone */}
         <div className="mb-6 h-7 w-48 bg-gray-200 rounded" />
+        {/* Skeleton tab bar */}
+        <div className="inline-flex gap-1 p-1 bg-gray-100 rounded-xl mb-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-9 w-24 bg-gray-200 rounded-lg" />
+          ))}
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
           <div className="lg:col-span-3 bg-gradient-to-br from-purple-300 to-indigo-300 rounded-xl h-56" />
           <div className="lg:col-span-2 bg-white rounded-xl shadow-sm h-56" />
@@ -441,6 +448,50 @@ function CreatorDashboard() {
         </div>
       )}
 
+      {/* Tab Navigation — segmented control (portal-purple active pill, live counts) */}
+      <div className="mb-6">
+        <nav
+          aria-label="Dashboard sections"
+          className="inline-flex w-full sm:w-auto items-center gap-1 p-1 bg-gray-100 rounded-xl overflow-x-auto"
+        >
+          {([
+            { id: 'overview', label: 'Overview', icon: Activity, count: null },
+            { id: 'pitches', label: 'My Pitches', icon: Upload, count: pitches?.length || 0 },
+            { id: 'ndas', label: 'NDAs', icon: Shield, count: safeNumber(stats?.totalInterest) || 0 },
+            { id: 'network', label: 'Network', icon: Users, count: followers || 0 },
+          ] as const).map(({ id, label, icon: Icon, count }) => {
+            const isActive = activeTab === id;
+            return (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                aria-current={isActive ? 'page' : undefined}
+                className={`relative flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all duration-200 ${
+                  isActive
+                    ? 'bg-white text-brand-portal-creator shadow-sm ring-1 ring-black/5'
+                    : 'text-gray-500 hover:text-gray-800 hover:bg-white/60'
+                }`}
+              >
+                <Icon className={`w-4 h-4 ${isActive ? 'text-brand-portal-creator' : 'text-gray-400'}`} />
+                <span>{label}</span>
+                {count !== null && count > 0 && (
+                  <span
+                    className={`ml-0.5 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-[11px] font-semibold tabular-nums ${
+                      isActive ? 'bg-brand-portal-creator/10 text-brand-portal-creator' : 'bg-gray-200 text-gray-500'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* ===== OVERVIEW TAB ===== */}
+      {activeTab === 'overview' && (
+      <>
       {/* ===== COMMAND CENTER HERO ZONE ===== */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
         {/* Left: Key Metrics */}
@@ -491,10 +542,13 @@ function CreatorDashboard() {
         <CreatorCollaborations />
       </div>
 
-      {/* ===== MY PITCHES + NDA QUICK STATUS ===== */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        {/* My Pitches — left 2/3 */}
-        <div className="lg:col-span-2">
+      </>
+      )}
+
+      {/* ===== MY PITCHES (Pitches tab) ===== */}
+      {activeTab === 'pitches' && (
+      <div className="mb-8">
+        <div>
           <div className="bg-white rounded-xl shadow-sm">
             <div className="px-6 py-4 border-b flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">My Pitches</h2>
@@ -571,8 +625,12 @@ function CreatorDashboard() {
             </div>
           </div>
         </div>
+      </div>
+      )}
 
-        {/* NDA Status + Subscription — right 1/3 */}
+      {/* ===== NDA STATUS + SUBSCRIPTION (Overview tab) ===== */}
+      {activeTab === 'overview' && (
+      <div className="max-w-2xl mb-8">
         <div className="space-y-6">
           <QuickNDAStatus userType="creator" />
 
@@ -640,11 +698,16 @@ function CreatorDashboard() {
           </div>
         </div>
       </div>
+      )}
 
-      {/* ===== NDA NOTIFICATION PANEL ===== */}
+      {/* ===== NDA NOTIFICATION PANEL (NDAs tab) ===== */}
+      {activeTab === 'ndas' && (
       <NDANotificationPanel className="mb-8" />
+      )}
 
-      {/* ===== STATS GRID — 6 KPI Cards (pushed down) ===== */}
+      {/* ===== STATS GRID — 6 KPI Cards (Pitches tab) ===== */}
+      {activeTab === 'pitches' && (
+      <>
       <div className="mb-4 px-1">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">Performance</h2>
       </div>
@@ -724,7 +787,12 @@ function CreatorDashboard() {
         </div>
       </div>
 
-      {/* ===== FUNDING OVERVIEW ===== */}
+      </>
+      )}
+
+      {/* ===== FUNDING OVERVIEW (Overview tab) ===== */}
+      {activeTab === 'overview' && (
+      <>
       {sectionStatus.funding.error ? (
         <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-lg p-4 mb-8">
           <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
@@ -768,7 +836,11 @@ function CreatorDashboard() {
         </div>
       </div>
 
-      {/* ===== CREATOR MILESTONES ===== */}
+      </>
+      )}
+
+      {/* ===== CREATOR MILESTONES (Pitches tab) ===== */}
+      {activeTab === 'pitches' && (
       <div className="bg-white rounded-xl shadow-sm mb-8">
         <div className="px-6 py-4 border-b">
           <h2 className="text-lg font-semibold text-gray-900">Creator Milestones</h2>
@@ -902,7 +974,10 @@ function CreatorDashboard() {
         </div>
       </div>
 
-      {/* ===== RECENT ACTIVITY (full-width) ===== */}
+      )}
+
+      {/* ===== RECENT ACTIVITY (Overview tab) ===== */}
+      {activeTab === 'overview' && (
       <div className="bg-white rounded-xl shadow-sm">
         <div className="px-6 py-4 border-b">
           <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
@@ -942,6 +1017,30 @@ function CreatorDashboard() {
           )}
         </div>
       </div>
+      )}
+
+      {/* ===== NETWORK TAB ===== */}
+      {activeTab === 'network' && (
+        <div className="bg-white rounded-xl shadow-sm p-8">
+          <div className="flex flex-col items-center text-center max-w-md mx-auto py-6">
+            <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-50 to-indigo-100 ring-1 ring-purple-100/60 mb-4">
+              <Users className="w-7 h-7 text-brand-portal-creator" />
+            </div>
+            <p className="text-4xl font-bold tracking-tight tabular-nums text-gray-900">{followers}</p>
+            <p className="text-sm font-medium text-gray-600 mt-1">Followers</p>
+            <p className="text-gray-500 text-sm mt-3 mb-6">
+              People who follow your work get notified when you publish new pitches.
+            </p>
+            <button
+              onClick={() => { void navigate('/creator/following'); }}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-action text-white rounded-lg hover:opacity-90 transition font-medium text-sm"
+            >
+              View followers &amp; following
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
