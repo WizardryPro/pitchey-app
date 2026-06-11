@@ -43,6 +43,73 @@ export class SimpleMessagingHandler {
     return this.hasSignedNDA(userId, recipientId);
   }
 
+  // People this user is allowed to start a conversation with — the same eligibility
+  // as canStartConversation (follow either direction OR shared NDA), but returned as
+  // a deduped contact list with the *reason* attached so the UI can explain WHY each
+  // person is messageable. Replaces the old NDA-only picker that made the follow path
+  // invisible (Karl: "I don't get the messaging system"). Each branch is independently
+  // try/caught so NDA-schema drift can't blank out the follow-based contacts.
+  async getMessageableContacts(userId: number) {
+    const nameExpr = `COALESCE(NULLIF(TRIM(COALESCE(u.first_name,'') || ' ' || COALESCE(u.last_name,'')), ''), u.username, u.email)`;
+    type Contact = {
+      id: number; name: string; type: string; companyName?: string;
+      iFollow: boolean; followsMe: boolean; hasNda: boolean;
+      pitchTitle?: string; signedAt?: string;
+    };
+    const contacts = new Map<number, Contact>();
+    const ensure = (id: number, name: string, type: string, companyName?: string): Contact => {
+      let c = contacts.get(id);
+      if (!c) {
+        c = { id, name, type, companyName, iFollow: false, followsMe: false, hasNda: false };
+        contacts.set(id, c);
+      }
+      return c;
+    };
+
+    // Follows — both directions. `i_follow` distinguishes "I follow them" from
+    // "they follow me" so the UI can label the relationship.
+    try {
+      const rows = await this.db.query(
+        `SELECT u.id, ${nameExpr} AS name, u.user_type AS type, u.company_name AS company_name,
+                (f.follower_id = $1) AS i_follow
+         FROM follows f
+         JOIN users u ON u.id = CASE WHEN f.follower_id = $1 THEN f.following_id ELSE f.follower_id END
+         WHERE (f.follower_id = $1 OR f.following_id = $1) AND u.id <> $1
+         LIMIT 300`,
+        [userId]
+      );
+      for (const r of rows) {
+        const c = ensure(Number(r.id), r.name || 'Unknown', r.type || 'user', r.company_name || undefined);
+        if (r.i_follow) c.iFollow = true; else c.followsMe = true;
+      }
+    } catch (e) { console.error('getMessageableContacts.follows failed:', e instanceof Error ? e.message : String(e)); }
+
+    // Shared signed NDAs — either direction (mirrors hasSignedNDA's COALESCE shape).
+    try {
+      const rows = await this.db.query(
+        `SELECT u.id, ${nameExpr} AS name, u.user_type AS type, u.company_name AS company_name,
+                p.title AS pitch_title, n.signed_at AS signed_at
+         FROM ndas n
+         JOIN pitches p ON p.id = n.pitch_id
+         JOIN users u ON u.id = CASE WHEN COALESCE(n.signer_id, n.user_id) = $1 THEN p.user_id ELSE COALESCE(n.signer_id, n.user_id) END
+         WHERE n.signed_at IS NOT NULL AND n.revoked_at IS NULL
+           AND (COALESCE(n.signer_id, n.user_id) = $1 OR p.user_id = $1)
+           AND u.id <> $1
+         ORDER BY n.signed_at DESC
+         LIMIT 300`,
+        [userId]
+      );
+      for (const r of rows) {
+        const c = ensure(Number(r.id), r.name || 'Unknown', r.type || 'user', r.company_name || undefined);
+        c.hasNda = true;
+        if (!c.pitchTitle && r.pitch_title) c.pitchTitle = r.pitch_title;
+        if (!c.signedAt && r.signed_at) c.signedAt = r.signed_at;
+      }
+    } catch (e) { console.error('getMessageableContacts.nda failed:', e instanceof Error ? e.message : String(e)); }
+
+    return { success: true, data: { contacts: Array.from(contacts.values()) } };
+  }
+
   // Get all messages for a user
   async getMessages(userId: number, limit: number = 50, offset: number = 0) {
     try {
@@ -112,10 +179,13 @@ export class SimpleMessagingHandler {
         if (existing.length > 0) {
           convId = existing[0].id;
         } else {
-          // NDA required to start a new conversation
-          const hasNDA = await this.hasSignedNDA(userId, recipient_id);
-          if (!hasNDA) {
-            return { success: false, error: 'A signed NDA is required to message this user' };
+          // Eligibility to open a new conversation: follow (either direction) OR a
+          // shared signed NDA — same rule as findOrCreateConversation/createConversation.
+          // (Was NDA-only here, which contradicted the follow-based model and the other
+          // two creation paths.)
+          const allowed = await this.canStartConversation(userId, recipient_id);
+          if (!allowed) {
+            return { success: false, error: 'Follow this user (or sign their NDA) to start a conversation' };
           }
 
           // Create new direct conversation

@@ -613,6 +613,51 @@ export default function PitchDetail() {
               </div>
             </div>
 
+            {/* Creative Team — public credits list (Director/Writer/Producer
+                cards). Saved on the create/edit form; surfaced here for all
+                viewers. Hidden when the pitch has none. */}
+            {Array.isArray((pitch as any).creativeAttachments) && (pitch as any).creativeAttachments.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <User className="w-5 h-5 text-gray-400" />
+                  Creative Team
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {(pitch as any).creativeAttachments.map((member: any, i: number) => (
+                    <div key={member.id ?? i} className="border border-gray-100 rounded-lg p-4 bg-gray-50">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className="font-semibold text-gray-900">{member.name || 'Unnamed'}</p>
+                        {member.role && (
+                          <span className="text-xs text-purple-600 bg-purple-50 px-2 py-0.5 rounded whitespace-nowrap">
+                            {member.role}
+                          </span>
+                        )}
+                      </div>
+                      {member.bio && (
+                        <p className="mt-2 text-sm text-gray-600 whitespace-pre-wrap">{member.bio}</p>
+                      )}
+                      {(member.imdbLink || member.websiteLink) && (
+                        <div className="mt-2 flex flex-wrap gap-3 text-sm">
+                          {member.imdbLink && (
+                            <a href={member.imdbLink} target="_blank" rel="noopener noreferrer"
+                               className="text-purple-600 hover:text-purple-700 font-medium">
+                              IMDb
+                            </a>
+                          )}
+                          {member.websiteLink && (
+                            <a href={member.websiteLink} target="_blank" rel="noopener noreferrer"
+                               className="text-purple-600 hover:text-purple-700 font-medium">
+                              Website
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Enhanced Information — only render when the pitch actually has
                 NDA-gated content (require_nda set or protected content present).
                 Previously this advertised protected content + an NDA on every

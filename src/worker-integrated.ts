@@ -2481,6 +2481,7 @@ class RouteRegistry {
     this.register('POST', '/api/messages/attachments', this.uploadMessageAttachment.bind(this));
     this.register('POST', '/api/conversations', this.createConversation.bind(this));
     this.register('GET', '/api/conversations', this.getConversations.bind(this));
+    this.register('GET', '/api/messages/contacts', this.getMessageableContacts.bind(this));
     this.register('GET', '/api/conversations/:id', this.getConversationById.bind(this));
     this.register('POST', '/api/conversations/:id/messages', this.sendMessageToConversation.bind(this));
 
@@ -5984,6 +5985,27 @@ pitchey_analytics_datapoints_per_minute 1250
           return hit ? (hit.file_url as string) : undefined;
         };
 
+        // Creative-team attachments — see getPitch for rationale. Public credits
+        // list, mapped to camelCase for the frontend reader.
+        let creativeAttachments: Array<Record<string, unknown>> = [];
+        try {
+          const caRows = await this.db.query(`
+            SELECT id, name, role, bio, imdb_link, website_link, profile_image_url, sort_order
+            FROM pitch_creative_attachments
+            WHERE pitch_id = $1
+            ORDER BY sort_order ASC, id ASC
+          `, [pitchId]);
+          creativeAttachments = (caRows || []).map((c: any) => ({
+            id: String(c.id),
+            name: c.name,
+            role: c.role,
+            bio: c.bio,
+            imdbLink: c.imdb_link ?? undefined,
+            websiteLink: c.website_link ?? undefined,
+            profileImageUrl: c.profile_image_url ?? undefined,
+          }));
+        } catch (_e) { /* pitch_creative_attachments may not exist in all envs */ }
+
         // Build response with conditional protected content
         const response: any = {
           id: pitch.id,
@@ -6031,6 +6053,8 @@ pitchey_analytics_datapoints_per_minute 1250
           pitchDeck: (hasNDAAccess || isOwner) ? (pitch.pitch_deck_url ?? findDoc('pitch_deck', 'pitchdeck', 'deck')) : undefined,
           script: (hasNDAAccess || isOwner) ? (pitch.script_url ?? findDoc('script', 'screenplay')) : undefined,
           trailer: (hasNDAAccess || isOwner) ? (pitch.trailer_url ?? findDoc('trailer', 'video')) : undefined,
+          creativeAttachments,
+          creative_attachments: creativeAttachments,
           creator: creatorInfo,
           hasSignedNDA: hasNDAAccess,
           requiresNDA: pitch.require_nda || false
@@ -6291,6 +6315,30 @@ pitchey_analytics_datapoints_per_minute 1250
         return hit ? (hit.file_url as string) : undefined;
       };
 
+      // Creative-team attachments (Director/Writer/Producer cards). Saved on
+      // create/update but never read back until now — so edit lost them and the
+      // detail page never showed them. Public to all viewers (it's a credits
+      // list, not NDA-gated content). Mapped to camelCase to match the frontend
+      // pitchService.transformPitchData() reader.
+      let creativeAttachments: Array<Record<string, unknown>> = [];
+      try {
+        const caRows = await sql`
+          SELECT id, name, role, bio, imdb_link, website_link, profile_image_url, sort_order
+          FROM pitch_creative_attachments
+          WHERE pitch_id = ${pitchId}
+          ORDER BY sort_order ASC, id ASC
+        `;
+        creativeAttachments = (caRows || []).map((c: any) => ({
+          id: String(c.id),
+          name: c.name,
+          role: c.role,
+          bio: c.bio,
+          imdbLink: c.imdb_link ?? undefined,
+          websiteLink: c.website_link ?? undefined,
+          profileImageUrl: c.profile_image_url ?? undefined,
+        }));
+      } catch { /* pitch_creative_attachments may not exist in all envs */ }
+
       // Does this pitch actually have NDA-gated content to reveal? The frontend
       // uses this (with requireNDA) to decide whether to show the "Enhanced
       // Information"/Request-NDA section at all — it previously advertised
@@ -6322,6 +6370,8 @@ pitchey_analytics_datapoints_per_minute 1250
         // Override spread creator_name for anonymous opt-out (see hideCreatorName)
         ...(hideCreatorName ? { creator_name: 'Anonymous Creator' } : {}),
         documents,
+        creativeAttachments,
+        creative_attachments: creativeAttachments,
         pitchDeck: (hasNDAAccess || isOwner) ? (_pdu ?? findDoc('pitch_deck', 'pitchdeck', 'deck')) : undefined,
         script: (hasNDAAccess || isOwner) ? (_su ?? findDoc('script', 'screenplay')) : undefined,
         trailer: (hasNDAAccess || isOwner) ? (_tu ?? findDoc('trailer', 'video')) : undefined,
@@ -20308,6 +20358,24 @@ Signatures: [To be completed upon signing]
       return new Response(JSON.stringify(result), {
         headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) },
         status: httpStatus
+      });
+    } catch (error) {
+      return errorHandler(error, request);
+    }
+  }
+
+  private async getMessageableContacts(request: Request): Promise<Response> {
+    try {
+      const authCheck = await this.requireAuth(request);
+      if (!authCheck.authorized) return authCheck.response;
+
+      const handler = new (await import('./handlers/messaging-simple')).SimpleMessagingHandler(this.db);
+      const result = await handler.getMessageableContacts(authCheck.user.id);
+
+      const origin = request.headers.get('Origin');
+      return new Response(JSON.stringify(result), {
+        headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) },
+        status: 200
       });
     } catch (error) {
       return errorHandler(error, request);
