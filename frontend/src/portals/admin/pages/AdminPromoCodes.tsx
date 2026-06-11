@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Ticket, RefreshCw, Users, AlertCircle } from 'lucide-react';
 import { adminService, type PromoCodeReport } from '../services/admin.service';
+import { AdminPageHeader } from '../components/AdminPageHeader';
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—';
@@ -129,21 +130,22 @@ export default function AdminPromoCodes() {
   }, [load]);
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Promo Codes</h1>
-          <p className="text-gray-600 mt-1">Launch codes and who has redeemed them.</p>
-        </div>
-        <button
-          onClick={() => void load()}
-          disabled={loading}
-          className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
-      </div>
+    <div className="max-w-5xl mx-auto">
+      <AdminPageHeader
+        title="Promo Codes"
+        subtitle="Launch codes and who has redeemed them."
+        icon={Ticket}
+        actions={
+          <button
+            onClick={() => void load()}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        }
+      />
 
       {error && (
         <div className="mb-6 flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
