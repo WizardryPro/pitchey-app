@@ -182,7 +182,7 @@ describe('AdminDashboard', () => {
     it('displays approved and rejected pitch counts', async () => {
       renderComponent()
       await waitFor(() => {
-        expect(screen.getByText('280 approved, 60 rejected')).toBeInTheDocument()
+        expect(screen.getByText('280 approved · 60 rejected')).toBeInTheDocument()
       })
     })
 

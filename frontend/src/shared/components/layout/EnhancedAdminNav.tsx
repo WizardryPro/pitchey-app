@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   Home, BarChart3, Activity, Users, FileText, Shield,
   DollarSign, FileBarChart, ClipboardList, Lock, Settings,
-  Store, ExternalLink
+  Store, ExternalLink, BadgeCheck, Ticket
 } from 'lucide-react';
 import { ADMIN_ROUTES } from '@/config/navigation.routes';
 
@@ -33,6 +33,7 @@ export const adminNavigationSections: NavigationSection[] = [
     items: [
       { label: 'Users', path: ADMIN_ROUTES.users, icon: Users },
       { label: 'Content Moderation', path: ADMIN_ROUTES.content, icon: FileText },
+      { label: 'Verifications', path: ADMIN_ROUTES.verifications, icon: BadgeCheck },
       { label: 'Moderation Log', path: ADMIN_ROUTES.moderationLog, icon: ClipboardList },
     ],
   },
@@ -40,6 +41,7 @@ export const adminNavigationSections: NavigationSection[] = [
     title: 'Financial',
     items: [
       { label: 'Transactions', path: ADMIN_ROUTES.transactions, icon: DollarSign },
+      { label: 'Promo Codes', path: ADMIN_ROUTES.promoCodes, icon: Ticket },
       { label: 'Reports', path: ADMIN_ROUTES.reports, icon: FileBarChart },
     ],
   },
