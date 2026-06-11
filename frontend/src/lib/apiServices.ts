@@ -505,10 +505,21 @@ export const paymentsAPI = {
 
   // Subscribe to a plan. Backend expects 'monthly' | 'annual' (not 'yearly').
   // currency is normalized server-side (EUR unless multi-currency is enabled).
-  async subscribe(tier: string, billingInterval?: 'monthly' | 'annual', currency?: string) {
-    const response = await apiClient.post<any>('/api/payments/subscribe', { tier, billingInterval, currency });
+  // promoCode (optional) is validated + pre-applied on the checkout session.
+  async subscribe(tier: string, billingInterval?: 'monthly' | 'annual', currency?: string, promoCode?: string) {
+    const response = await apiClient.post<any>('/api/payments/subscribe', { tier, billingInterval, currency, promoCode });
     if (response.success) {
       return { success: true, ...(response.data as object || {}) };
+    }
+    return { success: false, error: response.error?.message };
+  },
+
+  // Validate a promo code before checkout so the UI can show the discount and
+  // pre-apply it. { valid:false } means unknown/expired (not an error).
+  async validatePromo(code: string) {
+    const response = await apiClient.post<any>('/api/payments/promo/validate', { code });
+    if (response.success) {
+      return { success: true, ...(response.data as { valid: boolean; code?: string; percentOff?: number | null; amountOff?: number | null; label?: string }) };
     }
     return { success: false, error: response.error?.message };
   },
