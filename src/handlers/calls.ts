@@ -101,25 +101,27 @@ export async function listCallsHandler(request: Request, env: Env): Promise<Resp
   if (!sql) return jsonResponse({ calls: [] }, origin);
 
   try {
-    // Build the WHERE dynamically with positional params — the Neon client does
-    // not reliably compose multiple nested sql`` fragments, so use sql.query().
-    const conditions: string[] = [];
-    const params: unknown[] = [];
-    if (type === 'production' || type === 'investor') { params.push(type); conditions.push(`c.poster_type = $${params.length}`); }
-    if (status === 'open' || status === 'closed') { params.push(status); conditions.push(`c.status = $${params.length}`); }
-    if (genre && genre !== 'all') { params.push('%' + genre + '%'); conditions.push(`c.seeking_genres ILIKE $${params.length}`); }
-    if (q) { params.push('%' + q + '%'); conditions.push(`(c.title ILIKE $${params.length} OR c.mandate ILIKE $${params.length})`); }
-    const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-    params.push(limit);
-    const query = `
-      SELECT ${CALL_SELECT}
+    // Null-guarded filters in a single static tagged-template query: each filter is
+    // either a value or NULL, and a NULL bypasses its own condition. This avoids the
+    // hand-numbered `$N` build the old `sql.query()` path used — its `?q=` branch
+    // reused one placeholder twice, which dropped the query to Postgres' simple
+    // protocol and surfaced as `syntax error at or near "$1"`. Tagged templates also
+    // match the sibling handlers (getCallHandler / myCallsHandler) in this file.
+    const typeFilter = type === 'production' || type === 'investor' ? type : null;
+    const statusFilter = status === 'open' || status === 'closed' ? status : null;
+    const genreFilter = genre && genre !== 'all' ? '%' + genre + '%' : null;
+    const qFilter = q ? '%' + q + '%' : null;
+    const rows = await sql`
+      SELECT ${sql.unsafe(CALL_SELECT)}
       FROM open_calls c
       LEFT JOIN users u ON u.id = c.poster_user_id
-      ${whereClause}
+      WHERE (${typeFilter}::text IS NULL OR c.poster_type = ${typeFilter})
+        AND (${statusFilter}::text IS NULL OR c.status = ${statusFilter})
+        AND (${genreFilter}::text IS NULL OR c.seeking_genres ILIKE ${genreFilter})
+        AND (${qFilter}::text IS NULL OR c.title ILIKE ${qFilter} OR c.mandate ILIKE ${qFilter})
       ORDER BY (c.status = 'open') DESC, c.created_at DESC
-      LIMIT $${params.length}
+      LIMIT ${limit}
     `;
-    const rows = await sql.query(query, params);
     return jsonResponse({ calls: rows }, origin);
   } catch (err) {
     console.error('listCallsHandler error:', err instanceof Error ? err.message : String(err));
@@ -312,9 +314,14 @@ async function notify(
 ): Promise<void> {
   if (!sql) return;
   try {
+    // Omit `priority` and let the column default apply. Prod's notifications table
+    // carries a drifted `notifications_priority_check` that rejects 'normal' (the
+    // value the canonical schema documents as the default) — so an explicit 'normal'
+    // 500s the insert. Every other notification insert in the codebase omits priority
+    // and relies on the DB default; match them.
     await sql`
-      INSERT INTO notifications (user_id, type, title, message, related_pitch_id, related_user_id, action_url, priority, is_read, created_at)
-      VALUES (${n.userId}, ${n.type}, ${n.title}, ${n.message}, ${n.pitchId ?? null}, ${n.fromUserId ?? null}, ${n.actionUrl ?? '/opportunities'}, 'normal', false, NOW())
+      INSERT INTO notifications (user_id, type, title, message, related_pitch_id, related_user_id, action_url, is_read, created_at)
+      VALUES (${n.userId}, ${n.type}, ${n.title}, ${n.message}, ${n.pitchId ?? null}, ${n.fromUserId ?? null}, ${n.actionUrl ?? '/opportunities'}, false, NOW())
     `;
   } catch (err) {
     console.error('notify error:', err instanceof Error ? err.message : String(err));
