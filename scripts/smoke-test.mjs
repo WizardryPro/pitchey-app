@@ -101,6 +101,21 @@ const CONSOLE_NOISE = [
   /Non-Error promise rejection captured/i,
 ];
 
+// Transient lazy-chunk load failures. During a CF Pages deploy window, a request
+// for a code-split chunk can briefly resolve to the SPA's index.html (wrong MIME)
+// or 404 while the edge swaps bundle hashes — producing these console errors even
+// though the chunk hash is valid moments later. Real users self-heal via lazyRetry
+// (frontend/src/App.tsx), which reloads once to pick up the fresh hashes. The smoke
+// harness mirrors that: on seeing one of these, reload once and re-evaluate, so only
+// a *persistent* failure (a genuinely broken deploy) trips the gate.
+const CHUNK_LOAD_NOISE = [
+  /Failed to load module script/i,
+  /error loading dynamically imported module/i,
+  /Importing a module script failed/i,
+  /Loading chunk \S+ failed/i,
+  /ChunkLoadError/i,
+];
+
 // Login once per user type and cache the resulting cookies/storage so the 40+
 // route tests can share the auth session. This avoids tripping the API's
 // login rate-limiter (~5 attempts / 15 min), which previously 429'd most runs.
@@ -451,10 +466,31 @@ async function runRouteTest(browser, route, viewportName, storageState) {
     // correctly trip with "No banner landmark" if the header genuinely never rendered.
     // Non-portal routes (homepage, marketplace) keep the fixed beat.
     const isPortalRoute = /\/(creator|investor|production|watcher|admin)\//.test(route.path);
-    if (isPortalRoute) {
-      await page.locator('header').first().waitFor({ state: 'visible', timeout: 10_000 }).catch(() => {});
-    } else {
-      await page.waitForTimeout(2_500);
+    const waitForRender = async () => {
+      if (isPortalRoute) {
+        await page.locator('header').first().waitFor({ state: 'visible', timeout: 10_000 }).catch(() => {});
+      } else {
+        await page.waitForTimeout(2_500);
+      }
+    };
+    await waitForRender();
+
+    // Transient self-heal: the harness hits live prod, so a single run can catch a
+    // one-shot transient that a real user never notices — a mid-deploy lazy-chunk load
+    // (CF Pages serving index.html/404 for a chunk; lazyRetry in App.tsx reloads), or a
+    // cold-start 5xx on /api/auth/session (the app itself classifies these as
+    // SESSION_CHECK_TRANSIENT and retries). On any such signal, reload once and judge
+    // ONLY the post-reload state. A *persistent* failure re-trips after reload, so real
+    // regressions (broken deploy, real outage) still fail the gate.
+    const sawTransient =
+      consoleErrors.some((t) => CHUNK_LOAD_NOISE.some((re) => re.test(t))) ||
+      consoleErrors.some((t) => /SESSION_CHECK_TRANSIENT|Failed to get session \(status 5\d\d/i.test(t)) ||
+      networkErrors.length > 0; // networkErrors only ever holds 5xx (see listener above)
+    if (sawTransient) {
+      consoleErrors.length = 0;
+      networkErrors.length = 0;
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => {});
+      await waitForRender();
     }
 
     // Assertion 1: no "known-bad" text anywhere on the page

@@ -138,8 +138,14 @@ function extractFrontendCalls(): FrontendCall[] {
  */
 function normalizePath(raw: string): string {
   let p = raw
-    // Replace closed template expressions: ${varName} or ${obj.prop} → :param
-    .replace(/\$\{[^}]+\}/g, ':param')
+    // Replace closed template expressions preceded by '/' → path param (:param)
+    // e.g. /api/pitches/${id} → /api/pitches/:param
+    .replace(/\/\$\{[^}]+\}/g, '/:param')
+    // Drop closed template expressions NOT preceded by '/' — these are query-string
+    // suffixes glued onto a path segment (e.g. `/api/calls${suffix}` where suffix
+    // starts with '?').  Emitting ':param' here produces bogus paths like
+    // `/api/calls:param` that never match any backend route.
+    .replace(/\$\{[^}]+\}/g, '')
     // Truncate at unclosed ${ (happens with ternary expressions in nested templates)
     .replace(/\$\{.*$/, '')
     // Strip query strings
