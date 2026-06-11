@@ -126,9 +126,6 @@ const CreatorNDAManagement = lazyRetry(() => import('./pages/CreatorNDAManagemen
 const CreatorPitchView = lazyRetry(() => import('@portals/creator/pages/CreatorPitchView'));
 const CreatorActivity = lazyRetry(() => import('@portals/creator/pages/CreatorActivity'));
 const CreatorStats = lazyRetry(() => import('@portals/creator/pages/CreatorStats'));
-const CreatorPitchesPublished = lazyRetry(() => import('@portals/creator/pages/CreatorPitchesPublished'));
-const CreatorPitchesDrafts = lazyRetry(() => import('@portals/creator/pages/CreatorPitchesDrafts'));
-const CreatorPitchesReview = lazyRetry(() => import('@portals/creator/pages/CreatorPitchesReview'));
 const CreatorPitchesAnalytics = lazyRetry(() => import('@portals/creator/pages/CreatorPitchesAnalytics'));
 const CreatorTeamMembers = lazyRetry(() => import('@portals/creator/pages/CreatorTeamMembers'));
 const CreatorTeamInvite = lazyRetry(() => import('@portals/creator/pages/CreatorTeamInvite'));

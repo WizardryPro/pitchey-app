@@ -15,9 +15,9 @@ const getRelativePath = (absolutePath: string, prefix: string): string => {
 // Lazy load all Creator pages
 const CreatorActivity = lazy(() => import('@portals/creator/pages/CreatorActivity'));
 const CreatorStats = lazy(() => import('@portals/creator/pages/CreatorStats'));
-const CreatorPitchesPublished = lazy(() => import('@portals/creator/pages/CreatorPitchesPublished'));
-const CreatorPitchesDrafts = lazy(() => import('@portals/creator/pages/CreatorPitchesDrafts'));
-const CreatorPitchesReview = lazy(() => import('@portals/creator/pages/CreatorPitchesReview'));
+// CreatorPitchesPublished / Drafts / Review consolidated into ManagePitches
+// (the /creator/pitches library with status tabs). Their routes now redirect
+// there; the page files are retained for reference. See nav cleanup 2026-06-11.
 const CreatorPitchesAnalytics = lazy(() => import('@portals/creator/pages/CreatorPitchesAnalytics'));
 const CreatorTeamMembers = lazy(() => import('@portals/creator/pages/CreatorTeamMembers'));
 const CreatorTeamInvite = lazy(() => import('@portals/creator/pages/CreatorTeamInvite'));
@@ -110,14 +110,15 @@ export function AllCreatorRoutes({ isAuthenticated, userType }: RoutesProps) {
       } />
       
       {/* Pitch Management */}
+      {/* Consolidated into the single /creator/pitches library (status tabs). */}
       <Route path={getRelativePath(CREATOR_ROUTES.pitchesPublished, '/creator')} element={
-        isCreator ? <CreatorPitchesPublished /> : <Navigate to="/login/creator" />
+        <Navigate to="/creator/pitches?status=published" replace />
       } />
       <Route path={getRelativePath(CREATOR_ROUTES.pitchesDrafts, '/creator')} element={
-        isCreator ? <CreatorPitchesDrafts /> : <Navigate to="/login/creator" />
+        <Navigate to="/creator/pitches?status=draft" replace />
       } />
       <Route path={getRelativePath(CREATOR_ROUTES.pitchesReview, '/creator')} element={
-        isCreator ? <CreatorPitchesReview /> : <Navigate to="/login/creator" />
+        <Navigate to="/creator/pitches" replace />
       } />
       <Route path={getRelativePath(CREATOR_ROUTES.pitchesAnalytics, '/creator')} element={
         isCreator ? <CreatorPitchesAnalytics /> : <Navigate to="/login/creator" />
