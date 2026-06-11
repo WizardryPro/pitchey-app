@@ -125,12 +125,17 @@ describe('Settings', () => {
     })
   })
 
-  it('shows notifications tab content by default', async () => {
+  it('shows notifications tab content when the Notifications tab is selected', async () => {
     render(
       <MemoryRouter>
         <Settings />
       </MemoryRouter>
     )
+
+    await waitFor(() => {
+      expect(screen.getByText('Notifications')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('Notifications'))
 
     await waitFor(() => {
       expect(screen.getByText('Notification Preferences')).toBeInTheDocument()
@@ -145,6 +150,11 @@ describe('Settings', () => {
     )
 
     await waitFor(() => {
+      expect(screen.getByText('Notifications')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('Notifications'))
+
+    await waitFor(() => {
       expect(screen.getByText('Email Notifications')).toBeInTheDocument()
     })
   })
@@ -157,6 +167,11 @@ describe('Settings', () => {
     )
 
     await waitFor(() => {
+      expect(screen.getByText('Notifications')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('Notifications'))
+
+    await waitFor(() => {
       expect(screen.getByText('Push Notifications')).toBeInTheDocument()
     })
   })
@@ -167,6 +182,11 @@ describe('Settings', () => {
         <Settings />
       </MemoryRouter>
     )
+
+    await waitFor(() => {
+      expect(screen.getByText('Notifications')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('Notifications'))
 
     await waitFor(() => {
       expect(screen.getByText('Pitch Views')).toBeInTheDocument()
