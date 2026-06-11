@@ -449,14 +449,19 @@ export async function getPitchFeedbackPublic(request: Request, env: Env): Promis
         pf.id, pf.reviewer_type, pf.rating, pf.strengths, pf.weaknesses,
         pf.suggestions, pf.overall_feedback, pf.is_interested, pf.is_anonymous, pf.created_at,
         CASE WHEN pf.is_anonymous THEN NULL ELSE u.id END as reviewer_id,
-        -- Names are public to all viewers now (P5). If a user's display name is
-        -- actually an email (no real name set), show only the local part so we
-        -- don't leak their full email address to anonymous callers.
+        -- Canonical author rule (matches getPitchComments): chosen @username first,
+        -- then real name, then the email local-part. Email-shaped usernames are
+        -- skipped (no '@handle' that's really an address; no email leak). company_name
+        -- is never the author identity — it leaked in as "Slycloth/Sky Cloth" before.
         CASE
           WHEN pf.is_anonymous THEN 'Anonymous'
-          WHEN COALESCE(u.name, u.username, 'User') LIKE '%@%.%'
-            THEN split_part(COALESCE(u.name, u.username, 'User'), '@', 1)
-          ELSE COALESCE(u.name, u.username, 'User')
+          ELSE COALESCE(
+            CASE WHEN u.username IS NOT NULL AND TRIM(u.username) <> '' AND u.username NOT LIKE '%@%'
+                 THEN '@' || u.username END,
+            NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''),
+            split_part(u.email, '@', 1),
+            'User'
+          )
         END as reviewer_name,
         CASE WHEN pf.is_anonymous THEN NULL ELSE u.company_name END as reviewer_company
       FROM pitch_feedback pf
@@ -751,7 +756,16 @@ export async function getPitchComments(request: Request, env: Env): Promise<Resp
       SELECT
         pc.id, pc.content, pc.created_at, pc.user_id,
         pc.user_type,
-        u.name as user_name, u.username
+        -- Canonical author rule (matches getPitchFeedbackPublic): chosen @username
+        -- first, then real name, then the email local-part. Email-shaped usernames are
+        -- skipped (no email leak). Never company_name — that surfaced Karl as "Sky Cloth".
+        COALESCE(
+          CASE WHEN u.username IS NOT NULL AND TRIM(u.username) <> '' AND u.username NOT LIKE '%@%'
+               THEN '@' || u.username END,
+          NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''),
+          split_part(u.email, '@', 1),
+          'User'
+        ) as author_name
       FROM pitch_comments pc
       LEFT JOIN users u ON u.id = pc.user_id
       WHERE pc.pitch_id = ${pitchId}
@@ -766,7 +780,7 @@ export async function getPitchComments(request: Request, env: Env): Promise<Resp
           id: c.id,
           content: c.content,
           created_at: c.created_at,
-          display_name: c.user_name || c.username || 'User',
+          display_name: c.author_name || 'User',
           user_type: c.user_type,
         };
       }
