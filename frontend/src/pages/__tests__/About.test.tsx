@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import React from 'react'
 
@@ -26,13 +26,10 @@ vi.mock('../../services/content.service', () => ({
   },
 }))
 
-// ─── Logo component ─────────────────────────────────────────────────────
-vi.mock('../../components/Logo', () => ({
-  default: ({ onClick }: any) => (
-    <div data-testid="logo" onClick={onClick} role="button">
-      Pitchey
-    </div>
-  ),
+// ─── Auth store (used by the shared PublicTopNav) ───────────────────────
+const mockAuthState: any = { user: null, isAuthenticated: false, logout: vi.fn() }
+vi.mock('../../store/betterAuthStore', () => ({
+  useBetterAuthStore: () => mockAuthState,
 }))
 
 // ─── Component ─────────────────────────────────────────────────────────
@@ -107,24 +104,21 @@ describe('About', () => {
     })
   })
 
-  it('renders How It Works button', async () => {
+  it('exposes How It Works under the Learn dropdown', async () => {
     renderAbout()
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'How It Works' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Learn' })).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }))
+    await waitFor(() => {
+      expect(screen.getByRole('menuitem', { name: 'How It Works' })).toBeInTheDocument()
     })
   })
 
-  it('renders Back button in header', async () => {
+  it('renders the Pitchey logo in the nav', async () => {
     renderAbout()
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument()
-    })
-  })
-
-  it('renders logo', async () => {
-    renderAbout()
-    await waitFor(() => {
-      expect(screen.getByTestId('logo')).toBeInTheDocument()
+      expect(screen.getByAltText('Pitchey')).toBeInTheDocument()
     })
   })
 
@@ -177,21 +171,25 @@ describe('About', () => {
     expect(screen.getByText('About Pitchey')).toBeInTheDocument()
   })
 
-  it('navigates home when Get Started is clicked', async () => {
+  it('navigates to register when nav Get Started is clicked', async () => {
     renderAbout()
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Get Started' })).toBeInTheDocument()
     })
     screen.getByRole('button', { name: 'Get Started' }).click()
-    expect(mockNavigate).toHaveBeenCalledWith('/login')
+    expect(mockNavigate).toHaveBeenCalledWith('/register')
   })
 
-  it('navigates to how-it-works when How It Works is clicked', async () => {
+  it('navigates to how-it-works from the Learn dropdown', async () => {
     renderAbout()
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'How It Works' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Learn' })).toBeInTheDocument()
     })
-    screen.getByRole('button', { name: 'How It Works' }).click()
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }))
+    await waitFor(() => {
+      expect(screen.getByRole('menuitem', { name: 'How It Works' })).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByRole('menuitem', { name: 'How It Works' }))
     expect(mockNavigate).toHaveBeenCalledWith('/how-it-works')
   })
 })

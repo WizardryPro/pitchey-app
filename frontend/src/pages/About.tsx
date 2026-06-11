@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Film, ArrowLeft, Loader } from 'lucide-react';
+import { Loader } from 'lucide-react';
 import { contentService } from '../services/content.service';
-import Logo from '../components/Logo';
+import PublicTopNav from '@shared/components/layout/PublicTopNav';
 
 interface AboutContent {
   title?: string;
@@ -115,21 +115,7 @@ const About: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Logo size="lg" onClick={() => navigate('/')} />
-            <button 
-              onClick={() => navigate(-1)}
-              className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-purple-600 transition"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back
-            </button>
-          </div>
-        </div>
-      </header>
+      <PublicTopNav variant="solid" />
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -194,18 +180,18 @@ const About: React.FC = () => {
             </div>
           )}
 
-          <div className="mt-12 flex gap-4">
-            <button 
-              onClick={() => navigate('/login')}
+          <div className="mt-12 flex flex-col sm:flex-row gap-4">
+            <button
+              onClick={() => navigate('/register')}
               className="px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition"
             >
-              Get Started
+              Create your account
             </button>
-            <button 
-              onClick={() => navigate('/how-it-works')}
+            <button
+              onClick={() => navigate('/marketplace')}
               className="px-6 py-3 border border-purple-600 text-purple-600 font-semibold rounded-lg hover:bg-purple-50 transition"
             >
-              How It Works
+              Browse the marketplace
             </button>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import React from 'react'
 
@@ -15,6 +15,13 @@ vi.mock('react-router-dom', async () => {
     Link: ({ to, children, ...props }: any) => <a href={to} {...props}>{children}</a>,
   }
 })
+
+// ─── Auth store ─────────────────────────────────────────────────────
+const mockUser = { id: 1, email: 'test@test.com', userType: 'creator', username: 'testuser' }
+const mockAuthState: any = { user: mockUser, isAuthenticated: false, logout: vi.fn() }
+vi.mock('../../store/betterAuthStore', () => ({
+  useBetterAuthStore: () => mockAuthState,
+}))
 
 // ─── Content service ─────────────────────────────────────────────────
 const mockGetHowItWorks = vi.fn()
@@ -37,7 +44,9 @@ beforeAll(async () => {
 describe('HowItWorks', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    // Default: API fails gracefully, fallback content is used
+    mockAuthState.isAuthenticated = false
+    mockAuthState.user = mockUser
+    // Default: API fails gracefully, local default content is used
     mockGetHowItWorks.mockResolvedValue({ success: false, error: 'API unavailable' })
     mockGetStats.mockResolvedValue({ success: false, error: 'API unavailable' })
   })
@@ -49,157 +58,126 @@ describe('HowItWorks', () => {
       </MemoryRouter>
     )
 
-  it('shows loading state initially', () => {
-    let resolve: any
-    mockGetHowItWorks.mockReturnValue(new Promise(r => { resolve = r }))
+  it('renders the cinematic hero heading', async () => {
     renderComponent()
-    expect(screen.getByText('Loading content...')).toBeInTheDocument()
-    resolve({ success: false })
+    expect(screen.getByText('From a single page')).toBeInTheDocument()
+    expect(screen.getByText('to the big screen')).toBeInTheDocument()
   })
 
-  it('renders "How It Works" heading after loading', async () => {
+  it('renders the shared public nav (Browse, Learn, Get Started)', () => {
     renderComponent()
+    // How It Works + About now live under the "Learn" dropdown (closed by default)
+    expect(screen.getByRole('button', { name: 'Browse Pitches' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Learn' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Get Started' })).toBeInTheDocument()
+  })
+
+  it('defaults to the Creators track and shows its tagline + first step', () => {
+    renderComponent()
+    expect(screen.getByText('Turn a screenplay into your next production.')).toBeInTheDocument()
+    expect(screen.getByText('Build your pitch')).toBeInTheDocument()
+  })
+
+  it('switches to the Investors track when its tab is clicked', async () => {
+    renderComponent()
+    // Investor content is not rendered until the tab is active
+    expect(screen.queryByText('Browse curated pitches')).not.toBeInTheDocument()
+    // The tab pill in the switcher (button, not the nav)
+    fireEvent.click(screen.getByRole('button', { name: 'Investors' }))
     await waitFor(() => {
-      expect(screen.getByText('How It Works')).toBeInTheDocument()
+      expect(screen.getByText('Browse curated pitches')).toBeInTheDocument()
     })
   })
 
-  it('renders hero title from fallback content', async () => {
+  it('switches to the Production track when its tab is clicked', async () => {
     renderComponent()
+    fireEvent.click(screen.getByRole('button', { name: 'Production' }))
     await waitFor(() => {
-      expect(screen.getByText('Transform Your Ideas Into Reality')).toBeInTheDocument()
+      expect(screen.getByText('Stand up your slate')).toBeInTheDocument()
     })
   })
 
-  it('renders "For Creators" section heading', async () => {
+  it('renders the features section with default features', () => {
     renderComponent()
+    expect(screen.getByText('The infrastructure behind the deal')).toBeInTheDocument()
+    expect(screen.getByText('AI-assisted pitching')).toBeInTheDocument()
+    expect(screen.getByText('Heat Score discovery')).toBeInTheDocument()
+  })
+
+  it('renders the FAQ section with the first item open by default', () => {
+    renderComponent()
+    expect(screen.getByText('Good to know')).toBeInTheDocument()
+    expect(screen.getByText('Who can join Pitchey?')).toBeInTheDocument()
+    // First answer is expanded by default
+    expect(screen.getByText(/Creators pitching original work/)).toBeInTheDocument()
+  })
+
+  it('toggles a FAQ item open on click', async () => {
+    renderComponent()
+    fireEvent.click(screen.getByText('What does it cost?'))
     await waitFor(() => {
-      expect(screen.getByText('For Creators')).toBeInTheDocument()
+      expect(screen.getByText(/Browsing and building a profile is free/)).toBeInTheDocument()
     })
   })
 
-  it('renders "For Investors" section heading', async () => {
+  it('renders the CTA section', () => {
     renderComponent()
-    await waitFor(() => {
-      expect(screen.getByText('For Investors')).toBeInTheDocument()
-    })
+    expect(screen.getByText('Ready when you are')).toBeInTheDocument()
+    expect(screen.getByText('Create your account')).toBeInTheDocument()
   })
 
-  it('renders "Why Choose Pitchey?" section', async () => {
+  it('renders footer with contact email', () => {
     renderComponent()
-    await waitFor(() => {
-      expect(screen.getByText('Why Choose Pitchey?')).toBeInTheDocument()
-    })
+    expect(screen.getByText(/support@pitchey.com/)).toBeInTheDocument()
   })
 
-  it('renders creator steps from fallback content', async () => {
+  it('renders the Pitchey brand logo', () => {
     renderComponent()
-    await waitFor(() => {
-      expect(screen.getByText('Create Your Pitch')).toBeInTheDocument()
-      expect(screen.getByText('Protect Your Work')).toBeInTheDocument()
-      expect(screen.getByText('Connect with Investors')).toBeInTheDocument()
-      expect(screen.getByText('Secure Funding')).toBeInTheDocument()
-    })
+    // Logotype image(s) (alt="Pitchey") — header + footer
+    expect(screen.getAllByAltText('Pitchey').length).toBeGreaterThan(0)
   })
 
-  it('renders investor steps from fallback content', async () => {
-    renderComponent()
-    await waitFor(() => {
-      expect(screen.getByText('Browse Curated Content')).toBeInTheDocument()
-      expect(screen.getByText('Review Under NDA')).toBeInTheDocument()
-      expect(screen.getByText('Track Performance')).toBeInTheDocument()
-      expect(screen.getByText('Close Deals')).toBeInTheDocument()
-    })
-  })
-
-  it('renders key features from fallback content', async () => {
-    renderComponent()
-    await waitFor(() => {
-      expect(screen.getByText('AI-Powered Recommendations')).toBeInTheDocument()
-      expect(screen.getByText('Secure Platform')).toBeInTheDocument()
-      expect(screen.getByText('Quality Control')).toBeInTheDocument()
-      expect(screen.getByText('Direct Communication')).toBeInTheDocument()
-    })
-  })
-
-  it('renders Get Started button in header', async () => {
-    renderComponent()
-    await waitFor(() => {
-      expect(screen.getByText('Get Started')).toBeInTheDocument()
-    })
-  })
-
-  it('renders CTA section', async () => {
-    renderComponent()
-    await waitFor(() => {
-      expect(screen.getByText("Ready to Start Your Journey?")).toBeInTheDocument()
-    })
-  })
-
-  it('renders Create Account and Explore Marketplace buttons', async () => {
-    renderComponent()
-    await waitFor(() => {
-      expect(screen.getByText('Create Account')).toBeInTheDocument()
-      expect(screen.getByText('Explore Marketplace')).toBeInTheDocument()
-    })
-  })
-
-  it('renders Start Your Journey button', async () => {
-    renderComponent()
-    await waitFor(() => {
-      expect(screen.getByText('Start Your Journey')).toBeInTheDocument()
-    })
-  })
-
-  it('renders Browse Marketplace button in hero', async () => {
-    renderComponent()
-    await waitFor(() => {
-      expect(screen.getAllByText('Browse Marketplace').length).toBeGreaterThan(0)
-    })
-  })
-
-  it('renders footer with contact email', async () => {
-    renderComponent()
-    await waitFor(() => {
-      expect(screen.getByText(/support@pitchey.com/)).toBeInTheDocument()
-    })
-  })
-
-  it('shows error banner when API fails but still shows fallback content', async () => {
-    mockGetHowItWorks.mockRejectedValue(new Error('Network error'))
-    mockGetStats.mockRejectedValue(new Error('Network error'))
-
-    renderComponent()
-    await waitFor(() => {
-      expect(screen.getByText('Transform Your Ideas Into Reality')).toBeInTheDocument()
-    })
-    // Should still show the error warning
-    expect(screen.getByText(/Failed to load latest content/)).toBeInTheDocument()
-  })
-
-  it('uses API content when API call succeeds', async () => {
+  it('merges API step content over the local defaults', async () => {
     mockGetHowItWorks.mockResolvedValue({
       success: true,
       data: {
-        hero: { title: 'API Hero Title', subtitle: 'API subtitle' },
-        creatorSteps: [],
-        investorSteps: [],
-        features: [],
-      }
+        creatorSteps: [{ title: 'Custom Creator Step', description: 'From the CMS', icon: 'film' }],
+      },
     })
-    mockGetStats.mockResolvedValue({ success: false })
-
     renderComponent()
     await waitFor(() => {
-      expect(screen.getByText('API Hero Title')).toBeInTheDocument()
+      expect(screen.getByText('Custom Creator Step')).toBeInTheDocument()
     })
   })
 
-  it('renders Pitchey brand in header', async () => {
-    renderComponent()
-    // Brand mark is the logotype image (alt="Pitchey") after the 2026-05 logo rollout
-    await waitFor(() => {
-      expect(screen.getByAltText('Pitchey')).toBeInTheDocument()
+  it('renders real platform stats when the API returns non-zero data', async () => {
+    mockGetStats.mockResolvedValue({
+      success: true,
+      data: { total_users: 1200, published_pitches: 340, total_pitches: 980, total_invested: 5_000_000 },
     })
+    renderComponent()
+    await waitFor(() => {
+      expect(screen.getByText('Members')).toBeInTheDocument()
+      expect(screen.getByText('1.2K')).toBeInTheDocument()
+      expect(screen.getByText('$5M')).toBeInTheDocument()
+    })
+  })
+
+  it('hides the stats strip when the API returns all-zero data', async () => {
+    mockGetStats.mockResolvedValue({
+      success: true,
+      data: { total_users: 0, published_pitches: 0, total_pitches: 0, total_invested: 0 },
+    })
+    renderComponent()
+    // Give the effect a tick to resolve
+    await waitFor(() => expect(mockGetStats).toHaveBeenCalled())
+    expect(screen.queryByText('Members')).not.toBeInTheDocument()
+  })
+
+  it('shows Dashboard instead of Sign In when authenticated', () => {
+    mockAuthState.isAuthenticated = true
+    renderComponent()
+    const header = screen.getByRole('banner')
+    expect(within(header).getByText('Dashboard')).toBeInTheDocument()
   })
 })

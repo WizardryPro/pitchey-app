@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Film, TrendingUp, Search, Play, Star, Eye, Heart, Calendar, ArrowRight, Sparkles, User, Building2, Wallet, LogOut, Flame, Menu, X } from 'lucide-react';
+import { Film, TrendingUp, Search, Play, Star, Eye, Heart, Calendar, ArrowRight, Sparkles, User, Building2, Wallet, Flame } from 'lucide-react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { pitchService } from '@features/pitches/services/pitch.service';
 import { pitchAPI } from '../lib/api';
@@ -10,8 +10,8 @@ import FormatDisplay from '../components/FormatDisplay';
 import GenrePlaceholder from '@shared/components/GenrePlaceholder';
 import { getHeatScore, getPitcheyScore } from '../components/HeatBadge';
 import PitcheyRating from '../components/PitcheyRating';
-import { getPortalPath, getDashboardRoute } from '@/utils/navigation';
-import { getPortalTheme } from '@shared/hooks/usePortalTheme';
+import { getDashboardRoute } from '@/utils/navigation';
+import PublicTopNav from '@shared/components/layout/PublicTopNav';
 
 
 
@@ -26,20 +26,9 @@ export default function Homepage() {
   const [newReleases, setNewReleases] = useState<Pitch[]>([]);
   const [hotPitches, setHotPitches] = useState<Pitch[]>([]);
   const [loading, setLoading] = useState(true);
-  // Header blends with the dark hero at the top, then turns solid-white once the user scrolls
-  // PAST the hero into the bright content (so it stays readable on light backgrounds).
+  // Hero is pulled up behind the sticky nav (-mt-16) so PublicTopNav's backdrop is the
+  // hero itself; the nav flips transparent → white once the hero clears it.
   const heroRef = useRef<HTMLElement>(null);
-  const [scrolled, setScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  useEffect(() => {
-    const onScroll = () => {
-      const heroBottom = heroRef.current?.getBoundingClientRect().bottom ?? 0;
-      setScrolled(heroBottom <= 64); // 64 = header height; switch when the hero clears the nav
-    };
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
   // likedPitches state removed — replaced by Pitchey Score
 
   // Like handler removed — replaced by Pitchey Score rating system
@@ -117,181 +106,7 @@ export default function Homepage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 via-purple-50 to-white">
-      {/* Navigation Header */}
-      <header className={`sticky top-0 z-50 transition-colors duration-300 ${
-        scrolled
-          ? 'bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm'
-          : mobileMenuOpen
-            ? 'bg-[#1f1934] border-b border-white/10'
-            : 'bg-[#0a0a12]/70 backdrop-blur-md border-b border-white/5'
-      }`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-8">
-              <a href="/" className="flex items-center">
-                <img src={scrolled ? '/pitchey-logotype.png' : '/pitchey-logotype-white.png'} alt="Pitchey" className="h-8 w-auto" />
-              </a>
-              <nav className="hidden md:flex items-center gap-6">
-                <button
-                  onClick={() => navigate('/marketplace')}
-                  className={`text-nav-link transition ${scrolled ? 'hover:text-purple-600' : 'text-white/90 hover:text-white'}`}
-                >
-                  Browse Pitches
-                </button>
-                <button
-                  onClick={() => navigate('/opportunities')}
-                  className={`text-nav-link transition ${scrolled ? 'hover:text-purple-600' : 'text-white/90 hover:text-white'}`}
-                >
-                  Opportunities
-                </button>
-                <button
-                  onClick={() => navigate('/how-it-works')}
-                  className={`text-nav-link transition ${scrolled ? 'hover:text-purple-600' : 'text-white/90 hover:text-white'}`}
-                >
-                  How It Works
-                </button>
-                <button
-                  onClick={() => navigate('/about')}
-                  className={`text-nav-link transition ${scrolled ? 'hover:text-purple-600' : 'text-white/90 hover:text-white'}`}
-                >
-                  About
-                </button>
-              </nav>
-            </div>
-            <div className="hidden md:flex items-center gap-4">
-              {isAuthenticated && user ? (
-                <>
-                  {/* User Status Badge — tint comes from the portal theme so the
-                      badge matches sidebars and the identity strip. Don't reintroduce
-                      hardcoded colors (investor was 'green' before — the bug
-                      usePortalTheme docs explicitly call out). */}
-                  {(() => {
-                    const theme = getPortalTheme(userType);
-                    const meta =
-                      userType === 'production' ? { Icon: Building2, label: 'Production' } :
-                      userType === 'investor'   ? { Icon: Wallet,    label: 'Investor'   } :
-                      userType === 'creator'    ? { Icon: User,      label: 'Creator'    } :
-                      userType === 'watcher'    ? { Icon: Eye,       label: 'Watcher'    } :
-                      null;
-                    if (!meta) return null;
-                    const displayName =
-                      userType === 'production' && user.companyName
-                        ? user.companyName
-                        : user.firstName
-                          ? `${user.firstName} ${user.lastName || ''}`.trim()
-                          : user.username;
-                    return (
-                      <div className={`flex items-center gap-2 px-3 py-1.5 ${theme.bgMuted} border border-gray-200 rounded-lg`}>
-                        <meta.Icon className={`w-4 h-4 ${theme.textAccent}`} />
-                        <span className={`text-sm font-medium ${theme.textAccent}`}>{meta.label}</span>
-                        <span className="text-xs text-gray-400">•</span>
-                        <span className="text-sm text-gray-900">{displayName}</span>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Dashboard Button */}
-                  <button
-                    onClick={() => navigate(userType ? `/${getPortalPath(userType)}/dashboard` : '/login')}
-                    className="text-button px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
-                  >
-                    Dashboard
-                  </button>
-
-                  {/* Sign Out Button */}
-                  <button
-                    onClick={async () => { await logout(); navigate('/'); }}
-                    className={`text-button px-3 py-2 transition ${scrolled ? 'text-gray-500 hover:text-red-600' : 'text-white/70 hover:text-white'}`}
-                    title="Sign Out"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => navigate('/login')}
-                    className={`text-button px-4 py-2 transition ${scrolled ? 'text-purple-600 hover:text-purple-700' : 'text-white hover:text-white/80'}`}
-                  >
-                    Sign In
-                  </button>
-                  <button
-                    onClick={() => navigate('/register')}
-                    className="text-button px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
-                  >
-                    Get Started
-                  </button>
-                </>
-              )}
-            </div>
-
-            {/* Mobile hamburger — the desktop nav links are hidden < md, so narrow viewports
-                need a way to reach Browse / How It Works / About + the auth actions. */}
-            <button
-              onClick={() => setMobileMenuOpen((o) => !o)}
-              aria-label="Toggle navigation menu"
-              aria-expanded={mobileMenuOpen}
-              className={`md:hidden inline-flex items-center justify-center p-2 rounded-lg transition ${scrolled ? 'text-gray-700 hover:bg-gray-100' : 'text-white hover:bg-white/10'}`}
-            >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile dropdown menu */}
-        {mobileMenuOpen && (
-          <div className={`md:hidden border-t ${scrolled ? 'bg-white border-gray-200' : 'bg-[#1f1934] border-white/10'}`}>
-            <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
-              {[
-                { label: 'Browse Pitches', to: '/marketplace' },
-                { label: 'Opportunities', to: '/opportunities' },
-                { label: 'How It Works', to: '/how-it-works' },
-                { label: 'About', to: '/about' },
-              ].map((item) => (
-                <button
-                  key={item.to}
-                  onClick={() => { setMobileMenuOpen(false); navigate(item.to); }}
-                  className={`text-left px-3 py-2.5 rounded-lg text-sm font-medium transition ${scrolled ? 'text-gray-700 hover:bg-gray-100' : 'text-white/90 hover:bg-white/10'}`}
-                >
-                  {item.label}
-                </button>
-              ))}
-              <div className={`my-2 border-t ${scrolled ? 'border-gray-200' : 'border-white/10'}`} />
-              {isAuthenticated && user ? (
-                <>
-                  <button
-                    onClick={() => { setMobileMenuOpen(false); navigate(userType ? `/${getPortalPath(userType)}/dashboard` : '/login'); }}
-                    className="px-3 py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-semibold text-center shadow-lg shadow-purple-500/30 hover:from-purple-500 hover:to-indigo-500 transition"
-                  >
-                    Dashboard
-                  </button>
-                  <button
-                    onClick={async () => { setMobileMenuOpen(false); await logout(); navigate('/'); }}
-                    className={`text-left px-3 py-2.5 rounded-lg text-sm font-medium transition ${scrolled ? 'text-gray-600 hover:bg-gray-100' : 'text-white/80 hover:bg-white/10'}`}
-                  >
-                    Sign Out
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}
-                    className={`text-left px-3 py-2.5 rounded-lg text-sm font-medium transition ${scrolled ? 'text-purple-600 hover:bg-purple-50' : 'text-white hover:bg-white/10'}`}
-                  >
-                    Sign In
-                  </button>
-                  <button
-                    onClick={() => { setMobileMenuOpen(false); navigate('/register'); }}
-                    className="px-3 py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-semibold text-center shadow-lg shadow-purple-500/30 hover:from-purple-500 hover:to-indigo-500 transition"
-                  >
-                    Get Started
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-      </header>
+      <PublicTopNav variant="overlay" heroRef={heroRef} showIdentityBadge />
 
       {/* Hero — "Premiere Night": dark, cinematic, editorial display type. The bright content
           rails below it intentionally read as the marquee turning the lights up.
