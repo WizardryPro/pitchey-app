@@ -286,7 +286,7 @@ vi.mock('@features/pitches/components/PitchForm/EnhancedPitchFormSections', () =
   WhyNowSection: vi.fn(() => <div data-testid="why-now-section">Why Now</div>),
   ProductionLocationSection: vi.fn(() => <div data-testid="production-location-section">Production Location</div>),
   DevelopmentStageSelect: vi.fn(() => <div data-testid="development-stage-select">Development Stage</div>),
-  CreativeAttachmentsManager: vi.fn(() => <div data-testid="creative-attachments-manager">Creative Attachments</div>),
+  CreativeRosterManager: vi.fn(() => <div data-testid="creative-attachments-manager">Creative Attachments</div>),
   VideoUrlSection: vi.fn(() => <div data-testid="video-url-section">Video URL</div>),
 }))
 

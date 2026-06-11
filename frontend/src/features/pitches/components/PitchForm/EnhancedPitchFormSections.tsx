@@ -364,6 +364,140 @@ export const CreativeAttachmentsManager: React.FC<CreativeAttachmentsManagerProp
   );
 };
 
+// ============ CREATIVE ROSTER (production-pitch "Attached Creatives" look) ============
+// The create/edit forms previously used CreativeAttachmentsManager (plain cards with
+// bio/IMDb/website). The production pitch view renders a tighter "Attached Creatives"
+// roster — seeded role cards with avatar initials and a single name field per role.
+// This component mirrors that exact look for the create/edit flow (role + name only,
+// bio/links intentionally dropped per the 2026-06-11 decision). Bound to the same
+// CreativeAttachment[] shape so the existing create/update persistence path is unchanged.
+export const STANDARD_CREATIVE_ROLES = [
+  'Director',
+  'Producer',
+  'Cinematographer',
+  'Production Designer',
+  'Editor',
+  'Composer',
+];
+
+const creativeInitials = (name: string): string =>
+  name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+
+export const CreativeRosterManager: React.FC<CreativeAttachmentsManagerProps> = ({
+  attachments,
+  onChange,
+}) => {
+  // Always present the six standard roles (merging in any saved name by role), then
+  // append any custom-role rows the user added on top.
+  const rows: CreativeAttachment[] = React.useMemo(() => {
+    const standard = STANDARD_CREATIVE_ROLES.map((role, i) => {
+      const existing = attachments.find((a) => a.role === role);
+      return existing ?? { id: `role-${i}-${role}`, role, name: '', bio: '' };
+    });
+    const custom = attachments.filter((a) => !STANDARD_CREATIVE_ROLES.includes(a.role));
+    return [...standard, ...custom];
+  }, [attachments]);
+
+  const upsert = (row: CreativeAttachment, patch: Partial<CreativeAttachment>) => {
+    const idx = attachments.findIndex((a) => a.id === row.id);
+    if (idx >= 0) {
+      const next = attachments.slice();
+      next[idx] = { ...next[idx], ...patch };
+      onChange(next);
+    } else {
+      onChange([...attachments, { ...row, ...patch }]);
+    }
+  };
+
+  const removeRow = (row: CreativeAttachment) => {
+    onChange(attachments.filter((a) => a.id !== row.id));
+  };
+
+  const addCustom = () => {
+    onChange([...attachments, { id: Date.now().toString(), role: '', name: '', bio: '' }]);
+  };
+
+  return (
+    <div>
+      <div className="mb-1 flex items-center gap-2.5">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-inset ring-indigo-100">
+          <Users className="h-5 w-5" />
+        </span>
+        <h3 className="text-xl font-bold tracking-tight text-gray-900">Attached Creatives</h3>
+      </div>
+      <p className="mb-5 pl-[3.05rem] text-sm text-gray-500">
+        Attach key creative names — pitches with attached talent read as more bankable.
+      </p>
+
+      <p className="mb-2 pl-0.5 text-[0.68rem] font-semibold uppercase tracking-wide text-gray-400">
+        Creative roster
+      </p>
+      <div className="space-y-2.5">
+        {rows.map((row) => {
+          const isStandard = STANDARD_CREATIVE_ROLES.includes(row.role);
+          const initials = creativeInitials(row.name);
+          return (
+            <div
+              key={row.id}
+              className={`flex items-center gap-4 rounded-xl border p-3.5 transition ${
+                row.name ? 'border-indigo-200 bg-indigo-50/40' : 'border-gray-100 bg-gray-50/60'
+              }`}
+            >
+              <span
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
+                  initials ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-400'
+                }`}
+              >
+                {initials || <Users className="h-4 w-4" />}
+              </span>
+              <div className="min-w-0 flex-1">
+                {isStandard ? (
+                  <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-gray-400">
+                    {row.role}
+                  </p>
+                ) : (
+                  <input
+                    type="text"
+                    value={row.role}
+                    onChange={(e) => upsert(row, { role: e.target.value })}
+                    placeholder="Role (e.g. Writer)"
+                    className="w-full bg-transparent text-[0.7rem] font-semibold uppercase tracking-wide text-gray-500 placeholder:font-normal placeholder:normal-case placeholder:text-gray-300 focus:outline-none"
+                  />
+                )}
+                <input
+                  type="text"
+                  value={row.name}
+                  onChange={(e) => upsert(row, { name: e.target.value })}
+                  placeholder="Add a name…"
+                  className="mt-0.5 w-full bg-transparent text-sm font-medium text-gray-900 placeholder:font-normal placeholder:text-gray-400 focus:outline-none"
+                />
+              </div>
+              {!isStandard && (
+                <button
+                  type="button"
+                  onClick={() => removeRow(row)}
+                  className="shrink-0 text-gray-300 transition hover:text-red-500"
+                  aria-label="Remove creative"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <button
+        type="button"
+        onClick={addCustom}
+        className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-500 transition hover:border-indigo-300 hover:text-indigo-600"
+      >
+        <Plus className="h-4 w-4" /> Add another creative
+      </button>
+    </div>
+  );
+};
+
 // ============ VIDEO URL WITH PASSWORD SECTION ============
 interface VideoUrlSectionProps {
   videoUrl: string;
