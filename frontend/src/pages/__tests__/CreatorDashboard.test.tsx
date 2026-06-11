@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, beforeAll, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import React from 'react'
@@ -181,6 +181,15 @@ function renderDashboard() {
   )
 }
 
+// Dashboard is now tabbed (Overview · My Pitches · NDAs · Network). Click a tab —
+// scoped to the tab nav so we never collide with the QuickActions buttons that
+// share labels like "NDAs". Waits for the nav to appear (past the loading skeleton).
+async function gotoTab(name: RegExp) {
+  const user = userEvent.setup()
+  const nav = await screen.findByRole('navigation', { name: /Dashboard sections/i })
+  await user.click(within(nav).getByRole('button', { name }))
+}
+
 describe('CreatorDashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -297,6 +306,7 @@ describe('CreatorDashboard', () => {
 
     it('renders pitch cards from API response', async () => {
       renderDashboard()
+      await gotoTab(/My Pitches/i)
       await waitFor(() => {
         expect(screen.getByText('Pitch A')).toBeInTheDocument()
         expect(screen.getByText('Pitch B')).toBeInTheDocument()
@@ -325,6 +335,7 @@ describe('CreatorDashboard', () => {
         return Promise.resolve({ success: true, data: { followers: [], following: [] } })
       })
       renderDashboard()
+      await gotoTab(/My Pitches/i)
       await waitFor(() => {
         expect(screen.getByText(/haven't published any pitches/i)).toBeInTheDocument()
       })
@@ -395,6 +406,7 @@ describe('CreatorDashboard', () => {
         return Promise.resolve({ success: true, data: {} })
       })
       renderDashboard()
+      await gotoTab(/Network/i)
       await waitFor(() => {
         expect(screen.getByText('Followers')).toBeInTheDocument()
       })
@@ -440,7 +452,8 @@ describe('CreatorDashboard', () => {
       await waitFor(() => {
         expect(screen.getByText('Create Pitch')).toBeInTheDocument()
         expect(screen.getByText('Manage Pitches')).toBeInTheDocument()
-        expect(screen.getByText('NDAs')).toBeInTheDocument()
+        // "NDAs" now also appears as a tab label — quick-action + tab = 2 matches.
+        expect(screen.getAllByText('NDAs').length).toBeGreaterThan(0)
         expect(screen.getByText('Messages')).toBeInTheDocument()
         expect(screen.getByText('Analytics')).toBeInTheDocument()
         expect(screen.getByText('Billing')).toBeInTheDocument()
@@ -473,6 +486,7 @@ describe('CreatorDashboard', () => {
   describe('Milestones', () => {
     it('renders Creator Milestones section', async () => {
       renderDashboard()
+      await gotoTab(/My Pitches/i)
       await waitFor(() => {
         expect(screen.getByText('Creator Milestones')).toBeInTheDocument()
       })
@@ -480,6 +494,7 @@ describe('CreatorDashboard', () => {
 
     it('shows completed First Pitch milestone when pitches > 0', async () => {
       renderDashboard()
+      await gotoTab(/My Pitches/i)
       await waitFor(() => {
         expect(screen.getByText('First Pitch')).toBeInTheDocument()
         expect(screen.getByText('Completed')).toBeInTheDocument()
