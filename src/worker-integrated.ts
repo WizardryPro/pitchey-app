@@ -1556,6 +1556,7 @@ class RouteRegistry {
             userId: result.id,
             userEmail: result.email,
             userName: result.username || result.name || email.split('@')[0],
+            username: result.username,
             userType: result.user_type,
             firstName: result.first_name,
             lastName: result.last_name,
@@ -1710,6 +1711,7 @@ class RouteRegistry {
             userId: newUser.id,
             userEmail: newUser.email,
             userName: newUser.username || newUser.name || email.split('@')[0],
+            username: newUser.username,
             userType: newUser.user_type,
             expiresAt: expiresAt.toISOString()
           }),
@@ -4446,6 +4448,7 @@ class RouteRegistry {
               userId: user.id,
               userEmail: user.email,
               userName: user.username || user.name || user.email.split('@')[0],
+              username: user.username,
               userType: user.user_type,
               firstName: user.first_name,
               lastName: user.last_name,
@@ -4709,6 +4712,7 @@ class RouteRegistry {
               userId: user.id,
               userEmail: user.email,
               userName: user.username || user.name || user.email.split('@')[0],
+              username: user.username,
               userType: user.user_type,
               firstName: user.first_name,
               lastName: user.last_name,
@@ -15462,6 +15466,7 @@ pitchey_analytics_datapoints_per_minute 1250
             userId: user.id,
             userEmail: user.email,
             userName: user.username || user.name || user.email?.split('@')[0],
+            username: user.username,
             userType: user.user_type,
             firstName: user.first_name,
             lastName: user.last_name,
@@ -15710,6 +15715,7 @@ pitchey_analytics_datapoints_per_minute 1250
           JSON.stringify({
             id: sessionId, userId: user.id, userEmail: user.email,
             userName: user.username || user.name || user.email?.split('@')[0],
+            username: user.username,
             userType: user.user_type, firstName: user.first_name, lastName: user.last_name,
             bio: user.bio, companyName: user.company_name, profileImage: user.profile_image,
             expiresAt
