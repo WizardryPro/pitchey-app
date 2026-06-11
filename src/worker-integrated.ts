@@ -21637,16 +21637,11 @@ const websocketSafeHandler = {
           break;
 
         case "0 * * * *": // Hourly
-          await Promise.all([
-            sendDigestEmails(env, ctx),
-            checkMoneyPathSLOs(env, ctx)
-          ]);
+          await checkMoneyPathSLOs(env, ctx);
           break;
 
         case "0 0 * * *": // Daily
           await Promise.all([
-            exportAuditLogs(env, ctx),
-            archiveOldJobs(env, ctx),
             sweepExpiredSubscriptionGrants(env, ctx),
             topUpDemoAccountCredits(env, ctx),
           ]);
@@ -21941,18 +21936,6 @@ async function checkMoneyPathSLOs(env: any, _ctx: ExecutionContext): Promise<voi
     category: 'slo', action: 'check_complete',
     breaches, results: summary, duration_ms: Date.now() - startedAt,
   }));
-}
-
-async function sendDigestEmails(env: any, ctx: ExecutionContext): Promise<void> {
-  console.log("Sending digest emails...");
-}
-
-async function exportAuditLogs(env: any, ctx: ExecutionContext): Promise<void> {
-  console.log("Exporting audit logs...");
-}
-
-async function archiveOldJobs(env: any, ctx: ExecutionContext): Promise<void> {
-  console.log("Archiving old jobs...");
 }
 
 async function cleanupDatabase(env: any, _ctx: ExecutionContext): Promise<void> {
