@@ -5,6 +5,8 @@ import {
   X,
   Star,
   AlertTriangle,
+  Ticket,
+  Loader2,
 } from 'lucide-react';
 import { paymentsAPI } from '@/lib/apiServices';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
@@ -34,6 +36,39 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
   const [error, setError] = useState<string | null>(null);
   // Backend expects 'monthly' | 'annual' — UI still says "Yearly" for clarity.
   const [selectedBilling, setSelectedBilling] = useState<'monthly' | 'annual'>('monthly');
+  // In-app promo code: typed value, the applied (server-validated) code, and UI state.
+  const [promoInput, setPromoInput] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState<{ code: string; label: string; percentOff: number | null } | null>(null);
+  const [promoChecking, setPromoChecking] = useState(false);
+  const [promoError, setPromoError] = useState<string | null>(null);
+
+  const applyPromo = async () => {
+    const code = promoInput.trim();
+    if (!code) return;
+    setPromoChecking(true);
+    setPromoError(null);
+    try {
+      const res = await paymentsAPI.validatePromo(code) as { success: boolean; valid?: boolean; code?: string; label?: string; percentOff?: number | null; error?: string };
+      if (res.success && res.valid) {
+        setAppliedPromo({ code: res.code || code, label: res.label || 'Discount applied', percentOff: res.percentOff ?? null });
+        setPromoError(null);
+      } else {
+        setAppliedPromo(null);
+        setPromoError(res.error || "That code isn't valid or has expired.");
+      }
+    } catch {
+      setAppliedPromo(null);
+      setPromoError('Could not check that code. Try again.');
+    } finally {
+      setPromoChecking(false);
+    }
+  };
+
+  const clearPromo = () => {
+    setAppliedPromo(null);
+    setPromoInput('');
+    setPromoError(null);
+  };
 
   // Treat 'free' (legacy) the same as 'watcher' (current free tier id).
   const rawTier = subscription?.tier;
@@ -70,7 +105,7 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
       setLoading(true);
       setError(null);
 
-      const result = await paymentsAPI.subscribe(planKey, selectedBilling, currency) as any;
+      const result = await paymentsAPI.subscribe(planKey, selectedBilling, currency, appliedPromo?.code) as any;
 
       if (result && result.url) {
         window.location.href = result.url;
@@ -218,6 +253,53 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
         </div>
       </div>
 
+      {/* Promo code — validate + pre-apply before checkout so the discount is
+          locked in (no need to find Stripe's promo box on the hosted page). */}
+      <div className="max-w-md mx-auto w-full">
+        {appliedPromo ? (
+          <div className="flex items-center justify-between gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <Ticket className="w-4 h-4 text-green-600 flex-shrink-0" />
+              <span className="text-sm text-green-800 truncate">
+                <span className="font-semibold">{appliedPromo.code}</span> applied — {appliedPromo.label}
+              </span>
+            </div>
+            <button
+              onClick={clearPromo}
+              className="text-green-700 hover:text-green-900 text-sm font-medium flex-shrink-0"
+              aria-label="Remove promo code"
+            >
+              Remove
+            </button>
+          </div>
+        ) : (
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Ticket className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={promoInput}
+                  onChange={(e) => { setPromoInput(e.target.value); if (promoError) setPromoError(null); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void applyPromo(); } }}
+                  placeholder="Have a promo code?"
+                  className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              <button
+                onClick={() => void applyPromo()}
+                disabled={promoChecking || !promoInput.trim()}
+                className="px-4 py-2 text-sm font-medium rounded-lg bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {promoChecking && <Loader2 className="w-4 h-4 animate-spin" />}
+                Apply
+              </button>
+            </div>
+            {promoError && <p className="text-xs text-red-600 mt-1.5">{promoError}</p>}
+          </div>
+        )}
+      </div>
+
       {/* Plan Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {availableTiers.map((plan) => {
@@ -231,6 +313,11 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
           const annualSavings = !isFree && monthly > 0
             ? Math.max(0, monthly * 12 - annual)
             : 0;
+          // Preview the applied promo's percent discount on each paid card.
+          const promoPct = appliedPromo?.percentOff ?? 0;
+          const discountedPrice = !isFree && promoPct > 0
+            ? Math.max(0, displayedPrice * (1 - promoPct / 100))
+            : null;
           // A paid tier priced below the current tier is a downgrade, not an upgrade
           // (e.g. Karl on the unlimited/top plan sees "Downgrade" for cheaper tiers).
           const currentMonthly = currentTierDef?.price?.monthly ?? 0;
@@ -267,6 +354,20 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
                 <div className="mb-2">
                   {isFree ? (
                     <span className="text-3xl font-bold text-gray-900">Free</span>
+                  ) : discountedPrice != null ? (
+                    <>
+                      <span className="text-lg font-medium text-gray-400 line-through mr-2">
+                        {currencySymbol}{formatPrice(displayedPrice)}
+                      </span>
+                      <span className="text-3xl font-bold text-green-600">
+                        {discountedPrice === 0 ? 'Free' : `${currencySymbol}${formatPrice(discountedPrice)}`}
+                      </span>
+                      {discountedPrice > 0 && (
+                        <span className="text-gray-500">
+                          /{selectedBilling === 'annual' ? 'year' : 'month'}
+                        </span>
+                      )}
+                    </>
                   ) : (
                     <>
                       <span className="text-3xl font-bold text-gray-900">

@@ -39,6 +39,10 @@ export class StripeService {
     // requires the price to carry that currency via `currency_options`. When
     // omitted, Stripe uses the price's base currency (EUR) exactly as before.
     currency?: string;
+    // Stripe promotion-code id (promo_…) to PRE-APPLY (in-app promo field). When
+    // set, the discount is locked onto the session and the user never touches
+    // Stripe's promo box. Mutually exclusive with allow_promotion_codes.
+    promotionCodeId?: string;
   }): Promise<{ id: string; url: string }> {
     // `tier` is stamped into metadata so the webhook can look up the plan
     // (creator / production / exec) without having to reverse-engineer it
@@ -52,8 +56,6 @@ export class StripeService {
       'line_items[0][quantity]': '1',
       success_url: params.successUrl,
       cancel_url: params.cancelUrl,
-      // Show the promo-code box on the hosted checkout (FreeThePitch100 / LifesAPitch50).
-      allow_promotion_codes: 'true',
       // A 100%-off code leaves nothing due now; 'if_required' skips card collection
       // in that case while still collecting a card on paid/discounted-but-nonzero subs.
       payment_method_collection: 'if_required',
@@ -63,8 +65,42 @@ export class StripeService {
       'subscription_data[metadata][userId]': String(params.userId),
       'subscription_data[metadata][tier]': params.tier,
     };
+    if (params.promotionCodeId) {
+      // Pre-applied in-app code: lock the discount on. Stripe forbids combining
+      // `discounts` with `allow_promotion_codes`, so it's one or the other.
+      sessionParams['discounts[0][promotion_code]'] = params.promotionCodeId;
+    } else {
+      // No in-app code → still show Stripe's own promo box on the hosted page
+      // (FreeThePitch100 / LifesAPitch50) so the manual path keeps working.
+      sessionParams['allow_promotion_codes'] = 'true';
+    }
     if (params.currency) sessionParams.currency = params.currency;
     return this.request('POST', '/checkout/sessions', sessionParams);
+  }
+
+  // Look up a single ACTIVE promotion code by its human-facing code
+  // (e.g. "FreeThePitch100"). Returns null when there's no active, still-valid
+  // match. Powers the in-app promo field (validate + pre-apply).
+  async findPromotionCodeByCode(code: string): Promise<{
+    id: string; code: string; percentOff: number | null; amountOff: number | null; currency: string | null;
+  } | null> {
+    const res = await this.request<{ data: any[] }>(
+      'GET',
+      `/promotion_codes?code=${encodeURIComponent(code)}&active=true&limit=1`
+    );
+    const pc = res.data?.[0];
+    if (!pc) return null;
+    const coupon = pc.coupon || {};
+    // The promotion code can be active while its underlying coupon has expired
+    // or hit its redemption cap — `coupon.valid` is the real gate.
+    if (coupon.valid === false) return null;
+    return {
+      id: pc.id,
+      code: pc.code,
+      percentOff: coupon.percent_off ?? null,
+      amountOff: coupon.amount_off ?? null,
+      currency: coupon.currency ?? null,
+    };
   }
 
   async createCreditPurchaseCheckout(params: {

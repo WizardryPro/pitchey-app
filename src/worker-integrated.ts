@@ -2857,6 +2857,7 @@ class RouteRegistry {
     this.register('POST', '/api/payments/credits/use', this.useCredits.bind(this));
     this.register('GET', '/api/payments/subscription-status', this.getSubscriptionStatus.bind(this));
     this.register('POST', '/api/payments/subscribe', this.handleSubscribe.bind(this));
+    this.register('POST', '/api/payments/promo/validate', this.handleValidatePromo.bind(this));
     this.register('POST', '/api/payments/cancel-subscription', this.handleCancelSubscription.bind(this));
     this.register('POST', '/api/payments/billing-portal', this.handleBillingPortal.bind(this));
     this.register('GET', '/api/payments/history', (req) => this.getPaymentHistory(req));
@@ -10727,6 +10728,24 @@ pitchey_analytics_datapoints_per_minute 1250
       }
 
       const stripe = new StripeService(stripeKey);
+
+      // Optional in-app promo code: validate server-side and PRE-APPLY it on the
+      // checkout session (rather than relying on the user finding Stripe's promo
+      // box). An invalid code is a hard 400 so the user gets clear feedback
+      // instead of a silently-undiscounted checkout.
+      let promotionCodeId: string | undefined;
+      const promoInput = typeof body.promoCode === 'string' ? body.promoCode.trim() : '';
+      if (promoInput) {
+        const promo = await stripe.findPromotionCodeByCode(promoInput);
+        if (!promo) {
+          return new ApiResponseBuilder(request).error(
+            ErrorCode.BAD_REQUEST,
+            "That promo code isn't valid or has expired."
+          );
+        }
+        promotionCodeId = promo.id;
+      }
+
       const frontendUrl = (this.env as any).FRONTEND_URL || 'https://pitchey-5o8.pages.dev';
       const session = await stripe.createSubscriptionCheckout({
         userId: authResult.user!.id,
@@ -10738,6 +10757,7 @@ pitchey_analytics_datapoints_per_minute 1250
         // Only pass currency for non-base; EUR omits it → byte-identical to the
         // pre-multi-currency session. Requires the price to carry currency_options.
         currency: currency !== BASE_CURRENCY ? currency.toLowerCase() : undefined,
+        promotionCodeId,
       });
 
       return new ApiResponseBuilder(request).success({
@@ -10749,6 +10769,50 @@ pitchey_analytics_datapoints_per_minute 1250
     } catch (e: any) {
       console.error('Failed to create subscription checkout:', e);
       return new ApiResponseBuilder(request).error(ErrorCode.INTERNAL_ERROR, 'Failed to create subscription');
+    }
+  }
+
+  // POST /api/payments/promo/validate — check a promo code before checkout so the
+  // subscribe UI can show the discount and pre-apply it. Returns { valid:false }
+  // for an unknown/expired code (not an error — the user just mistyped).
+  private async handleValidatePromo(request: Request): Promise<Response> {
+    const authResult = await this.validateAuth(request);
+    if (!authResult.valid) {
+      return new ApiResponseBuilder(request).error(ErrorCode.UNAUTHORIZED, 'Authentication required');
+    }
+    try {
+      const body = await request.json() as any;
+      const code = typeof body.code === 'string' ? body.code.trim() : '';
+      if (!code) {
+        return new ApiResponseBuilder(request).error(ErrorCode.BAD_REQUEST, 'Enter a promo code.');
+      }
+      const stripeKey = (this.env as any).STRIPE_SECRET_KEY;
+      if (!stripeKey) {
+        return new ApiResponseBuilder(request).error(ErrorCode.SERVICE_UNAVAILABLE, 'Promo codes are unavailable right now.');
+      }
+      const stripe = new StripeService(stripeKey);
+      const promo = await stripe.findPromotionCodeByCode(code);
+      if (!promo) {
+        return new ApiResponseBuilder(request).success({ valid: false });
+      }
+      let label: string;
+      if (promo.percentOff != null) {
+        label = promo.percentOff >= 100 ? 'Free — 100% off' : `${promo.percentOff}% off`;
+      } else if (promo.amountOff != null) {
+        label = `${(promo.amountOff / 100).toFixed(2)} ${String(promo.currency || '').toUpperCase()} off`;
+      } else {
+        label = 'Discount applied';
+      }
+      return new ApiResponseBuilder(request).success({
+        valid: true,
+        code: promo.code,
+        percentOff: promo.percentOff,
+        amountOff: promo.amountOff,
+        label,
+      });
+    } catch (e: any) {
+      console.error('Promo validate failed:', e);
+      return new ApiResponseBuilder(request).error(ErrorCode.INTERNAL_ERROR, 'Could not validate that code.');
     }
   }
 
