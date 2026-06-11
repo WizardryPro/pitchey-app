@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, Eye, Edit3, Trash2, BarChart3, Search, Filter, RefreshCw } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Plus, Eye, Edit3, Trash2, BarChart3, Search, RefreshCw } from 'lucide-react';
 import { pitchService } from '@features/pitches/services/pitch.service';
 import type { Pitch } from '@shared/types/api';
 import FormatDisplay from '../components/FormatDisplay';
@@ -17,7 +17,19 @@ export default function ManagePitches() {
   const [pitches, setPitches] = useState<Pitch[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  // Status filter is driven by the URL (?status=published|draft) so the old
+  // /creator/pitches/published and /drafts routes can redirect into this single
+  // library and deep-links keep working. 'all' is the default (no query param).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const statusFilter = searchParams.get('status') ?? 'all';
+  const setStatusFilter = (status: string) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (status === 'all') next.delete('status');
+      else next.set('status', status);
+      return next;
+    }, { replace: true });
+  };
   const [loadingStates, setLoadingStates] = useState<{[key: number]: string}>({});
   const [notifications, setNotifications] = useState<{message: string, type: 'success' | 'error', id: number}[]>([]);
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -194,7 +206,7 @@ export default function ManagePitches() {
       {/* Page heading — global chrome comes from PortalLayout's MinimalHeader */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Manage Pitches</h1>
+          <h1 className="text-2xl font-bold text-gray-900">My Pitches</h1>
           <p className="text-sm text-gray-500 mt-1">View and manage all your pitch submissions</p>
         </div>
         <button
@@ -248,17 +260,23 @@ export default function ManagePitches() {
           </div>
           
           <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-gray-400" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className={`px-3 py-2 border border-gray-300 rounded-lg ${theme.inputFocus}`}
-            >
-              <option value="all">All Status</option>
-              <option value="published">Published</option>
-              <option value="draft">Draft</option>
-              <option value="under_review">Under Review</option>
-            </select>
+            {([
+              { value: 'all', label: 'All' },
+              { value: 'published', label: 'Published' },
+              { value: 'draft', label: 'Drafts' },
+            ]).map((tab) => (
+              <button
+                key={tab.value}
+                onClick={() => setStatusFilter(tab.value)}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
+                  statusFilter === tab.value
+                    ? `${theme.heroGradient} text-white`
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
 
           <div className="flex items-center gap-2">
@@ -410,7 +428,7 @@ export default function ManagePitches() {
                   
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => void navigate(`${portalPrefix}/pitches/${pitch.id}/edit`)}
+                      onClick={() => void navigate(`${portalPrefix}/pitch/${pitch.id}`)}
                       className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-sm"
                     >
                       <Eye className="w-4 h-4" />

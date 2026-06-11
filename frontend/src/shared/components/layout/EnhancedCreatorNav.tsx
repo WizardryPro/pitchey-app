@@ -34,7 +34,7 @@ export const creatorNavigationSections: NavigationSection[] = [
     items: [
       { label: 'My Pitches', path: CREATOR_ROUTES.pitches, icon: Film },
       { label: 'Slates', path: CREATOR_ROUTES.slates, icon: Layers },
-      { label: 'Create New', path: CREATOR_ROUTES.pitchNew, icon: Plus },
+      { label: 'Create Pitch', path: CREATOR_ROUTES.pitchNew, icon: Plus },
     ],
   },
   {

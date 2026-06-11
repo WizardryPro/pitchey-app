@@ -132,7 +132,7 @@ export function EnhancedNavigationShadcn({
   const projectMenuItems = {
     creator: [
       { label: 'My Pitches', href: `${portalPrefix}/pitches`, icon: Film },
-      { label: 'Create New', href: `${portalPrefix}/pitch/new`, icon: Plus },
+      { label: 'Create Pitch', href: `${portalPrefix}/pitch/new`, icon: Plus },
       { label: 'Analytics', href: `${portalPrefix}/pitch-analytics`, icon: BarChart3 },
       { label: 'NDAs', href: `${portalPrefix}/ndas`, icon: Shield },
     ],

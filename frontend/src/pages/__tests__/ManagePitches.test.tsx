@@ -335,7 +335,8 @@ describe('ManagePitches', () => {
       })
 
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-      await user.selectOptions(screen.getByDisplayValue('All Status'), 'published')
+      // Status filter is now a tab row (replaced the <select>); click the Published tab.
+      await user.click(screen.getByRole('button', { name: /Published/ }))
 
       expect(screen.getByText('Published One')).toBeInTheDocument()
       expect(screen.queryByText('Draft One')).not.toBeInTheDocument()
