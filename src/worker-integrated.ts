@@ -21632,19 +21632,13 @@ const websocketSafeHandler = {
         case "*/5 * * * *": // Every 5 minutes
           await Promise.all([
             checkNDAExpirations(env, ctx),
-            checkContainerHealth(env, ctx),
             keepDatabaseWarm(env, ctx) // P3: closes the Neon 5-min autosuspend gap (gated off by default)
           ]);
-          break;
-
-        case "*/10 * * * *": // Every 10 minutes
-          await monitorJobQueues(env, ctx);
           break;
 
         case "0 * * * *": // Hourly
           await Promise.all([
             sendDigestEmails(env, ctx),
-            aggregateMetrics(env, ctx),
             checkMoneyPathSLOs(env, ctx)
           ]);
           break;
@@ -21713,10 +21707,6 @@ export { WebSocketRoom } from './durable-objects/websocket-room';
 // Placeholder scheduled task functions (used by scheduled handler in websocketSafeHandler)
 async function checkNDAExpirations(env: any, ctx: ExecutionContext): Promise<void> {
   console.log("Checking NDA expirations...");
-}
-
-async function checkContainerHealth(env: any, ctx: ExecutionContext): Promise<void> {
-  console.log("Checking container health...");
 }
 
 // P3 (connectivity-map): Neon compute autosuspends after 5 min idle
@@ -21953,16 +21943,8 @@ async function checkMoneyPathSLOs(env: any, _ctx: ExecutionContext): Promise<voi
   }));
 }
 
-async function monitorJobQueues(env: any, ctx: ExecutionContext): Promise<void> {
-  console.log("Monitoring job queues...");
-}
-
 async function sendDigestEmails(env: any, ctx: ExecutionContext): Promise<void> {
   console.log("Sending digest emails...");
-}
-
-async function aggregateMetrics(env: any, ctx: ExecutionContext): Promise<void> {
-  console.log("Aggregating metrics...");
 }
 
 async function exportAuditLogs(env: any, ctx: ExecutionContext): Promise<void> {
