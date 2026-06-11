@@ -234,7 +234,7 @@ vi.mock('@features/pitches/components/PitchForm/EnhancedPitchFormSections', () =
   DevelopmentStageSelect: ({ value, onChange }: any) => (
     <div data-testid="development-stage">Development Stage</div>
   ),
-  CreativeAttachmentsManager: ({ attachments, onChange }: any) => (
+  CreativeRosterManager: ({ attachments, onChange }: any) => (
     <div data-testid="creative-attachments">Creative Attachments</div>
   ),
   VideoUrlSection: ({ value, onChange }: any) => (
@@ -462,7 +462,9 @@ describe('CreatePitch', () => {
         <CreatePitch />
       </MemoryRouter>
     )
-    expect(screen.getByText('Creative Team')).toBeInTheDocument()
+    // The section now renders the production-style "Attached Creatives" roster
+    // (CreativeRosterManager), mocked here as the creative-attachments testid.
+    expect(screen.getByTestId('creative-attachments')).toBeInTheDocument()
   })
 
   it('renders Document Upload Hub', () => {

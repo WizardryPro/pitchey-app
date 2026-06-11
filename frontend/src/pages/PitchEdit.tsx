@@ -13,7 +13,7 @@ import type { Character } from '@shared/types/character';
 import { normalizeCharacters, serializeCharacters } from '@features/pitches/utils/characterUtils';
 import { DocumentUpload } from '@features/uploads/components/DocumentUpload';
 import type { DocumentFile } from '@features/uploads/components/DocumentUpload';
-import { CreativeAttachmentsManager, type CreativeAttachment } from '@features/pitches/components/PitchForm/EnhancedPitchFormSections';
+import { CreativeRosterManager, type CreativeAttachment } from '@features/pitches/components/PitchForm/EnhancedPitchFormSections';
 
 interface PitchFormData {
   title: string;
@@ -413,8 +413,11 @@ export default function PitchEdit() {
         characters: serializeCharacters(formData.characters),
         // Send the full creative-team list. The update handler deletes + re-inserts
         // pitch_creative_attachments, so the array must always reflect the current
-        // desired state (empty array clears them).
-        creativeAttachments: formData.creativeAttachments,
+        // desired state (empty array clears them). Drop seeded-but-unfilled roster
+        // rows (the standard roles render empty until a name is typed).
+        creativeAttachments: (formData.creativeAttachments || []).filter(
+          (a: CreativeAttachment) => a.name?.trim()
+        ),
       };
 
       // Collects names of any media/documents that failed to upload during this
@@ -875,10 +878,9 @@ export default function PitchEdit() {
             />
           </div>
 
-          {/* Creative Team Section */}
+          {/* Creative Team Section — mirrors the production pitch "Attached Creatives" roster */}
           <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-6">Creative Team</h2>
-            <CreativeAttachmentsManager
+            <CreativeRosterManager
               attachments={formData.creativeAttachments || []}
               onChange={(creativeAttachments) => setFormData(prev => ({ ...prev, creativeAttachments }))}
             />

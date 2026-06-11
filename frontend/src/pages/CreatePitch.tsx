@@ -29,7 +29,7 @@ import {
   WhyNowSection,
   ProductionLocationSection,
   DevelopmentStageSelect,
-  CreativeAttachmentsManager,
+  CreativeRosterManager,
   VideoUrlSection,
   type CreativeAttachment
 } from '@features/pitches/components/PitchForm/EnhancedPitchFormSections';
@@ -412,7 +412,12 @@ export default function CreatePitch() {
           videoPassword: validatedData.videoPassword,
           videoPlatform: validatedData.videoPlatform,
           // Documents will be uploaded separately
-          documents: validatedData.documents || []
+          documents: validatedData.documents || [],
+          // Attached creatives roster — only persist rows with a name (the seeded
+          // standard roles render empty until filled). Was previously dropped on create.
+          creativeAttachments: (formData.creativeAttachments || []).filter(
+            (a: CreativeAttachment) => a.name?.trim()
+          )
         };
 
         // Add custom NDA URL if available
@@ -1185,11 +1190,9 @@ export default function CreatePitch() {
             </div>
           </div>
 
-          {/* Creative Team Section */}
+          {/* Creative Team Section — mirrors the production pitch "Attached Creatives" roster */}
           <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-6">Creative Team</h2>
-            
-            <CreativeAttachmentsManager
+            <CreativeRosterManager
               attachments={formData.creativeAttachments || []}
               onChange={(attachments) => setValue('creativeAttachments', attachments)}
             />
