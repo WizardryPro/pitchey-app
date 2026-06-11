@@ -21709,8 +21709,6 @@ export const NotificationRoom = WebSocketDurableObject;
 // Durable Object Exports (Premium Feature)
 export { NotificationHub } from './durable-objects/notification-hub';
 export { WebSocketRoom } from './durable-objects/websocket-room';
-export { ContainerOrchestrator } from './durable-objects/container-orchestrator-do';
-export { JobScheduler } from './durable-objects/job-scheduler-do';
 
 // Placeholder scheduled task functions (used by scheduled handler in websocketSafeHandler)
 async function checkNDAExpirations(env: any, ctx: ExecutionContext): Promise<void> {
