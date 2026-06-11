@@ -2,11 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowRight, Film, Users, DollarSign, Shield, TrendingUp, Star, Zap, Target, Award,
-  Sparkles, Play, Menu, X, ChevronDown, Search, MessageSquare, Eye, Lock, BadgeCheck,
-  Clapperboard, Handshake, Flame, LogOut,
+  Sparkles, Play, ChevronDown, Search, MessageSquare, Eye, Lock, BadgeCheck,
+  Clapperboard, Handshake, Flame,
 } from 'lucide-react';
-import { useBetterAuthStore } from '../store/betterAuthStore';
-import { getPortalPath } from '@/utils/navigation';
+import PublicTopNav from '@shared/components/layout/PublicTopNav';
 import { contentService } from '../services/content.service';
 
 // ---------------------------------------------------------------------------
@@ -138,9 +137,6 @@ const fmtCount = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}K` : `${n}
 
 const HowItWorks: React.FC = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, user, logout } = useBetterAuthStore();
-  const userType = user?.userType;
-
   const [tracks, setTracks] = useState<Track[]>(ROLE_TRACKS);
   const [features, setFeatures] = useState<Step[]>(FEATURES);
   const [stats, setStats] = useState<Array<{ value: string; label: string }>>([]);
@@ -148,18 +144,6 @@ const HowItWorks: React.FC = () => {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   const heroRef = useRef<HTMLElement>(null);
-  const [scrolled, setScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => {
-      const bottom = heroRef.current?.getBoundingClientRect().bottom ?? 0;
-      setScrolled(bottom <= 64);
-    };
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
 
   // Merge optional CMS content over the local defaults; pull real platform stats.
   useEffect(() => {
@@ -200,114 +184,11 @@ const HowItWorks: React.FC = () => {
     })();
   }, []);
 
-  const navLinks = [
-    { label: 'Browse Pitches', to: '/marketplace' },
-    { label: 'Opportunities', to: '/opportunities' },
-    { label: 'How It Works', to: '/how-it-works' },
-    { label: 'About', to: '/about' },
-  ];
   const track = tracks[activeRole];
 
   return (
     <div className="min-h-screen bg-[#0d0a18] text-white">
-      {/* ===================== Header (scroll-aware, matches Homepage) ===================== */}
-      <header className={`sticky top-0 z-50 transition-colors duration-300 ${
-        scrolled
-          ? 'bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm'
-          : mobileMenuOpen ? 'bg-[#1f1934] border-b border-white/10' : 'bg-[#0a0a12]/70 backdrop-blur-md border-b border-white/5'
-      }`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-8">
-              <a href="/" className="flex items-center">
-                <img src={scrolled ? '/pitchey-logotype.png' : '/pitchey-logotype-white.png'} alt="Pitchey" className="h-8 w-auto" />
-              </a>
-              <nav className="hidden md:flex items-center gap-6">
-                {navLinks.map((l) => {
-                  const active = l.to === '/how-it-works';
-                  return (
-                    <button
-                      key={l.to}
-                      onClick={() => navigate(l.to)}
-                      className={`text-nav-link transition ${
-                        scrolled
-                          ? active ? 'text-purple-700 font-semibold' : 'hover:text-purple-600'
-                          : active ? 'text-white font-semibold' : 'text-white/90 hover:text-white'
-                      }`}
-                    >
-                      {l.label}
-                    </button>
-                  );
-                })}
-              </nav>
-            </div>
-            <div className="hidden md:flex items-center gap-4">
-              {isAuthenticated && user ? (
-                <>
-                  <button
-                    onClick={() => navigate(userType ? `/${getPortalPath(userType)}/dashboard` : '/login')}
-                    className="text-button px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
-                  >
-                    Dashboard
-                  </button>
-                  <button
-                    onClick={async () => { await logout(); navigate('/'); }}
-                    className={`text-button px-3 py-2 transition ${scrolled ? 'text-gray-500 hover:text-red-600' : 'text-white/70 hover:text-white'}`}
-                    title="Sign Out"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => navigate('/login')}
-                    className={`text-button px-4 py-2 transition ${scrolled ? 'text-purple-600 hover:text-purple-700' : 'text-white hover:text-white/80'}`}
-                  >
-                    Sign In
-                  </button>
-                  <button
-                    onClick={() => navigate('/register')}
-                    className="text-button px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
-                  >
-                    Get Started
-                  </button>
-                </>
-              )}
-            </div>
-            <button
-              onClick={() => setMobileMenuOpen((o) => !o)}
-              aria-label="Toggle navigation menu"
-              aria-expanded={mobileMenuOpen}
-              className={`md:hidden inline-flex items-center justify-center p-2 rounded-lg transition ${scrolled ? 'text-gray-700 hover:bg-gray-100' : 'text-white hover:bg-white/10'}`}
-            >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
-        </div>
-        {mobileMenuOpen && (
-          <div className={`md:hidden border-t ${scrolled ? 'bg-white border-gray-200' : 'bg-[#1f1934] border-white/10'}`}>
-            <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
-              {navLinks.map((item) => (
-                <button
-                  key={item.to}
-                  onClick={() => { setMobileMenuOpen(false); navigate(item.to); }}
-                  className={`text-left px-3 py-2.5 rounded-lg text-sm font-medium transition ${scrolled ? 'text-gray-700 hover:bg-gray-100' : 'text-white/90 hover:bg-white/10'}`}
-                >
-                  {item.label}
-                </button>
-              ))}
-              <div className={`my-2 border-t ${scrolled ? 'border-gray-200' : 'border-white/10'}`} />
-              <button
-                onClick={() => { setMobileMenuOpen(false); navigate(isAuthenticated && userType ? `/${getPortalPath(userType)}/dashboard` : '/register'); }}
-                className="px-3 py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-semibold text-center shadow-lg shadow-purple-500/30 hover:from-purple-500 hover:to-indigo-500 transition"
-              >
-                {isAuthenticated ? 'Dashboard' : 'Get Started'}
-              </button>
-            </div>
-          </div>
-        )}
-      </header>
+      <PublicTopNav variant="overlay" heroRef={heroRef} />
 
       {/* ===================== Hero — "Premiere Night" ===================== */}
       <section ref={heroRef} className="relative -mt-16 overflow-hidden bg-gradient-to-b from-[#3a2f5c] via-[#2c2547] to-[#1f1934]">

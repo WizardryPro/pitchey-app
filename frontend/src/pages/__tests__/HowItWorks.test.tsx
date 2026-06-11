@@ -64,10 +64,12 @@ describe('HowItWorks', () => {
     expect(screen.getByText('to the big screen')).toBeInTheDocument()
   })
 
-  it('renders the "How It Works" nav link and Get Started CTA in header', () => {
+  it('renders the shared public nav (Browse, Learn, Get Started)', () => {
     renderComponent()
-    expect(screen.getByText('How It Works')).toBeInTheDocument()
-    expect(screen.getByText('Get Started')).toBeInTheDocument()
+    // How It Works + About now live under the "Learn" dropdown (closed by default)
+    expect(screen.getByRole('button', { name: 'Browse Pitches' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Learn' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Get Started' })).toBeInTheDocument()
   })
 
   it('defaults to the Creators track and shows its tagline + first step', () => {

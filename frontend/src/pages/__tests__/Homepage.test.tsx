@@ -138,8 +138,10 @@ describe('Homepage', () => {
   it('renders navigation links', () => {
     renderHomepage()
     expect(screen.getAllByRole('button', { name: 'Browse Pitches' }).length).toBeGreaterThan(0)
-    expect(screen.getByRole('button', { name: 'How It Works' })).toBeInTheDocument()
-    // "About" appears in both nav and footer
+    expect(screen.getAllByRole('button', { name: 'Opportunities' }).length).toBeGreaterThan(0)
+    // How It Works + About now live under the "Learn" dropdown
+    expect(screen.getByRole('button', { name: 'Learn' })).toBeInTheDocument()
+    // "About" still appears in the footer
     expect(screen.getAllByRole('button', { name: 'About' }).length).toBeGreaterThan(0)
   })
 
