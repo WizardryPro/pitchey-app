@@ -108,7 +108,7 @@ const CreatorProfile = () => {
 
         setCreator({
           id: Number(u.id) || 0,
-          username: String(u.username ?? u.email ?? ''),
+          username: String(u.username ?? u.name ?? ''),
           firstName: u.first_name as string | undefined ?? u.firstName as string | undefined,
           lastName: u.last_name as string | undefined ?? u.lastName as string | undefined,
           companyName: u.company_name as string | undefined ?? u.companyName as string | undefined,
@@ -470,14 +470,16 @@ const CreatorProfile = () => {
               <h2 className="text-xl font-bold text-gray-900 mb-6">Contact Information</h2>
               
               <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Mail className="w-5 h-5 text-gray-400" />
-                  <div>
-                    <p className="text-sm text-gray-600">Email</p>
-                    <p className="text-gray-900">{creator.email}</p>
+                {creator.email && (
+                  <div className="flex items-center gap-3">
+                    <Mail className="w-5 h-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-600">Email</p>
+                      <p className="text-gray-900">{creator.email}</p>
+                    </div>
                   </div>
-                </div>
-                
+                )}
+
                 {creator.phone && (
                   <div className="flex items-center gap-3">
                     <Phone className="w-5 h-5 text-gray-400" />

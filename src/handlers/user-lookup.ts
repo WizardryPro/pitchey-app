@@ -146,10 +146,18 @@ export async function userByIdHandler(request: Request, env: Env): Promise<Respo
       return jsonResponse({ success: false, error: { code: 'BAD_REQUEST', message: 'Valid user ID required' } }, 400, origin);
     }
 
+    // Public profile lookup: only expose contact email when the user has
+    // opted in via Privacy > "Show Email Address" (user_settings.show_email,
+    // default false). The owner sees their own email via /api/users/profile.
     const [user] = await sql`
-      SELECT ${sql.unsafe(SAFE_USER_COLUMNS)}
-      FROM users
-      WHERE id = ${userId} AND is_active = true
+      SELECT
+        u.id, u.username, u.name, u.user_type,
+        u.first_name, u.last_name, u.company_name,
+        u.profile_image, u.bio, u.location, u.verified, u.created_at,
+        CASE WHEN COALESCE(us.show_email, false) THEN u.email ELSE NULL END AS email
+      FROM users u
+      LEFT JOIN user_settings us ON us.user_id = u.id
+      WHERE u.id = ${userId} AND u.is_active = true
       LIMIT 1
     `;
 
