@@ -52,6 +52,22 @@ function errorResponse(message: string, origin: string | null, status = 400): Re
   return jsonResponse({ success: false, error: message }, origin, status);
 }
 
+/**
+ * Base64-encode an ArrayBuffer in fixed-size chunks. Spreading a whole multi-MB
+ * Uint8Array into `String.fromCharCode(...bytes)` blows the argument/call-stack
+ * limit ("Maximum call stack size exceeded") for anything but tiny files — which
+ * 500'd this handler on real-world PDFs. 32KB chunks stay well under the limit.
+ */
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  const CHUNK = 0x8000; // 32768
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK) as unknown as number[]);
+  }
+  return btoa(binary);
+}
+
 export async function aiPitchExtract(request: Request, env: Env): Promise<Response> {
   const origin = request.headers.get('Origin');
   const userId = await getUserId(request, env);
@@ -109,7 +125,7 @@ export async function aiPitchExtract(request: Request, env: Env): Promise<Respon
 
     if (isPdf) {
       // Send PDF directly to Claude using document type
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(fileBytes)));
+      const base64 = arrayBufferToBase64(fileBytes);
       content = [
         {
           type: 'document',
