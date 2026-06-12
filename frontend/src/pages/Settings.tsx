@@ -4,6 +4,7 @@ import { Shield, Bell, Eye, Mail, Smartphone, Lock, Key, Trash2, AlertCircle, Us
 import { toast } from 'react-hot-toast';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { sessionManager } from '../lib/session-manager';
+import { sessionCache } from '../store/sessionCache';
 import { UserService } from '../services/user.service';
 import { API_URL } from '../config';
 import { usePortalTheme } from '@shared/hooks/usePortalTheme';
@@ -70,6 +71,10 @@ export default function Settings() {
       });
       sessionManager.clearCache();
       await checkSession();
+      // Re-write the localStorage session cache with the fresh user so a page
+      // refresh doesn't surface the stale pre-change username for the cache TTL.
+      const freshUser = useBetterAuthStore.getState().user;
+      if (freshUser) sessionCache.set(freshUser);
       toast.success('Profile updated');
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
