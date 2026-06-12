@@ -61,18 +61,18 @@ export const productionNavigationSections: NavigationSection[] = [
   },
 ];
 
-export function EnhancedProductionNav() {
+export function EnhancedProductionNav({ collapsed = false }: { collapsed?: boolean }) {
   const navigate = useNavigate();
   const location = useLocation();
 
   return (
-    <nav className="w-64 bg-white border-r border-gray-200 h-full overflow-y-auto">
-      <div className="p-4">
-        <h2 className="text-xl font-bold text-brand-portal-production mb-4">Production Portal</h2>
+    <nav className="w-full">
+      <div className={collapsed ? 'p-2' : 'p-4'}>
+        {!collapsed && <h2 className="text-xl font-bold text-brand-portal-production mb-4">Production Portal</h2>}
 
         {productionNavigationSections.map((section, sectionIdx) => (
-          <div key={section.title || `section-${sectionIdx}`} className="mb-5">
-            {section.title && (
+          <div key={section.title || `section-${sectionIdx}`} className={collapsed ? 'mb-2' : 'mb-5'}>
+            {!collapsed && section.title && (
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                 {section.title}
               </h3>
@@ -87,8 +87,9 @@ export function EnhancedProductionNav() {
                   <button
                     key={item.path + item.label}
                     onClick={() => navigate(item.path)}
+                    title={collapsed ? item.label : undefined}
                     className={`
-                      w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm
+                      w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg text-sm
                       transition-colors duration-200
                       ${isActive
                         ? 'bg-brand-portal-production/10 text-brand-portal-production font-medium'
@@ -96,9 +97,9 @@ export function EnhancedProductionNav() {
                       }
                     `}
                   >
-                    <Icon className="w-4 h-4" />
-                    <span className="flex-1 text-left">{item.label}</span>
-                    {item.badge && (
+                    <Icon className="w-4 h-4 shrink-0" />
+                    {!collapsed && <span className="flex-1 text-left">{item.label}</span>}
+                    {!collapsed && item.badge && (
                       <span className="px-1.5 py-0.5 text-xs font-medium bg-red-100 text-red-700 rounded">
                         {item.badge}
                       </span>
