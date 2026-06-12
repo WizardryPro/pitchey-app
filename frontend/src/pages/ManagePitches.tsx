@@ -6,6 +6,7 @@ import type { Pitch } from '@shared/types/api';
 import FormatDisplay from '../components/FormatDisplay';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { usePortalTheme } from '@shared/hooks/usePortalTheme';
+import LogoLoader from '@/components/LogoLoader';
 
 export default function ManagePitches() {
   const navigate = useNavigate();
@@ -349,7 +350,7 @@ export default function ManagePitches() {
         {/* Pitches Grid */}
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${theme.spinnerBorder}`}></div>
+            <LogoLoader size="md" label="Loading your pitches…" />
           </div>
         ) : filteredPitches.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm p-12 text-center">
