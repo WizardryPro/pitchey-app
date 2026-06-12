@@ -29,6 +29,64 @@ import {
 } from '@shared/utils/defensive';
 import { formatNumber } from '@shared/utils/formatters';
 
+/**
+ * "Your Next Goals" — compact progress card. Rendered on both the Overview tab
+ * (so it's visible at a glance) and inside Creator Milestones on the Pitches tab.
+ * Renders nothing once every goal is met.
+ */
+function NextGoalsCard({
+  totalViews,
+  followers,
+  totalPitches,
+  className = '',
+}: {
+  totalViews: number;
+  followers: number;
+  totalPitches: number;
+  className?: string;
+}) {
+  const goals = [
+    { key: 'views', label: 'Views', icon: Eye, current: totalViews, target: 1000 },
+    { key: 'followers', label: 'Followers', icon: Users, current: followers, target: 50 },
+    { key: 'pitches', label: 'Pitches', icon: Sparkles, current: totalPitches, target: 5 },
+  ].filter((goal) => goal.current < goal.target);
+
+  if (goals.length === 0) return null;
+
+  return (
+    <div className={`rounded-xl bg-gradient-to-br from-purple-50 to-indigo-50 p-5 ring-1 ring-purple-100/70 ${className}`}>
+      <h4 className="text-sm font-semibold text-gray-900 mb-4">Your Next Goals</h4>
+      <div className="space-y-4">
+        {goals.map((goal) => {
+          const Icon = goal.icon;
+          const pct = Math.min((goal.current / goal.target) * 100, 100);
+          return (
+            <div key={goal.key}>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-purple-100 to-indigo-100 text-purple-600 ring-1 ring-inset ring-purple-200/60">
+                    <Icon className="h-3.5 w-3.5" />
+                  </span>
+                  {goal.label}
+                </span>
+                <span className="text-xs font-semibold tabular-nums text-gray-500">
+                  {goal.current.toLocaleString()} / {goal.target.toLocaleString()}
+                </span>
+              </div>
+              <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/70 ring-1 ring-inset ring-gray-200/70">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 transition-all duration-700 ease-out"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function CreatorDashboard() {
   const navigate = useNavigate();
   const { user: authUser, isAuthenticated, checkSession } = useBetterAuthStore();
@@ -535,6 +593,14 @@ function CreatorDashboard() {
       </div>
       {showShareModal && <ShareLinksModal onClose={() => setShowShareModal(false)} />}
 
+      {/* Goals — surfaced on Overview so creators see their progress at a glance */}
+      <NextGoalsCard
+        className="mb-8"
+        totalViews={safeNumber(totalViews)}
+        followers={safeNumber(followers)}
+        totalPitches={safeNumber(stats?.totalPitches)}
+      />
+
       {/* B3: creators redeem a production company's join code to collaborate */}
       <div className="mb-8 space-y-6">
         <JoinCompanyCard />
@@ -933,42 +999,12 @@ function CreatorDashboard() {
           </div>
 
           {/* Progress to next milestone */}
-          <div className="mt-6 rounded-xl bg-gradient-to-br from-purple-50 to-indigo-50 p-5 ring-1 ring-purple-100/70">
-            <h4 className="text-sm font-semibold text-gray-900 mb-4">Your Next Goals</h4>
-            <div className="space-y-4">
-              {[
-                { key: 'views', label: 'Views', icon: Eye, current: safeNumber(totalViews), target: 1000 },
-                { key: 'followers', label: 'Followers', icon: Users, current: safeNumber(followers), target: 50 },
-                { key: 'pitches', label: 'Pitches', icon: Sparkles, current: safeNumber(stats?.totalPitches), target: 5 },
-              ]
-                .filter((goal) => goal.current < goal.target)
-                .map((goal) => {
-                  const Icon = goal.icon;
-                  const pct = Math.min((goal.current / goal.target) * 100, 100);
-                  return (
-                    <div key={goal.key}>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-purple-100 to-indigo-100 text-purple-600 ring-1 ring-inset ring-purple-200/60">
-                            <Icon className="h-3.5 w-3.5" />
-                          </span>
-                          {goal.label}
-                        </span>
-                        <span className="text-xs font-semibold tabular-nums text-gray-500">
-                          {goal.current.toLocaleString()} / {goal.target.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/70 ring-1 ring-inset ring-gray-200/70">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 transition-all duration-700 ease-out"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-            </div>
-          </div>
+          <NextGoalsCard
+            className="mt-6"
+            totalViews={safeNumber(totalViews)}
+            followers={safeNumber(followers)}
+            totalPitches={safeNumber(stats?.totalPitches)}
+          />
         </div>
       </div>
 
