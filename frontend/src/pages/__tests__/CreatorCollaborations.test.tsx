@@ -110,8 +110,8 @@ describe('CreatorCollaborations', () => {
       </MemoryRouter>
     )
 
-    // animate-spin is used for the loading spinner
-    const spinner = document.querySelector('.animate-spin')
+    // the film LogoLoader is used for the loading state
+    const spinner = document.querySelector('.pitchey-film-anim')
     expect(spinner).toBeInTheDocument()
   })
 
@@ -256,10 +256,10 @@ describe('CreatorCollaborations', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('No collaborations found')).toBeInTheDocument()
+      expect(screen.getByText('No collaborations yet')).toBeInTheDocument()
     })
 
-    expect(screen.getByText('Start building partnerships to grow your creative projects.')).toBeInTheDocument()
+    expect(screen.getByText(/Collaborations start when a production company or investor proposes/)).toBeInTheDocument()
   })
 
   it('shows error state when API fails', async () => {
@@ -272,7 +272,7 @@ describe('CreatorCollaborations', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('No collaborations found')).toBeInTheDocument()
+      expect(screen.getByText('No collaborations yet')).toBeInTheDocument()
     })
   })
 
