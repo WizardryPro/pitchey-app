@@ -7,7 +7,7 @@ import { sessionCache } from './store/sessionCache';
 import { GlobalErrorBoundary } from '@shared/components/feedback/ConsoleErrorBoundary';
 import ToastProvider from '@shared/components/feedback/ToastProvider';
 import { NotificationToastProvider } from '@shared/components/feedback/NotificationToastContainer';
-import LoadingSpinner from '@shared/components/feedback/LoadingSpinner';
+import LogoSplash from '@/components/LogoSplash';
 // Import safe context provider (without legacy AuthProvider)
 import { AppContextProviderSafe } from '@shared/contexts/AppContextProviderSafe';
 import { configService } from './services/config.service';
@@ -282,11 +282,7 @@ function PitchRouter() {
   // during the hydration race. Show the app's standard loading state and only
   // decide PitchDetail-vs-PublicPitchView once auth has settled.
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner size="lg" text="Loading..." />
-      </div>
-    );
+    return <LogoSplash message="Loading…" />;
   }
 
   // Also treat a valid cached session as authenticated for routing purposes, so
@@ -392,12 +388,7 @@ function App() {
   // Show loading state while initializing to prevent flicker and navigation loops
   if (initializing || !sessionChecked) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="text-center">
-          <LoadingSpinner size="lg" text="Loading..." />
-          <p className="mt-4 text-gray-600">Please wait...</p>
-        </div>
-      </div>
+      <LogoSplash message="Preparing your workspace…" />
     );
   }
 
@@ -409,14 +400,7 @@ function App() {
         <NotificationToastProvider>
           <ToastProvider>
             <Router>
-              <Suspense fallback={
-                <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-                  <div className="text-center">
-                    <LoadingSpinner size="lg" text="Loading..." />
-                    <p className="mt-4 text-gray-600">Optimizing your experience...</p>
-                  </div>
-                </div>
-              }>
+              <Suspense fallback={<LogoSplash message="Optimizing your experience…" />}>
                 <Routes>
           {/* Homepage - Only render on exact path match */}
           <Route path="/" element={<Homepage />} />
