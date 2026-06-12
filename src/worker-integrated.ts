@@ -6694,23 +6694,46 @@ pitchey_analytics_datapoints_per_minute 1250
       // Handle creative attachments if provided
       if (data.creativeAttachments !== undefined) {
         try {
+          // Preserve invite/verification state across the delete+reinsert: a verified or
+          // pending attachment keeps its status if the same (role, name) is still present.
+          // (Renaming an entry resets it to 'listed' — correct, it's a fresh claim.)
+          const prevAttachRows = await this.db.query(
+            `SELECT name, role, status, invited_user_id, invited_email, invite_token, invited_at, responded_at
+             FROM pitch_creative_attachments WHERE pitch_id = $1 AND status <> 'listed'`,
+            [params.id],
+          );
+          const prevAttachByKey = new Map<string, any>();
+          for (const r of (prevAttachRows || [])) {
+            prevAttachByKey.set(`${String(r.role ?? '').toLowerCase()} ${String(r.name ?? '').toLowerCase()}`, r);
+          }
+
           // Delete existing attachments
           await this.db.query(`DELETE FROM pitch_creative_attachments WHERE pitch_id = $1`, [params.id]);
           
           // Insert new attachments
           if (data.creativeAttachments && data.creativeAttachments.length > 0) {
             for (const attachment of data.creativeAttachments) {
+              const attachKey = `${String(attachment.role ?? '').toLowerCase()} ${String(attachment.name ?? '').toLowerCase()}`;
+              const prevAttach = prevAttachByKey.get(attachKey);
+              if (prevAttach) prevAttachByKey.delete(attachKey); // one carry-over per match
               await this.db.query(`
                 INSERT INTO pitch_creative_attachments (
-                  pitch_id, name, role, bio, imdb_link, website_link, created_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
+                  pitch_id, name, role, bio, imdb_link, website_link,
+                  status, invited_user_id, invited_email, invite_token, invited_at, responded_at, created_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
               `, [
                 params.id,
                 attachment.name,
                 attachment.role,
                 attachment.bio,
                 attachment.imdbLink ?? null,
-                attachment.websiteLink ?? null
+                attachment.websiteLink ?? null,
+                prevAttach?.status ?? 'listed',
+                prevAttach?.invited_user_id ?? null,
+                prevAttach?.invited_email ?? null,
+                prevAttach?.invite_token ?? null,
+                prevAttach?.invited_at ?? null,
+                prevAttach?.responded_at ?? null
               ]);
             }
           }
