@@ -423,3 +423,16 @@
     }
   }
 }
+/* ── Pitchey film-strip loader ──────────────────────────────────────────────
+   Reusable "running film" load animation (see components/LogoLoader.tsx).
+   The element paints a vertically-repeating film tile and scrolls the
+   background by exactly one tile height, so the loop is seamless. */
+@keyframes pitchey-film-run {
+  to { background-position-y: var(--film-tile, 25px); }
+}
+.pitchey-film-anim {
+  animation: pitchey-film-run 0.8s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pitchey-film-anim { animation: none; }
+}
