@@ -14,6 +14,8 @@
 
 interface LogoLoaderProps {
   size?: 'sm' | 'md' | 'lg';
+  /** Animation pace — snappy for buttons, calm for splash screens. */
+  speed?: 'fast' | 'normal' | 'slow';
   /** Optional caption rendered under the strip (also improves a11y). */
   label?: string;
   className?: string;
@@ -24,6 +26,8 @@ const DIMS = {
   md: { w: 40, h: 50, tile: 25 },
   lg: { w: 58, h: 72, tile: 36 },
 } as const;
+
+const SPEED = { fast: '0.6s', normal: '0.8s', slow: '1.15s' } as const;
 
 // One film tile: brand-violet body, a darker frame divider, white sprocket holes down
 // both edges, and a translucent frame window. preserveAspectRatio='none' lets it stretch
@@ -38,7 +42,7 @@ const TILE_SVG = encodeURIComponent(
   `</svg>`
 );
 
-export default function LogoLoader({ size = 'md', label, className = '' }: LogoLoaderProps) {
+export default function LogoLoader({ size = 'md', speed = 'normal', label, className = '' }: LogoLoaderProps) {
   const d = DIMS[size];
 
   return (
@@ -54,6 +58,7 @@ export default function LogoLoader({ size = 'md', label, className = '' }: LogoL
           height: d.h,
           // consumed by the @keyframes scroll distance
           ['--film-tile' as string]: `${d.tile}px`,
+          animationDuration: SPEED[speed],
           backgroundImage: `url("data:image/svg+xml,${TILE_SVG}")`,
           backgroundRepeat: 'repeat-y',
           backgroundSize: `${d.w}px ${d.tile}px`,
