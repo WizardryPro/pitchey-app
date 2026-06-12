@@ -99,7 +99,7 @@ describe('CreatorPitchView', () => {
     mockGetPublicById.mockReturnValue(new Promise(() => {}))
     renderWithRoute()
 
-    const spinner = document.querySelector('.animate-spin')
+    const spinner = document.querySelector('.pitchey-film-anim')
     expect(spinner).toBeInTheDocument()
   })
 

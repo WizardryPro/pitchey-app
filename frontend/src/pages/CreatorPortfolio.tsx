@@ -4,6 +4,7 @@ import { ArrowLeft, Plus, Eye, TrendingUp, Film, MapPin, Calendar, BadgeCheck, E
 import { apiClient } from '../lib/api-client';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import ShareLinksModal from '../components/portfolio/ShareLinksModal';
+import LogoLoader from '@/components/LogoLoader';
 
 interface Pitch {
   id: string;
@@ -106,7 +107,7 @@ export default function CreatorPortfolio() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600 mx-auto"></div>
+          <LogoLoader size="md" className="mx-auto" />
           <p className="mt-4 text-gray-600">Loading portfolio...</p>
         </div>
       </div>

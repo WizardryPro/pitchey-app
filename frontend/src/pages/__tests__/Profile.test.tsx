@@ -100,7 +100,7 @@ describe('Profile', () => {
       </MemoryRouter>
     )
     // Should show the spinner before data loads
-    const spinner = document.querySelector('.animate-spin')
+    const spinner = document.querySelector('.pitchey-film-anim')
     expect(spinner).toBeTruthy()
   })
 

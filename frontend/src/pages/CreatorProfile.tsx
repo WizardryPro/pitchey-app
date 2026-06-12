@@ -6,6 +6,7 @@ import {
   MessageSquare, Bookmark, UserPlus, UserCheck, TrendingUp
 } from 'lucide-react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
+import LogoLoader from '@/components/LogoLoader';
 import FollowButton from '@features/browse/components/FollowButton';
 import { config } from '../config';
 import FormatDisplay from '../components/FormatDisplay';
@@ -208,7 +209,7 @@ const CreatorProfile = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        <LogoLoader size="md" />
       </div>
     );
   }

@@ -4,6 +4,7 @@ import { Eye, Heart, Share2, Tag, Film, Calendar, User, Shield, Lock, DollarSign
 import { pitchAPI } from '../lib/api';
 import type { Pitch } from '../lib/api';
 import { useBetterAuthStore } from '../store/betterAuthStore';
+import LogoLoader from '@/components/LogoLoader';
 import { formatCurrency } from '@shared/utils/formatters';
 import PortalTopNav from '@shared/components/layout/PortalTopNav';
 import { ndaService } from '@features/ndas/services/nda.service';
@@ -200,7 +201,7 @@ export default function PublicPitchView() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+        <LogoLoader size="md" />
       </div>
     );
   }
