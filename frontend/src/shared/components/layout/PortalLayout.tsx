@@ -4,6 +4,7 @@ import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { MinimalHeader } from './MinimalHeader';
 import { PageErrorBoundary } from '@shared/components/feedback/ConsoleErrorBoundary';
 import { getPortalTheme } from '@shared/hooks/usePortalTheme';
+import LogoLoader from '@/components/LogoLoader';
 
 import { EnhancedCreatorNav } from './EnhancedCreatorNav';
 import { EnhancedInvestorNav } from './EnhancedInvestorNav';
@@ -92,14 +93,17 @@ export function PortalLayout({ userType }: PortalLayoutProps) {
         {/* Desktop rail. The <aside> reserves the layout slot (16 collapsed / 64 open);
             the inner panel is fixed so it stays pinned on scroll and, when collapsed,
             expands to full width on hover as an OVERLAY — no content reflow. */}
-        <aside
-          onMouseEnter={() => setIsSidebarHovered(true)}
-          onMouseLeave={() => setIsSidebarHovered(false)}
-          className={`hidden lg:block shrink-0 transition-all duration-200 ease-in-out ${isDesktopSidebarCollapsed ? 'w-16' : 'w-64'}`}
-        >
-          <div className={`
+        <aside className={`hidden lg:block shrink-0 transition-[width] duration-200 ease-in-out ${isDesktopSidebarCollapsed ? 'w-16' : 'w-64'}`}>
+          {/* Hover handlers live on the FIXED panel (the element that actually grows to
+              w-64), NOT the w-16 placeholder above — otherwise the cursor leaves the
+              listening element the instant the panel expands, causing expand/collapse
+              flicker. */}
+          <div
+            onMouseEnter={() => setIsSidebarHovered(true)}
+            onMouseLeave={() => setIsSidebarHovered(false)}
+            className={`
             fixed top-16 left-0 bottom-0 z-30 flex flex-col
-            bg-white border-r border-gray-200 transition-all duration-200 ease-in-out
+            bg-white border-r border-gray-200 transition-[width] duration-200 ease-in-out
             ${railExpanded ? 'w-64' : 'w-16'}
             ${isDesktopSidebarCollapsed && isSidebarHovered ? 'shadow-2xl' : ''}
           `}>
@@ -150,7 +154,7 @@ export function PortalLayout({ userType }: PortalLayoutProps) {
           <div className="container mx-auto px-4 py-6 max-w-7xl">
             {/* Page Content - key forces re-render on route change and resets error boundary */}
             <PageErrorBoundary key={location.pathname}>
-              <Suspense fallback={<div className="flex items-center justify-center h-64"><div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${theme.spinnerBorder}`}></div></div>}>
+              <Suspense fallback={<div className="flex items-center justify-center h-64"><LogoLoader size="md" /></div>}>
                 <Outlet />
               </Suspense>
             </PageErrorBoundary>
