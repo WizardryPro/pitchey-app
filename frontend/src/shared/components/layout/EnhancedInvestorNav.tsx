@@ -1,10 +1,10 @@
 import React from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, BarChart3, Activity, LineChart, Briefcase, Clock, CheckCircle,
   FolderOpen, Globe, Bookmark, Eye, DollarSign, FileText, PieChart,
   TrendingUp, AlertTriangle, Users, Building2, UserCheck, Wallet,
-  CreditCard, Settings, Shield, Receipt, Calculator, FileCheck, Store, ExternalLink,
+  CreditCard, Settings, Shield, Receipt, Calculator, FileCheck,
   GitBranch
 } from 'lucide-react';
 import { INVESTOR_ROUTES } from '@/config/navigation.routes';
@@ -109,33 +109,6 @@ export function EnhancedInvestorNav({ collapsed = false }: { collapsed?: boolean
     <nav className="w-full">
       <div className={collapsed ? 'p-2' : 'p-4'}>
         {!collapsed && <h2 className="text-xl font-bold text-brand-portal-investor mb-4">Investor Portal</h2>}
-
-        {/* Quick Links - Always visible at top */}
-        <div className="mb-6 pb-4 border-b border-gray-200">
-          {!collapsed && (
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-              Quick Links
-            </h3>
-          )}
-          <div className="space-y-1">
-            <Link
-              to="/"
-              title={collapsed ? 'Home' : undefined}
-              className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-brand-portal-investor/5 hover:text-brand-portal-investor transition-colors duration-200`}
-            >
-              <Home className="w-4 h-4 shrink-0" />
-              {!collapsed && <><span className="flex-1 text-left">Home</span><ExternalLink className="w-3 h-3 text-gray-400" /></>}
-            </Link>
-            <Link
-              to="/marketplace"
-              title={collapsed ? 'Marketplace' : undefined}
-              className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-brand-portal-investor/5 hover:text-brand-portal-investor transition-colors duration-200`}
-            >
-              <Store className="w-4 h-4 shrink-0" />
-              {!collapsed && <><span className="flex-1 text-left">Marketplace</span><ExternalLink className="w-3 h-3 text-gray-400" /></>}
-            </Link>
-          </div>
-        </div>
 
         {investorNavigationSections.map((section) => (
           <div key={section.title} className={collapsed ? 'mb-2' : 'mb-6'}>

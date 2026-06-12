@@ -18,12 +18,21 @@ interface PortalLayoutProps {
 export function PortalLayout({ userType }: PortalLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Closed by default on mobile
   // Desktop sidebar collapse — persisted so it sticks across navigations/sessions.
-  // Collapsed = a slim icon rail (labels via tooltip); expanded = the full labelled nav.
+  // Collapsed = a slim icon rail (labels via tooltip / hover); expanded = the full
+  // labelled nav. Defaults to COLLAPSED (the cleaner resting state) on first visit.
   const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(() => {
-    try { return localStorage.getItem('pitchey:sidebarCollapsed') === '1'; } catch { return false; }
+    try {
+      const stored = localStorage.getItem('pitchey:sidebarCollapsed');
+      return stored === null ? true : stored === '1';
+    } catch { return true; }
   });
+  // When collapsed, hovering the rail temporarily expands it as an overlay (no reflow).
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const location = useLocation();
   const theme = getPortalTheme(userType);
+
+  // The rail shows full labels when pinned open OR while hovered (collapsed).
+  const railExpanded = !isDesktopSidebarCollapsed || isSidebarHovered;
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -80,31 +89,34 @@ export function PortalLayout({ userType }: PortalLayoutProps) {
             scrolling content. flex-col: nav scrolls internally, collapse toggle pinned
             at the bottom. The aside owns the chrome (bg/border/width) so the nav
             components are width-agnostic content. */}
-        <aside className={`
-          hidden lg:flex lg:flex-col transition-all duration-300 ease-in-out
-          sticky top-16 self-start h-[calc(100vh-4rem)]
-          bg-white border-r border-gray-200
-          ${isDesktopSidebarCollapsed ? 'w-16' : 'w-64'}
-        `}>
-          <div className="flex-1 overflow-y-auto">
-            {renderSidebar(isDesktopSidebarCollapsed)}
+        {/* Desktop rail. The <aside> reserves the layout slot (16 collapsed / 64 open);
+            the inner panel is fixed so it stays pinned on scroll and, when collapsed,
+            expands to full width on hover as an OVERLAY — no content reflow. */}
+        <aside
+          onMouseEnter={() => setIsSidebarHovered(true)}
+          onMouseLeave={() => setIsSidebarHovered(false)}
+          className={`hidden lg:block shrink-0 transition-all duration-200 ease-in-out ${isDesktopSidebarCollapsed ? 'w-16' : 'w-64'}`}
+        >
+          <div className={`
+            fixed top-16 left-0 bottom-0 z-30 flex flex-col
+            bg-white border-r border-gray-200 transition-all duration-200 ease-in-out
+            ${railExpanded ? 'w-64' : 'w-16'}
+            ${isDesktopSidebarCollapsed && isSidebarHovered ? 'shadow-2xl' : ''}
+          `}>
+            <div className="flex-1 overflow-y-auto">
+              {renderSidebar(!railExpanded)}
+            </div>
+            <button
+              type="button"
+              onClick={toggleDesktopSidebar}
+              className="shrink-0 border-t border-gray-200 px-3 py-2.5 flex items-center justify-center gap-2 text-xs font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
+              title={isDesktopSidebarCollapsed ? 'Pin sidebar open' : 'Collapse sidebar'}
+              aria-label={isDesktopSidebarCollapsed ? 'Pin sidebar open' : 'Collapse sidebar'}
+            >
+              {isDesktopSidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+              {railExpanded && <span>{isDesktopSidebarCollapsed ? 'Pin open' : 'Collapse'}</span>}
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={toggleDesktopSidebar}
-            className="shrink-0 border-t border-gray-200 px-3 py-2.5 flex items-center justify-center gap-2 text-xs font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
-            title={isDesktopSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            aria-label={isDesktopSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {isDesktopSidebarCollapsed ? (
-              <PanelLeftOpen className="w-4 h-4" />
-            ) : (
-              <>
-                <PanelLeftClose className="w-4 h-4" />
-                <span>Collapse</span>
-              </>
-            )}
-          </button>
         </aside>
 
         {/* Sidebar - Mobile Overlay (always full width — only the desktop rail collapses) */}

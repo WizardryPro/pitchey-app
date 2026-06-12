@@ -59,24 +59,8 @@ describe('EnhancedAdminNav', () => {
     })
   })
 
-  describe('Quick Links section', () => {
-    it('renders Quick Links section heading', () => {
-      renderComponent()
-      expect(screen.getByText('Quick Links')).toBeInTheDocument()
-    })
-
-    it('renders Home quick link pointing to /', () => {
-      renderComponent()
-      const homeLink = screen.getByText('Home').closest('a')
-      expect(homeLink).toHaveAttribute('href', '/')
-    })
-
-    it('renders Marketplace quick link pointing to /marketplace', () => {
-      renderComponent()
-      const marketplaceLink = screen.getByText('Marketplace').closest('a')
-      expect(marketplaceLink).toHaveAttribute('href', '/marketplace')
-    })
-  })
+  // Quick Links section removed 2026-06-12 — the sidebar's Home/Marketplace quick
+  // links duplicated the header nav, so they were trimmed (see PortalLayout header).
 
   describe('Navigation sections', () => {
     it('renders all 5 section headings', () => {
