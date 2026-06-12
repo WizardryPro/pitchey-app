@@ -61,6 +61,56 @@ Contact creator → Negotiate acquisition
 - [ ] "Contact Creator" - after NDA approval
 - [ ] "Start Negotiation" - collaboration tools
 
+### 4. Targeted Outreach via Identity & Thesis _(unlocked 2026-06-12)_
+
+A pre-discovery trust/matching layer that sits *before* flows 1–3. Each role now has a
+role-tailored profile at `/<portal>/settings/profile` that publishes the signals the
+other side needs to qualify a match — so outreach is targeted instead of cold.
+
+```
+Investor publishes fund identity + investment thesis (genres/stage/cheque size)
+   → Creator reads the thesis on the investor's public profile
+   → Creator pitches the RIGHT investors (not a spray)
+Creator publishes creative statement + portfolio
+   → Investor / Production vet the creator's profile before engaging
+   → higher-intent NDA requests feed flows 1–3
+```
+
+**Why it matters:** raises match quality on both sides of the marketplace, lifting the
+conversion rate of the existing discovery → NDA → deal funnel. Before this, investor
+settings had no identity beyond a username; investors were undifferentiated.
+
+**Key CTAs to check:**
+- [ ] "Edit Investor Profile" card - `/investor/settings`
+- [ ] "Edit your full creator profile" launcher - `/creator/settings` Profile tab
+- [ ] "Edit your full company profile" launcher - `/production/settings` Profile tab
+- [ ] Investment Thesis field saves + shows on public investor profile
+- [ ] Creator "About Your Work" + portfolio link save + show on public profile
+
+### 5. Branded Slate Distribution _(unlocked 2026-06-12)_
+
+Turns a Slate (curated pitch collection) into a polished, shareable marketing asset that a
+creator or production can send *off-platform* to investors/buyers — an outbound funnel that
+drives inbound discovery back into flows 2–3.
+
+```
+Creator/Production curates pitches into a Slate → adds a cover/banner image →
+publishes → copies the public link (/slates/s/:id) →
+shares externally (email / LinkedIn / deck) → recipient lands on a branded hero page →
+clicks into individual pitches → enters the discovery → NDA funnel
+```
+
+**Why it matters:** the cover image makes the public slate (and its social unfurl) look like
+an intentional, branded showcase rather than a bare list — the difference between a link
+worth forwarding and one that isn't. This is the platform's main *outbound* sharing surface
+(the portfolio share has no banner — it uses the creator avatar; the slate is the branded one).
+
+**Key CTAs to check:**
+- [ ] "Add cover image" / "Change cover image" - `/creator/slates/:id`
+- [ ] "Publish" toggle - slate editor
+- [ ] "Copy link" - slate editor (public link)
+- [ ] Cover renders as hero banner on public `/slates/s/:id`
+
 ---
 
 ## ROUTE-BY-ROUTE AUDIT CHECKLIST
