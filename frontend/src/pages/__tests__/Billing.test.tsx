@@ -115,7 +115,7 @@ describe('Billing', () => {
     // Make getSubscriptionStatus never resolve during this test
     mockGetSubscriptionStatus.mockReturnValue(new Promise(() => {}))
     renderComponent()
-    expect(document.querySelector('.animate-spin')).toBeTruthy()
+    expect(document.querySelector('.pitchey-film-anim')).toBeTruthy()
   })
 
   it('renders Billing & Payments heading after loading', async () => {

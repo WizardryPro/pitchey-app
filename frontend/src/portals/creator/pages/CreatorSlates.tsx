@@ -5,6 +5,7 @@ import {
   Film, MoreVertical, Pencil, Globe
 } from 'lucide-react';
 import { SlateService, type Slate } from '@/services/slate.service';
+import LogoLoader from '@/components/LogoLoader';
 
 export default function CreatorSlates() {
   const navigate = useNavigate();
@@ -198,7 +199,7 @@ export default function CreatorSlates() {
       {/* Slate List */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="animate-spin h-8 w-8 border-2 border-purple-600 border-t-transparent rounded-full" />
+          <LogoLoader size="md" />
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-20 bg-white border border-gray-200 rounded-xl">

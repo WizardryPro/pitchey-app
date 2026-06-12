@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import LogoLoader from '@/components/LogoLoader';
 import {
   CreditCard,
   Download,
@@ -110,7 +111,7 @@ export default function Billing() {
     return (
       <div className="flex items-center justify-center py-16">
         <div className="text-center">
-          <div className={`animate-spin rounded-full h-12 w-12 border-b-2 ${theme.spinnerBorder} mx-auto`}></div>
+          <LogoLoader size="md" className="mx-auto" />
           <p className="mt-4 text-gray-600">Loading billing information...</p>
         </div>
       </div>

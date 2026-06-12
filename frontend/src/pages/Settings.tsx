@@ -7,6 +7,7 @@ import { sessionManager } from '../lib/session-manager';
 import { UserService } from '../services/user.service';
 import { API_URL } from '../config';
 import { usePortalTheme } from '@shared/hooks/usePortalTheme';
+import LogoLoader from '@/components/LogoLoader';
 
 interface NotificationSettings {
   emailNotifications: boolean;
@@ -209,7 +210,7 @@ export default function Settings() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${theme.spinnerBorder}`}></div>
+        <LogoLoader size="md" />
       </div>
     );
   }

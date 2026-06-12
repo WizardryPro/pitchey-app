@@ -129,7 +129,7 @@ describe('CreatorProfile', () => {
   it('shows loading spinner initially', () => {
     mockFetch.mockReturnValue(new Promise(() => {}))
     render(<MemoryRouter><Component /></MemoryRouter>)
-    expect(document.querySelector('.animate-spin')).toBeInTheDocument()
+    expect(document.querySelector('.pitchey-film-anim')).toBeInTheDocument()
   })
 
   it('calls GET /api/users/:id for creator data', async () => {

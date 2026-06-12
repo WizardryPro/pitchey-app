@@ -4,6 +4,7 @@ import { Camera, Mail, Phone, MapPin, Building2, Calendar, Edit3, Save, X, Loade
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { API_URL } from '../config';
 import { usePortalTheme } from '@shared/hooks/usePortalTheme';
+import LogoLoader from '@/components/LogoLoader';
 import { prepareImageForUpload, PRE_COMPRESSION_MAX_BYTES } from '../utils/imageUpload';
 
 interface UserProfile {
@@ -214,7 +215,7 @@ export default function Profile() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${theme.spinnerBorder}`}></div>
+        <LogoLoader size="md" />
       </div>
     );
   }

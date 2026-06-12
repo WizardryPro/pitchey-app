@@ -94,7 +94,7 @@ describe('Settings', () => {
         <Settings />
       </MemoryRouter>
     )
-    const spinner = document.querySelector('.animate-spin')
+    const spinner = document.querySelector('.pitchey-film-anim')
     expect(spinner).toBeTruthy()
   })
 

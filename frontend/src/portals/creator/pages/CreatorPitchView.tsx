@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
+import LogoLoader from '@/components/LogoLoader';
 import { 
   ArrowLeft, Eye, Heart, Share2, Edit, Trash2, BarChart3, 
   Shield, MessageSquare, Clock, Calendar, User, Tag, 
@@ -270,7 +271,7 @@ const CreatorPitchView: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        <LogoLoader size="md" />
       </div>
     );
   }
