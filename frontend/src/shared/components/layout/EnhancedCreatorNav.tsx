@@ -63,45 +63,49 @@ export const creatorNavigationSections: NavigationSection[] = [
   },
 ];
 
-export function EnhancedCreatorNav() {
+export function EnhancedCreatorNav({ collapsed = false }: { collapsed?: boolean }) {
   const navigate = useNavigate();
   const location = useLocation();
 
   return (
-    <nav className="w-64 bg-white border-r border-gray-200 h-full overflow-y-auto">
-      <div className="p-4">
-        <h2 className="text-xl font-bold text-brand-portal-creator mb-4">Creator Portal</h2>
+    <nav className="w-full">
+      <div className={collapsed ? 'p-2' : 'p-4'}>
+        {!collapsed && <h2 className="text-xl font-bold text-brand-portal-creator mb-4">Creator Portal</h2>}
 
         {/* Quick Links - Always visible at top */}
         <div className="mb-6 pb-4 border-b border-gray-200">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-            Quick Links
-          </h3>
+          {!collapsed && (
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              Quick Links
+            </h3>
+          )}
           <div className="space-y-1">
             <Link
               to="/"
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-brand-portal-creator/10 hover:text-brand-portal-creator transition-colors duration-200"
+              title={collapsed ? 'Home' : undefined}
+              className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-brand-portal-creator/10 hover:text-brand-portal-creator transition-colors duration-200`}
             >
-              <Home className="w-4 h-4" />
-              <span className="flex-1 text-left">Home</span>
-              <ExternalLink className="w-3 h-3 text-gray-400" />
+              <Home className="w-4 h-4 shrink-0" />
+              {!collapsed && <><span className="flex-1 text-left">Home</span><ExternalLink className="w-3 h-3 text-gray-400" /></>}
             </Link>
             <Link
               to="/creator/browse"
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-brand-portal-creator/10 hover:text-brand-portal-creator transition-colors duration-200"
+              title={collapsed ? 'Marketplace' : undefined}
+              className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-brand-portal-creator/10 hover:text-brand-portal-creator transition-colors duration-200`}
             >
-              <Store className="w-4 h-4" />
-              <span className="flex-1 text-left">Marketplace</span>
-              <ExternalLink className="w-3 h-3 text-gray-400" />
+              <Store className="w-4 h-4 shrink-0" />
+              {!collapsed && <><span className="flex-1 text-left">Marketplace</span><ExternalLink className="w-3 h-3 text-gray-400" /></>}
             </Link>
           </div>
         </div>
 
         {creatorNavigationSections.map((section) => (
-          <div key={section.title} className="mb-6">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-              {section.title}
-            </h3>
+          <div key={section.title} className={collapsed ? 'mb-2' : 'mb-6'}>
+            {!collapsed && (
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                {section.title}
+              </h3>
+            )}
             <div className="space-y-1">
               {section.items.map((item) => {
                 const Icon = item.icon;
@@ -117,18 +121,19 @@ export function EnhancedCreatorNav() {
                   <button
                     key={item.path}
                     onClick={() => navigate(item.path)}
+                    title={collapsed ? item.label : undefined}
                     className={`
-                      w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm
+                      w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg text-sm
                       transition-colors duration-200
-                      ${isActive 
-                        ? 'bg-brand-portal-creator/10 text-brand-portal-creator font-medium' 
+                      ${isActive
+                        ? 'bg-brand-portal-creator/10 text-brand-portal-creator font-medium'
                         : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                       }
                     `}
                   >
-                    <Icon className="w-4 h-4" />
-                    <span className="flex-1 text-left">{item.label}</span>
-                    {item.badge && (
+                    <Icon className="w-4 h-4 shrink-0" />
+                    {!collapsed && <span className="flex-1 text-left">{item.label}</span>}
+                    {!collapsed && item.badge && (
                       <span className="px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded">
                         {item.badge}
                       </span>
