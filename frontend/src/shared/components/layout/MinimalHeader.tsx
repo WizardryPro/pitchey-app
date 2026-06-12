@@ -101,9 +101,9 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
           {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
 
-        {/* Logo — portal identity is carried by the role badge + main-content
-            strip, not the logo color */}
-        <Link to={homePath} className="flex items-center" aria-label="Pitchey dashboard">
+        {/* Logo → public home (standard convention). The dedicated "Dashboard"
+            quick-nav link below handles getting back to the portal dashboard. */}
+        <Link to="/" className="flex items-center" aria-label="Pitchey home">
           <Logo size="md" />
         </Link>
 

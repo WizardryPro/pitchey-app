@@ -1,62 +1,31 @@
 import React from 'react';
-import { Loader2 } from 'lucide-react';
+import LogoLoader from '@/components/LogoLoader';
 
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  /** Kept for API compatibility — the brand film loader is always violet. */
   color?: 'purple' | 'blue' | 'gray' | 'white';
   className?: string;
   text?: string;
 }
 
-const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
-  size = 'md',
-  color = 'purple',
-  className = '',
-  text
-}) => {
-  const sizeClasses = {
-    sm: 'w-4 h-4',
-    md: 'w-6 h-6',
-    lg: 'w-8 h-8',
-    xl: 'w-12 h-12'
-  };
+// Map the legacy spinner sizes onto the film-strip loader sizes.
+const SIZE_MAP = { sm: 'sm', md: 'sm', lg: 'md', xl: 'lg' } as const;
 
-  const colorClasses = {
-    purple: 'text-purple-600',
-    blue: 'text-blue-600',
-    gray: 'text-gray-600',
-    white: 'text-white'
-  };
-
-  const textSizeClasses = {
-    sm: 'text-xs',
-    md: 'text-sm',
-    lg: 'text-base',
-    xl: 'text-lg'
-  };
-
+/**
+ * LoadingSpinner — now renders the Pitchey film-strip loader (LogoLoader) so every
+ * data-load loading state across the app shares one branded animation. API preserved
+ * (size/text/className + data-testid) for drop-in compatibility.
+ */
+const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ size = 'md', className = '', text }) => {
   return (
-    <div 
+    <div
       className={`flex flex-col items-center justify-center ${className}`}
       data-testid="loading-spinner"
-      role="status"
-      aria-live="polite"
     >
-      <Loader2 
-        className={`${sizeClasses[size]} ${colorClasses[color]} animate-spin`}
-        aria-hidden="true"
-      />
-      {text && (
-        <p className={`mt-2 ${textSizeClasses[size]} ${colorClasses[color]} font-medium`}>
-          {text}
-        </p>
-      )}
-      {!text && (
-        <span className="sr-only">Loading...</span>
-      )}
+      <LogoLoader size={SIZE_MAP[size]} label={text} />
     </div>
   );
 };
 
-export { LoadingSpinner };
 export default LoadingSpinner;
