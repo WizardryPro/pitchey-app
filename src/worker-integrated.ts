@@ -100,6 +100,7 @@ import {
   pitchPublishHandler,
   pitchArchiveHandler
 } from './handlers/pitch-interactions';
+import { inviteCreativeAttachmentHandler, acceptCreativeAttachmentHandler, declineCreativeAttachmentHandler } from './handlers/creative-attachments';
 
 // Activity feed (Following/Saved pivot, Phase 2) — actor/action event source.
 import { recordActivity, getActivityFeed } from './db/activity-feed';
@@ -2682,6 +2683,10 @@ class RouteRegistry {
     this.register('DELETE', '/api/pitches/:id/like', (req) => pitchUnlikeHandler(req, this.env));
     this.register('POST', '/api/pitches/:id/save', (req) => realPitchSaveHandler(req, this.env));
     this.register('DELETE', '/api/pitches/:id/save', (req) => realPitchUnsaveHandler(req, this.env));
+    // Build Your Team — invite / accept / decline verified creative attachments
+    this.register('POST', '/api/pitches/:id/attachments/:attachmentId/invite', (req) => inviteCreativeAttachmentHandler(req, this.env));
+    this.register('POST', '/api/attachments/:token/accept', (req) => acceptCreativeAttachmentHandler(req, this.env));
+    this.register('POST', '/api/attachments/:token/decline', (req) => declineCreativeAttachmentHandler(req, this.env));
 
     // Pitch Publish/Archive endpoints (with cache invalidation)
     this.register('POST', '/api/pitches/:id/publish', async (req) => {
@@ -5997,7 +6002,7 @@ pitchey_analytics_datapoints_per_minute 1250
         let creativeAttachments: Array<Record<string, unknown>> = [];
         try {
           const caRows = await this.db.query(`
-            SELECT id, name, role, bio, imdb_link, website_link, profile_image_url, sort_order
+            SELECT id, name, role, bio, imdb_link, website_link, profile_image_url, sort_order, status
             FROM pitch_creative_attachments
             WHERE pitch_id = $1
             ORDER BY sort_order ASC, id ASC
@@ -6007,6 +6012,8 @@ pitchey_analytics_datapoints_per_minute 1250
             name: c.name,
             role: c.role,
             bio: c.bio,
+            status: c.status ?? 'listed',
+            verified: c.status === 'accepted',
             imdbLink: c.imdb_link ?? undefined,
             websiteLink: c.website_link ?? undefined,
             profileImageUrl: c.profile_image_url ?? undefined,
@@ -6330,7 +6337,7 @@ pitchey_analytics_datapoints_per_minute 1250
       let creativeAttachments: Array<Record<string, unknown>> = [];
       try {
         const caRows = await sql`
-          SELECT id, name, role, bio, imdb_link, website_link, profile_image_url, sort_order
+          SELECT id, name, role, bio, imdb_link, website_link, profile_image_url, sort_order, status
           FROM pitch_creative_attachments
           WHERE pitch_id = ${pitchId}
           ORDER BY sort_order ASC, id ASC
@@ -6340,6 +6347,8 @@ pitchey_analytics_datapoints_per_minute 1250
           name: c.name,
           role: c.role,
           bio: c.bio,
+          status: c.status ?? 'listed',
+          verified: c.status === 'accepted',
           imdbLink: c.imdb_link ?? undefined,
           websiteLink: c.website_link ?? undefined,
           profileImageUrl: c.profile_image_url ?? undefined,
