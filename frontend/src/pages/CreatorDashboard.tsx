@@ -933,42 +933,40 @@ function CreatorDashboard() {
           </div>
 
           {/* Progress to next milestone */}
-          <div className="mt-6 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg">
-            <h4 className="text-sm font-semibold text-gray-900 mb-2">Your Next Goals</h4>
-            <div className="space-y-2">
-              {totalViews < 1000 && (
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min((totalViews / 1000) * 100, 100)}%` }}
-                    />
-                  </div>
-                  <span className="text-xs text-gray-600">{totalViews}/1000 views</span>
-                </div>
-              )}
-              {followers < 50 && (
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-purple-600 h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min((followers / 50) * 100, 100)}%` }}
-                    />
-                  </div>
-                  <span className="text-xs text-gray-600">{followers}/50 followers</span>
-                </div>
-              )}
-              {safeNumber(stats?.totalPitches) < 5 && (
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-green-600 h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min((safeNumber(stats?.totalPitches) / 5) * 100, 100)}%` }}
-                    />
-                  </div>
-                  <span className="text-xs text-gray-600">{safeNumber(stats?.totalPitches)}/5 pitches</span>
-                </div>
-              )}
+          <div className="mt-6 rounded-xl bg-gradient-to-br from-purple-50 to-indigo-50 p-5 ring-1 ring-purple-100/70">
+            <h4 className="text-sm font-semibold text-gray-900 mb-4">Your Next Goals</h4>
+            <div className="space-y-4">
+              {[
+                { key: 'views', label: 'Views', icon: Eye, current: safeNumber(totalViews), target: 1000 },
+                { key: 'followers', label: 'Followers', icon: Users, current: safeNumber(followers), target: 50 },
+                { key: 'pitches', label: 'Pitches', icon: Sparkles, current: safeNumber(stats?.totalPitches), target: 5 },
+              ]
+                .filter((goal) => goal.current < goal.target)
+                .map((goal) => {
+                  const Icon = goal.icon;
+                  const pct = Math.min((goal.current / goal.target) * 100, 100);
+                  return (
+                    <div key={goal.key}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-purple-100 to-indigo-100 text-purple-600 ring-1 ring-inset ring-purple-200/60">
+                            <Icon className="h-3.5 w-3.5" />
+                          </span>
+                          {goal.label}
+                        </span>
+                        <span className="text-xs font-semibold tabular-nums text-gray-500">
+                          {goal.current.toLocaleString()} / {goal.target.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/70 ring-1 ring-inset ring-gray-200/70">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 transition-all duration-700 ease-out"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
           </div>
         </div>

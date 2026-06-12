@@ -300,7 +300,8 @@ describe('CreatorDashboard', () => {
         expect(screen.getAllByText('Active Pitches').length).toBeGreaterThan(0)
         expect(screen.getAllByText('Total Views').length).toBeGreaterThan(0)
         expect(screen.getByText('Avg Rating')).toBeInTheDocument()
-        expect(screen.getByText('Followers')).toBeInTheDocument()
+        // 'Followers' now appears twice — the KPI card + the "Your Next Goals" row.
+        expect(screen.getAllByText('Followers').length).toBeGreaterThan(0)
         expect(screen.getByText('Engagement Rate')).toBeInTheDocument()
       })
     })
