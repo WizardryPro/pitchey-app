@@ -6,6 +6,8 @@ import {
   Twitter, Linkedin, Instagram, Youtube, Award
 } from 'lucide-react';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
+import { sessionManager } from '@/lib/session-manager';
+import { sessionCache } from '@/store/sessionCache';
 import { getDashboardRoute } from '@/utils/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
 import { toast } from 'react-hot-toast';
@@ -38,7 +40,7 @@ interface CompanyProfileData {
 
 export default function ProductionSettingsProfile() {
   const navigate = useNavigate();
-  const { user } = useBetterAuthStore();
+  const { user, checkSession } = useBetterAuthStore();
   const [loading, setLoading] = useState(false);
   const [profileData, setProfileData] = useState<CompanyProfileData>({
     companyName: user?.companyName || '',
@@ -122,6 +124,12 @@ export default function ProductionSettingsProfile() {
         })
       });
       if (!response.ok) throw new Error('Save failed');
+      // Refresh the session cache (the #280 fix) so a username/name change
+      // reflects immediately instead of waiting out the 5-min cache TTL.
+      sessionManager.clearCache();
+      await checkSession();
+      const freshUser = useBetterAuthStore.getState().user;
+      if (freshUser) sessionCache.set(freshUser);
       toast.success('Company profile updated successfully!');
     } catch (error) {
       toast.error('Failed to update company profile');

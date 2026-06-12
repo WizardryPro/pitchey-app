@@ -269,6 +269,33 @@ export default function Settings() {
           <div className="p-6">
             {activeTab === 'profile' && (
               <div className="space-y-6">
+                {/* Portals with a richer, role-tailored profile editor launch into it
+                    from here. The username/email below stay as a quick edit. */}
+                {(user?.userType === 'creator' || user?.userType === 'production') && (
+                  <button
+                    onClick={() => navigate(
+                      user?.userType === 'production'
+                        ? '/production/settings/profile'
+                        : '/creator/settings/profile'
+                    )}
+                    className="w-full flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition text-left"
+                  >
+                    <span className="flex items-center gap-3">
+                      <User className={`w-5 h-5 ${theme.textAccent}`} />
+                      <span>
+                        <span className="block font-medium text-gray-900">
+                          {user?.userType === 'production' ? 'Edit your full company profile' : 'Edit your full creator profile'}
+                        </span>
+                        <span className="block text-sm text-gray-500">
+                          {user?.userType === 'production'
+                            ? 'Company details, branding, contact and the address used on NDAs'
+                            : 'Your creative statement, portfolio, contact and the address used on NDAs'}
+                        </span>
+                      </span>
+                    </span>
+                    <span className={`text-sm font-medium ${theme.textAccent}`}>Open →</span>
+                  </button>
+                )}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Profile</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">

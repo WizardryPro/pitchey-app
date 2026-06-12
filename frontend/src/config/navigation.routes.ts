@@ -38,6 +38,7 @@ export const CREATOR_ROUTES = {
   following: '/creator/following',
   profile: '/creator/profile',
   settings: '/creator/settings',
+  settingsProfile: '/creator/settings/profile',
 
   // Legal Documents
   legalDashboard: '/legal/dashboard',
@@ -92,6 +93,7 @@ export const INVESTOR_ROUTES = {
   wallet: '/investor/wallet',
   paymentMethods: '/investor/payment-methods',
   settings: '/investor/settings',
+  settingsProfile: '/investor/settings/profile',
   following: '/investor/following',
   ndaRequests: '/investor/nda-requests',
   myCollaborations: '/investor/my-collaborations',

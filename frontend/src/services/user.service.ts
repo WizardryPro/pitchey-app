@@ -63,12 +63,17 @@ export interface User {
 
 export interface ProfileUpdateInput {
   name?: string;
+  firstName?: string;
+  lastName?: string;
   username?: string;
   email?: string;
   phone?: string;
   bio?: string;
   location?: string;
   website?: string;
+  companyName?: string;
+  companyAddress?: string;
+  profileImage?: string;
   socialLinks?: {
     twitter?: string;
     linkedin?: string;

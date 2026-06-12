@@ -55,6 +55,7 @@ const RiskAssessment = lazy(() => import('@portals/investor/pages/RiskAssessment
 const InvestorWallet = lazy(() => import('@portals/investor/pages/InvestorWallet'));
 const PaymentMethods = lazy(() => import('@portals/investor/pages/PaymentMethods'));
 const InvestorSettings = lazy(() => import('@portals/investor/pages/InvestorSettings'));
+const InvestorSettingsProfile = lazy(() => import('@portals/investor/pages/InvestorSettingsProfile'));
 const NDARequests = lazy(() => import('@portals/investor/pages/NDARequests'));
 const InvestorDiscover = lazy(() => import('@portals/investor/pages/InvestorDiscover'));
 
@@ -261,6 +262,9 @@ export function AllInvestorRoutes({ isAuthenticated, userType }: RoutesProps) {
       } />
       <Route path={getRelativePath(INVESTOR_ROUTES.settings, '/investor')} element={
         isInvestor ? <InvestorSettings /> : <Navigate to="/login/investor" />
+      } />
+      <Route path={getRelativePath(INVESTOR_ROUTES.settingsProfile, '/investor')} element={
+        isInvestor ? <InvestorSettingsProfile /> : <Navigate to="/login/investor" />
       } />
       <Route path={getRelativePath(INVESTOR_ROUTES.ndaRequests, '/investor')} element={
         isInvestor ? <NDARequests /> : <Navigate to="/login/investor" />

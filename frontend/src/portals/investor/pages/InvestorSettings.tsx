@@ -127,6 +127,28 @@ const InvestorSettings = () => {
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold mb-8">Settings</h1>
 
+          {/* Profile & Identity — username, name, investment thesis live here */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Profile &amp; Identity
+              </CardTitle>
+              <CardDescription>
+                Change your username, name, fund details, and investment thesis
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                onClick={() => { void navigate('/investor/settings/profile'); }}
+                className="w-full justify-start"
+              >
+                <User className="h-4 w-4 mr-2" />
+                Edit Investor Profile
+              </Button>
+            </CardContent>
+          </Card>
+
           {/* Notification Settings */}
           <Card className="mb-6">
             <CardHeader>
@@ -368,7 +390,7 @@ const InvestorSettings = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <Button
-                onClick={() => { void navigate('/investor/profile'); }}
+                onClick={() => { void navigate('/investor/settings/profile'); }}
                 variant="outline"
                 className="w-full justify-start"
               >

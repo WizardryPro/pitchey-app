@@ -1,12 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Pencil, Check, X, Trash2,
   GripVertical, Film, Eye, Heart, Plus, Globe,
-  EyeOff, Search, ExternalLink
+  EyeOff, Search, ExternalLink, Camera, Loader2
 } from 'lucide-react';
 import { SlateService, type SlateDetail } from '@/services/slate.service';
 import { apiClient } from '@/lib/api-client';
+import { API_URL } from '@/config';
+import { prepareImageForUpload, PRE_COMPRESSION_MAX_BYTES } from '@/utils/imageUpload';
+import { toast } from 'react-hot-toast';
 
 interface PitchSearchResult {
   id: number;
@@ -37,6 +40,10 @@ export default function CreatorSlateDetailPage() {
   // Drag state
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  // Cover image
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingCover, setUploadingCover] = useState(false);
 
   const slateId = parseInt(id || '0', 10);
 
@@ -76,6 +83,56 @@ export default function CreatorSlateDetailPage() {
     const updated = await SlateService.update(slateId, { status: newStatus });
     if (updated) {
       setSlate({ ...slate, status: newStatus });
+    }
+  };
+
+  // Upload a slate cover image. Reuses the free identity-image endpoint
+  // (folder='covers') and the shared 'cover' compression preset (1920px).
+  // This is the hero banner shown on the public slate page.
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !slate) return;
+    if (file.size > PRE_COMPRESSION_MAX_BYTES) {
+      toast.error('File too large. Please pick an image under 30MB.');
+      return;
+    }
+    setUploadingCover(true);
+    try {
+      const compressed = await prepareImageForUpload(file, 'cover');
+      const formData = new FormData();
+      formData.append('file', compressed);
+      formData.append('folder', 'covers');
+      const uploadRes = await fetch(`${API_URL}/api/upload/profile`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json().catch(() => ({ message: 'Upload failed' })) as { message?: string };
+        throw new Error(err.message || 'Upload failed');
+      }
+      const { url } = await uploadRes.json() as { url: string };
+      const updated = await SlateService.update(slateId, { cover_image: url });
+      if (!updated) throw new Error('Failed to save cover');
+      setSlate({ ...slate, cover_image: url });
+      toast.success('Cover updated');
+    } catch (err) {
+      const ex = err instanceof Error ? err : new Error(String(err));
+      toast.error(ex.message || 'Failed to upload cover');
+    } finally {
+      setUploadingCover(false);
+      if (coverInputRef.current) coverInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveCover = async () => {
+    if (!slate) return;
+    const updated = await SlateService.update(slateId, { cover_image: null });
+    if (updated) {
+      setSlate({ ...slate, cover_image: null });
+      toast.success('Cover removed');
+    } else {
+      toast.error('Failed to remove cover');
     }
   };
 
@@ -174,6 +231,36 @@ export default function CreatorSlateDetailPage() {
 
   return (
     <div className="space-y-6">
+      {/* Cover banner — the hero image shown on the public slate page */}
+      <div className="group relative h-40 sm:h-48 rounded-xl overflow-hidden bg-gradient-to-r from-purple-600 to-indigo-600">
+        {slate.cover_image && (
+          <img src={slate.cover_image} alt={`${slate.title} cover`} className="w-full h-full object-cover" />
+        )}
+        <input
+          ref={coverInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => { void handleCoverUpload(e); }}
+        />
+        <button
+          onClick={() => coverInputRef.current?.click()}
+          disabled={uploadingCover}
+          className="absolute inset-0 flex items-center justify-center gap-2 bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          {uploadingCover ? <Loader2 className="h-6 w-6 animate-spin" /> : <Camera className="h-6 w-6" />}
+          <span className="font-medium">{slate.cover_image ? 'Change cover image' : 'Add cover image'}</span>
+        </button>
+        {slate.cover_image && !uploadingCover && (
+          <button
+            onClick={handleRemoveCover}
+            className="absolute top-3 right-3 px-2 py-1 rounded-md bg-black/50 text-white text-xs hover:bg-black/70 transition-colors flex items-center gap-1"
+          >
+            <X className="h-3 w-3" /> Remove
+          </button>
+        )}
+      </div>
+
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3 min-w-0">

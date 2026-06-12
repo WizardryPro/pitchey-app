@@ -232,6 +232,7 @@ const ProductionSaved = lazyRetry(() => import('@portals/production/pages/Produc
 const AdvancedSearch = lazyRetry(() => import('./pages/AdvancedSearch'));
 const SearchPage = lazyRetry(() => import('./pages/SearchPage'));
 const SettingsProfile = lazyRetry(() => import('./pages/settings/SettingsProfile'));
+const CreatorSettingsProfile = lazyRetry(() => import('@portals/creator/pages/CreatorSettingsProfile'));
 const NotificationSettings = lazyRetry(() => import('./pages/settings/NotificationSettings'));
 const PrivacySettings = lazyRetry(() => import('./pages/settings/PrivacySettings'));
 const InvestorPortfolio = lazyRetry(() => import('@portals/investor/pages/InvestorPortfolio'));
@@ -522,6 +523,7 @@ function App() {
             <Route path="following" element={<Following />} />
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="settings/profile" element={<CreatorSettingsProfile />} />
             <Route path="portfolio" element={<CreatorPortfolio />} />
             <Route path="billing" element={<Billing />} />
 
