@@ -202,9 +202,9 @@ export default function WatcherDashboard() {
       <div>
         <div className="flex items-baseline justify-between mb-4 px-1">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">Quick Actions</h2>
-          <span className="text-xs text-gray-400">3 shortcuts</span>
+          <span className="text-xs text-gray-400">2 shortcuts</span>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <Link
             to="/watcher/browse"
             className="group relative overflow-hidden bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-cyan-200 transition-all duration-200"
@@ -220,25 +220,6 @@ export default function WatcherDashboard() {
               </h3>
               <p className="text-sm text-gray-500 leading-relaxed">
                 Discover pitches from creators worldwide
-              </p>
-            </div>
-          </Link>
-
-          <Link
-            to={WATCHER_ROUTES.saved}
-            className="group relative overflow-hidden bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-cyan-200 transition-all duration-200"
-          >
-            <div aria-hidden className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-cyan-100/0 to-cyan-100/0 group-hover:from-cyan-100/60 group-hover:to-sky-100/40 rounded-full blur-2xl transition-all duration-300" />
-            <div className="relative">
-              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-sky-600 text-white shadow-sm shadow-cyan-500/30 mb-4 group-hover:scale-105 group-hover:shadow-cyan-500/40 transition-all duration-200">
-                <Heart className="w-5 h-5" />
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-1.5">
-                Saved Pitches
-                <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-cyan-600 group-hover:translate-x-0.5 transition-all duration-200" />
-              </h3>
-              <p className="text-sm text-gray-500 leading-relaxed">
-                Revisit pitches you bookmarked
               </p>
             </div>
           </Link>
