@@ -792,7 +792,7 @@ export default function MarketplaceEnhanced() {
                   {pitch.genre}
                 </span>
               )}
-              <HumanMadeBadge aiUsed={(pitch as any).aiUsed ?? (pitch as any).ai_used} />
+              <HumanMadeBadge aiUsed={(pitch as any).aiUsed ?? (pitch as any).ai_used} variant="compact" />
             </div>
             {getPitchBudgetDisplay(pitch) && (
               <span className="text-xs sm:text-sm font-medium text-green-600 flex items-center gap-0.5">

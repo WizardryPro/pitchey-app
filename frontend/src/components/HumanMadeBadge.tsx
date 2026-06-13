@@ -4,12 +4,24 @@ const DISCLAIMER = 'Pitchey verifies this declaration. If AI-generated content i
 
 interface Props {
   aiUsed?: boolean;
-  variant?: 'inline' | 'pill';
+  variant?: 'inline' | 'pill' | 'compact';
 }
 
 export default function HumanMadeBadge({ aiUsed, variant = 'inline' }: Props) {
   // Only show when explicitly marked as not AI-generated
   if (aiUsed !== false) return null;
+
+  if (variant === 'compact') {
+    // Dense surfaces (marketplace card rows): no pill fill, no "100%" — a quiet
+    // verification mark. Emerald lives only in the icon so it doesn't pile onto
+    // the green budget + score meter sharing the same row.
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs text-gray-500" title={DISCLAIMER}>
+        <Fingerprint className="w-3 h-3 text-emerald-500 shrink-0" />
+        Human-made
+      </span>
+    );
+  }
 
   if (variant === 'pill') {
     return (
