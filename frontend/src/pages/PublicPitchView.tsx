@@ -580,11 +580,12 @@ export default function PublicPitchView() {
                 isAuthenticated={isAuthenticated}
                 isOwner={isOwner}
                 fromPath={`/pitch/${id}`}
+                onRate={() => document.getElementById('pitch-feedback')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
               />
             )}
 
             {pitch && (
-              <div className="bg-white rounded-xl shadow-sm p-6">
+              <div id="pitch-feedback" className="scroll-mt-24 bg-white rounded-xl shadow-sm p-6">
                 <FeedbackSection
                   pitchId={pitch.id}
                   isOwner={false}

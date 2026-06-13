@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, UserPlus, Bookmark } from 'lucide-react';
+import { Heart, UserPlus, Bookmark, Star } from 'lucide-react';
 import { API_URL } from '@/config';
 import { socialService } from '@features/browse/services/social.service';
 
@@ -28,6 +28,10 @@ export interface InterestedCardProps {
   fromPath?: string;
   /** Fired after a successful save/unsave so a parent can react (e.g. unlock a workspace). */
   onSavedChange?: (saved: boolean) => void;
+  /** When set, shows a prominent "Rate & review" action that jumps to the feedback
+   *  section. Surfaces the highest-value audience signal (rating/feedback) instead
+   *  of leaving it buried below the fold. Authenticated → onRate(); anon → sign-in. */
+  onRate?: () => void;
   className?: string;
 }
 
@@ -40,6 +44,7 @@ const InterestedCard: React.FC<InterestedCardProps> = ({
   isOwner = false,
   fromPath,
   onSavedChange,
+  onRate,
   className = '',
 }) => {
   const navigate = useNavigate();
@@ -141,11 +146,24 @@ const InterestedCard: React.FC<InterestedCardProps> = ({
       <h3 className="text-lg font-semibold text-gray-900 mb-1">Interested?</h3>
       <p className="text-sm text-gray-500 mb-4">
         {isAuthenticated
-          ? 'Show your support and keep this pitch close.'
-          : 'Sign in to engage with this pitch and its creator.'}
+          ? 'Rate it, follow the creator, or keep it close — all free.'
+          : 'Sign in to rate, like, follow, and save — all free.'}
       </p>
 
       <div className="space-y-2">
+        {/* Rate & review — the highest-value audience signal, surfaced up top */}
+        {onRate && (
+          <button
+            type="button"
+            onClick={() => (isAuthenticated ? onRate() : goToLogin())}
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition group bg-amber-50 text-amber-700 hover:bg-amber-100 ring-1 ring-amber-200/60"
+          >
+            <Star className="w-4 h-4 group-hover:fill-amber-300" />
+            <span className="flex-1 text-left text-sm font-medium">Rate &amp; review</span>
+            {!isAuthenticated && <span className="text-xs text-amber-500/80">Free</span>}
+          </button>
+        )}
+
         {/* Like this pitch */}
         <button
           type="button"

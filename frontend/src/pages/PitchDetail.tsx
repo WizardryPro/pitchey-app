@@ -982,20 +982,24 @@ export default function PitchDetail() {
                 isAuthenticated={isAuthenticated}
                 isOwner={isOwner}
                 fromPath={`/pitch/${id}`}
+                onRate={() => document.getElementById('pitch-feedback')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
               />
             )}
 
             {/* Feedback & Ratings — visible to all viewers (anon included).
                 Quick-rate (1-5 stars) is open to anyone except the owner;
                 structured feedback form is auth-gated inside the component
-                via canLeaveFeedback. */}
-            <FeedbackSection
-              pitchId={pitch.id}
-              isOwner={isOwner}
-              isAuthenticated={isAuthenticated}
-              userType={(user as any)?.userType || (user as any)?.user_type || ''}
-              showScoreSummary={false}
-            />
+                via canLeaveFeedback. The id anchors the InterestedCard's
+                "Rate & review" jump. */}
+            <div id="pitch-feedback" className="scroll-mt-24">
+              <FeedbackSection
+                pitchId={pitch.id}
+                isOwner={isOwner}
+                isAuthenticated={isAuthenticated}
+                userType={(user as any)?.userType || (user as any)?.user_type || ''}
+                showScoreSummary={false}
+              />
+            </div>
           </div>
 
           {/* Sidebar */}
