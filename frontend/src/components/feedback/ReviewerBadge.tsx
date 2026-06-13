@@ -1,4 +1,4 @@
-import { Briefcase, User, Eye, UserCircle, HelpCircle } from 'lucide-react';
+import { Briefcase, TrendingUp, User, Users, Eye, UserCircle, HelpCircle } from 'lucide-react';
 import type { ComponentType } from 'react';
 
 type IconComponent = ComponentType<{ className?: string }>;
@@ -11,12 +11,17 @@ interface ReviewerBadgeConfig {
 
 // Canonical role set — matches reviewer_type values written by mapUserType() in
 // src/handlers/pitch-feedback.ts. Weights shown in comments are from heat_role_weights.
+// Colors use the canonical portal brand tokens (tailwind brand.portal-*) so a
+// role reads as that role everywhere — NOT green (green is reserved for high
+// Pitchey Scores, which is why a green "Investor" badge was misleading).
+// Industry roles share no icon: Production = Briefcase, Investor = TrendingUp,
+// so the two highest-weight reviewers are distinguishable at a glance.
 const ROLE_CONFIG: Record<string, ReviewerBadgeConfig> = {
   // Industry (high weight)
-  production: { label: 'Production', color: 'bg-blue-100 text-blue-700',     icon: Briefcase },  // ×4
-  investor:   { label: 'Investor',   color: 'bg-green-100 text-green-700',   icon: Briefcase },  // ×3
-  creator:    { label: 'Creator',    color: 'bg-purple-100 text-purple-700', icon: User },       // ×1
-  peer:       { label: 'Peer',       color: 'bg-indigo-100 text-indigo-700', icon: User },       // ×1
+  production: { label: 'Production', color: 'bg-brand-portal-production/10 text-brand-portal-production', icon: Briefcase },  // ×4
+  investor:   { label: 'Investor',   color: 'bg-brand-portal-investor/10 text-brand-portal-investor',     icon: TrendingUp }, // ×3
+  creator:    { label: 'Creator',    color: 'bg-brand-portal-creator/10 text-brand-portal-creator',       icon: User },       // ×1
+  peer:       { label: 'Peer',       color: 'bg-teal-100 text-teal-700',     icon: Users },      // ×1
 
   // Audience (low weight)
   viewer:     { label: 'Viewer',     color: 'bg-gray-100 text-gray-600',     icon: Eye },        // ×0.5
