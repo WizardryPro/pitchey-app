@@ -13,7 +13,7 @@ import { useResponsive } from '@/shared/hooks/useResponsive';
 import { configService } from '../services/config.service';
 
 import FormatDisplay from '../components/FormatDisplay';
-import PitcheyRating from '../components/PitcheyRating';
+import { ScoreMeter } from '../components/feedback/ScoreMeter';
 import HeatBadge, { getHeatScore, getHeatLevel } from '../components/HeatBadge';
 import VerificationBadge from '../components/VerificationBadge';
 import HumanMadeBadge from '../components/HumanMadeBadge';
@@ -699,7 +699,7 @@ export default function MarketplaceEnhanced() {
                   </span>
                   {(() => {
                     const r = Number((pitch as any).rating_average) || Number((pitch as any).ratingAverage) || 0;
-                    return r > 0 ? <PitcheyRating mode="stars" value={r} showNumber /> : null;
+                    return r > 0 ? <ScoreMeter value={r} size="sm" showLabel={false} compact /> : null;
                   })()}
                   <span className="hidden sm:flex items-center gap-1">
                     <MessageCircle className="w-4 h-4" />
@@ -812,7 +812,7 @@ export default function MarketplaceEnhanced() {
             </span>
             {(() => {
               const r = Number((pitch as any).rating_average) || Number((pitch as any).ratingAverage) || 0;
-              return r > 0 ? <PitcheyRating mode="stars" value={r} showNumber /> : null;
+              return r > 0 ? <ScoreMeter value={r} size="sm" showLabel={false} compact /> : null;
             })()}
           </div>
         </div>
@@ -920,7 +920,7 @@ export default function MarketplaceEnhanced() {
                         <span className="flex items-center gap-0.5"><Eye className="w-3 h-3" />{pitch.viewCount || 0}</span>
                         {(() => {
                           const r = Number((pitch as any).rating_average) || Number((pitch as any).ratingAverage) || 0;
-                          return r > 0 ? <PitcheyRating mode="stars" value={r} showNumber /> : null;
+                          return r > 0 ? <ScoreMeter value={r} size="sm" showLabel={false} compact /> : null;
                         })()}
                         {getPitchBudgetDisplay(pitch) && <span className="text-green-600 font-medium">{getPitchBudgetDisplay(pitch)}</span>}
                       </div>
