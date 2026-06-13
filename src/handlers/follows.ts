@@ -35,7 +35,9 @@ export async function followsHandler(request: Request, env: Env): Promise<Respon
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300',
+        // Per-user follow feed — MUST be private (a shared/CDN cache would serve
+        // one user's follows to another) and short so a new follow shows promptly.
+        'Cache-Control': 'private, max-age=30',
         ...corsHeaders
       }
     });
@@ -155,7 +157,9 @@ export async function followsHandler(request: Request, env: Env): Promise<Respon
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300',
+        // Per-user follow feed — MUST be private (a shared/CDN cache would serve
+        // one user's follows to another) and short so a new follow shows promptly.
+        'Cache-Control': 'private, max-age=30',
         ...corsHeaders
       }
     });
@@ -166,7 +170,9 @@ export async function followsHandler(request: Request, env: Env): Promise<Respon
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300',
+        // Per-user follow feed — MUST be private (a shared/CDN cache would serve
+        // one user's follows to another) and short so a new follow shows promptly.
+        'Cache-Control': 'private, max-age=30',
         ...corsHeaders
       }
     });
@@ -252,7 +258,9 @@ export async function followersHandler(request: Request, env: Env): Promise<Resp
       status: 200,
       headers: { 
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300',
+        // Per-user follow feed — MUST be private (a shared/CDN cache would serve
+        // one user's follows to another) and short so a new follow shows promptly.
+        'Cache-Control': 'private, max-age=30',
         ...corsHeaders
       }
     });
@@ -263,7 +271,9 @@ export async function followersHandler(request: Request, env: Env): Promise<Resp
       status: 200,
       headers: { 
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300',
+        // Per-user follow feed — MUST be private (a shared/CDN cache would serve
+        // one user's follows to another) and short so a new follow shows promptly.
+        'Cache-Control': 'private, max-age=30',
         ...corsHeaders
       }
     });
@@ -291,7 +301,9 @@ export async function followingHandler(request: Request, env: Env): Promise<Resp
       status: 200,
       headers: { 
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300',
+        // Per-user follow feed — MUST be private (a shared/CDN cache would serve
+        // one user's follows to another) and short so a new follow shows promptly.
+        'Cache-Control': 'private, max-age=30',
         ...corsHeaders
       }
     });
@@ -347,7 +359,9 @@ export async function followingHandler(request: Request, env: Env): Promise<Resp
       status: 200,
       headers: { 
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300',
+        // Per-user follow feed — MUST be private (a shared/CDN cache would serve
+        // one user's follows to another) and short so a new follow shows promptly.
+        'Cache-Control': 'private, max-age=30',
         ...corsHeaders
       }
     });
@@ -358,7 +372,9 @@ export async function followingHandler(request: Request, env: Env): Promise<Resp
       status: 200,
       headers: { 
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300',
+        // Per-user follow feed — MUST be private (a shared/CDN cache would serve
+        // one user's follows to another) and short so a new follow shows promptly.
+        'Cache-Control': 'private, max-age=30',
         ...corsHeaders
       }
     });

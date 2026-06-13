@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Eye, Heart, Search, ArrowRight, Sparkles, Info, Flame, Bookmark, Clapperboard } from 'lucide-react';
+import { Eye, Heart, Search, ArrowRight, Sparkles, Info, Flame, Bookmark, Clapperboard, Rss, UserPlus } from 'lucide-react';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { apiClient } from '@/lib/api-client';
 import { WATCHER_ROUTES } from '@/config/navigation.routes';
@@ -42,12 +42,55 @@ function PitchTile({ pitch, onOpen }: { pitch: PitchRec; onOpen: (id: number) =>
   );
 }
 
+function timeAgo(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (!then) return '';
+  const s = Math.max(0, Math.floor((Date.now() - then) / 1000));
+  if (s < 60) return 'just now';
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return d < 7 ? `${d}d ago` : `${Math.floor(d / 7)}w ago`;
+}
+
+type FollowActivity = {
+  creator?: { username?: string; companyName?: string; profileImage?: string };
+  pitch?: { id?: number; title?: string; genre?: string };
+  createdAt?: string;
+};
+
+/** A single "creator you follow posted X" row. */
+function FollowFeedRow({ a, onOpen }: { a: FollowActivity; onOpen: (id: number) => void }) {
+  const name = a.creator?.username || a.creator?.companyName || 'A creator';
+  const img = a.creator?.profileImage;
+  const pid = Number(a.pitch?.id);
+  return (
+    <button onClick={() => onOpen(pid)} className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 text-left transition-colors">
+      <span className="shrink-0 w-9 h-9 rounded-full overflow-hidden bg-gradient-to-br from-cyan-100 to-sky-200 ring-1 ring-cyan-100 flex items-center justify-center text-cyan-700 text-sm font-semibold">
+        {img ? <img src={img} alt={name} className="w-full h-full object-cover" /> : name.charAt(0).toUpperCase()}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm text-gray-900 truncate">
+          <span className="font-semibold">{name}</span> posted <span className="font-semibold">{a.pitch?.title || 'a new pitch'}</span>
+        </span>
+        <span className="block text-xs text-gray-500 truncate">
+          {a.pitch?.genre ? `${a.pitch.genre} · ` : ''}{a.createdAt ? timeAgo(a.createdAt) : ''}
+        </span>
+      </span>
+      <ArrowRight className="w-4 h-4 text-gray-300 shrink-0" />
+    </button>
+  );
+}
+
 export default function WatcherDashboard() {
   const navigate = useNavigate();
   const { user: authUser, isAuthenticated } = useBetterAuthStore();
   const [savedCount, setSavedCount] = useState(0);
   const [hotPitches, setHotPitches] = useState<PitchRec[]>([]);
   const [savedPreview, setSavedPreview] = useState<PitchRec[]>([]);
+  const [followFeed, setFollowFeed] = useState<FollowActivity[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -60,12 +103,16 @@ export default function WatcherDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const [savedRes, hot, savedList] = await Promise.all([
+      const [savedRes, hot, savedList, followRes] = await Promise.all([
         apiClient.get<{ totalSaved: number }>('/api/saved-pitches/stats').catch(() => ({ success: false, data: null })),
         pitchService.getPublicHotPitches(6).catch(() => [] as unknown[]),
         SavedPitchesService.getSavedPitches().catch(() => ({ savedPitches: [] as { pitch?: unknown }[] })),
+        apiClient.get<{ activities?: FollowActivity[] }>('/api/follows').catch(() => ({ success: false, data: null })),
       ]);
       if (savedRes.success && savedRes.data) setSavedCount(savedRes.data.totalSaved || 0);
+      // /api/follows returns { activities } flat; apiClient may wrap in .data — handle both.
+      const followBody = (followRes as { data?: { activities?: FollowActivity[] }; activities?: FollowActivity[] });
+      setFollowFeed((followBody?.data?.activities || followBody?.activities || []).slice(0, 5));
       setHotPitches((hot as PitchRec[]) || []);
       setSavedPreview(
         (((savedList as { savedPitches?: { pitch?: unknown }[] })?.savedPitches) || [])
@@ -128,6 +175,40 @@ export default function WatcherDashboard() {
           <p className="text-xs text-gray-400 mt-0.5">Browse, like &amp; save — free forever</p>
         </div>
       </div>
+
+      {/* From creators you follow — the personalised habit loop */}
+      {!loading && (
+        <div>
+          <div className="flex items-baseline justify-between mb-4 px-1">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+              <Rss className="w-4 h-4 text-cyan-600" /> From creators you follow
+            </h2>
+            {followFeed.length > 0 && (
+              <Link to={`${WATCHER_ROUTES.library}?tab=following`} className="text-xs font-medium text-cyan-700 hover:text-cyan-800 inline-flex items-center gap-1">
+                Following <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            )}
+          </div>
+          {followFeed.length > 0 ? (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-100 overflow-hidden">
+              {followFeed.map((a, i) => (
+                <FollowFeedRow key={`${a.pitch?.id ?? 'x'}-${i}`} a={a} onOpen={(id) => navigate(`/pitch/${id}`)} />
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
+              <div className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-cyan-50 to-sky-100 ring-1 ring-cyan-100/60 mb-3">
+                <UserPlus className="w-5 h-5 text-cyan-600" />
+              </div>
+              <p className="text-sm font-medium text-gray-700">Follow creators you love</p>
+              <p className="text-xs text-gray-500 mt-1 mb-4">Their new pitches show up here first, so you never miss a drop.</p>
+              <Link to="/watcher/browse" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-700 transition">
+                <Search className="w-4 h-4" /> Discover creators
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Hottest right now — pull the audience into content */}
       {!loading && hotPitches.length > 0 && (
