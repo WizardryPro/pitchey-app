@@ -2727,6 +2727,20 @@ class RouteRegistry {
                 });
               }
 
+              // Persist a bell notification for every follower. The realtime push
+              // above is ephemeral — an offline follower (e.g. a watcher) would miss
+              // it entirely. One bulk insert fans out to all followers at once.
+              try {
+                await this.db.query(
+                  `INSERT INTO notifications (user_id, type, title, message, related_pitch_id, related_user_id, action_url, is_read, created_at)
+                   SELECT f.follower_id, 'pitch_update', $1, $2, $3, $4, $5, false, NOW()
+                   FROM follows f WHERE f.following_id = $4`,
+                  [`${creatorName} posted a new pitch`, `"${pitch.title}" is now live — take a look.`, pitch.id, Number(userId), `/pitch/${pitch.id}`]
+                );
+              } catch (e) {
+                console.debug('Failed to persist follower pitch-published notifications:', e);
+              }
+
               // Persist to the activity feed (one actor row; fanned out at read time).
               // recordActivity never throws — safe to await inline.
               await recordActivity(this.env, {

@@ -66,6 +66,7 @@ See `docs/roadmap-post-launch-2026-04-20.md` for the post-launch execution plan.
 Available slash commands: `/deploy`, `/test`, `/migrate`
 
 ## Domain Context Docs
+- **[Creator ↔ Production collaboration](docs/creator-production-collaboration.md)** — how creators link with production companies: discovery, join codes/invites, collaboration NDA, shared workspace (`resolveWorkspace`), pitch-scoped collab bridge, deals, and the gating model
 - **[Frontend](docs/context-frontend.md)** — React, Zustand, routing, testing patterns, dashboard architecture
 - **[Backend](docs/context-backend.md)** — Worker API, auth endpoints, database, caching, RBAC
 - **[Deployment](docs/context-deployment.md)** — CI/CD, environment setup, service URLs, deploy commands
