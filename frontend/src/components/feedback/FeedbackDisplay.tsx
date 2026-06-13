@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { ThumbsUp, AlertTriangle, Lightbulb, Sparkles } from 'lucide-react';
 import { FeedbackService } from '../../services/feedback.service';
 import type { FeedbackEntry, RatingStats, RoleBreakdown as RoleBreakdownData } from '../../services/feedback.service';
-import PitcheyRating from '../PitcheyRating';
 import { getRatingLabel } from '../../constants/pitchey-score';
-import { ReviewerBadge } from './ReviewerBadge';
+import { ReviewerBadge, roleAccentBorder } from './ReviewerBadge';
+import { ScoreMeter } from './ScoreMeter';
 import { RoleBreakdown } from './RoleBreakdown';
 
 function RatingBar({ label, count, total }: { label: string; count: number; total: number }) {
@@ -22,21 +22,21 @@ function RatingBar({ label, count, total }: { label: string; count: number; tota
 
 function FeedbackCard({ entry }: { entry: FeedbackEntry }) {
   return (
-    <div className="border border-gray-100 rounded-xl p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-gray-900 text-sm">{entry.is_anonymous ? 'Anonymous' : entry.reviewer_name}</span>
+    <div className={`border border-gray-100 border-l-[3px] ${roleAccentBorder(entry.reviewer_type)} rounded-xl p-4 space-y-3`}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="font-medium text-gray-900 text-sm truncate">{entry.is_anonymous ? 'Anonymous' : entry.reviewer_name}</span>
           <ReviewerBadge type={entry.reviewer_type} />
           {entry.is_interested && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 shrink-0">
               <Sparkles className="w-3 h-3" /> Interested
             </span>
           )}
         </div>
-        <span className="text-xs text-gray-400">{new Date(entry.created_at).toLocaleDateString()}</span>
+        <span className="text-xs text-gray-400 shrink-0">{new Date(entry.created_at).toLocaleDateString()}</span>
       </div>
 
-      {entry.rating && <PitcheyRating mode="display" value={entry.rating} />}
+      {entry.rating ? <ScoreMeter value={entry.rating} /> : null}
 
       {entry.strengths?.length > 0 && (
         <div className="space-y-1">
@@ -108,7 +108,8 @@ function ScoreCards({ ratings }: { ratings: RatingStats }) {
         {pitcheyScore > 0 && (
           <p className="text-xs text-amber-600 mt-1">{getRatingLabel(pitcheyScore)}</p>
         )}
-        <p className="text-xs text-amber-500 mt-1">Industry</p>
+        <p className="text-xs text-amber-500 mt-1 mb-2">Industry</p>
+        {pitcheyScore > 0 && <ScoreMeter value={pitcheyScore} size="sm" showNumber={false} showLabel={false} />}
       </div>
       {/* Viewer Score — grey/secondary */}
       <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center">
@@ -119,7 +120,8 @@ function ScoreCards({ ratings }: { ratings: RatingStats }) {
         {viewerScore > 0 && (
           <p className="text-xs text-gray-500 mt-1">{getRatingLabel(viewerScore)}</p>
         )}
-        <p className="text-xs text-gray-400 mt-1">Audience</p>
+        <p className="text-xs text-gray-400 mt-1 mb-2">Audience</p>
+        {viewerScore > 0 && <ScoreMeter value={viewerScore} size="sm" showNumber={false} showLabel={false} />}
       </div>
     </div>
   );

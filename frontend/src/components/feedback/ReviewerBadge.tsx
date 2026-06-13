@@ -32,6 +32,21 @@ const ROLE_CONFIG: Record<string, ReviewerBadgeConfig> = {
   _fallback:  { label: 'User',       color: 'bg-gray-100 text-gray-600',     icon: HelpCircle },
 };
 
+// Left-accent border per role — brand token for industry/creator (high signal),
+// muted gray for audience (low weight). Lets a feedback card telegraph reviewer
+// authority before any text is read. Industry > audience by line weight + color.
+export function roleAccentBorder(type: string): string {
+  switch (type) {
+    case 'production': return 'border-brand-portal-production';
+    case 'investor':   return 'border-brand-portal-investor';
+    case 'creator':    return 'border-brand-portal-creator';
+    case 'peer':       return 'border-teal-400';
+    case 'viewer':
+    case 'watcher':    return 'border-gray-200';
+    default:           return 'border-gray-100';
+  }
+}
+
 interface Props {
   type: string;
 }
