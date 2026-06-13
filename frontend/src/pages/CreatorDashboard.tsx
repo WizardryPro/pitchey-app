@@ -553,38 +553,44 @@ function CreatorDashboard() {
       {/* ===== COMMAND CENTER HERO ZONE ===== */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
         {/* Left: Key Metrics */}
-        <div className="lg:col-span-3 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl p-6 text-white shadow-lg shadow-purple-500/20">
-          <p className="text-sm font-semibold uppercase tracking-wider text-purple-200/80 mb-5">At a Glance</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div
+        <div className="lg:col-span-3 rounded-2xl bg-gradient-to-br from-purple-50 to-indigo-50 p-5 sm:p-6 ring-1 ring-purple-100/70">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-4">At a Glance</p>
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
+            <button
               onClick={() => { void navigate('/creator/pitches'); }}
-              className="bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl p-4 cursor-pointer transition"
+              className="text-left rounded-xl bg-white p-3 sm:p-4 ring-1 ring-purple-100/60 hover:ring-purple-200 hover:shadow-sm transition"
             >
-              <TrendingUp className="w-5 h-5 text-purple-200 mb-2" />
-              <p className="text-3xl font-bold tracking-tight tabular-nums">{formatNumber(safeAccess(stats, 'activePitches', 0))}</p>
-              <p className="text-purple-200 text-xs mt-0.5">Active Pitches</p>
-            </div>
+              <span className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-brand-portal-creator/10 mb-2">
+                <TrendingUp className="w-4 h-4 text-brand-portal-creator" />
+              </span>
+              <p className="text-2xl sm:text-3xl font-bold tracking-tight tabular-nums text-gray-900 leading-none">{formatNumber(safeAccess(stats, 'activePitches', 0))}</p>
+              <p className="text-gray-500 text-xs mt-1">Active Pitches</p>
+            </button>
 
-            <div
+            <button
               onClick={() => { void navigate('/creator/analytics'); }}
-              className="bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl p-4 cursor-pointer transition"
+              className="text-left rounded-xl bg-white p-3 sm:p-4 ring-1 ring-purple-100/60 hover:ring-purple-200 hover:shadow-sm transition"
             >
-              <Eye className="w-5 h-5 text-purple-200 mb-2" />
-              <p className="text-3xl font-bold tracking-tight tabular-nums">{formatNumber(safeNumber(totalViews, 0))}</p>
-              <p className="text-purple-200 text-xs mt-0.5">Total Views</p>
-            </div>
+              <span className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-brand-portal-creator/10 mb-2">
+                <Eye className="w-4 h-4 text-brand-portal-creator" />
+              </span>
+              <p className="text-2xl sm:text-3xl font-bold tracking-tight tabular-nums text-gray-900 leading-none">{formatNumber(safeNumber(totalViews, 0))}</p>
+              <p className="text-gray-500 text-xs mt-1">Total Views</p>
+            </button>
 
-            <div
+            <button
               onClick={() => { void navigate('/creator/ndas'); }}
-              className="bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl p-4 cursor-pointer transition relative"
+              className="relative text-left rounded-xl bg-white p-3 sm:p-4 ring-1 ring-purple-100/60 hover:ring-purple-200 hover:shadow-sm transition"
             >
-              <Shield className="w-5 h-5 text-purple-200 mb-2" />
-              <p className="text-3xl font-bold tracking-tight tabular-nums">{formatNumber(safeAccess(stats, 'totalInterest', 0))}</p>
-              <p className="text-purple-200 text-xs mt-0.5">Pending NDAs</p>
+              <span className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-brand-portal-creator/10 mb-2">
+                <Shield className="w-4 h-4 text-brand-portal-creator" />
+              </span>
+              <p className="text-2xl sm:text-3xl font-bold tracking-tight tabular-nums text-gray-900 leading-none">{formatNumber(safeAccess(stats, 'totalInterest', 0))}</p>
+              <p className="text-gray-500 text-xs mt-1">Pending NDAs</p>
               {safeNumber(stats?.totalInterest) > 0 && (
-                <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-red-500 rounded-full" />
+                <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-red-500 rounded-full" />
               )}
-            </div>
+            </button>
           </div>
         </div>
 
