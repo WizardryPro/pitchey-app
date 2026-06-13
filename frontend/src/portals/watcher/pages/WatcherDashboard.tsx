@@ -1,15 +1,54 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Eye, Heart, TrendingUp, CreditCard, Search, ArrowRight, Sparkles, Info } from 'lucide-react';
+import { Eye, Heart, TrendingUp, CreditCard, Search, ArrowRight, Sparkles, Info, Flame, Bookmark, Clapperboard } from 'lucide-react';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { apiClient } from '@/lib/api-client';
 import { WATCHER_ROUTES } from '@/config/navigation.routes';
+import { pitchService } from '@features/pitches/services/pitch.service';
+import { SavedPitchesService } from '@features/pitches/services/saved-pitches.service';
+import HeatBadge, { getHeatScore, getPitcheyScore } from '@/components/HeatBadge';
+import { ScoreMeter } from '@/components/feedback/ScoreMeter';
+
+type PitchRec = Record<string, unknown>;
+
+/** Compact pitch tile for the dashboard content rails — cover + heat + score,
+ *  matching the marketplace's visual language. Whole tile opens the pitch. */
+function PitchTile({ pitch, onOpen }: { pitch: PitchRec; onOpen: (id: number) => void }) {
+  const id = Number(pitch.id);
+  const heat = getHeatScore(pitch);
+  const score = getPitcheyScore(pitch);
+  const cover = (pitch.cover_image || pitch.title_image || pitch.titleImage || pitch.thumbnailUrl) as string | undefined;
+  const title = String(pitch.title || 'Untitled');
+  const genre = (pitch.genre as string) || '';
+  return (
+    <button
+      onClick={() => onOpen(id)}
+      className="group text-left bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-cyan-200 transition-all duration-200"
+    >
+      <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-cyan-900 to-sky-900">
+        {cover ? (
+          <img src={cover} alt={title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center"><Clapperboard className="w-8 h-8 text-white/40" /></div>
+        )}
+        {heat > 0 && <div className="absolute top-2 left-2"><HeatBadge score={heat} /></div>}
+      </div>
+      <div className="p-3">
+        <h4 className="font-semibold text-gray-900 text-sm line-clamp-1">{title}</h4>
+        {genre && <p className="text-xs text-gray-500 truncate mt-0.5">{genre}</p>}
+        {score > 0 && <div className="mt-2"><ScoreMeter value={score} size="sm" compact showLabel={false} /></div>}
+      </div>
+    </button>
+  );
+}
 
 export default function WatcherDashboard() {
   const navigate = useNavigate();
   const { user: authUser, isAuthenticated } = useBetterAuthStore();
   const [credits, setCredits] = useState(0);
   const [savedCount, setSavedCount] = useState(0);
+  const [hotPitches, setHotPitches] = useState<PitchRec[]>([]);
+  const [savedPreview, setSavedPreview] = useState<PitchRec[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,12 +61,21 @@ export default function WatcherDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const [creditsRes, savedRes] = await Promise.all([
+      const [creditsRes, savedRes, hot, savedList] = await Promise.all([
         apiClient.get<{ credits: number }>('/api/payments/credits/balance').catch(() => ({ success: false, data: null })),
         apiClient.get<{ totalSaved: number }>('/api/saved-pitches/stats').catch(() => ({ success: false, data: null })),
+        pitchService.getPublicHotPitches(6).catch(() => [] as unknown[]),
+        SavedPitchesService.getSavedPitches().catch(() => ({ savedPitches: [] as { pitch?: unknown }[] })),
       ]);
       if (creditsRes.success && creditsRes.data) setCredits(creditsRes.data.credits || 0);
       if (savedRes.success && savedRes.data) setSavedCount(savedRes.data.totalSaved || 0);
+      setHotPitches((hot as PitchRec[]) || []);
+      setSavedPreview(
+        (((savedList as { savedPitches?: { pitch?: unknown }[] })?.savedPitches) || [])
+          .map((s) => s.pitch as PitchRec)
+          .filter(Boolean)
+          .slice(0, 4)
+      );
     } catch {
       // Non-critical
     } finally {
@@ -96,6 +144,59 @@ export default function WatcherDashboard() {
           <p className="text-xs text-gray-400 mt-0.5">Current plan</p>
         </div>
       </div>
+
+      {/* Hottest right now — pull the audience into content */}
+      {!loading && hotPitches.length > 0 && (
+        <div>
+          <div className="flex items-baseline justify-between mb-4 px-1">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+              <Flame className="w-4 h-4 text-orange-500" /> Hottest right now
+            </h2>
+            <Link to="/watcher/browse" className="text-xs font-medium text-cyan-700 hover:text-cyan-800 inline-flex items-center gap-1">
+              Browse all <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            {hotPitches.slice(0, 6).map((p) => (
+              <PitchTile key={String(p.id)} pitch={p} onOpen={(id) => navigate(`/pitch/${id}`)} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Your saved pitches — personal content + a real empty state */}
+      {!loading && (
+        <div>
+          <div className="flex items-baseline justify-between mb-4 px-1">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+              <Bookmark className="w-4 h-4 text-pink-500" /> Your saved pitches
+            </h2>
+            {savedPreview.length > 0 && (
+              <Link to={WATCHER_ROUTES.saved} className="text-xs font-medium text-cyan-700 hover:text-cyan-800 inline-flex items-center gap-1">
+                View all <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            )}
+          </div>
+          {savedPreview.length > 0 ? (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              {savedPreview.map((p) => (
+                <PitchTile key={String(p.id)} pitch={p} onOpen={(id) => navigate(`/pitch/${id}`)} />
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
+              <div className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-pink-50 to-rose-100 ring-1 ring-pink-100/60 mb-3">
+                <Heart className="w-5 h-5 text-pink-500" />
+              </div>
+              <p className="text-sm font-medium text-gray-700">No saved pitches yet</p>
+              <p className="text-xs text-gray-500 mt-1 mb-4">Tap the heart on any pitch to bookmark it here.</p>
+              <Link to="/watcher/browse" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-700 transition">
+                <Search className="w-4 h-4" /> Browse pitches
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Quick Actions */}
       <div>
