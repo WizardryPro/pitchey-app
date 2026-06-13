@@ -18,6 +18,11 @@ interface TurnstileOptions {
   'expired-callback'?: () => void;
   // Cloudflare passes an error code string (e.g. "600010" = hostname not allowed).
   'error-callback'?: (errorCode?: string) => void;
+  // Silently re-solve when the token expires (~5 min) instead of going stale, and
+  // auto-retry transient failures — kills most "TURNSTILE_FAILED" 403s on submit.
+  'refresh-expired'?: 'auto' | 'manual' | 'never';
+  'retry'?: 'auto' | 'never';
+  'retry-interval'?: number;
   theme?: 'light' | 'dark' | 'auto';
   size?: 'normal' | 'compact' | 'invisible';
 }
@@ -98,6 +103,10 @@ export default function Turnstile({ onVerify, onExpire, onError, theme = 'auto',
           // Keep the token cleared so the gated Sign in button stays disabled.
           onExpireRef.current?.();
         },
+        // Re-issue a fresh token on expiry/transient error before the user submits,
+        // so a token that sat idle never reaches the server stale.
+        'refresh-expired': 'auto',
+        'retry': 'auto',
         theme,
         size,
       });

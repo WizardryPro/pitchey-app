@@ -46,7 +46,14 @@ export default function AdminLogin() {
         return;
       }
       console.error('Admin login failed:', err);
+      // A fresh challenge re-renders immediately (resetTurnstile). If the failure
+      // was a stale/expired security token, tell the user it self-healed so they
+      // just tap Sign in again instead of reloading the page.
       resetTurnstile();
+      const msg = err instanceof Error ? err.message : String(err);
+      if (/turnstile|security check|captcha|bot verification|verification failed/i.test(msg)) {
+        setAuthError('Your security check expired. A fresh one just loaded — tap Sign in again.');
+      }
     }
   };
 
