@@ -10,6 +10,18 @@ import { portalAuth } from '../lib/better-auth-client';
 import { sessionCache } from './sessionCache';
 import { sessionManager } from '../lib/session-manager';
 
+// Map a raw server auth error to user-facing copy. Turnstile tokens are
+// single-use and ~5-min-lived; a stale one returns "Bot verification failed",
+// which reads like a broken login. The login pages auto-reset the widget on
+// error, so tell the user it self-healed and to retry in place. Shared by all
+// portal sign-in methods so every portal shows the same friendly message.
+function friendlyLoginError(srvErr?: string | null): string {
+  if (srvErr && /turnstile|bot verification|verification failed|captcha|security check/i.test(srvErr)) {
+    return 'Your security check expired. A fresh one just loaded — please tap Sign in again.';
+  }
+  return srvErr || 'Login failed. Please complete the captcha above and try again.';
+}
+
 /**
  * Thrown when login succeeds but MFA verification is required.
  * Catch this in login pages to redirect to /mfa/challenge.
@@ -98,7 +110,7 @@ export const useBetterAuthStore = create<BetterAuthState>((set) => ({
       }
       if (response.success === false) {
         const srvErr = typeof response.error === 'string' ? response.error : (response.error as any)?.message;
-        throw new Error(srvErr || 'Login failed. Please complete the captcha above and try again.');
+        throw new Error(friendlyLoginError(srvErr));
       }
       const user = response.user || response.data?.user;
       if (!user) throw new Error('Login response was incomplete. Please try again.');
@@ -123,7 +135,7 @@ export const useBetterAuthStore = create<BetterAuthState>((set) => ({
       }
       if (response.success === false) {
         const srvErr = typeof response.error === 'string' ? response.error : (response.error as any)?.message;
-        throw new Error(srvErr || 'Login failed. Please complete the captcha above and try again.');
+        throw new Error(friendlyLoginError(srvErr));
       }
       const user = response.user || response.data?.user;
       if (!user) throw new Error('Login response was incomplete. Please try again.');
@@ -148,7 +160,7 @@ export const useBetterAuthStore = create<BetterAuthState>((set) => ({
       }
       if (response.success === false) {
         const srvErr = typeof response.error === 'string' ? response.error : (response.error as any)?.message;
-        throw new Error(srvErr || 'Login failed. Please complete the captcha above and try again.');
+        throw new Error(friendlyLoginError(srvErr));
       }
       const user = response.user || response.data?.user;
       if (!user) throw new Error('Login response was incomplete. Please try again.');
@@ -173,7 +185,7 @@ export const useBetterAuthStore = create<BetterAuthState>((set) => ({
       }
       if (response.success === false) {
         const srvErr = typeof response.error === 'string' ? response.error : (response.error as any)?.message;
-        throw new Error(srvErr || 'Login failed. Please complete the captcha above and try again.');
+        throw new Error(friendlyLoginError(srvErr));
       }
       const user = response.user || response.data?.user;
       if (!user) throw new Error('Login response was incomplete. Please try again.');
