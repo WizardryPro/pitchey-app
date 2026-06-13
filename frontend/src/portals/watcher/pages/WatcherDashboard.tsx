@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Eye, Heart, TrendingUp, CreditCard, Search, ArrowRight, Sparkles, Info, Flame, Bookmark, Clapperboard } from 'lucide-react';
+import { Eye, Heart, Search, ArrowRight, Sparkles, Info, Flame, Bookmark, Clapperboard } from 'lucide-react';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { apiClient } from '@/lib/api-client';
 import { WATCHER_ROUTES } from '@/config/navigation.routes';
@@ -45,7 +45,6 @@ function PitchTile({ pitch, onOpen }: { pitch: PitchRec; onOpen: (id: number) =>
 export default function WatcherDashboard() {
   const navigate = useNavigate();
   const { user: authUser, isAuthenticated } = useBetterAuthStore();
-  const [credits, setCredits] = useState(0);
   const [savedCount, setSavedCount] = useState(0);
   const [hotPitches, setHotPitches] = useState<PitchRec[]>([]);
   const [savedPreview, setSavedPreview] = useState<PitchRec[]>([]);
@@ -61,13 +60,11 @@ export default function WatcherDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const [creditsRes, savedRes, hot, savedList] = await Promise.all([
-        apiClient.get<{ credits: number }>('/api/payments/credits/balance').catch(() => ({ success: false, data: null })),
+      const [savedRes, hot, savedList] = await Promise.all([
         apiClient.get<{ totalSaved: number }>('/api/saved-pitches/stats').catch(() => ({ success: false, data: null })),
         pitchService.getPublicHotPitches(6).catch(() => [] as unknown[]),
         SavedPitchesService.getSavedPitches().catch(() => ({ savedPitches: [] as { pitch?: unknown }[] })),
       ]);
-      if (creditsRes.success && creditsRes.data) setCredits(creditsRes.data.credits || 0);
       if (savedRes.success && savedRes.data) setSavedCount(savedRes.data.totalSaved || 0);
       setHotPitches((hot as PitchRec[]) || []);
       setSavedPreview(
@@ -104,7 +101,7 @@ export default function WatcherDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-2 gap-4 sm:gap-5">
         <div className="group relative bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-pink-50 to-rose-100 ring-1 ring-pink-100/60">
@@ -120,19 +117,6 @@ export default function WatcherDashboard() {
 
         <div className="group relative bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
           <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-cyan-50 to-sky-100 ring-1 ring-cyan-100/60">
-              <CreditCard className="w-5 h-5 text-cyan-600" />
-            </div>
-            <span className="text-3xl font-bold tracking-tight text-gray-900 tabular-nums">
-              {loading ? '—' : credits}
-            </span>
-          </div>
-          <p className="text-sm font-medium text-gray-600">Credits Available</p>
-          <p className="text-xs text-gray-400 mt-0.5">Unlock premium actions</p>
-        </div>
-
-        <div className="group relative bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-          <div className="flex items-start justify-between mb-4">
             <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-sky-50 to-cyan-100 ring-1 ring-sky-100/60">
               <Eye className="w-5 h-5 text-sky-600" />
             </div>
@@ -141,7 +125,7 @@ export default function WatcherDashboard() {
             </span>
           </div>
           <p className="text-sm font-medium text-gray-600">The Watcher</p>
-          <p className="text-xs text-gray-400 mt-0.5">Current plan</p>
+          <p className="text-xs text-gray-400 mt-0.5">Browse, like &amp; save — free forever</p>
         </div>
       </div>
 
@@ -198,54 +182,7 @@ export default function WatcherDashboard() {
         </div>
       )}
 
-      {/* Quick Actions */}
-      <div>
-        <div className="flex items-baseline justify-between mb-4 px-1">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">Quick Actions</h2>
-          <span className="text-xs text-gray-400">2 shortcuts</span>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <Link
-            to="/watcher/browse"
-            className="group relative overflow-hidden bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-cyan-200 transition-all duration-200"
-          >
-            <div aria-hidden className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-cyan-100/0 to-cyan-100/0 group-hover:from-cyan-100/60 group-hover:to-sky-100/40 rounded-full blur-2xl transition-all duration-300" />
-            <div className="relative">
-              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-sky-600 text-white shadow-sm shadow-cyan-500/30 mb-4 group-hover:scale-105 group-hover:shadow-cyan-500/40 transition-all duration-200">
-                <Search className="w-5 h-5" />
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-1.5">
-                Browse Marketplace
-                <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-cyan-600 group-hover:translate-x-0.5 transition-all duration-200" />
-              </h3>
-              <p className="text-sm text-gray-500 leading-relaxed">
-                Discover pitches from creators worldwide
-              </p>
-            </div>
-          </Link>
-
-          <Link
-            to={WATCHER_ROUTES.billing}
-            className="group relative overflow-hidden bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-cyan-200 transition-all duration-200"
-          >
-            <div aria-hidden className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-cyan-100/0 to-cyan-100/0 group-hover:from-cyan-100/60 group-hover:to-sky-100/40 rounded-full blur-2xl transition-all duration-300" />
-            <div className="relative">
-              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-sky-600 text-white shadow-sm shadow-cyan-500/30 mb-4 group-hover:scale-105 group-hover:shadow-cyan-500/40 transition-all duration-200">
-                <TrendingUp className="w-5 h-5" />
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-1.5">
-                Buy Credits
-                <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-cyan-600 group-hover:translate-x-0.5 transition-all duration-200" />
-              </h3>
-              <p className="text-sm text-gray-500 leading-relaxed">
-                Purchase credits to unlock features
-              </p>
-            </div>
-          </Link>
-        </div>
-      </div>
-
-      {/* NDA notice */}
+      {/* Conversion nudge — the "funnel" half of the audience+funnel intent */}
       <div className="flex gap-3 bg-gradient-to-r from-amber-50 to-orange-50/60 border border-amber-200/70 rounded-2xl p-5">
         <div className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg bg-amber-100 text-amber-700">
           <Info className="w-4 h-4" />

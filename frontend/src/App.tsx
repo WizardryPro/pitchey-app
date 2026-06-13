@@ -601,13 +601,12 @@ function App() {
                 (restores the original /watcher/browse intent noted in MarketplaceEnhanced). */}
             <Route path="browse" element={<Marketplace />} />
             {/* Legacy redirect — old sidebar entry now lives in /watcher/library */}
+            {/* Legacy redirect — old sidebar entry now lives in /watcher/library */}
             <Route path="saved" element={<Navigate to="/watcher/library?tab=saved" replace />} />
             <Route path="following" element={<Navigate to="/watcher/library?tab=following" replace />} />
-            <Route path="pitch/new" element={<CreatePitch />} />
-            <Route path="pitch/:id/edit" element={<PitchEdit />} />
-            <Route path="pitches/:id/edit" element={<PitchEdit />} />
-            <Route path="drafts" element={<ManagePitches />} />
-            <Route path="billing" element={<Billing />} />
+            {/* Watcher = audience-only. Creation (pitch/new, drafts, edit) and billing
+                were orphaned routes contradicting that intent — removed 2026-06-13.
+                Stale links fall through to the index → dashboard redirect. */}
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
           </Route>

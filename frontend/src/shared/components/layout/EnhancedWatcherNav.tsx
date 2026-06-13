@@ -1,8 +1,8 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Home, Library,
-  CreditCard, User, Settings
+  Home, Compass, Library,
+  User, Settings
 } from 'lucide-react';
 import { WATCHER_ROUTES } from '@/config/navigation.routes';
 
@@ -19,16 +19,16 @@ interface NavigationSection {
 
 export const watcherNavigationSections: NavigationSection[] = [
   {
-    title: 'Dashboard',
+    title: 'Watch',
     items: [
       { label: 'Overview', path: WATCHER_ROUTES.dashboard, icon: Home },
+      { label: 'Discover', path: WATCHER_ROUTES.browse, icon: Compass },
       { label: 'My Library', path: WATCHER_ROUTES.library, icon: Library },
     ],
   },
   {
     title: 'Account',
     items: [
-      { label: 'Credits & Billing', path: WATCHER_ROUTES.billing, icon: CreditCard },
       { label: 'Profile', path: WATCHER_ROUTES.profile, icon: User },
       { label: 'Settings', path: WATCHER_ROUTES.settings, icon: Settings },
     ],
