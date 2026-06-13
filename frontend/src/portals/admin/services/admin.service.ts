@@ -174,6 +174,10 @@ export interface PromoRedeemer {
 export interface PromoCodeReport {
   id: string;
   code: string;
+  cohort: string | null;
+  recipient: string | null;
+  recipientEmail: string | null;
+  sentAt: string | null;
   percentOff: number | null;
   used: number;
   max: number | null;
@@ -509,6 +513,31 @@ class AdminService {
     });
     const result = await handleResponse<{ success: boolean; data: { codes: PromoCodeReport[] } }>(response);
     return result.data?.codes ?? [];
+  }
+
+  // Mint N single-use film-industry codes server-side (worker uses its own
+  // live Stripe key — no terminal needed).
+  async generatePromoCodes(count: number, percentOff: number): Promise<{ created: { id: string; code: string }[]; count: number }> {
+    const response = await fetch(`${API_BASE_URL}/api/admin/promo-codes/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ count, percentOff }),
+    });
+    const result = await handleResponse<{ success: boolean; data: { created: { id: string; code: string }[]; count: number } }>(response);
+    return result.data;
+  }
+
+  // Assign an industry code to a recipient + email it to them.
+  async sendPromoInvite(promoId: string, recipientName: string, recipientEmail: string): Promise<{ code: string; recipient: string; recipientEmail: string; sentAt: string }> {
+    const response = await fetch(`${API_BASE_URL}/api/admin/promo-codes/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ promoId, recipientName, recipientEmail }),
+    });
+    const result = await handleResponse<{ success: boolean; data: { code: string; recipient: string; recipientEmail: string; sentAt: string } }>(response);
+    return result.data;
   }
 }
 

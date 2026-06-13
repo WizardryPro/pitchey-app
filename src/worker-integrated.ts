@@ -3581,6 +3581,14 @@ class RouteRegistry {
       const { adminPromoCodesHandler } = await import('./handlers/promo-codes');
       return adminPromoCodesHandler(req, this.env);
     });
+    this.register('POST', '/api/admin/promo-codes/send', async (req) => {
+      const { sendPromoInviteHandler } = await import('./handlers/promo-codes');
+      return sendPromoInviteHandler(req, this.env);
+    });
+    this.register('POST', '/api/admin/promo-codes/generate', async (req) => {
+      const { createPromoCodesHandler } = await import('./handlers/promo-codes');
+      return createPromoCodesHandler(req, this.env);
+    });
 
     this.register('GET', '/api/creator/ndas', async (req) => {
       const { creatorNdasHandler } = await import('./handlers/creator-sidebar');

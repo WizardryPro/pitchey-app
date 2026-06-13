@@ -153,6 +153,42 @@ export class StripeService {
     return this.request('GET', '/promotion_codes?limit=100');
   }
 
+  // Update a promotion code's metadata (Stripe only allows `active` + `metadata`
+  // on update). Used to stamp who an industry code was assigned/sent to.
+  async updatePromotionCodeMetadata(id: string, metadata: Record<string, string>): Promise<any> {
+    const params: Record<string, string> = {};
+    for (const [k, v] of Object.entries(metadata)) params[`metadata[${k}]`] = v;
+    return this.request('POST', `/promotion_codes/${id}`, params);
+  }
+
+  // Retrieve a coupon by id; returns null if it doesn't exist (so callers can
+  // create-or-reuse idempotently).
+  async retrieveCoupon(id: string): Promise<any | null> {
+    try {
+      return await this.request('GET', `/coupons/${encodeURIComponent(id)}`);
+    } catch {
+      return null;
+    }
+  }
+
+  async createCoupon(params: { id: string; percentOff: number; duration?: string; name?: string; metadata?: Record<string, string> }): Promise<any> {
+    const p: Record<string, string> = {
+      id: params.id,
+      percent_off: String(params.percentOff),
+      duration: params.duration || 'forever',
+    };
+    if (params.name) p.name = params.name;
+    for (const [k, v] of Object.entries(params.metadata || {})) p[`metadata[${k}]`] = v;
+    return this.request('POST', '/coupons', p);
+  }
+
+  async createPromotionCode(params: { coupon: string; code: string; maxRedemptions?: number; metadata?: Record<string, string> }): Promise<any> {
+    const p: Record<string, string> = { coupon: params.coupon, code: params.code };
+    if (params.maxRedemptions != null) p.max_redemptions = String(params.maxRedemptions);
+    for (const [k, v] of Object.entries(params.metadata || {})) p[`metadata[${k}]`] = v;
+    return this.request('POST', '/promotion_codes', p);
+  }
+
   // Checkout sessions are scanned to find WHO redeemed a code: each session
   // carries the applied `discounts[].promotion_code` and the `metadata.userId`
   // we stamp at creation, so we can join straight back to our users table.
