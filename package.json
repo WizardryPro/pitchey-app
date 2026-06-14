@@ -41,7 +41,8 @@
     "db:migrate": "node scripts/migrate.mjs apply",
     "db:migrate:status": "node scripts/migrate.mjs status",
     "db:migrate:check": "node scripts/migrate.mjs check",
-    "db:migrate:baseline": "node scripts/migrate.mjs baseline"
+    "db:migrate:baseline": "node scripts/migrate.mjs baseline",
+    "check:nda-flow": "node scripts/checks/nda-approve-flow.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
