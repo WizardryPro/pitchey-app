@@ -1265,19 +1265,21 @@ function ProductionDashboard() {
 
             {/* Following Tab Header with Filters */}
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50/80 border border-blue-100/60 rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
+              {/* Stack heading above filters below sm so the title can't get
+                  squeezed to one-word-per-line and the selects can't overflow. */}
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
+                <div className="min-w-0">
                   <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                    <Users className="w-6 h-6 text-purple-600" />
+                    <Users className="w-6 h-6 text-purple-600 shrink-0" />
                     Your Following Feed
                   </h2>
                   <p className="text-gray-600 mt-1">Stay updated with the latest from creators you follow</p>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-3 w-full sm:w-auto sm:shrink-0">
                   <select
                     value={followingSortBy}
                     onChange={(e) => setFollowingSortBy(e.target.value)}
-                    className="px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    className="flex-1 min-w-[140px] sm:flex-none px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                   >
                     <option value="recent">Most Recent</option>
                     <option value="popular">Most Popular</option>
@@ -1287,7 +1289,7 @@ function ProductionDashboard() {
                   <select
                     value={followingFilterBy}
                     onChange={(e) => setFollowingFilterBy(e.target.value)}
-                    className="px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    className="flex-1 min-w-[140px] sm:flex-none px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                   >
                     <option value="all">All Content</option>
                     <option value="new">New This Week</option>
@@ -1543,19 +1545,21 @@ function ProductionDashboard() {
 
             {/* Header with Overview Stats */}
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
+              {/* Stack the 4-pill stats below the heading until lg so they get
+                  full width instead of clipping ("Pending" → "Penc"). */}
+              <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between mb-6">
+                <div className="min-w-0">
                   <h2 className="text-2xl font-semibold text-gray-900 flex items-center gap-3">
-                    <Shield className="w-7 h-7 text-purple-600" />
+                    <Shield className="w-7 h-7 text-purple-600 shrink-0" />
                     NDA Management Center
                   </h2>
                   <p className="text-gray-600 mt-2">
                     Manage all your NDA workflows in one place - from incoming requests to signed agreements
                   </p>
                 </div>
-                
+
                 {/* Quick Stats — split by direction */}
-                <div className="grid grid-cols-2 gap-6 text-center">
+                <div className="grid grid-cols-2 gap-4 sm:gap-6 text-center w-full lg:w-auto lg:shrink-0">
                   <div className="space-y-2">
                     <div className="flex items-center justify-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
                       <Inbox className="w-3.5 h-3.5" />
