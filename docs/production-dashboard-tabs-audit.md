@@ -13,9 +13,9 @@ The dashboard is a 4-tab segmented control: **Overview · Saved Pitches · Follo
 | 3 | Duplicate "NDA Summary" block | `be26d8e8` ✅ |
 | 4 | Following CTA clutter (4 → 2) | `be26d8e8` ✅ |
 | 5 | Filters rendered in empty states | `be26d8e8` ✅ |
-| 6 | Deep NDA heading nesting | Partially (shortened by #3); full collapsibles **deferred** |
+| 6 | Deep NDA heading nesting | `63bd802e` ✅ (collapsible direction sections with count badges) |
 
-Remaining (lower priority, not yet done): #6 full collapsible NDA sections; the Overview↔tabs content duplication (part of #3) is a larger IA decision left open.
+All six audit items resolved. Remaining open (larger IA decision, not a bug): the Overview↔tabs content duplication — Overview re-surfaces saved/following/NDA data the dedicated tabs also show; consolidating that is a product call, not a cleanup.
 
 ---
 
