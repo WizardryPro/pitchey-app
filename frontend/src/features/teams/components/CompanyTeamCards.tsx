@@ -181,7 +181,11 @@ export function CompanyJoinCodeCard() {
 
       {members.length > 0 && (
         <div className="mt-5 border-t border-gray-100 pt-4">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Members &amp; NDA status</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Company members</p>
+          <p className="mb-2 text-xs text-gray-400">
+            Creators who joined your company with this code. The badge shows whether they&apos;ve signed the
+            company collaboration NDA — required before they can open shared workspaces.
+          </p>
           <ul className="space-y-1.5">
             {members.map((m) => (
               <li key={m.userId} className="flex items-center justify-between gap-2 rounded-lg px-1 py-1">
@@ -191,8 +195,11 @@ export function CompanyJoinCodeCard() {
                 </div>
                 {m.ndaStatus === 'signed' ? (
                   <div className="flex shrink-0 items-center gap-2">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
-                      <Shield className="h-3 w-3" /> Signed
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200"
+                      title="Company collaboration NDA — signed"
+                    >
+                      <Shield className="h-3 w-3" /> NDA signed
                     </span>
                     {m.documentUrl && (
                       <a
@@ -200,15 +207,18 @@ export function CompanyJoinCodeCard() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-[11px] font-medium text-purple-600 hover:text-purple-800"
-                        title="View signed NDA"
+                        title="View the signed company collaboration NDA"
                       >
-                        <FileText className="h-3 w-3" /> NDA
+                        <FileText className="h-3 w-3" /> View
                       </a>
                     )}
                   </div>
                 ) : (
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-inset ring-amber-200">
-                    <Clock className="h-3 w-3" /> Pending
+                  <span
+                    className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-inset ring-amber-200"
+                    title="Has joined the company but not yet signed the collaboration NDA"
+                  >
+                    <Clock className="h-3 w-3" /> NDA pending
                   </span>
                 )}
               </li>
