@@ -4,6 +4,19 @@ _Captured live from `pitchey-5o8.pages.dev/production/dashboard` (stellarproduct
 
 The dashboard is a 4-tab segmented control: **Overview · Saved Pitches · Following · NDAs**. Below is an inventory of each tab and the UI/UX issues found, then a prioritised cross-cutting list.
 
+## Status (resolved 2026-06-14)
+
+| # | Item | Commit |
+|---|---|---|
+| 1 | Responsive header/stat clipping (Following, NDAs) | `59b3058f` ✅ |
+| 2 | Saved-count disagreed across 3 surfaces (real bug: api-client `.data` nesting + mislabeled chart) | `b4a879cb` ✅ |
+| 3 | Duplicate "NDA Summary" block | `be26d8e8` ✅ |
+| 4 | Following CTA clutter (4 → 2) | `be26d8e8` ✅ |
+| 5 | Filters rendered in empty states | `be26d8e8` ✅ |
+| 6 | Deep NDA heading nesting | Partially (shortened by #3); full collapsibles **deferred** |
+
+Remaining (lower priority, not yet done): #6 full collapsible NDA sections; the Overview↔tabs content duplication (part of #3) is a larger IA decision left open.
+
 ---
 
 ## Tab 1 — Overview
