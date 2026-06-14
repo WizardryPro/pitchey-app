@@ -9,7 +9,8 @@ import {
   X, AlertCircle, User, Trash2, CheckCircle,
   Bookmark, Filter, Search,
   Wifi, WifiOff, AlertTriangle, RefreshCw,
-  Inbox, Send, Sparkles, ArrowRight, Share2, CreditCard, MessageSquare
+  Inbox, Send, Sparkles, ArrowRight, Share2, CreditCard, MessageSquare,
+  ChevronDown
 } from 'lucide-react';
 import QuickActionsPanel, { type QuickAction } from '../components/dashboard/QuickActionsPanel';
 import ShareLinksModal from '../components/portfolio/ShareLinksModal';
@@ -78,6 +79,9 @@ function ProductionDashboard() {
   });
   const { isConnected, connectionQuality, isReconnecting } = useWebSocket();
   const [activeTab, setActiveTab] = useState<'overview' | 'my-pitches' | 'saved' | 'following' | 'ndas'>('overview');
+  // Collapsible NDA sections — both open by default; lets a producer fold away
+  // the direction they don't care about so the tab isn't a wall of headings.
+  const [ndaSectionsOpen, setNdaSectionsOpen] = useState({ incoming: true, outgoing: true });
   const [showShareModal, setShowShareModal] = useState(false);
 
   const quickActions: QuickAction[] = [
@@ -1625,16 +1629,27 @@ function ProductionDashboard() {
             <div className="space-y-8">
               {/* SECTION: NDAs ON YOUR PITCHES (incoming — others asking/signing to see your work) */}
               <section>
-                <div className="flex items-center gap-3 mb-4 pb-2 border-b border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setNdaSectionsOpen(s => ({ ...s, incoming: !s.incoming }))}
+                  aria-expanded={ndaSectionsOpen.incoming}
+                  className="w-full flex items-center gap-3 mb-4 pb-2 border-b border-gray-200 text-left"
+                >
                   <div className="p-2 bg-blue-50 rounded-lg">
                     <Inbox className="w-5 h-5 text-blue-600" />
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">NDAs on Your Pitches</h3>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                      NDAs on Your Pitches
+                      <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold tabular-nums">
+                        {incomingNDARequests.length + incomingSignedNDAs.length}
+                      </span>
+                    </h3>
                     <p className="text-sm text-gray-600">Others requesting access to — or already accessing — your pitches</p>
                   </div>
-                </div>
-                <div className="space-y-6">
+                  <ChevronDown className={`w-5 h-5 text-gray-400 shrink-0 transition-transform ${ndaSectionsOpen.incoming ? '' : '-rotate-90'}`} />
+                </button>
+                <div className={`space-y-6 ${ndaSectionsOpen.incoming ? '' : 'hidden'}`}>
                   {/* 1. Incoming NDA Requests - Others wanting to access your pitches */}
                   <NDAManagementPanel
                 category="incoming-requests"
@@ -1685,16 +1700,27 @@ function ProductionDashboard() {
 
               {/* SECTION: NDAs YOU'VE INITIATED (outgoing — access you've asked for or signed on others' pitches) */}
               <section>
-                <div className="flex items-center gap-3 mb-4 pb-2 border-b border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setNdaSectionsOpen(s => ({ ...s, outgoing: !s.outgoing }))}
+                  aria-expanded={ndaSectionsOpen.outgoing}
+                  className="w-full flex items-center gap-3 mb-4 pb-2 border-b border-gray-200 text-left"
+                >
                   <div className="p-2 bg-purple-50 rounded-lg">
                     <Send className="w-5 h-5 text-purple-600" />
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">NDAs You've Initiated</h3>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                      NDAs You've Initiated
+                      <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold tabular-nums">
+                        {outgoingNDARequests.length + signedNDAs.length}
+                      </span>
+                    </h3>
                     <p className="text-sm text-gray-600">Requests you've sent and NDAs you've signed to access other creators' pitches</p>
                   </div>
-                </div>
-                <div className="space-y-6">
+                  <ChevronDown className={`w-5 h-5 text-gray-400 shrink-0 transition-transform ${ndaSectionsOpen.outgoing ? '' : '-rotate-90'}`} />
+                </button>
+                <div className={`space-y-6 ${ndaSectionsOpen.outgoing ? '' : 'hidden'}`}>
                   {/* 3. Your Outgoing NDA Requests - Your pending requests */}
                   <NDAManagementPanel
                     category="outgoing-requests"
