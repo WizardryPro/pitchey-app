@@ -221,7 +221,14 @@ const InterestedCard: React.FC<InterestedCardProps> = ({
         </button>
       </div>
 
-      {!isAuthenticated && (
+      {isAuthenticated ? (
+        // The audience's payoff: their engagement isn't a dead counter — the
+        // liker breakdown is genuinely surfaced to creators + producers, so a
+        // like/save/follow is real signal. Stated truthfully, it nudges action.
+        <p className="text-xs text-gray-400 mt-3 text-center">
+          Creators &amp; producers can see the audience backing a pitch.
+        </p>
+      ) : (
         <p className="text-xs text-gray-400 mt-3 text-center">No credit card required</p>
       )}
     </div>

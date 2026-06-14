@@ -168,3 +168,77 @@ export async function getPitchEngagementHandler(request: Request, env: Env): Pro
     });
   }
 }
+
+/**
+ * GET /api/pitches/audience-demand
+ * The producer-facing demand lens — ranks published pitches by *audience*
+ * (watcher) engagement specifically, isolated from the blended Heat score.
+ *
+ * Heat already weights industry attention ×4; this does the opposite — it
+ * surfaces what the crowd is backing before the industry weighs in, so a
+ * producer can mine genuine audience appetite as its own signal. Score =
+ * watcher likes ×3 + saves ×2 + views ×1 (intent-ordered). Only pitches with
+ * real audience signal appear; an empty result is honest ("no audience signal
+ * yet"), not a bug. Each row carries the raw watcher counts so the UI can show
+ * "12 watchers like this" rather than an opaque number.
+ *
+ * Watcher = user_type 'viewer' (legacy DB naming; see CLAUDE.md viewer/watcher).
+ */
+export async function audienceDemandHandler(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin');
+  const headers = { 'Content-Type': 'application/json', ...getCorsHeaders(origin) };
+
+  const sql = getDb(env);
+  if (!sql) {
+    return new Response(JSON.stringify({ success: false, error: 'Service unavailable' }), { status: 503, headers });
+  }
+
+  try {
+    const url = new URL(request.url);
+    const limit = Math.min(24, Math.max(1, parseInt(url.searchParams.get('limit') || '8', 10)));
+
+    const pitches = await sql`
+      WITH wl AS (
+        SELECT l.pitch_id, COUNT(DISTINCT l.user_id) AS cnt
+        FROM likes l JOIN users u ON u.id = l.user_id
+        WHERE u.user_type = 'viewer' GROUP BY l.pitch_id
+      ), ws AS (
+        SELECT s.pitch_id, COUNT(DISTINCT s.user_id) AS cnt
+        FROM saved_pitches s JOIN users u ON u.id = s.user_id
+        WHERE u.user_type = 'viewer' GROUP BY s.pitch_id
+      ), wv AS (
+        SELECT v.pitch_id, COUNT(DISTINCT v.viewer_id) AS cnt
+        FROM pitch_views v JOIN users u ON u.id = v.viewer_id
+        WHERE u.user_type = 'viewer' GROUP BY v.pitch_id
+      )
+      SELECT
+        p.id, p.title, p.logline, p.genre, p.format,
+        p.title_image AS cover_image,
+        COALESCE(p.view_count, 0)::int AS view_count,
+        COALESCE(p.like_count, 0)::int AS like_count,
+        p.heat_score::float AS heat_score,
+        p.created_at,
+        u.id AS creator_id, u.username AS creator_username,
+        u.name AS creator_name, u.profile_image AS creator_avatar,
+        COALESCE(wl.cnt, 0)::int AS watcher_likes,
+        COALESCE(ws.cnt, 0)::int AS watcher_saves,
+        COALESCE(wv.cnt, 0)::int AS watcher_views,
+        (COALESCE(wl.cnt, 0) * 3 + COALESCE(ws.cnt, 0) * 2 + COALESCE(wv.cnt, 0))::int AS audience_score
+      FROM pitches p
+      JOIN users u ON u.id = COALESCE(p.creator_id, p.user_id)
+      LEFT JOIN wl ON wl.pitch_id = p.id
+      LEFT JOIN ws ON ws.pitch_id = p.id
+      LEFT JOIN wv ON wv.pitch_id = p.id
+      WHERE p.status = 'published'
+        AND (COALESCE(wl.cnt, 0) * 3 + COALESCE(ws.cnt, 0) * 2 + COALESCE(wv.cnt, 0)) > 0
+      ORDER BY audience_score DESC, p.heat_score DESC NULLS LAST
+      LIMIT ${limit}
+    `;
+
+    return new Response(JSON.stringify({ success: true, data: { pitches } }), { headers });
+  } catch (err) {
+    const e = err instanceof Error ? err : new Error(String(err));
+    console.error('audienceDemandHandler error:', e.message);
+    return new Response(JSON.stringify({ success: false, error: 'Failed to load audience demand' }), { status: 500, headers });
+  }
+}

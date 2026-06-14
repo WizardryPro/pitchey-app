@@ -62,7 +62,7 @@ import {
   getViewAnalyticsHandler,
   getPitchViewersHandler
 } from './handlers/views';
-import { getPitchEngagementHandler } from './handlers/pitch-engagement';
+import { getPitchEngagementHandler, audienceDemandHandler } from './handlers/pitch-engagement';
 
 // Import extended dashboard handlers
 import {
@@ -2283,6 +2283,9 @@ class RouteRegistry {
       const { hotPitchesHandler } = await import('./handlers/heat-score');
       return hotPitchesHandler(req, this.env);
     });
+    // Producer-facing demand lens — pitches ranked by audience (watcher)
+    // engagement, isolated from blended Heat. Registered BEFORE :id.
+    this.register('GET', '/api/pitches/audience-demand', (req) => audienceDemandHandler(req, this.env));
     // Real implementations replacing canned stub-routes (see stub-routes.ts)
     this.register('GET', '/api/investment/recommendations', this.getInvestmentRecommendations.bind(this));
     this.register('GET', '/api/production/investments/overview', this.getProductionInvestmentsOverview.bind(this));

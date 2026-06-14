@@ -29,6 +29,7 @@ import FollowButton from '@features/browse/components/FollowButton';
 import NDAManagementPanel from '@features/ndas/components/NDAManagementPanel';
 import { CompanyJoinCodeCard } from '@features/teams/components/CompanyTeamCards';
 import ProductionSlateBoard from '../portals/production/components/ProductionSlateBoard';
+import AudienceDemandRail from '../portals/production/components/AudienceDemandRail';
 import FormatDisplay from '../components/FormatDisplay';
 import { EnhancedProductionAnalytics } from '@features/analytics/components/Analytics/EnhancedProductionAnalytics';
 import { withPortalErrorBoundary } from '../components/ErrorBoundary/PortalErrorBoundary';
@@ -967,6 +968,10 @@ function ProductionDashboard() {
 
             {/* Workspace-driven deal funnel — owned + saved pitches by readiness */}
             <ProductionSlateBoard />
+
+            {/* Audience demand lens — pitches ranked by watcher engagement,
+                isolated from blended Heat (moat plan, phase 2). */}
+            <AudienceDemandRail />
 
             {/* Pitch Evaluation Analytics */}
             <EnhancedProductionAnalytics
