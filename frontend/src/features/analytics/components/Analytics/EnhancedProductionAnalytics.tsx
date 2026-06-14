@@ -232,7 +232,7 @@ export const EnhancedProductionAnalytics: React.FC<PitchEvaluationProps> = (prop
                   category: item.genre,
                   value: item.count
                 }))}
-                title="Saved Pitches by Genre"
+                title="Pitches by Genre"
                 type="doughnut"
                 height={300}
               />

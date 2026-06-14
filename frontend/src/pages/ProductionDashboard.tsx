@@ -368,11 +368,18 @@ function ProductionDashboard() {
           setFollowingPitches([]);
         }
 
-        // Saved pitch IDs and full items for the Saved Pitches tab
-        if (savedResponse.success && Array.isArray(savedResponse.data)) {
-          setSavedPitches(savedResponse.data.map((sp: any) => sp.pitchId || sp.pitch_id));
-          setSavedPitchItems(savedResponse.data);
-        }
+        // Saved pitch IDs and full items for the Saved Pitches tab.
+        // GET /api/saved-pitches returns `{ success, savedPitches[], total }`,
+        // and apiClient nests the body under `.data` — so the array lives at
+        // `savedResponse.data.savedPitches`. Reading `savedResponse.data` (an
+        // object, not an array) is why the Saved tab showed 0 while the Slate
+        // correctly showed the same saved pitch. Unwrap defensively.
+        const savedBody: any = (savedResponse as any).data ?? savedResponse;
+        const savedArr: any[] = Array.isArray(savedBody?.savedPitches)
+          ? savedBody.savedPitches
+          : (Array.isArray(savedBody) ? savedBody : []);
+        setSavedPitches(savedArr.map((sp: any) => sp.pitchId || sp.pitch_id));
+        setSavedPitchItems(savedArr);
 
         // Following creators count — backend returns { data: { stats: { following: N } } }
         if (followStatsResponse.success && followStatsResponse.data) {
