@@ -3,7 +3,6 @@ import {
   TrendingUp,
   Eye,
   Heart,
-  Share2,
   Users,
   DollarSign,
   Film,
@@ -45,7 +44,6 @@ interface CreatorAnalyticsData {
     totalPitches: number;
     totalViews: number;
     totalLikes: number;
-    totalShares: number;
     engagementRate: number;
     fundingReceived: number;
     averageRating: number;
@@ -57,7 +55,6 @@ interface CreatorAnalyticsData {
     pitchesChange: number;
     viewsChange: number;
     likesChange: number;
-    sharesChange: number;
     engagementChange: number;
     fundingChange: number;
     ratingChange: number;
@@ -144,7 +141,6 @@ export const EnhancedCreatorAnalytics: React.FC<CreatorAnalyticsProps> = ({
           totalPitches: overview.totalPitches || 0,
           totalViews: overview.totalViews || 0,
           totalLikes: overview.totalLikes || 0,
-          totalShares: 0,
           engagementRate: performance.engagementTrend?.length ?
             performance.engagementTrend.reduce((acc, curr) => acc + (curr?.rate || 0), 0) / performance.engagementTrend.length : 0,
           fundingReceived: dashboardMetrics?.revenue?.total || 0,
@@ -157,7 +153,6 @@ export const EnhancedCreatorAnalytics: React.FC<CreatorAnalyticsProps> = ({
           pitchesChange: overview.pitchesChange || 0,
           viewsChange: overview.viewsChange || 0,
           likesChange: overview.likesChange || 0,
-          sharesChange: 0,
           engagementChange: 0,
           fundingChange: dashboardMetrics?.revenue?.growth || 0,
           ratingChange: 0,
@@ -368,14 +363,13 @@ export const EnhancedCreatorAnalytics: React.FC<CreatorAnalyticsProps> = ({
           icon={<Heart className="w-5 h-5 text-pink-500" />}
           variant="danger"
         />
-        <AnalyticCard 
-          title="Shares"
-          value={analyticsData.kpis.totalShares}
-          change={analyticsData.changes.sharesChange}
-          icon={<Share2 className="w-5 h-5 text-blue-500" />}
-          variant="primary"
-        />
-        <AnalyticCard 
+        {/*
+          "Shares" KPI removed — it was hardwired to 0 with no backend source.
+          Shares are not tracked anywhere (the pitch_shares table exists but is
+          never written to or queried). Reinstate when real share tracking lands.
+          See issue #288.
+        */}
+        <AnalyticCard
           title="NDA Requests"
           value={analyticsData.kpis.ndaRequests}
           change={analyticsData.changes.ndaChange}
