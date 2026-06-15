@@ -66,6 +66,8 @@ export async function creatorPitchesHandler(request: Request, env: Env): Promise
           view_count,
           like_count,
           nda_count,
+          rating_average,
+          rating_count,
           published_at,
           created_at,
           updated_at
@@ -105,6 +107,8 @@ export async function creatorPitchesHandler(request: Request, env: Env): Promise
           view_count,
           like_count,
           nda_count,
+          rating_average,
+          rating_count,
           published_at,
           created_at,
           updated_at
@@ -145,6 +149,8 @@ export async function creatorPitchesHandler(request: Request, env: Env): Promise
       viewCount: pitch.view_count || 0,
       likeCount: pitch.like_count || 0,
       ndaCount: pitch.nda_count || 0,
+      ratingAverage: Number(pitch.rating_average) || 0,
+      ratingCount: Number(pitch.rating_count) || 0,
       publishedAt: pitch.published_at,
       createdAt: pitch.created_at,
       updatedAt: pitch.updated_at

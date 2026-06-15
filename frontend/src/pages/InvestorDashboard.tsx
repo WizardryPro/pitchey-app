@@ -467,7 +467,6 @@ function InvestorDashboard() {
                 {formatPercentage(portfolio.averageROI, 0)}
               </p>
               <p className="text-sm font-medium text-gray-600 mt-1">Average ROI</p>
-              <p className="text-xs text-gray-400 mt-0.5">Industry avg: 12.3%</p>
             </div>
 
             <div className="group relative bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">

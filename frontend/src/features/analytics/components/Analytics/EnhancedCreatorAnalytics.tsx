@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  TrendingUp,
   Eye,
   Heart,
   Users,
@@ -376,21 +375,11 @@ export const EnhancedCreatorAnalytics: React.FC<CreatorAnalyticsProps> = ({
           icon={<MessageSquare className="w-5 h-5 text-orange-500" />}
           variant="warning"
         />
-        <AnalyticCard 
-          title="Average Rating"
-          value={analyticsData.kpis.averageRating.toFixed(1)}
-          change={analyticsData.changes.ratingChange}
-          icon={<TrendingUp className="w-5 h-5 text-yellow-500" />}
-          variant="warning"
-        />
-        <AnalyticCard 
-          title="Response Rate"
-          value={analyticsData.kpis.responseRate}
-          change={analyticsData.changes.responseChange}
-          icon={<MessageSquare className="w-5 h-5 text-teal-500" />}
-          variant="success"
-          format="percentage"
-        />
+        {/*
+          "Average Rating" and "Response Rate" KPIs removed — both were hardwired
+          to 0 with no backend source. Reinstate when real values are wired up.
+          See issue #288.
+        */}
       </div>
 
       {/* Charts Grid */}
