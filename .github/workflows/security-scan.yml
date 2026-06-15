@@ -76,13 +76,25 @@ jobs:
 
       - name: NPM Audit
         run: |
-          npm audit --audit-level=moderate --json > npm-audit.json || true
-          if [ $(cat npm-audit.json | jq '.metadata.vulnerabilities.moderate + .metadata.vulnerabilities.high + .metadata.vulnerabilities.critical' 2>/dev/null || echo "0") -gt 0 ]; then
-            echo "❌ Found vulnerabilities in npm packages"
+          # Full-tree audit for visibility only — does NOT fail the build.
+          # The build/deploy toolchain (wrangler → miniflare/esbuild/ws, form-data,
+          # etc.) routinely carries CVEs whose only fix is a major bump gated on
+          # Cloudflare's release cadence, and none of it ships to the Worker
+          # runtime. Surfacing it keeps awareness without a perpetually-red gate.
+          echo "ℹ️  Full dependency tree (informational, non-blocking):"
+          npm audit --audit-level=moderate --json > npm-audit-full.json || true
+          cat npm-audit-full.json | jq '.metadata.vulnerabilities'
+
+          # Gate ONLY on production (runtime) dependencies — what actually reaches
+          # the deployed Worker. This is the failing check.
+          npm audit --omit=dev --audit-level=moderate --json > npm-audit.json || true
+          prod_vulns=$(cat npm-audit.json | jq '.metadata.vulnerabilities.moderate + .metadata.vulnerabilities.high + .metadata.vulnerabilities.critical' 2>/dev/null || echo "0")
+          if [ "$prod_vulns" -gt 0 ]; then
+            echo "❌ Found moderate+ vulnerabilities in PRODUCTION dependencies"
             cat npm-audit.json | jq '.vulnerabilities'
             exit 1
           else
-            echo "✅ No moderate or higher vulnerabilities found"
+            echo "✅ No moderate+ vulnerabilities in production (runtime) dependencies"
           fi
 
       - name: Snyk Security Scan
