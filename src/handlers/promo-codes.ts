@@ -201,6 +201,7 @@ export async function createPromoCodesHandler(request: Request, env: Env): Promi
       return jsonResponse({ success: false, error: 'Admin access required' }, origin, 403);
     }
 
+    // fire-and-forget
     const body = (await request.json().catch(() => ({}))) as { count?: number; percentOff?: number };
     const count = Math.max(1, Math.min(50, Math.floor(Number(body.count) || 0)));
     const percentOff = Math.max(1, Math.min(100, Math.floor(Number(body.percentOff ?? 100))));
@@ -275,6 +276,7 @@ export async function sendPromoInviteHandler(request: Request, env: Env): Promis
       return jsonResponse({ success: false, error: 'Admin access required' }, origin, 403);
     }
 
+    // fire-and-forget
     const body = (await request.json().catch(() => ({}))) as {
       promoId?: string; code?: string; recipientName?: string; recipientEmail?: string;
     };

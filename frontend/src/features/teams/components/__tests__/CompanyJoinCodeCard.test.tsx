@@ -24,16 +24,16 @@ beforeEach(() => {
 })
 
 describe('CompanyJoinCodeCard — per-seat NDA status', () => {
-  it('lists members with Signed / Pending status and a doc link for signed', async () => {
+  it('lists members with NDA signed / NDA pending status and a doc link for signed', async () => {
     render(<CompanyJoinCodeCard />)
 
     await waitFor(() => expect(screen.getByText('Alex Creator')).toBeInTheDocument())
     expect(screen.getByText('Dana Writer')).toBeInTheDocument()
-    expect(screen.getByText('Signed')).toBeInTheDocument()
-    expect(screen.getByText('Pending')).toBeInTheDocument()
+    expect(screen.getByText('NDA signed')).toBeInTheDocument()
+    expect(screen.getByText('NDA pending')).toBeInTheDocument()
 
     // Signed member exposes a "View NDA" link to the document endpoint.
-    const link = screen.getByTitle('View signed NDA') as HTMLAnchorElement
+    const link = screen.getByTitle('View the signed company collaboration NDA') as HTMLAnchorElement
     expect(link.getAttribute('href')).toContain('/api/teams/2/collaboration-nda/document?signerId=1025')
   })
 })
