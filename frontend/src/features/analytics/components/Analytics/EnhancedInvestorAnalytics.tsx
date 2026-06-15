@@ -116,7 +116,7 @@ export const EnhancedInvestorAnalytics: React.FC<InvestorAnalyticsProps> = ({
 
       if (result.success && analyticsData) {
         // Transform API response to component data structure
-        const transformedData: InvestorAnalyticsData = transformApiResponse(analyticsData, timeRange);
+        const transformedData: InvestorAnalyticsData = transformApiResponse(analyticsData);
         setAnalyticsData(transformedData);
       } else {
         console.warn('API returned unexpected structure', result);
@@ -133,73 +133,107 @@ export const EnhancedInvestorAnalytics: React.FC<InvestorAnalyticsProps> = ({
     }
   }, [timeRange]);
 
-  // Transform API response to component data structure
-  const transformApiResponse = (apiData: any, range: string): InvestorAnalyticsData => {
-    const multiplier = range === '7d' ? 0.25 : range === '30d' ? 1 : range === '90d' ? 3 : 12;
+  // Transform API response to component data structure.
+  //
+  // The /api/investor/analytics endpoint returns ONLY real fields:
+  //   performance[], topPerformers[], riskAnalysis{}, genrePerformance[].
+  // It does NOT return portfolio value, active-deal counts, monthly-deal counts,
+  // NDA counts, or period-over-period deltas. Anything we can't derive from the
+  // real fields is left at 0 — we do NOT fabricate it. (KPIs at 0 read as "no
+  // data"; AnalyticCard hides the trend badge when change === 0.)
+  const transformApiResponse = (apiData: any): InvestorAnalyticsData => {
+    const genres: any[] = Array.isArray(apiData.genrePerformance) ? apiData.genrePerformance : [];
+    const performance: any[] = Array.isArray(apiData.performance) ? apiData.performance : [];
+    const risk = apiData.riskAnalysis;
+
+    const totalInvested = genres.reduce((sum, g) => sum + (g.totalValue || 0), 0);
+    const totalInvestments = genres.reduce((sum, g) => sum + (g.investments || 0), 0);
+
+    // Value-weighted average ROI across genres (avgROI comes from real roi_percentage).
+    const averageROI = totalInvested > 0
+      ? genres.reduce((sum, g) => sum + (g.avgROI || 0) * (g.totalValue || 0), 0) / totalInvested
+      : 0;
+
+    // Current portfolio value derived from invested capital + recorded ROI per genre.
+    // This is the only honest portfolio-value aggregate the API supports.
+    const portfolioValue = Math.round(
+      genres.reduce((sum, g) => sum + (g.totalValue || 0) * (1 + (g.avgROI || 0) / 100), 0)
+    );
+
+    // Diversification = (1 − Herfindahl index over invested value) × 10, 0–10 scale.
+    const diversificationIndex = totalInvested > 0
+      ? (1 - genres.reduce((sum, g) => sum + Math.pow((g.totalValue || 0) / totalInvested, 2), 0)) * 10
+      : 0;
+
+    // riskAnalysis values are real percentages (sum to 100 when investments exist).
+    const riskScore = risk
+      ? ((risk.highRisk || 0) * 3 + (risk.mediumRisk || 0) * 2 + (risk.lowRisk || 0)) / 100 * 10
+      : 0;
 
     return {
       kpis: {
-        totalInvestments: apiData.performance?.length || Math.round(15 * multiplier / 12),
-        totalInvested: apiData.genrePerformance?.reduce((sum: number, g: any) => sum + (g.totalValue || 0), 0) || Math.round(2500000 * multiplier),
-        portfolioValue: Math.round((apiData.genrePerformance?.reduce((sum: number, g: any) => sum + (g.totalValue || 0), 0) || 2500000) * 1.28 * multiplier),
-        activeDeals: Math.round(8 * (range === '7d' ? 0.8 : 1)),
-        averageROI: apiData.genrePerformance?.reduce((sum: number, g: any) => sum + (g.avgROI || 0), 0) / Math.max(apiData.genrePerformance?.length || 1, 1) || 22.5,
-        successRate: 0,
-        monthlyDeals: range === '7d' ? 1 : range === '30d' ? 3 : range === '90d' ? 9 : 36,
-        ndasSigned: Math.round(45 * multiplier / 12),
-        diversificationIndex: 0,
-        riskScore: apiData.riskAnalysis ? (apiData.riskAnalysis.highRisk * 3 + apiData.riskAnalysis.mediumRisk * 2 + apiData.riskAnalysis.lowRisk) / 100 * 10 : 0,
+        totalInvestments,
+        totalInvested,
+        portfolioValue,
+        activeDeals: 0,   // not provided by the API
+        averageROI,
+        successRate: 0,   // not provided by the API
+        monthlyDeals: 0,  // not provided by the API
+        ndasSigned: 0,    // not provided by the API
+        diversificationIndex,
+        riskScore,
       },
       changes: {
-        investmentsChange: range === '7d' ? 10 : range === '30d' ? 25 : range === '90d' ? 40 : 60,
-        investedChange: range === '7d' ? 8 : range === '30d' ? 18 : range === '90d' ? 30 : 50,
-        portfolioChange: range === '7d' ? 12 : range === '30d' ? 28 : range === '90d' ? 45 : 70,
-        dealsChange: range === '7d' ? 5 : range === '30d' ? 14 : range === '90d' ? 25 : 40,
-        roiChange: 3.2,
-        successChange: 5,
+        // The analytics API does not return period-over-period deltas. Show no
+        // trend badge rather than invent one (AnalyticCard hides change === 0).
+        investmentsChange: 0,
+        investedChange: 0,
+        portfolioChange: 0,
+        dealsChange: 0,
+        roiChange: 0,
+        successChange: 0,
         monthlyDealsChange: 0,
-        ndaChange: range === '7d' ? 5 : range === '30d' ? 15 : range === '90d' ? 25 : 40,
-        diversificationChange: 0.5,
-        riskChange: -0.3,
+        ndaChange: 0,
+        diversificationChange: 0,
+        riskChange: 0,
       },
       charts: {
-        portfolioGrowth: generateTimeSeriesData(range, 2000000, 3500000),
-        investmentsByCategory: apiData.genrePerformance?.map((g: any) => ({
+        // Real time-series from the API; empty array → charts render their empty state.
+        portfolioGrowth: performance.map((p) => ({
+          date: p.date,
+          value: (p.invested || 0) + (p.returns || 0),
+        })),
+        investmentsByCategory: genres.map((g) => ({
           category: g.genre || 'Unknown',
           amount: g.totalValue || 0,
-          count: g.investments || 0
-        })) || [],
-        dealFlow: generateTimeSeriesData(range, 1, 5),
-        roiTrends: generateTimeSeriesData(range, 15, 35),
-        riskAssessment: apiData.riskAnalysis ? [
-          { risk: 'Low Risk', count: apiData.riskAnalysis.lowRisk || 45 },
-          { risk: 'Medium Risk', count: apiData.riskAnalysis.mediumRisk || 35 },
-          { risk: 'High Risk', count: apiData.riskAnalysis.highRisk || 20 },
-        ] : [
-          { risk: 'Low Risk', count: 45 },
-          { risk: 'Medium Risk', count: 35 },
-          { risk: 'High Risk', count: 20 },
-        ],
-        monthlyPerformance: generateMonthlyPerformance(range),
-        topInvestments: apiData.topPerformers?.map((p: any) => ({
+          count: g.investments || 0,
+        })),
+        dealFlow: [], // per-period deal counts not provided by the API
+        roiTrends: performance.map((p) => ({
+          date: p.date,
+          value: p.invested > 0 ? Math.round(((p.returns || 0) / p.invested) * 100) : 0,
+        })),
+        riskAssessment: risk ? [
+          { risk: 'Low Risk', count: risk.lowRisk || 0 },
+          { risk: 'Medium Risk', count: risk.mediumRisk || 0 },
+          { risk: 'High Risk', count: risk.highRisk || 0 },
+        ] : [],
+        monthlyPerformance: performance.map((p) => ({
+          month: p.date,
+          invested: p.invested || 0,
+          returns: p.returns || 0,
+          deals: 0,
+        })),
+        topInvestments: (apiData.topPerformers || []).map((p: any) => ({
           title: p.pitchTitle || 'Unknown',
           amount: p.amount || 0,
           roi: p.currentValue && p.amount ? Math.round((p.currentValue - p.amount) / p.amount * 100) : 0,
-          status: 'Active'
-        })) || [],
-        marketSegments: apiData.marketSegments?.map((s: any) => ({
-          segment: s.segment || 'Unknown',
-          allocation: s.allocation || 0,
-          performance: s.performance || 0,
-        })) || [],
+          status: p.status || 'Active',
+        })),
+        marketSegments: [], // not provided by the API
       }
     };
   };
-
-  // Empty chart data generators (no fake data — charts show "no data" state)
-  const generateTimeSeriesData = (_range: string, _min: number, _max: number): { date: string; value: number }[] => [];
-
-  const generateMonthlyPerformance = (_range: string): { month: string; invested: number; returns: number; deals: number }[] => [];
 
   useEffect(() => {
     fetchAnalyticsData();
@@ -360,22 +394,30 @@ export const EnhancedInvestorAnalytics: React.FC<InvestorAnalyticsProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Portfolio Growth */}
         <ChartContainer title="Portfolio Value Growth">
-          <AreaChart
-            data={analyticsData.charts.portfolioGrowth}
-            title="Portfolio Value ($)"
-            color="#10B981"
-            height={300}
-          />
+          {analyticsData.charts.portfolioGrowth.length > 0 ? (
+            <AreaChart
+              data={analyticsData.charts.portfolioGrowth}
+              title="Portfolio Value ($)"
+              color="#10B981"
+              height={300}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-[300px] text-gray-500">No data available</div>
+          )}
         </ChartContainer>
 
         {/* ROI Trends */}
         <ChartContainer title="ROI Trends">
-          <LineChart
-            data={analyticsData.charts.roiTrends}
-            title="ROI (%)"
-            color="#8B5CF6"
-            height={300}
-          />
+          {analyticsData.charts.roiTrends.length > 0 ? (
+            <LineChart
+              data={analyticsData.charts.roiTrends}
+              title="ROI (%)"
+              color="#8B5CF6"
+              height={300}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-[300px] text-gray-500">No data available</div>
+          )}
         </ChartContainer>
 
         {/* Investment by Category */}
@@ -396,27 +438,35 @@ export const EnhancedInvestorAnalytics: React.FC<InvestorAnalyticsProps> = ({
 
         {/* Risk Assessment */}
         <ChartContainer title="Portfolio Risk Distribution">
-          <PieChartComponent
-            data={analyticsData.charts.riskAssessment.map(item => ({
-              category: item.risk,
-              value: item.count
-            }))}
-            title="Investment Risk Levels"
-            type="doughnut"
-            height={300}
-          />
+          {analyticsData.charts.riskAssessment.some(item => item.count > 0) ? (
+            <PieChartComponent
+              data={analyticsData.charts.riskAssessment.map(item => ({
+                category: item.risk,
+                value: item.count
+              }))}
+              title="Investment Risk Levels"
+              type="doughnut"
+              height={300}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-[300px] text-gray-500">No data available</div>
+          )}
         </ChartContainer>
 
         {/* Deal Flow */}
         <ChartContainer title="Monthly Deal Flow">
-          <BarChart
-            data={analyticsData.charts.dealFlow.map((item, index) => ({
-              category: new Date(item.date).toLocaleDateString('en-US', { month: 'short' }),
-              value: item.value
-            }))}
-            title="Number of Deals"
-            height={300}
-          />
+          {analyticsData.charts.dealFlow.length > 0 ? (
+            <BarChart
+              data={analyticsData.charts.dealFlow.map((item) => ({
+                category: new Date(item.date).toLocaleDateString('en-US', { month: 'short' }),
+                value: item.value
+              }))}
+              title="Number of Deals"
+              height={300}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-[300px] text-gray-500">No data available</div>
+          )}
         </ChartContainer>
 
         {/* Market Segments Performance */}
@@ -451,16 +501,20 @@ export const EnhancedInvestorAnalytics: React.FC<InvestorAnalyticsProps> = ({
 
       {/* Monthly Performance Overview */}
       <ChartContainer title="Monthly Investment Performance">
-        <StackedBarChart
-          data={analyticsData.charts.monthlyPerformance.map(item => ({
-            category: item.month,
-            values: [
-              { label: 'Invested', value: item.invested / 1000 },
-              { label: 'Returns', value: item.returns / 1000 }
-            ]
-          }))}
-          height={350}
-        />
+        {analyticsData.charts.monthlyPerformance.length > 0 ? (
+          <StackedBarChart
+            data={analyticsData.charts.monthlyPerformance.map(item => ({
+              category: item.month,
+              values: [
+                { label: 'Invested', value: item.invested / 1000 },
+                { label: 'Returns', value: item.returns / 1000 }
+              ]
+            }))}
+            height={350}
+          />
+        ) : (
+          <div className="flex items-center justify-center h-[350px] text-gray-500">No data available</div>
+        )}
       </ChartContainer>
 
       {/* Top Investments */}
@@ -503,60 +557,14 @@ export const EnhancedInvestorAnalytics: React.FC<InvestorAnalyticsProps> = ({
         )}
       </div>
 
-      {/* Portfolio Insights */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl border p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Portfolio Health</h3>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Diversification</span>
-              <span className="font-semibold text-green-600">Excellent</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Risk Level</span>
-              <span className="font-semibold text-yellow-600">Moderate</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Liquidity</span>
-              <span className="font-semibold text-blue-600">High</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Performance</span>
-              <span className="font-semibold text-green-600">Above Market</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Market Insights</h3>
-          <div className="space-y-3">
-            <div className="bg-green-50 p-3 rounded-lg">
-              <p className="text-sm text-green-800">Action films showing 15% growth</p>
-            </div>
-            <div className="bg-yellow-50 p-3 rounded-lg">
-              <p className="text-sm text-yellow-800">Comedy genre underperforming</p>
-            </div>
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <p className="text-sm text-blue-800">Documentary market expanding</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recommendations</h3>
-          <div className="space-y-3">
-            <div className="border-l-4 border-blue-500 pl-3">
-              <p className="text-sm text-gray-700">Consider increasing Sci-Fi allocation</p>
-            </div>
-            <div className="border-l-4 border-green-500 pl-3">
-              <p className="text-sm text-gray-700">Excellent ROI in current portfolio</p>
-            </div>
-            <div className="border-l-4 border-yellow-500 pl-3">
-              <p className="text-sm text-gray-700">Monitor risk levels closely</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/*
+        Removed the static "Portfolio Health", "Market Insights", and
+        "Recommendations" panels — they rendered hardcoded strings
+        ("Action films showing 15% growth", "Consider increasing Sci-Fi
+        allocation", etc.) to every investor regardless of their actual
+        portfolio. No data source backs them. Reinstate only when a real
+        insights/recommendations endpoint exists. See issue #287.
+      */}
     </div>
   );
 };

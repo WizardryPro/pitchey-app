@@ -139,6 +139,21 @@ function InvestorDashboard() {
   const initialLoading = !sectionStatus.portfolio.loaded && !sectionStatus.portfolio.error;
   const isOnline = useOnlineStatus();
 
+  // Derived analytics/financials metrics — computed from REAL investment data.
+  // Previously these tabs showed hardcoded fabrications ($67,500 returns, 73%
+  // success rate, $250,000 available funds, a fake transactions table) to every
+  // investor regardless of activity. We only show what we can derive; anything
+  // without a real data source is omitted rather than invented. See issue #287.
+  const totalReturns = investments.reduce((sum, inv) => sum + (inv.amount * (inv.roi || 0)) / 100, 0);
+  const profitableCount = investments.filter((inv) => (inv.roi || 0) > 0).length;
+  const successRate = investments.length > 0 ? Math.round((profitableCount / investments.length) * 100) : 0;
+  const avgDealSize = investments.length > 0
+    ? investments.reduce((sum, inv) => sum + (inv.amount || 0), 0) / investments.length
+    : 0;
+  const pendingAmount = investments
+    .filter((inv) => /pending|negotiat/i.test(inv.status || ''))
+    .reduce((sum, inv) => sum + (inv.amount || 0), 0);
+
   // Check session on mount and redirect if not authenticated
   useEffect(() => {
     const validateSession = async () => {
@@ -452,7 +467,6 @@ function InvestorDashboard() {
                 {formatPercentage(portfolio.averageROI, 0)}
               </p>
               <p className="text-sm font-medium text-gray-600 mt-1">Average ROI</p>
-              <p className="text-xs text-gray-400 mt-0.5">Industry avg: 12.3%</p>
             </div>
 
             <div className="group relative bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
@@ -1036,22 +1050,22 @@ function InvestorDashboard() {
                   </div>
                 </div>
                 
-                {/* Key Metrics */}
+                {/* Key Metrics — derived from real investment data */}
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="bg-gray-50 rounded-lg p-4">
                     <p className="text-sm text-gray-600">Total Returns</p>
-                    <p className="text-2xl font-bold text-gray-900">$67,500</p>
-                    <p className="text-xs text-indigo-600 mt-1">+15% YTD</p>
+                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalReturns)}</p>
+                    <p className="text-xs text-gray-500 mt-1">Across {investments.length} investment{investments.length === 1 ? '' : 's'}</p>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-4">
                     <p className="text-sm text-gray-600">Success Rate</p>
-                    <p className="text-2xl font-bold text-gray-900">73%</p>
-                    <p className="text-xs text-gray-500 mt-1">11 of 15 profitable</p>
+                    <p className="text-2xl font-bold text-gray-900">{successRate}%</p>
+                    <p className="text-xs text-gray-500 mt-1">{profitableCount} of {investments.length} profitable</p>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-4">
                     <p className="text-sm text-gray-600">Avg. Deal Size</p>
-                    <p className="text-2xl font-bold text-gray-900">$75,000</p>
-                    <p className="text-xs text-gray-500 mt-1">Last 6 months</p>
+                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(avgDealSize)}</p>
+                    <p className="text-xs text-gray-500 mt-1">Per investment</p>
                   </div>
                 </div>
               </div>
@@ -1068,17 +1082,9 @@ function InvestorDashboard() {
                   </button>
                 </div>
                 
-                {/* Financial Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                  <div className="bg-indigo-50 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm text-gray-600">Available Funds</p>
-                      <Wallet className="w-4 h-4 text-indigo-600" />
-                    </div>
-                    <p className="text-2xl font-bold text-gray-900">$250,000</p>
-                    <p className="text-xs text-gray-500 mt-1">Ready to invest</p>
-                  </div>
-                  
+                {/* Financial Summary Cards — derived from real investment data.
+                    "Available Funds" removed: no wallet-balance data source exists. */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                   <div className="bg-blue-50 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-sm text-gray-600">Allocated</p>
@@ -1087,22 +1093,22 @@ function InvestorDashboard() {
                     <p className="text-2xl font-bold text-gray-900">{formatCurrency(portfolio.totalInvested)}</p>
                     <p className="text-xs text-gray-500 mt-1">In active investments</p>
                   </div>
-                  
+
                   <div className="bg-purple-50 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-sm text-gray-600">Total Returns</p>
                       <TrendingUp className="w-4 h-4 text-purple-600" />
                     </div>
-                    <p className="text-2xl font-bold text-gray-900">$67,500</p>
-                    <p className="text-xs text-indigo-600 mt-1">+15% YTD</p>
+                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalReturns)}</p>
+                    <p className="text-xs text-gray-500 mt-1">Realized + projected</p>
                   </div>
-                  
+
                   <div className="bg-orange-50 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-sm text-gray-600">Pending</p>
                       <Clock className="w-4 h-4 text-orange-600" />
                     </div>
-                    <p className="text-2xl font-bold text-gray-900">$45,000</p>
+                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(pendingAmount)}</p>
                     <p className="text-xs text-gray-500 mt-1">In negotiation</p>
                   </div>
                 </div>
@@ -1132,63 +1138,35 @@ function InvestorDashboard() {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        <tr>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            Dec 15, 2024
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            Investment: "Digital Dreams"
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            Investment
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">
-                            -$50,000
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-indigo-100 text-indigo-800">
-                              Completed
-                            </span>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            Dec 10, 2024
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            Return: "The Last Echo"
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            Return
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-indigo-600">
-                            +$12,500
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-indigo-100 text-indigo-800">
-                              Received
-                            </span>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            Dec 5, 2024
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            Deposit: Wire Transfer
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            Deposit
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-indigo-600">
-                            +$100,000
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-indigo-100 text-indigo-800">
-                              Cleared
-                            </span>
-                          </td>
-                        </tr>
+                        {investments.length > 0 ? (
+                          investments.slice(0, 10).map((inv) => (
+                            <tr key={inv.id}>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {inv.dateInvested ? new Date(inv.dateInvested).toLocaleDateString() : '—'}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                Investment: "{inv.pitchTitle}"
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                Investment
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">
+                                -{formatCurrency(inv.amount)}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-indigo-100 text-indigo-800">
+                                  {inv.status || 'Recorded'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={5} className="px-6 py-8 text-center text-sm text-gray-500">
+                              No transactions yet
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
