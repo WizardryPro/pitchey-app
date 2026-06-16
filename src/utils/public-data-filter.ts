@@ -171,7 +171,11 @@ export function filterPitchForPublic(pitch: any): PublicPitch | null {
     nda_count: pitch.nda_count || 0,
     comment_count: pitch.comment_count || 0,
     share_count: pitch.share_count || 0,
-    rating: pitch.rating != null ? Number(pitch.rating) : undefined,
+    // Source the REAL computed rating (rating_average, maintained by the feedback
+    // system) — not the legacy `rating` column, which is always 0. Every public
+    // card reads this; sourcing the dead column made every star render "—" even
+    // though pitches have ratings.
+    rating: Number(pitch.rating_average ?? pitch.rating ?? 0) || undefined,
     require_nda: pitch.require_nda,
     seeking_investment: pitch.seeking_investment,
 

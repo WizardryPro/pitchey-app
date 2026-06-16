@@ -422,7 +422,7 @@ export default function Homepage() {
                           </span>
                           <span className="flex items-center gap-1 text-amber-500">
                             <Star className="w-3 h-3" />
-                            {pitch.ratingAverage ? Number(pitch.ratingAverage).toFixed(1) : '—'}
+                            {(() => { const r = Number((pitch as any).rating ?? pitch.ratingAverage ?? 0); return r > 0 ? r.toFixed(1) : '—'; })()}
                           </span>
                         </div>
                         <span className="flex items-center gap-1">
@@ -510,7 +510,7 @@ export default function Homepage() {
                           </span>
                           <span className="flex items-center gap-1 text-amber-500">
                             <Star className="w-3 h-3" />
-                            {pitch.ratingAverage ? Number(pitch.ratingAverage).toFixed(1) : '—'}
+                            {(() => { const r = Number((pitch as any).rating ?? pitch.ratingAverage ?? 0); return r > 0 ? r.toFixed(1) : '—'; })()}
                           </span>
                         </div>
                         <span className="flex items-center gap-1">
