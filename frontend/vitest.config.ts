@@ -18,7 +18,10 @@ export default defineConfig({
     },
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html', 'lcov'],
+      // json-summary writes coverage/coverage-summary.json, which the CI
+      // coverage-gate (quality-gates.yml) reads for the headline %. Without it,
+      // CI silently fell back to scraping the HTML report (or 0).
+      reporter: ['text', 'json', 'json-summary', 'html', 'lcov'],
       reportsDirectory: './coverage',
       exclude: [
         'node_modules/**',
