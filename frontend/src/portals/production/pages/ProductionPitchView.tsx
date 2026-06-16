@@ -519,6 +519,7 @@ const ProductionPitchView: React.FC = () => {
           ? { ...n, id: String(saved.id), createdAt: saved.created_at }
           : n
       ));
+      toast.success('Note added');
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
       // Roll back optimistic update
@@ -536,6 +537,7 @@ const ProductionPitchView: React.FC = () => {
 
     try {
       await ProductionService.deletePitchNote(pitchId, parseInt(noteId, 10));
+      toast.success('Note deleted');
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
       setNotes(previousNotes); // Roll back
@@ -590,7 +592,10 @@ const ProductionPitchView: React.FC = () => {
       await ProductionService.updatePitchTeam(pitchId, updated);
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
+      // Auto-save on each field edit — no success toast (noise), but a failed
+      // save must not be silent or the producer loses edits without knowing.
       console.error('Failed to save team:', e.message);
+      toast.error('Couldn\'t save team changes. Please try again.');
     }
   };
 

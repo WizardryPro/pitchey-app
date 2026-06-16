@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import toast from 'react-hot-toast';
 import {
   Shield, CheckCircle, XCircle, AlertTriangle, Clock,
   Upload, Building2, RefreshCw,
@@ -384,9 +385,11 @@ export default function ProductionVerification() {
 
       await fetchStatus();
       setShowForm(false);
+      toast.success('Verification submitted — our team will review it within 1–2 business days.');
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
       setFormError(e.message);
+      toast.error(e.message || 'Couldn\'t submit verification. Please try again.');
     } finally {
       setSubmitting(false);
     }

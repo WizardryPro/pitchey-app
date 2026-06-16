@@ -450,9 +450,16 @@ function SubmissionsModal({ call, onClose }: { call: OpenCall; onClose: () => vo
   }, [call.id]);
 
   const setStatus = async (s: CallSubmission, status: SubmissionStatus) => {
+    const previousStatus = s.status;
     setSubs((prev) => prev.map((x) => (x.id === s.id ? { ...x, status } : x)));
-    try { await callsService.updateSubmission(s.id, status); }
-    catch (err) { toast.error(err instanceof Error ? err.message : 'Failed to update'); }
+    try {
+      await callsService.updateSubmission(s.id, status);
+      toast.success(`Submission marked as ${status}`);
+    } catch (err) {
+      // Revert so the displayed status never diverges from what was saved.
+      setSubs((prev) => prev.map((x) => (x.id === s.id ? { ...x, status: previousStatus } : x)));
+      toast.error(err instanceof Error ? err.message : 'Failed to update');
+    }
   };
 
   const toggleSelect = (pitchId: number) => setSelected((prev) => {
@@ -537,6 +544,7 @@ const TYPE_TABS = [
 export default function OpportunitiesBoard() {
   const navigate = useNavigate();
   const location = useLocation();
+  const toast = useToast();
   const { user, isAuthenticated } = useBetterAuthStore();
   const userType = user?.userType;
   const canPost = isAuthenticated && (userType === 'production' || userType === 'investor');
@@ -601,10 +609,14 @@ export default function OpportunitiesBoard() {
   };
 
   const toggleStatus = async (call: OpenCall) => {
+    const nextStatus = call.status === 'open' ? 'closed' : 'open';
     try {
-      await callsService.update(call.id, { status: call.status === 'open' ? 'closed' : 'open' });
+      await callsService.update(call.id, { status: nextStatus });
       load();
-    } catch { /* toast handled in service throw path elsewhere */ }
+      toast.success(nextStatus === 'open' ? 'Call reopened' : 'Call closed to new submissions');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Couldn\'t update the call. Please try again.');
+    }
   };
 
   return (

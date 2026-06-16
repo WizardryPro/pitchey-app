@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { socialService } from '../services/social.service';
 
@@ -86,6 +87,7 @@ const FollowButton: React.FC<FollowButtonProps> = ({
         }
         setIsFollowing(false);
         onFollowChange?.(false);
+        toast.success(pitchId ? 'Unfollowed pitch' : 'Unfollowed');
       } else {
         // Follow
         if (pitchId) {
@@ -95,10 +97,11 @@ const FollowButton: React.FC<FollowButtonProps> = ({
         }
         setIsFollowing(true);
         onFollowChange?.(true);
+        toast.success(pitchId ? 'Following pitch — you\'ll get updates' : 'Following — you\'ll get updates');
       }
     } catch (error) {
       console.error('Error updating follow status:', error);
-      // You might want to show a toast notification here
+      toast.error('Couldn\'t update follow status. Please try again.');
     } finally {
       setLoading(false);
     }

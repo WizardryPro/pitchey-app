@@ -11,6 +11,7 @@ export default function StripePortalCard() {
     try {
       const result = await paymentsAPI.openBillingPortal();
       if (result.success) {
+        toast.loading('Opening billing portal…');
         window.location.assign(result.url);
         return;
       }

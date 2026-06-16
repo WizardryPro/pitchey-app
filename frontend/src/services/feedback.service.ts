@@ -68,6 +68,7 @@ export interface CommentEntry {
   created_at: string;
   display_name: string;
   user_type: string;
+  is_anonymous?: boolean;
 }
 
 export interface ConsumptionStatus {
@@ -181,14 +182,14 @@ export class FeedbackService {
     }
   }
 
-  /** Submit a comment */
-  static async submitComment(pitchId: number, content: string): Promise<boolean> {
+  /** Submit a comment. isAnonymous=true posts as "Anonymous" (owner can still see). */
+  static async submitComment(pitchId: number, content: string, isAnonymous = false): Promise<boolean> {
     try {
       // Backend returns { success: true, data: <comment row> } (201). After the
       // api-client unwraps data.data, res.data is the comment row — no .success
       // field — so res.data?.success was always undefined → false (comments looked
       // broken even though they saved). Use res.success (the wrapper flag).
-      const res = await apiClient.post<{ id: number }>(`/api/pitches/${pitchId}/comments`, { content });
+      const res = await apiClient.post<{ id: number }>(`/api/pitches/${pitchId}/comments`, { content, isAnonymous });
       return res.success;
     } catch (e) {
       console.error('[feedback] submitComment failed', e);

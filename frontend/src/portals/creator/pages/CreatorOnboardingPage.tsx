@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { UserService } from '@/services/user.service';
 import { getPortalPath } from '@/utils/navigation';
@@ -98,17 +99,33 @@ export default function OnboardingPage() {
         try {
           await UserService.uploadProfileImage(photoFile);
         } catch (err) {
+          // Non-fatal: the profile still saves. Surface it instead of swallowing
+          // so the user knows the photo didn't take and can retry in Settings.
           console.warn('Profile photo upload failed:', err);
+          toast.error('Your photo couldn\'t be uploaded — you can add it later in Settings.');
         }
       }
 
       const name = `${firstName.trim()} ${lastName.trim()}`;
+      // updateProfile throws on a non-2xx / unsuccessful save, so a failed save
+      // lands in catch below rather than silently navigating to the dashboard.
       await UserService.updateProfile({ name, bio: bio.trim() });
-      await checkSession();
+      // The save succeeded — confirm it immediately, before the slower session
+      // refresh, so the click never feels like it "did nothing".
+      toast.success('Profile complete — welcome to Pitchey!');
+      // Session refresh is best-effort: the profile is already saved, so a refresh
+      // hiccup must not turn a successful save into an error or block the redirect.
+      try {
+        await checkSession();
+      } catch (refreshErr) {
+        console.warn('Session refresh after onboarding failed (non-fatal):', refreshErr);
+      }
       void navigate(`/${getPortalPath(userType)}/dashboard`, { replace: true });
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
-      setError(e.message || 'Something went wrong. Please try again.');
+      const msg = e.message || 'Something went wrong. Please try again.';
+      setError(msg);
+      toast.error(msg);
       setSubmitting(false);
     }
   };

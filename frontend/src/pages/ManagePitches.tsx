@@ -167,7 +167,12 @@ export default function ManagePitches() {
       setPitches(prev => prev.map(pitch => 
         pitch.id === pitchId ? updatedPitch : pitch
       ));
-      addNotification(`Pitch ${newStatus === 'published' ? 'published' : 'archived'} successfully`, 'success');
+      addNotification(
+        newStatus === 'published'
+          ? 'Pitch published — it\'s now live on the marketplace for investors to find.'
+          : 'Pitch unpublished — it\'s back to a draft and no longer on the marketplace.',
+        'success',
+      );
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err));
       console.error('Failed to update pitch status:', error);

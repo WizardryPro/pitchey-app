@@ -170,13 +170,14 @@ export default function Settings() {
     });
       
       if (response.ok) {
-        // Show success message
+        toast.success('Settings saved');
       } else {
-        // Show error message
         console.error('Failed to save settings');
+        toast.error('Couldn\'t save settings. Please try again.');
       }
     } catch (error) {
       console.error('Failed to save settings:', error);
+      toast.error('Couldn\'t save settings. Please try again.');
     } finally {
       setSaving(false);
     }

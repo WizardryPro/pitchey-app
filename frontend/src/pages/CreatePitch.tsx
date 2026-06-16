@@ -52,6 +52,9 @@ export default function CreatePitch() {
     || new URLSearchParams(location.search).get('invitedBy')
     || '').trim();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Which action is in flight — drives the button label ("Publishing…" vs
+  // "Creating…") and the publish step after the pitch is created.
+  const [publishing, setPublishing] = useState(false);
   const [currentStep, setCurrentStep] = useState<'form' | 'creating' | 'uploading' | 'complete'>('form');
   const isOnline = useOnlineStatus();
   const [aiExtracting, setAiExtracting] = useState(false);
@@ -341,9 +344,7 @@ export default function CreatePitch() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const submitPitch = async (publish: boolean) => {
     // Prevent submission when offline
     if (!navigator.onLine) {
       error('You are offline', 'Please check your internet connection and try again.');
@@ -351,6 +352,7 @@ export default function CreatePitch() {
     }
 
     setIsSubmitting(true);
+    setPublishing(publish);
     setHasAttemptedSubmit(true);
     setCurrentStep('form');
 
@@ -496,13 +498,33 @@ export default function CreatePitch() {
         // Announce success to screen readers
         a11y.validation.announceSuccess(SUCCESS_MESSAGES.PITCH_CREATED || 'Pitch created successfully');
 
-        // A new pitch is saved as a DRAFT — it does NOT appear on the marketplace
-        // until it's published. Say so explicitly so creators don't wait for it to
-        // show up on its own (the "takes a while to appear" confusion).
-        success(
-          'Pitch saved as a draft',
-          'It won\'t appear on the marketplace until you publish it — open it from "My Pitches" and hit Publish.'
-        );
+        // The pitch is created as a draft. If the creator hit "Publish", flip it
+        // live now (after media uploads so the published pitch already has its
+        // cover/trailer). A failed publish must NOT look like a failed create —
+        // the draft is safely saved, so we degrade to a clear "saved as draft"
+        // message rather than an error.
+        if (publish) {
+          try {
+            await pitchService.publish(pitchId);
+            success(
+              'Pitch published!',
+              'It\'s now live on the marketplace for investors to find.'
+            );
+          } catch (pubErr: any) {
+            error(
+              'Saved as a draft — not published',
+              pubErr?.message || 'Your pitch is saved, but we couldn\'t publish it. Open it from "My Pitches" and hit Publish.'
+            );
+          }
+        } else {
+          // A new pitch is saved as a DRAFT — it does NOT appear on the marketplace
+          // until it's published. Say so explicitly so creators don't wait for it to
+          // show up on its own (the "takes a while to appear" confusion).
+          success(
+            'Pitch saved as a draft',
+            'It won\'t appear on the marketplace until you publish it — open it from "My Pitches" and hit Publish.'
+          );
+        }
 
         // PHASE 4: Navigate only after everything completes
         navigate(isProduction ? '/production/pitches' : '/creator/pitches');
@@ -517,11 +539,13 @@ export default function CreatePitch() {
         setCurrentStep('form');
       } finally {
         setIsSubmitting(false);
+        setPublishing(false);
       }
     });
-    
+
     if (!isFormValid) {
       setIsSubmitting(false);
+      setPublishing(false);
       const errorKeys = Object.keys(fieldErrors);
       if (errorKeys.length > 0) {
         // Show toast with error summary
@@ -533,6 +557,13 @@ export default function CreatePitch() {
         a11y.focus.focusById(errorKeys[0]);
       }
     }
+  };
+
+  // Form-level submit (Enter key) defaults to the safe action: save as draft.
+  // The explicit Publish button calls submitPitch(true).
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    void submitPitch(false);
   };
 
   const handleAiExtract = async (file: File) => {
@@ -1617,21 +1648,22 @@ export default function CreatePitch() {
             >
               Cancel
             </button>
+            {/* Save as Draft — also the form's default action (Enter key submits here) */}
             <button
               {...a11y.button.getAttributes({
                 type: 'submit',
                 disabled: isSubmitting,
-                loading: isSubmitting,
-                ariaLabel: isSubmitting ? 'Creating pitch...' : 'Submit pitch'
+                loading: isSubmitting && !publishing,
+                ariaLabel: isSubmitting && !publishing ? 'Saving draft...' : 'Save as draft'
               })}
-              className={`px-6 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:shadow-lg transition flex items-center gap-2 ${a11y.classes.focusVisible} ${isSubmitting ? a11y.classes.disabledElement : ''}`}
-              data-testid="submit-button"
+              className={`px-6 py-2 border border-purple-300 text-purple-700 bg-white rounded-lg hover:bg-purple-50 transition flex items-center gap-2 ${a11y.classes.focusVisible} ${isSubmitting ? a11y.classes.disabledElement : ''}`}
+              data-testid="save-draft-button"
             >
-              {isSubmitting ? (
+              {isSubmitting && !publishing ? (
                 <>
-                  <LoadingSpinner size="sm" color="white" aria-hidden="true" />
+                  <LoadingSpinner size="sm" color="purple" aria-hidden="true" />
                   <span aria-live="polite">
-                    {currentStep === 'creating' && 'Creating pitch...'}
+                    {currentStep === 'creating' && 'Saving draft...'}
                     {currentStep === 'uploading' && `Uploading files (${uploadManager.overallProgress}%)...`}
                     {currentStep === 'complete' && 'Finalizing...'}
                     {currentStep === 'form' && 'Validating...'}
@@ -1639,8 +1671,36 @@ export default function CreatePitch() {
                 </>
               ) : (
                 uploadManager.hasUploads
-                  ? `Create Pitch (${uploadManager.pendingUploads.length} files to upload)`
-                  : 'Create Pitch'
+                  ? `Save as Draft (${uploadManager.pendingUploads.length} files)`
+                  : 'Save as Draft'
+              )}
+            </button>
+            {/* Publish — creates the pitch then flips it live in one step */}
+            <button
+              {...a11y.button.getAttributes({
+                type: 'button',
+                disabled: isSubmitting,
+                loading: isSubmitting && publishing,
+                ariaLabel: isSubmitting && publishing ? 'Publishing pitch...' : 'Publish pitch'
+              })}
+              onClick={() => void submitPitch(true)}
+              className={`px-6 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:shadow-lg transition flex items-center gap-2 ${a11y.classes.focusVisible} ${isSubmitting ? a11y.classes.disabledElement : ''}`}
+              data-testid="publish-button"
+            >
+              {isSubmitting && publishing ? (
+                <>
+                  <LoadingSpinner size="sm" color="white" aria-hidden="true" />
+                  <span aria-live="polite">
+                    {currentStep === 'creating' && 'Creating pitch...'}
+                    {currentStep === 'uploading' && `Uploading files (${uploadManager.overallProgress}%)...`}
+                    {currentStep === 'complete' && 'Publishing...'}
+                    {currentStep === 'form' && 'Validating...'}
+                  </span>
+                </>
+              ) : (
+                uploadManager.hasUploads
+                  ? `Publish (${uploadManager.pendingUploads.length} files)`
+                  : 'Publish'
               )}
             </button>
           </div>

@@ -387,7 +387,7 @@ describe('PitchForm (CreatePitch)', () => {
       })
     })
 
-    it('should show submit and cancel buttons', async () => {
+    it('should show save-draft, publish and cancel buttons', async () => {
       render(<CreatePitch />)
 
       // Wait for form to be present first
@@ -395,12 +395,15 @@ describe('PitchForm (CreatePitch)', () => {
         expect(screen.getByLabelText(/title/i)).toBeInTheDocument()
       }, { timeout: 2000 })
 
-      // Then check for buttons
-      const submitButton = screen.getByTestId('submit-button')
+      // Then check for buttons — the create form publishes or saves a draft directly
+      const saveDraftButton = screen.getByTestId('save-draft-button')
+      const publishButton = screen.getByTestId('publish-button')
       const cancelButton = screen.getByTestId('cancel-button')
-      expect(submitButton).toBeInTheDocument()
+      expect(saveDraftButton).toBeInTheDocument()
+      expect(publishButton).toBeInTheDocument()
       expect(cancelButton).toBeInTheDocument()
-      expect(submitButton).toHaveTextContent('Create Pitch')
+      expect(saveDraftButton).toHaveTextContent('Save as Draft')
+      expect(publishButton).toHaveTextContent('Publish')
       expect(cancelButton).toHaveTextContent('Cancel')
     })
   })
@@ -415,7 +418,7 @@ describe('PitchForm (CreatePitch)', () => {
       }, { timeout: 2000 })
 
       // Try to submit empty form
-      const submitButton = screen.getByTestId('submit-button')
+      const submitButton = screen.getByTestId('save-draft-button')
       await user.click(submitButton)
 
       // Check that validation prevents submission
@@ -743,7 +746,7 @@ describe('PitchForm (CreatePitch)', () => {
       // Try to fill basic required fields
       try {
         await fillValidForm()
-        const submitButton = screen.getByTestId('submit-button')
+        const submitButton = screen.getByTestId('save-draft-button')
         await user.click(submitButton)
         // Check if mock was called
         expect(vi.mocked(pitchService.create)).toHaveBeenCalled()
@@ -766,7 +769,7 @@ describe('PitchForm (CreatePitch)', () => {
         await fillValidForm()
         
         // Try to find submit button with different selectors
-        let submitButton = screen.queryByTestId('submit-button')
+        let submitButton = screen.queryByTestId('save-draft-button')
         if (!submitButton) {
           submitButton = screen.queryByRole('button', { name: /create|submit/i })
         }
@@ -798,7 +801,7 @@ describe('PitchForm (CreatePitch)', () => {
         await fillValidForm()
         
         // Try to find submit button with different selectors
-        let submitButton = screen.queryByTestId('submit-button')
+        let submitButton = screen.queryByTestId('save-draft-button')
         if (!submitButton) {
           submitButton = screen.queryByRole('button', { name: /create|submit/i })
         }
@@ -831,7 +834,7 @@ describe('PitchForm (CreatePitch)', () => {
         await fillValidForm()
         
         // Try to find submit button with different selectors
-        let submitButton = screen.queryByTestId('submit-button')
+        let submitButton = screen.queryByTestId('save-draft-button')
         if (!submitButton) {
           submitButton = screen.queryByRole('button', { name: /create|submit/i })
         }
@@ -868,7 +871,7 @@ describe('PitchForm (CreatePitch)', () => {
       }, { timeout: 2000 })
 
       // Try to submit without filling required fields
-      let submitButton = screen.queryByTestId('submit-button')
+      let submitButton = screen.queryByTestId('save-draft-button')
       if (!submitButton) {
         submitButton = screen.queryByRole('button', { name: /create|submit/i })
       }
@@ -956,7 +959,7 @@ describe('PitchForm (CreatePitch)', () => {
       }, { timeout: 2000 })
 
       // Try to find and click submit button
-      let submitButton = screen.queryByTestId('submit-button')
+      let submitButton = screen.queryByTestId('save-draft-button')
       if (!submitButton) {
         submitButton = screen.queryByRole('button', { name: /create|submit/i })
       }
@@ -987,7 +990,7 @@ describe('PitchForm (CreatePitch)', () => {
       }, { timeout: 2000 })
 
       // Try to find and click submit button
-      let submitButton = screen.queryByTestId('submit-button')
+      let submitButton = screen.queryByTestId('save-draft-button')
       if (!submitButton) {
         submitButton = screen.queryByRole('button', { name: /create|submit/i })
       }

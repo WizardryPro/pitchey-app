@@ -8,6 +8,7 @@ import {
   AlertCircle, CheckCircle, XCircle, ChevronRight,
   X, Loader2
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { pitchAPI } from '@/lib/api';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { apiClient } from '@/lib/api-client';
@@ -345,10 +346,12 @@ const InvestorPitchView: React.FC = () => {
           isPrivate: res.data!.note.is_private,
           category: res.data!.note.category as InvestmentNote['category']
         } : n));
+        toast.success('Note added');
       }
     } catch {
       // Rollback on failure
       setNotes(prev => prev.filter(n => n.id !== tempNote.id));
+      toast.error('Failed to add note');
     }
   };
 
@@ -359,8 +362,10 @@ const InvestorPitchView: React.FC = () => {
 
     try {
       await apiClient.delete(`/api/investor/pitches/${id}/notes/${noteId}`);
+      toast.success('Note deleted');
     } catch {
       setNotes(prev); // Rollback
+      toast.error('Failed to delete note');
     }
   };
 
@@ -389,9 +394,14 @@ const InvestorPitchView: React.FC = () => {
     const updated = { ...diligenceChecklist, [key]: !diligenceChecklist[key] };
     setDiligenceChecklist(updated);
 
-    // Persist to API (fire-and-forget)
+    // Persist to API (auto-save on each toggle — no success toast to avoid noise)
     if (id) {
-      void apiClient.put(`/api/investor/pitches/${id}/diligence`, { checklist: updated });
+      apiClient.put(`/api/investor/pitches/${id}/diligence`, { checklist: updated })
+        .catch(() => {
+          // Roll back on failure so the UI reflects what was actually saved
+          setDiligenceChecklist(prev => ({ ...prev, [key]: !updated[key] }));
+          toast.error('Failed to save checklist');
+        });
     }
   };
 

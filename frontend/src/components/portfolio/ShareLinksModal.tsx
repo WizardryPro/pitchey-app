@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Copy, Check, Link2, Eye, Trash2, Plus } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { apiClient } from '../../lib/api-client';
 
 interface ShareLink {
@@ -51,9 +52,12 @@ export default function ShareLinksModal({ onClose }: ShareLinksModalProps) {
       if (res.success && res.data) {
         setLinks(prev => [{ ...res.data!, revoked_at: null } as ShareLink, ...prev]);
         setNewLabel('');
+        toast.success('Share link created');
+      } else {
+        toast.error('Failed to create share link');
       }
     } catch {
-      // silent
+      toast.error('Failed to create share link');
     } finally {
       setCreating(false);
     }
@@ -66,9 +70,12 @@ export default function ShareLinksModal({ onClose }: ShareLinksModalProps) {
         setLinks(prev =>
           prev.map(l => (l.id === id ? { ...l, revoked_at: new Date().toISOString() } : l))
         );
+        toast.success('Share link revoked');
+      } else {
+        toast.error('Failed to revoke share link');
       }
     } catch {
-      // silent
+      toast.error('Failed to revoke share link');
     }
   }
 

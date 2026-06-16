@@ -562,12 +562,14 @@ function ProductionDashboard() {
         if (analyticsData && analyticsData.success) {
           setAnalytics(analyticsData.analytics);
         }
-        // Show success message
+        toast.success('NDA request approved — they can now view the protected pitch.');
       } else {
         console.error('Failed to approve NDA request:', result?.error || 'Unknown error');
+        toast.error('Couldn\'t approve the NDA request. Please try again.');
       }
     } catch (error) {
       console.error('Failed to approve NDA request:', error);
+      toast.error('Couldn\'t approve the NDA request. Please try again.');
     }
   };
   
@@ -577,12 +579,14 @@ function ProductionDashboard() {
       if (result && result.success) {
         // Remove from pending requests
         setIncomingNDARequests(prev => prev.filter(r => r.id !== request.id));
-        // Show rejection message
+        toast.success('NDA request declined.');
       } else {
         console.error('Failed to reject NDA request:', result?.error || 'Unknown error');
+        toast.error('Couldn\'t decline the NDA request. Please try again.');
       }
     } catch (error) {
       console.error('Failed to reject NDA request:', error);
+      toast.error('Couldn\'t decline the NDA request. Please try again.');
     }
   };
 

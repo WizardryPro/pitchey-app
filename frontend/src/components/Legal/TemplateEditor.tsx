@@ -30,6 +30,7 @@ import {
   Text,
   Brackets
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import api from '../../lib/api';
 
 // Types
@@ -274,16 +275,19 @@ const TemplateEditor: React.FC = () => {
       });
 
       if (response.data?.success) {
+        const wasUpdate = !!template.id;
         if (!template.id) {
           setTemplate(prev => ({ ...prev, id: response.data.data.template.id }));
         }
-        // Success feedback could be added here
+        toast.success(wasUpdate ? 'Template updated' : 'Template created');
       } else {
         setError('Failed to save template');
+        toast.error('Failed to save template');
       }
     } catch (error: any) {
       console.error('Save error:', error);
       setError(error.response?.data?.error || 'Failed to save template');
+      toast.error(error.response?.data?.error || 'Failed to save template');
     } finally {
       setSaving(false);
     }

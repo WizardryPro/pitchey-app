@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 import {
   Crown,
   Check,
@@ -108,6 +109,7 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
       const result = await paymentsAPI.subscribe(planKey, selectedBilling, currency, appliedPromo?.code) as any;
 
       if (result && result.url) {
+        toast.loading('Redirecting to secure checkout…');
         window.location.href = result.url;
       } else {
         throw new Error(result?.error || 'No checkout URL received');
@@ -133,8 +135,10 @@ export default function SubscriptionCard({ subscription, onRefresh }: Subscripti
 
       await paymentsAPI.cancelSubscription();
       onRefresh();
+      toast.success('Subscription cancelled — you keep access until the end of your billing period.');
     } catch (err: any) {
       setError(err.message || 'Failed to cancel subscription');
+      toast.error(err.message || 'Couldn\'t cancel your subscription. Please try again.');
     } finally {
       setLoading(false);
     }

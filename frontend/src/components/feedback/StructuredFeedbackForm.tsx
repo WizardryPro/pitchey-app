@@ -3,6 +3,7 @@ import { Plus, X, ThumbsUp, AlertTriangle, Lightbulb, EyeOff, Send, Trash2 } fro
 import { FeedbackService } from '../../services/feedback.service';
 import type { FeedbackEntry } from '../../services/feedback.service';
 import PitcheyRating from '../PitcheyRating';
+import { useToast } from '@shared/components/feedback/ToastProvider';
 
 interface Props {
   pitchId: number;
@@ -68,6 +69,7 @@ function DynamicList({
 }
 
 export default function StructuredFeedbackForm({ pitchId, onSubmitted, existingFeedback }: Props) {
+  const { success } = useToast();
   const isEditing = !!existingFeedback;
   const [rating, setRating] = useState<number>(existingFeedback?.rating ?? 0);
   const [strengths, setStrengths] = useState<string[]>(existingFeedback?.strengths?.length ? existingFeedback.strengths : ['']);
@@ -110,8 +112,10 @@ export default function StructuredFeedbackForm({ pitchId, onSubmitted, existingF
 
       if (isEditing) {
         await FeedbackService.update(pitchId, payload);
+        success('Feedback updated');
       } else {
         await FeedbackService.submit(pitchId, payload);
+        success('Feedback submitted', 'Thanks — the creator can see your input.');
       }
       onSubmitted();
     } catch (err) {
@@ -127,6 +131,7 @@ export default function StructuredFeedbackForm({ pitchId, onSubmitted, existingF
     setSubmitting(true);
     try {
       await FeedbackService.remove(pitchId);
+      success('Feedback deleted');
       onSubmitted();
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));

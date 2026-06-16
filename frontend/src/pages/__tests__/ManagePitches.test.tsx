@@ -207,7 +207,8 @@ describe('ManagePitches', () => {
       await user.click(screen.getByText('Publish'))
 
       await waitFor(() => {
-        expect(screen.getByText(/published successfully/i)).toBeInTheDocument()
+        // Copy was made clearer than "published successfully" — now confirms it's live.
+        expect(screen.getByText(/now live on the marketplace/i)).toBeInTheDocument()
       })
     })
 

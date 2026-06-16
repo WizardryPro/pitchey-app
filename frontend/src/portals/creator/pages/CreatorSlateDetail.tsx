@@ -72,6 +72,9 @@ export default function CreatorSlateDetailPage() {
     });
     if (updated && slate) {
       setSlate({ ...slate, title: updated.title, description: updated.description });
+      toast.success('Slate details saved');
+    } else {
+      toast.error('Couldn\'t save slate details. Please try again.');
     }
     setEditing(false);
     setSaving(false);
@@ -83,6 +86,13 @@ export default function CreatorSlateDetailPage() {
     const updated = await SlateService.update(slateId, { status: newStatus });
     if (updated) {
       setSlate({ ...slate, status: newStatus });
+      toast.success(
+        newStatus === 'published'
+          ? 'Slate published — anyone with the link can view it.'
+          : 'Slate set to draft — it\'s no longer publicly visible.',
+      );
+    } else {
+      toast.error('Couldn\'t update the slate. Please try again.');
     }
   };
 
@@ -144,6 +154,9 @@ export default function CreatorSlateDetailPage() {
         ...slate,
         pitches: slate.pitches.filter(p => p.id !== pitchId),
       });
+      toast.success('Pitch removed from slate');
+    } else {
+      toast.error('Couldn\'t remove the pitch. Please try again.');
     }
   };
 
@@ -177,6 +190,9 @@ export default function CreatorSlateDetailPage() {
       await loadSlate();
       // Remove from search results
       setPitchResults(prev => prev.filter(p => p.id !== pitchId));
+      toast.success('Pitch added to slate');
+    } else {
+      toast.error('Couldn\'t add the pitch. Please try again.');
     }
   };
 
@@ -197,6 +213,7 @@ export default function CreatorSlateDetailPage() {
       return;
     }
 
+    const previousPitches = slate.pitches;
     const pitches = [...slate.pitches];
     const [moved] = pitches.splice(dragIndex, 1);
     pitches.splice(targetIndex, 0, moved);
@@ -206,8 +223,13 @@ export default function CreatorSlateDetailPage() {
     setDragIndex(null);
     setDragOverIndex(null);
 
-    // Persist
-    await SlateService.reorderPitches(slateId, pitches.map(p => p.id));
+    // Persist — revert the optimistic reorder if the save didn't stick so the
+    // displayed order never diverges from what's actually stored.
+    const ok = await SlateService.reorderPitches(slateId, pitches.map(p => p.id));
+    if (!ok) {
+      setSlate(prev => (prev ? { ...prev, pitches: previousPitches } : prev));
+      toast.error('Couldn\'t save the new order. Please try again.');
+    }
   };
 
   if (loading) {
