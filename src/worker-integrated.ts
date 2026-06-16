@@ -8456,7 +8456,7 @@ pitchey_analytics_datapoints_per_minute 1250
           `, [
             creatorId,
             `${authResult.user.name || authResult.user.email} has requested NDA access to your pitch`,
-            nda.id
+            this.safeParseInt(nda.id)
           ]);
         } catch (notifError) {
           console.error('Failed to create notification:', notifError);
