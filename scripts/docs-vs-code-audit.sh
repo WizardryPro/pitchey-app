@@ -57,7 +57,12 @@ URL_SOURCES=(
 mapfile -t PAGES_URLS < <(
   # Exclude src/workflows/ — parked never-deployed worker per issue #60.
   # Its URLs aren't expected to resolve and changes there are blocked by CLAUDE.md carve-out.
-  grep -RhoE --exclude-dir=workflows "https://([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9.-]*[a-zA-Z0-9])\\.pages\\.dev" "${URL_SOURCES[@]}" 2>/dev/null | sort -u
+  # Exclude test files — they legitimately contain NON-resolving fixtures, e.g. the
+  # CORS test asserts pitchey.pages.dev / pitchey-main.pages.dev are REJECTED origins,
+  # so curling them (NXDOMAIN) is expected, not drift.
+  grep -RhoE --exclude-dir=workflows --exclude-dir=__tests__ \
+    --exclude='*.test.ts' --exclude='*.test.tsx' --exclude='*.spec.ts' --exclude='*.spec.tsx' \
+    "https://([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9.-]*[a-zA-Z0-9])\\.pages\\.dev" "${URL_SOURCES[@]}" 2>/dev/null | sort -u
 )
 
 if [[ "${#PAGES_URLS[@]}" -eq 0 ]]; then
