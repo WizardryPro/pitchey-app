@@ -1,17 +1,22 @@
-name: Neon Preview Branch Sweep
+name: Preview Environment Sweep
 
-# Belt-and-suspenders cleanup for Neon preview branches. The per-PR
-# `cleanup-preview` job in neon-preview.yml deletes a PR's `preview/pr-<N>`
-# branch when the PR closes, and works for ~all PRs — but the occasional leak
-# (a transient delete failure, a close event that never fired) accumulated until
-# the project hit its branch cap and `setup-preview` started failing with
-# "branches limit exceeded" (2026-06-15). This sweep reconciles daily: any
-# `preview/pr-<N>` branch whose PR is no longer open gets deleted.
+# Belt-and-suspenders cleanup for per-PR preview environments — both the Neon
+# `preview/pr-<N>` branch AND the Cloudflare `pitchey-pr-<N>` Worker. The per-PR
+# `cleanup-preview` job in neon-preview.yml deletes both when a PR closes and
+# works for ~all PRs, but the occasional leak (transient delete failure, a close
+# event that never fired) accumulates:
+#   - leaked Neon branches hit the project branch cap → `setup-preview` failed
+#     with "branches limit exceeded" (2026-06-15).
+#   - leaked preview Workers keep running their `*/15 * * * *` cron, which fails
+#     `No such module "db"` every 15 min and spams Sentry → Slack (2026-06-16,
+#     18 stale workers found).
+# This sweep reconciles daily: any preview branch/worker whose PR is no longer
+# open is deleted.
 #
-# Safety: only ever touches branches matching ^preview/pr-<N>$. It never deletes
-# `production` (or any non-preview branch), never deletes a branch whose PR is
-# still OPEN, and skips (does not delete) any branch whose PR state can't be
-# resolved. Use the workflow_dispatch `dry_run` input to preview without deleting.
+# Safety: only ever touches names matching ^preview/pr-<N>$ / ^pitchey-pr-<N>$.
+# Never deletes `production`, the live workers (pitchey-api-prod etc.), a resource
+# whose PR is still OPEN, or one whose PR state can't be resolved. Use the
+# workflow_dispatch `dry_run` input to preview without deleting.
 
 on:
   schedule:
@@ -80,7 +85,50 @@ jobs:
           done < <(echo "$branches" | jq -r '.[] | select(.name | test("^preview/pr-[0-9]+$")) | [.id, .name] | @tsv')
 
           echo ""
-          echo "Sweep complete — deleted:$deleted kept:$kept skipped:$skipped failed:$failed"
+          echo "Branch sweep complete — deleted:$deleted kept:$kept skipped:$skipped failed:$failed"
           # Surface delete failures in the run summary but don't fail the job;
           # next daily run retries, and a persistent failure shows in the count.
           if [ "$failed" -gt 0 ]; then echo "::warning::$failed branch deletion(s) failed"; fi
+
+      - name: Sweep stale preview Workers
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CF_API_TOKEN:-}" ] || [ -z "${CF_ACCOUNT_ID:-}" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID not set — skipping worker sweep"
+            exit 0
+          fi
+          api="https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/workers/scripts"
+
+          # Only pitchey-pr-<N> Workers are ever considered — live workers
+          # (pitchey-api-prod, pitchey-browse-api, pitchey-coming-soon) don't match.
+          scripts="$(curl -fsS -H "Authorization: Bearer $CF_API_TOKEN" "$api" \
+            | jq -r '.result[].id' | grep -E '^pitchey-pr-[0-9]+$' || true)"
+
+          kept=0; deleted=0; skipped=0; failed=0
+          for name in $scripts; do
+            pr="${name#pitchey-pr-}"
+            state="$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json state -q .state 2>/dev/null || echo UNKNOWN)"
+            case "$state" in
+              OPEN)
+                echo "keep    $name  (PR #$pr OPEN)"; kept=$((kept+1)) ;;
+              CLOSED|MERGED)
+                if [ "$DRY_RUN" = "true" ]; then
+                  echo "DELETE  $name  (PR #$pr $state) [dry-run]"; deleted=$((deleted+1))
+                elif curl -fsS -X DELETE -H "Authorization: Bearer $CF_API_TOKEN" "$api/$name?force=true" >/dev/null; then
+                  echo "DELETE  $name  (PR #$pr $state)"; deleted=$((deleted+1))
+                else
+                  echo "::warning::failed to delete $name (non-fatal)"; failed=$((failed+1))
+                fi ;;
+              *)
+                echo "skip    $name  (PR #$pr state=$state)"; skipped=$((skipped+1)) ;;
+            esac
+          done
+
+          echo ""
+          echo "Worker sweep complete — deleted:$deleted kept:$kept skipped:$skipped failed:$failed"
+          if [ "$failed" -gt 0 ]; then echo "::warning::$failed worker deletion(s) failed"; fi
