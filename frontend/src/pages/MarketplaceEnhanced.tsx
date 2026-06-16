@@ -51,6 +51,8 @@ import {
 } from 'lucide-react';
 import { API_URL } from '../config';
 import { formatBudgetCompact } from '@shared/utils/formatters';
+import { getBrowsePath } from '@/utils/navigation';
+import { normalizeUserType } from '@shared/types/user-type';
 
 // Get the best available image URL from a pitch (handles snake_case API + camelCase)
 function getPitchImageUrl(pitch: Pitch): string | undefined {
@@ -190,7 +192,22 @@ export default function MarketplaceEnhanced() {
   // When rendered inside a portal (e.g. /watcher/browse), PortalLayout
   // already provides a header — hide the standalone one to avoid duplicates.
   const isInsidePortal = /^\/(watcher|creator|investor|production|admin)\//.test(location.pathname);
-  
+
+  // Keep the chrome consistent: an authenticated portal user should always browse
+  // inside their PortalLayout (sidebar) shell, never the standalone /marketplace
+  // top-nav. Many dashboard links still point at /marketplace; rather than chase
+  // every call site, redirect here to the in-portal browse route so navigating
+  // dashboard → marketplace no longer flips sidebar → top-bar. Query string (e.g.
+  // ?sort=hot) is preserved. Anonymous users keep the standalone marketplace.
+  const inPortalBrowsePath = isAuthenticated ? getBrowsePath(normalizeUserType(user?.userType)) : '/marketplace';
+  const shouldRedirectIntoPortal = !isInsidePortal && isAuthenticated && inPortalBrowsePath !== '/marketplace';
+  useEffect(() => {
+    if (shouldRedirectIntoPortal) {
+      navigate(`${inPortalBrowsePath}${location.search}`, { replace: true });
+    }
+  }, [shouldRedirectIntoPortal, inPortalBrowsePath, location.search, navigate]);
+
+
   // Per-tab state management to prevent content bleeding
   interface TabState {
     pitches: Pitch[];
