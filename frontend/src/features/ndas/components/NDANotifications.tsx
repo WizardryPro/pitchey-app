@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Bell, 
   FileText, 
@@ -374,8 +375,11 @@ export function NDANotificationBadge({ className = '' }: { className?: string })
 // Full notification panel for dashboard
 export function NDANotificationPanel({ className = '' }: { className?: string }) {
   const { user } = useBetterAuthStore();
+  const navigate = useNavigate();
+  const { success, error: showError } = useToast();
   const [requests, setRequests] = useState<NDA[]>([]);
   const [loading, setLoading] = useState(false);
+  const [processingIds, setProcessingIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     if (user?.userType === 'creator') {
@@ -398,6 +402,25 @@ export function NDANotificationPanel({ className = '' }: { className?: string })
       console.error('Failed to fetch NDA requests:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleApprove = async (ndaId: number) => {
+    try {
+      setProcessingIds(prev => new Set(prev).add(ndaId));
+      await ndaService.approveNDA(ndaId, 'Request approved. Please review and sign the NDA.');
+      success('NDA Approved', 'The requester has been notified and can now sign the NDA.');
+      await fetchRequests();
+    } catch (error) {
+      const e = error instanceof Error ? error : new Error(String(error));
+      console.error('Failed to approve NDA:', e);
+      showError('Approval Failed', e.message || 'Failed to approve NDA request');
+    } finally {
+      setProcessingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(ndaId);
+        return newSet;
+      });
     }
   };
 
@@ -456,10 +479,17 @@ export function NDANotificationPanel({ className = '' }: { className?: string })
                     </p>
                   </div>
                   <div className="flex space-x-2 ml-4">
-                    <button className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700">
-                      Approve
+                    <button
+                      onClick={() => handleApprove(nda.id)}
+                      disabled={processingIds.has(nda.id)}
+                      className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {processingIds.has(nda.id) ? 'Approving…' : 'Approve'}
                     </button>
-                    <button className="px-3 py-1 border border-gray-300 text-gray-700 text-xs rounded hover:bg-gray-50">
+                    <button
+                      onClick={() => { void navigate('/creator/ndas'); }}
+                      className="px-3 py-1 border border-gray-300 text-gray-700 text-xs rounded hover:bg-gray-50"
+                    >
                       Review
                     </button>
                   </div>
@@ -469,7 +499,10 @@ export function NDANotificationPanel({ className = '' }: { className?: string })
             
             {requests.length > 3 && (
               <div className="text-center pt-2">
-                <button className="text-sm text-purple-600 hover:text-purple-700 font-medium">
+                <button
+                  onClick={() => { void navigate('/creator/ndas'); }}
+                  className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+                >
                   View All {requests.length} Requests
                 </button>
               </div>
