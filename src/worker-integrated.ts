@@ -8349,130 +8349,98 @@ pitchey_analytics_datapoints_per_minute 1250
     const pitchId = data.pitchId;
 
     try {
-      // Check if NDA already exists - use signer_id which is the correct column
-      const existingQuery = `
-        SELECT id FROM ndas
-        WHERE signer_id = $1
-        AND pitch_id = $2
-      `;
-      const [existing] = await this.db.query(existingQuery, [authResult.user.id, pitchId]) as DatabaseRow[];
+      // 1) Validate the pitch exists and resolve its owner BEFORE touching credits.
+      const pitchRows = await this.db.query(
+        `SELECT user_id FROM pitches WHERE id = $1`,
+        [pitchId]
+      ) as DatabaseRow[];
+      const pitch = pitchRows[0];
+      if (!pitch) {
+        return builder.error(ErrorCode.NOT_FOUND, 'Pitch not found');
+      }
+      const creatorId: number = this.safeParseInt(pitch.user_id) || 0;
 
+      // Can't request an NDA on your own pitch.
+      if (creatorId === Number(authResult.user.id)) {
+        return builder.error(ErrorCode.BAD_REQUEST, 'You cannot request an NDA on your own pitch');
+      }
+
+      // 2) Dedup against the canonical `ndas` table — the SAME table approveNDA and
+      //    the getPitch access-gate read. (Bug #284: requests used to be written to
+      //    `nda_requests`, which approve/gate never look at, so they were orphaned.)
+      const [existing] = await this.db.query(
+        `SELECT id FROM ndas WHERE signer_id = $1 AND pitch_id = $2`,
+        [authResult.user.id, pitchId]
+      ) as DatabaseRow[];
       if (existing) {
         return builder.error(ErrorCode.ALREADY_EXISTS, 'NDA request already exists');
       }
 
-      // Credit check + deduction for NDA requests (10 credits)
+      // 3) Credit balance CHECK only — deduction happens AFTER a successful insert
+      //    (Bug #284: credits used to be charged before validation/insert, with no
+      //    refund if the request then failed).
       const ndaCreditCost = 10;
       const creditRows = await this.db.query(
         `SELECT balance FROM user_credits WHERE user_id = $1`,
         [authResult.user.id]
       ) as DatabaseRow[];
       const currentBalance = creditRows.length > 0 ? (Number(creditRows[0].balance) || 0) : 0;
-
       if (currentBalance < ndaCreditCost) {
         return builder.error(ErrorCode.BAD_REQUEST, 'Insufficient credits. NDA requests cost 10 credits.');
       }
-
       const newBalance = currentBalance - ndaCreditCost;
 
-      // Deduct credits
-      await this.db.query(
-        `UPDATE user_credits SET balance = balance - $1, total_used = total_used + $1, last_updated = NOW() WHERE user_id = $2`,
-        [ndaCreditCost, authResult.user.id]
-      );
-
-      // Record credit transaction
-      await this.db.query(
-        `INSERT INTO credit_transactions (user_id, type, amount, description, balance_before, balance_after, usage_type, pitch_id, created_at)
-         VALUES ($1, 'usage', $2, 'NDA request', $3, $4, 'nda_request', $5, NOW())`,
-        [authResult.user.id, -ndaCreditCost, currentBalance, newBalance, this.safeParseInt(pitchId)]
-      );
-
-      // Auto-approve for demo accounts
+      // Demo accounts are auto-approved AND immediately granted access.
       const userEmail = authResult.user.email || '';
       const isDemoAccount = userEmail.includes('@demo.com');
-      const ndaStatus = isDemoAccount ? 'approved' : 'pending';
-      console.log(`NDA request from ${userEmail}, isDemoAccount: ${isDemoAccount}, status: ${ndaStatus}`);
+      const ndaStatus = isDemoAccount ? 'signed' : 'pending';
 
-      // Get pitch creator to ensure the pitch exists - try different column names
-      let pitch: DatabaseRow | null = null;
-      let creatorId: number = 0;
-
-      const result = await this.db.query(
-        `SELECT user_id FROM pitches WHERE id = $1`,
-        [pitchId]
-      ) as DatabaseRow[];
-      pitch = result[0];
-
-      if (!pitch) {
-        return builder.error(ErrorCode.NOT_FOUND, 'Pitch not found');
-      }
-
-      creatorId = this.safeParseInt(pitch.user_id) || 1;
-
-      // Insert NDA request into nda_requests table (not ndas table)
-      // nda_requests table uses requester_id instead of signer_id
-      interface NDARecord {
-        id: number;
-        pitch_id: number;
-        owner_id: number;
-        requester_id?: number;
-        request_message?: string;
-        expires_at?: string;
-        status?: string;
-        created_at?: string;
-      }
-      let nda: NDARecord | null = null;
-
+      // 4) Insert the request into the canonical `ndas` table (signer_id = requester).
+      //    Demo accounts land 'signed' + access_granted; everyone else 'pending'
+      //    awaiting creator approval. Unique (pitch_id, signer_id) backstops dedup.
+      const demoTimestamp = isDemoAccount ? new Date().toISOString() : null;
+      let nda: DatabaseRow | null = null;
       try {
-        // Build the query properly based on demo account status
-        if (isDemoAccount) {
-          // For demo accounts, auto-approve the request
-          const result = await this.db.query(`
-            INSERT INTO nda_requests (
-              requester_id, pitch_id, owner_id, status, nda_type,
-              request_message, created_at, responded_at
-            ) VALUES (
-              $1, $2, $3, 'approved', 'basic',
-              $4, NOW(), NOW()
-            ) RETURNING *
-          `, [authResult.user.id, this.safeParseInt(data.pitchId), creatorId as number, this.safeString(data.message) || 'NDA Request']);
-          nda = result[0] as unknown as NDARecord;
-
-          // Also create the actual NDA record for demo accounts
-          await this.db.query(`
-            INSERT INTO ndas (
-              signer_id, pitch_id, status, nda_type,
-              access_granted, created_at, updated_at, signed_at
-            ) VALUES (
-              $1, $2, 'signed', 'basic', true,
-              NOW(), NOW(), NOW()
-            ) ON CONFLICT (pitch_id, signer_id) DO UPDATE SET
-              status = 'signed',
-              access_granted = true,
-              updated_at = NOW()
-          `, [authResult.user.id, this.safeParseInt(data.pitchId)]);
-        } else {
-          // Regular flow - create pending request
-          const result2 = await this.db.query(`
-            INSERT INTO nda_requests (
-              requester_id, pitch_id, owner_id, status, nda_type,
-              request_message, created_at
-            ) VALUES (
-              $1, $2, $3, 'pending', 'basic',
-              $4, NOW()
-            ) RETURNING *
-          `, [authResult.user.id, this.safeParseInt(data.pitchId), creatorId as number, this.safeString(data.message) || 'NDA Request']);
-          nda = result2[0] as unknown as NDARecord;
-        }
+        const inserted = await this.db.query(`
+          INSERT INTO ndas (
+            signer_id, pitch_id, status, nda_type, access_granted,
+            ip_address, user_agent, created_at, updated_at, signed_at, approved_at
+          ) VALUES (
+            $1, $2, $3, 'basic', $4,
+            $5, $6, NOW(), NOW(), $7, $7
+          )
+          ON CONFLICT (pitch_id, signer_id) DO NOTHING
+          RETURNING *
+        `, [
+          authResult.user.id,
+          this.safeParseInt(pitchId),
+          ndaStatus,
+          isDemoAccount,
+          request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || null,
+          request.headers.get('User-Agent') || null,
+          demoTimestamp,
+        ]) as DatabaseRow[];
+        nda = inserted[0] || null;
       } catch (insertError) {
         console.error('Failed to create NDA request:', insertError);
         throw new Error('Failed to create NDA request');
       }
 
+      // ON CONFLICT DO NOTHING → a concurrent request already exists; do NOT charge.
       if (!nda) {
-        throw new Error('Failed to create NDA request');
+        return builder.error(ErrorCode.ALREADY_EXISTS, 'NDA request already exists');
       }
+
+      // 5) Charge credits ONLY now that the request row is committed.
+      await this.db.query(
+        `UPDATE user_credits SET balance = balance - $1, total_used = total_used + $1, last_updated = NOW() WHERE user_id = $2`,
+        [ndaCreditCost, authResult.user.id]
+      );
+      await this.db.query(
+        `INSERT INTO credit_transactions (user_id, type, amount, description, balance_before, balance_after, usage_type, pitch_id, created_at)
+         VALUES ($1, 'usage', $2, 'NDA request', $3, $4, 'nda_request', $5, NOW())`,
+        [authResult.user.id, -ndaCreditCost, currentBalance, newBalance, this.safeParseInt(pitchId)]
+      );
 
       // Create notification for pitch owner if not auto-approved
       if (!isDemoAccount && creatorId) {
@@ -8488,7 +8456,7 @@ pitchey_analytics_datapoints_per_minute 1250
           `, [
             creatorId,
             `${authResult.user.name || authResult.user.email} has requested NDA access to your pitch`,
-            nda.id
+            this.safeParseInt(nda.id)
           ]);
         } catch (notifError) {
           console.error('Failed to create notification:', notifError);
@@ -8507,13 +8475,13 @@ pitchey_analytics_datapoints_per_minute 1250
         description,
         {
           userId: authResult.user.id,
-          ndaId: nda.id,
-          pitchId: nda.pitch_id,
+          ndaId: this.safeParseInt(nda.id),
+          pitchId: this.safeParseInt(nda.pitch_id),
           ipAddress: request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || undefined,
           userAgent: request.headers.get('User-Agent') || undefined,
           metadata: {
-            ownerId: nda.owner_id,
-            message: nda.request_message,
+            ownerId: creatorId,
+            message: this.safeString(data.reason) || 'NDA Request',
             expiresAt: nda.expires_at,
             isDemoAccount,
             autoApproved: isDemoAccount
@@ -8541,9 +8509,9 @@ pitchey_analytics_datapoints_per_minute 1250
         id: nda.id,
         status: nda.status,
         pitchId: nda.pitch_id,
-        requesterId: nda.requester_id,
-        ownerId: nda.owner_id,
-        message: nda.request_message,
+        requesterId: nda.signer_id,
+        ownerId: creatorId,
+        message: this.safeString(data.reason) || 'NDA Request',
         expiresAt: nda.expires_at,
         createdAt: nda.created_at,
         creditsUsed: ndaCreditCost,
@@ -8697,6 +8665,32 @@ pitchey_analytics_datapoints_per_minute 1250
 
       if (!nda) {
         return builder.error(ErrorCode.NOT_FOUND, 'NDA request not found or not authorized');
+      }
+
+      // Refund the requester's 10 NDA-request credits (Bug #284: rejection used to
+      // silently keep the charge). Fire-and-forget — a refund hiccup must not block
+      // the rejection itself.
+      try {
+        const signerId = this.safeParseInt(nda.signer_id);
+        const refundAmount = 10;
+        const balRows = await this.db.query(
+          `SELECT balance FROM user_credits WHERE user_id = $1`,
+          [signerId]
+        ) as DatabaseRow[];
+        if (balRows.length > 0) {
+          const bal = Number(balRows[0].balance) || 0;
+          await this.db.query(
+            `UPDATE user_credits SET balance = balance + $1, total_used = GREATEST(total_used - $1, 0), last_updated = NOW() WHERE user_id = $2`,
+            [refundAmount, signerId]
+          );
+          await this.db.query(
+            `INSERT INTO credit_transactions (user_id, type, amount, description, balance_before, balance_after, usage_type, pitch_id, created_at)
+             VALUES ($1, 'refund', $2, 'NDA request rejected — refund', $3, $4, 'nda_request_refund', $5, NOW())`,
+            [signerId, refundAmount, bal, bal + refundAmount, this.safeParseInt(nda.pitch_id)]
+          );
+        }
+      } catch (refundError) {
+        console.error('Failed to refund NDA request credits on rejection:', refundError);
       }
 
       // Create notification for the requester (signer)
@@ -16148,40 +16142,10 @@ pitchey_analytics_datapoints_per_minute 1250
         ORDER BY n.created_at DESC
       `;
 
-      // Also check nda_requests table for pending requests
-      let nrResults: any[] = [];
-      try {
-        nrResults = await sql`
-          SELECT
-            nr.id, nr.pitch_id, nr.requester_id, nr.status,
-            nr.nda_type, nr.created_at, nr.updated_at, nr.expires_at,
-            nr.message, nr.response_message, nr.requested_at, nr.responded_at,
-            p.title as pitch_title, p.genre as pitch_genre,
-            p.user_id as pitch_owner_id,
-            u.username as requester_username, u.name as requester_name,
-            u.email as requester_email,
-            creator.username as creator_username, creator.name as creator_name
-          FROM nda_requests nr
-          JOIN pitches p ON nr.pitch_id = p.id
-          LEFT JOIN users u ON u.id = nr.requester_id
-          LEFT JOIN users creator ON creator.id = p.user_id
-          WHERE (nr.pitch_owner_id = ${authResult.user.id} OR nr.creator_id = ${authResult.user.id} OR p.user_id = ${authResult.user.id})
-            AND nr.requester_id != ${authResult.user.id}
-            AND nr.status = 'pending'
-          ORDER BY COALESCE(nr.requested_at, nr.created_at) DESC
-        `;
-      } catch { /* nda_requests table issues are non-fatal */ }
-
-      // Merge and deduplicate by pitch_id + requester_id
-      const seen = new Set<string>();
-      const allRequests: any[] = [];
-      for (const r of [...ndaResults, ...nrResults]) {
-        const key = `${r.pitch_id}-${r.requester_id || r.signer_id}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          allRequests.push(r);
-        }
-      }
+      // Bug #284: pending requests now live in `ndas` (the table approveNDA and the
+      // access-gate read). The legacy `nda_requests` branch is removed so the `id`
+      // surfaced here is a real `ndas.id` the Approve button can actually act on.
+      const allRequests: any[] = ndaResults;
 
       return new Response(JSON.stringify({
         success: true,
