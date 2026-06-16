@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Briefcase, Building2, Wallet, Plus, X, MapPin, CalendarDays, DollarSign,
   BadgeCheck, Loader2, Pencil, Megaphone, ArrowRight, Send, Inbox, Check, Star, BarChart3,
 } from 'lucide-react';
 import PortalTopNav from '@shared/components/layout/PortalTopNav';
+import { getPortalPath } from '@/utils/navigation';
+import { normalizeUserType } from '@shared/types/user-type';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { useToast } from '@shared/components/feedback/ToastProvider';
 import { getGenresSync, getFormatsSync } from '@config/pitchConstants';
@@ -534,10 +536,24 @@ const TYPE_TABS = [
 
 export default function OpportunitiesBoard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isAuthenticated } = useBetterAuthStore();
   const userType = user?.userType;
   const canPost = isAuthenticated && (userType === 'production' || userType === 'investor');
   const canSubmit = isAuthenticated && (userType === 'creator' || userType === 'production');
+
+  // Keep portal chrome consistent (same fix as /marketplace): authenticated
+  // creator/investor/production users browse this inside their PortalLayout sidebar
+  // (/<portal>/opportunities) instead of the standalone top-nav page. Watcher/admin/
+  // anon keep the standalone page (no in-portal route for them). Query string preserved.
+  const isInsidePortal = /^\/(watcher|creator|investor|production|admin)\//.test(location.pathname);
+  const portalSeg = getPortalPath(normalizeUserType(userType));
+  const inPortalPath = ['creator', 'investor', 'production'].includes(portalSeg) ? `/${portalSeg}/opportunities` : null;
+  useEffect(() => {
+    if (!isInsidePortal && inPortalPath) {
+      navigate(`${inPortalPath}${location.search}`, { replace: true });
+    }
+  }, [isInsidePortal, inPortalPath, location.search, navigate]);
 
   const [calls, setCalls] = useState<OpenCall[]>([]);
   const [loading, setLoading] = useState(true);
@@ -593,7 +609,7 @@ export default function OpportunitiesBoard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-stone-50 via-white to-stone-50">
-      <PortalTopNav />
+      {!isInsidePortal && <PortalTopNav />}
 
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-r from-purple-700 via-purple-600 to-indigo-600 text-white">
