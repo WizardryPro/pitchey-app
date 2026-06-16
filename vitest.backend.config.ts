@@ -6,11 +6,23 @@ import { resolve } from 'path'
 // NOT spin up workerd here. Pure-logic services, handlers, and utils are the target;
 // anything that genuinely needs Worker bindings belongs in an integration tier we
 // haven't built yet. Frontend has its own config under frontend/.
+//
+// IMPORTANT: this file is deliberately NOT named `vitest.config.ts`. A root-level
+// `vitest.config.ts` gets auto-discovered when running the FRONTEND suite from
+// frontend/, which resets vitest's project root to the repo root and makes
+// frontend's relative `setupFiles: ['./src/test/setup.ts']` resolve to THIS
+// backend setup (node env, no jest-dom) — silently breaking ~all frontend tests.
+// Run this explicitly: `vitest --config vitest.backend.config.ts` (see root
+// package.json scripts). `root` is pinned to __dirname so paths never depend on cwd.
 export default defineConfig({
   test: {
+    root: __dirname,
     globals: true,
     environment: 'node',
-    setupFiles: ['./src/test/setup.ts'],
+    // NOT under src/test/ — that path collides with frontend's own
+    // ./src/test/setup.ts and vitest would cross-resolve them, loading this
+    // node-env setup into the frontend (jsdom) suite and breaking ~all of it.
+    setupFiles: [resolve(__dirname, './test/backend-setup.ts')],
     include: ['src/**/*.test.ts'],
     exclude: [
       '**/node_modules/**',
