@@ -426,6 +426,11 @@ async function runRouteTest(browser, route, viewportName, storageState) {
   const errors = [];
   const consoleErrors = [];
   const networkErrors = [];
+  // Set when the route's ONLY failures are cold-start 5xx blips (nav/console/network)
+  // — the caller retries such routes once and only fails if they re-trip. A 5xx
+  // resource response can land *after* the in-run sawTransient snapshot below, which
+  // is the race that let a one-shot 502 fail a scheduled run (run 27521975313).
+  let transientOnly = false;
 
   context.on('page', (page) => {
     page.on('console', (msg) => {
@@ -529,22 +534,37 @@ async function runRouteTest(browser, route, viewportName, storageState) {
       }
     }
 
-    // Fold accumulated errors
-    if (consoleErrors.length > 0) {
+    // Fold accumulated errors. Split console errors into cold-start 5xx blips vs
+    // real errors so the caller can tell a transient-only failure from a genuine one.
+    const transient5xxConsole = consoleErrors.filter((t) => /Failed to load resource.*status of 5\d\d/i.test(t));
+    const realConsole = consoleErrors.filter((t) => !/Failed to load resource.*status of 5\d\d/i.test(t));
+    if (realConsole.length > 0) {
       errors.push(
-        `Console errors × ${consoleErrors.length}: ${consoleErrors.slice(0, 3).map((s) => s.slice(0, 120)).join(' | ')}`,
+        `Console errors × ${realConsole.length}: ${realConsole.slice(0, 3).map((s) => s.slice(0, 120)).join(' | ')}`,
       );
+    }
+    if (transient5xxConsole.length > 0) {
+      errors.push(`Transient 5xx console × ${transient5xxConsole.length}: ${transient5xxConsole.slice(0, 2).map((s) => s.slice(0, 120)).join(' | ')}`);
     }
     if (networkErrors.length > 0) {
       errors.push(`5xx network × ${networkErrors.length}: ${networkErrors.slice(0, 3).join(' | ')}`);
     }
+
+    // Hard errors = everything that is NOT a cold-start 5xx blip (nav 5xx, the
+    // transient-console fold, the 5xx-network fold). If there are failures but every
+    // one is a transient 5xx, flag for a single caller-level retry.
+    const isTransientErr = (e) =>
+      /^HTTP 5\d\d on navigation$/.test(e) ||
+      /^Transient 5xx console ×/.test(e) ||
+      /^5xx network ×/.test(e);
+    transientOnly = errors.length > 0 && errors.every(isTransientErr);
   } catch (err) {
     errors.push(`Exception: ${err.message}`);
   } finally {
     await context.close();
   }
 
-  return { route: route.path, as: route.as, viewport: viewportName, errors };
+  return { route: route.path, as: route.as, viewport: viewportName, errors, transientOnly };
 }
 
 async function main() {
@@ -605,7 +625,18 @@ async function main() {
     }
     for (const viewportName of Object.keys(VIEWPORTS)) {
       process.stdout.write(`  [${viewportName.padEnd(7)}] ${route.path.padEnd(32)} `);
-      const result = await runRouteTest(browser, route, viewportName, storageState);
+      let result = await runRouteTest(browser, route, viewportName, storageState);
+      // Cold-start self-heal: if the only failures were transient 5xx blips (which
+      // a real user would never notice and which clear on a refresh), retry the
+      // route once and trust the second result. A genuine outage re-trips and
+      // still fails the gate. Prevents a one-shot 502 from firing an incident.
+      if (result.errors.length > 0 && result.transientOnly) {
+        await new Promise((r) => setTimeout(r, 1500));
+        const retry = await runRouteTest(browser, route, viewportName, storageState);
+        result = retry.errors.length === 0
+          ? retry
+          : { ...retry, errors: [`(after transient-5xx retry) ${retry.errors[0]}`, ...retry.errors.slice(1)] };
+      }
       process.stdout.write(result.errors.length === 0 ? '✓\n' : '✗\n');
       results.push(result);
       // Small gap between tests to avoid tripping burst rate-limiters on auth
