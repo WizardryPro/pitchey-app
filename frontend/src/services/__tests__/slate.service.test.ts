@@ -115,6 +115,14 @@ describe('SlateService', () => {
 
       expect(result).toEqual([]);
     });
+
+    it('returns empty array when apiClient resolves with success:false', async () => {
+      mockGet.mockResolvedValue({ success: false, error: { message: 'HTTP 500' } });
+
+      const result = await SlateService.list();
+
+      expect(result).toEqual([]);
+    });
   });
 
   // ─── get ───────────────────────────────────────────────────────────────────
@@ -146,6 +154,14 @@ describe('SlateService', () => {
 
       expect(result).toBeNull();
     });
+
+    it('returns null when apiClient resolves with success:false', async () => {
+      mockGet.mockResolvedValue({ success: false, error: { message: 'HTTP 404' } });
+
+      const result = await SlateService.get(999);
+
+      expect(result).toBeNull();
+    });
   });
 
   // ─── create ────────────────────────────────────────────────────────────────
@@ -172,6 +188,14 @@ describe('SlateService', () => {
 
     it('returns null when API throws', async () => {
       mockPost.mockRejectedValue(new Error('Unauthorized'));
+
+      const result = await SlateService.create({ title: 'New Slate' });
+
+      expect(result).toBeNull();
+    });
+
+    it('returns null when apiClient resolves with success:false', async () => {
+      mockPost.mockResolvedValue({ success: false, error: { message: 'Unauthorized' } });
 
       const result = await SlateService.create({ title: 'New Slate' });
 
@@ -215,6 +239,14 @@ describe('SlateService', () => {
 
       expect(result).toBeNull();
     });
+
+    it('returns null when apiClient resolves with success:false', async () => {
+      mockPut.mockResolvedValue({ success: false, error: { message: 'HTTP 404' } });
+
+      const result = await SlateService.update(999, { title: 'Bad' });
+
+      expect(result).toBeNull();
+    });
   });
 
   // ─── remove ────────────────────────────────────────────────────────────────
@@ -235,6 +267,14 @@ describe('SlateService', () => {
 
       expect(result).toBe(false);
     });
+
+    it('returns false when apiClient resolves with success:false', async () => {
+      mockDelete.mockResolvedValue({ success: false, error: { message: 'HTTP 500' } });
+
+      const result = await SlateService.remove(1);
+
+      expect(result).toBe(false);
+    });
   });
 
   // ─── addPitch ──────────────────────────────────────────────────────────────
@@ -250,6 +290,14 @@ describe('SlateService', () => {
 
     it('returns false when API throws', async () => {
       mockPost.mockRejectedValue(new Error('Pitch already in slate'));
+
+      const result = await SlateService.addPitch(1, 100);
+
+      expect(result).toBe(false);
+    });
+
+    it('returns false when apiClient resolves with success:false', async () => {
+      mockPost.mockResolvedValue({ success: false, error: { message: 'Pitch already in slate' } });
 
       const result = await SlateService.addPitch(1, 100);
 
@@ -275,6 +323,14 @@ describe('SlateService', () => {
 
       expect(result).toBe(false);
     });
+
+    it('returns false when apiClient resolves with success:false', async () => {
+      mockDelete.mockResolvedValue({ success: false, error: { message: 'HTTP 404' } });
+
+      const result = await SlateService.removePitch(1, 999);
+
+      expect(result).toBe(false);
+    });
   });
 
   // ─── reorderPitches ────────────────────────────────────────────────────────
@@ -292,6 +348,14 @@ describe('SlateService', () => {
       mockPut.mockRejectedValue(new Error('Invalid order'));
 
       const result = await SlateService.reorderPitches(1, []);
+
+      expect(result).toBe(false);
+    });
+
+    it('returns false when apiClient resolves with success:false', async () => {
+      mockPut.mockResolvedValue({ success: false, error: { message: 'Invalid order' } });
+
+      const result = await SlateService.reorderPitches(1, [3, 1, 2]);
 
       expect(result).toBe(false);
     });

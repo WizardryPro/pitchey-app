@@ -52,7 +52,9 @@ function jsonResponse(body: unknown, status = 200): Response {
 describe('Integration: SlateService ↔ apiClient ↔ fetch', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
-    (global.fetch as ReturnType<typeof vi.fn>).mockReset();
+    // jsdom/undici install a native global.fetch that overrides the vi.fn() from
+    // setup.ts, so we can't rely on it already being a mock — stub a fresh one.
+    vi.stubGlobal('fetch', vi.fn());
 
     // Import real services after mocks are in place
     const slateMod = await import('../../services/slate.service');
@@ -127,20 +129,17 @@ describe('Integration: SlateService ↔ apiClient ↔ fetch', () => {
       expect(init?.method).toBe('POST');
     });
 
-    it('returns the apiClient error object (not null) on 4xx — wiring bug', async () => {
-      // WIRING BUG: SlateService.create does `return res?.data ?? res ?? null`.
-      // On a 4xx, apiClient returns { success:false, error:{...} } (does NOT throw).
-      // res.data is undefined, so `?? res` kicks in — returning the error object,
-      // not null as the interface implies. The service should check res.success.
+    it('returns null on 4xx (honors apiClient success flag)', async () => {
+      // apiClient returns { success:false, error:{...} } on a 4xx (does NOT throw).
+      // create() must check res.success and return null on failure rather than
+      // leaking the error wrapper to callers as if it were a created slate.
       (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
         jsonResponse({ error: 'Unauthorized' }, 401)
       );
 
       const result = await SlateService.create({ title: 'Fail Slate' });
 
-      // Documents current (buggy) behavior: returns the apiClient error wrapper
-      expect(result).not.toBeNull();
-      expect((result as any)?.success).toBe(false);
+      expect(result).toBeNull();
     });
   });
 
@@ -182,17 +181,15 @@ describe('Integration: SlateService ↔ apiClient ↔ fetch', () => {
       expect(init?.method).toBe('POST');
     });
 
-    it('addPitch returns true even on network error — wiring bug', async () => {
-      // WIRING BUG: SlateService.addPitch uses try/catch but apiClient.post() swallows
-      // errors internally (returns { success:false } instead of throwing). The service
-      // catch() never fires. The method always returns true regardless of outcome.
-      // Fix: check res.success before returning true.
+    it('addPitch returns false on network error (honors apiClient success flag)', async () => {
+      // apiClient.post() never throws — it returns { success:false } on a network
+      // failure. addPitch must check res.success and return false rather than
+      // unconditionally reporting success.
       (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Failed to fetch'));
 
       const ok = await SlateService.addPitch(10, 42);
 
-      // Documents current (buggy) behavior: always true even on network failure
-      expect(ok).toBe(true);
+      expect(ok).toBe(false);
     });
 
     it('removePitch calls DELETE and returns true on success', async () => {
@@ -246,16 +243,14 @@ describe('Integration: SlateService ↔ apiClient ↔ fetch', () => {
       expect(init?.method).toBe('DELETE');
     });
 
-    it('returns true even on network error — wiring bug (same as addPitch)', async () => {
-      // WIRING BUG: Same issue as addPitch — apiClient.delete() never throws,
-      // so the catch() in SlateService.remove() never fires. Always returns true.
-      // Fix: check the returned res.success before returning true.
+    it('returns false on network error (honors apiClient success flag)', async () => {
+      // Same contract as addPitch — apiClient.delete() never throws, it returns
+      // { success:false }. remove() must check res.success and return false.
       (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Network'));
 
       const ok = await SlateService.remove(10);
 
-      // Documents current (buggy) behavior
-      expect(ok).toBe(true);
+      expect(ok).toBe(false);
     });
   });
 });
