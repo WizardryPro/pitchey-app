@@ -340,6 +340,7 @@ export class AdminEndpointsHandler {
           (SELECT COUNT(*)::int FROM pitches) AS total_pitches,
           (SELECT COUNT(*)::int FROM pitches WHERE status IN ('published','active')) AS approved_pitches,
           (SELECT COUNT(*)::int FROM pitches WHERE status = 'draft') AS draft_pitches,
+          (SELECT COUNT(*)::int FROM pitches WHERE moderation_status = 'rejected') AS rejected_pitches,
           (SELECT COUNT(*)::int FROM ndas WHERE status = 'pending') AS pending_ndas,
           (SELECT COALESCE(SUM(amount), 0)::float FROM payments WHERE status = 'completed') AS total_revenue
       `;
@@ -352,7 +353,7 @@ export class AdminEndpointsHandler {
         activeUsers: s.active_users ?? 0,
         recentSignups: s.recent_signups ?? 0,
         approvedPitches: s.approved_pitches ?? 0,
-        rejectedPitches: 0
+        rejectedPitches: s.rejected_pitches ?? 0
       }, corsHeaders);
     } catch (error) {
       await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
@@ -392,6 +393,22 @@ export class AdminEndpointsHandler {
         FROM pitches`);
       const inv = await one(sql`SELECT COUNT(*)::int AS cnt, COALESCE(SUM(amount), 0)::float AS volume FROM investments`);
       const nda = await one(sql`SELECT COUNT(*) FILTER (WHERE status IN ('signed','approved'))::int AS active FROM ndas`);
+      // Real moderation queue + financial-health counts. Each block is its own
+      // defensive query so a missing column in some env degrades that metric to 0
+      // (honest) without zeroing the others or 500ing the dashboard. These were
+      // previously hardcoded 0, which gave admins a false "all clear".
+      const pmod = await one(sql`
+        SELECT COUNT(*) FILTER (WHERE moderation_status = 'flagged')::int AS flagged,
+               COUNT(*) FILTER (WHERE moderation_status = 'rejected')::int AS removed
+        FROM pitches`);
+      const cr = await one(sql`
+        SELECT COUNT(*) FILTER (WHERE status = 'pending')::int AS pending_flags,
+               COUNT(*) FILTER (WHERE resolved_at >= date_trunc('day', NOW()))::int AS actions_today,
+               COUNT(DISTINCT moderator_id) FILTER (WHERE resolved_at >= NOW() - INTERVAL '30 days')::int AS active_moderators,
+               COALESCE(AVG(EXTRACT(EPOCH FROM (resolved_at - created_at)) / 3600)
+                        FILTER (WHERE resolved_at IS NOT NULL), 0)::float AS avg_resolution_hours
+        FROM content_reports`);
+      const pay = await one(sql`SELECT COUNT(*) FILTER (WHERE status = 'pending')::int AS pending FROM payments`);
 
       const stats: SystemStats = {
         users: {
@@ -406,20 +423,20 @@ export class AdminEndpointsHandler {
           total_pitches: p.total || 0,
           published_pitches: p.published || 0,
           draft_pitches: p.draft || 0,
-          flagged_content: 0,
-          removed_content: 0
+          flagged_content: pmod.flagged || 0,
+          removed_content: pmod.removed || 0
         },
         moderation: {
-          pending_flags: 0,
-          actions_today: 0,
-          active_moderators: 0,
-          average_resolution_time: 0
+          pending_flags: cr.pending_flags || 0,
+          actions_today: cr.actions_today || 0,
+          active_moderators: cr.active_moderators || 0,
+          average_resolution_time: cr.avg_resolution_hours || 0
         },
         financial: {
           total_investments: inv.cnt || 0,
           total_volume: inv.volume || 0,
           active_ndas: nda.active || 0,
-          pending_payments: 0
+          pending_payments: pay.pending || 0
         }
       };
 
@@ -689,9 +706,22 @@ export class AdminEndpointsHandler {
       }
       await sql`UPDATE users SET account_locked_until = NOW() + INTERVAL '30 days', account_lock_reason = ${body.reason}, updated_at = NOW() WHERE id = ${userId}`;
 
+      // Persist a real moderation record and use its DB id — previously this was
+      // a fabricated Math.random() value with no audit trail behind it.
+      let actionId = 0;
+      try {
+        const auditRows = await sql`
+          INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_values, event_category, description, created_at)
+          VALUES (${userAuth.userId}, 'suspension', 'user', ${userId},
+                  ${JSON.stringify({ reason: body.reason, duration: body.duration || '7 days' })}::jsonb, 'admin',
+                  ${`Suspended user #${userId}`}, NOW())
+          RETURNING id`;
+        actionId = auditRows?.[0]?.id ?? 0;
+      } catch { /* audit is non-critical — never block the suspension on it */ }
+
       // Create moderation action
       const moderationAction: ModerationAction = {
-        id: Math.floor(Math.random() * 1000) + 100,
+        id: actionId,
         action_type: 'suspension',
         target_type: 'user',
         target_id: userId,

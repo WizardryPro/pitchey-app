@@ -275,22 +275,24 @@ describe('Transactions', () => {
       })
     })
 
-    it('shows refund section for refundable transactions', async () => {
+    it('shows refund section pointing to Stripe for refundable transactions', async () => {
       const user = userEvent.setup()
       renderComponent()
       await waitFor(() => {
         expect(screen.getAllByText('View').length).toBe(5)
       })
-      // First transaction is completed payment with refundableAmount
+      // First transaction is a completed payment with refundableAmount.
       await user.click(screen.getAllByText('View')[0])
       await waitFor(() => {
         expect(screen.getByText('Transaction Details')).toBeInTheDocument()
       })
-      // "Process Refund" appears as both section heading and button text
-      expect(screen.getAllByText('Process Refund').length).toBeGreaterThanOrEqual(1)
-      expect(screen.getByText('Refund Amount')).toBeInTheDocument()
-      expect(screen.getByText('Refund Reason')).toBeInTheDocument()
-      expect(screen.getByText('Max')).toBeInTheDocument()
+      // Refunds are issued in Stripe (not automated in-app) — the section points
+      // the admin to the Stripe dashboard rather than an in-app refund form.
+      expect(screen.getByText('Refunds')).toBeInTheDocument()
+      expect(screen.getByText(/Refunds are issued from the Stripe dashboard/i)).toBeInTheDocument()
+      const stripeLink = screen.getByText(/Open in Stripe to refund/i).closest('a') as HTMLAnchorElement
+      expect(stripeLink).toBeTruthy()
+      expect(stripeLink.getAttribute('href')).toContain('dashboard.stripe.com/payments/')
     })
 
     it('shows subscription plan in metadata when available', async () => {
