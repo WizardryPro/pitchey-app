@@ -510,10 +510,11 @@ export default function CreatePitch() {
               'Pitch published!',
               'It\'s now live on the marketplace for investors to find.'
             );
-          } catch (pubErr: any) {
+          } catch (pubErr) {
+            const e = pubErr instanceof Error ? pubErr : new Error(String(pubErr));
             error(
               'Saved as a draft — not published',
-              pubErr?.message || 'Your pitch is saved, but we couldn\'t publish it. Open it from "My Pitches" and hit Publish.'
+              e.message || 'Your pitch is saved, but we couldn\'t publish it. Open it from "My Pitches" and hit Publish.'
             );
           }
         } else {
