@@ -2,12 +2,12 @@
  * Tests for the RBAC permission contract that src/utils/rbac-integration.ts is
  * meant to enforce.
  *
- * NOTE: rbac-integration.ts is a BROKEN ORPHAN (no live importer) — it has a
- * stray `;` inside an object literal (~line 50) AND imports `./errors` /
- * `./response-builder`, neither of which exists. It cannot be imported and is a
- * deletion candidate (flagged to the owner; left as-is, not silently revived).
- * So we test the real security logic directly against RBACService
- * (src/services/rbac.service.ts), which is what the adaptor delegates to.
+ * NOTE: src/utils/rbac-integration.ts was a BROKEN ORPHAN (no live importer —
+ * a stray `;` inside an object literal AND imports of non-existent `./errors` /
+ * `./response-builder`) and was DELETED 2026-06-16. Its intended security
+ * contract is covered here directly against RBACService
+ * (src/services/rbac.service.ts), which is what the adaptor delegated to and
+ * what the live RBAC path (rbac-enforcer / permission-helpers) actually uses.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
