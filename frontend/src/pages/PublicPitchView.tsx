@@ -191,8 +191,8 @@ export default function PublicPitchView() {
   };
 
   const handleNDASigned = async () => {
-    // For demo accounts, NDA is auto-approved and signed
-    // Refresh the NDA status from the server
+    // Re-read the real NDA status from the server (request goes 'pending' until the
+    // pitch owner approves — demo accounts included; there is no auto-approve).
     if (pitch) {
       await checkNDAStatus(pitch.id);
     }
