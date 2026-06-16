@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { Plus, Users, AlertCircle, ArrowUpDown, Info } from 'lucide-react';
 import type { Character } from '@shared/types/character';
 import { CharacterCard } from './CharacterCard';
@@ -132,9 +133,12 @@ export const CharacterManagement: React.FC<CharacterManagementProps> = ({
       
       setIsFormOpen(false);
       setEditingCharacter(undefined);
+      toast.success('Character saved');
     } catch (error) {
       console.error('Error saving character:', error);
-      setError(error instanceof Error ? error.message : 'Failed to save character');
+      const message = error instanceof Error ? error.message : 'Failed to save character';
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -156,9 +160,12 @@ export const CharacterManagement: React.FC<CharacterManagementProps> = ({
       // In both API and local mode, remove from local state
       const updatedCharacters = normalizedCharacters.filter(char => char.id !== id);
       onChange(updatedCharacters);
+      toast.success('Character deleted');
     } catch (error) {
       console.error('Error deleting character:', error);
-      setError(error instanceof Error ? error.message : 'Failed to delete character');
+      const message = error instanceof Error ? error.message : 'Failed to delete character';
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -204,7 +211,9 @@ export const CharacterManagement: React.FC<CharacterManagementProps> = ({
       }
     } catch (error) {
       console.error('Error reordering characters:', error);
-      setError(error instanceof Error ? error.message : 'Failed to reorder characters');
+      const message = error instanceof Error ? error.message : 'Failed to reorder characters';
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -247,7 +256,9 @@ export const CharacterManagement: React.FC<CharacterManagementProps> = ({
       }
     } catch (error) {
       console.error('Error moving character up:', error);
-      setError(error instanceof Error ? error.message : 'Failed to move character');
+      const message = error instanceof Error ? error.message : 'Failed to move character';
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -290,7 +301,9 @@ export const CharacterManagement: React.FC<CharacterManagementProps> = ({
       }
     } catch (error) {
       console.error('Error moving character down:', error);
-      setError(error instanceof Error ? error.message : 'Failed to move character');
+      const message = error instanceof Error ? error.message : 'Failed to move character';
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }

@@ -413,14 +413,15 @@ describe('CreatePitch', () => {
     expect(screen.getByText('Actively Seeking Investment')).toBeInTheDocument()
   })
 
-  it('renders Cancel and Create Pitch buttons', () => {
+  it('renders Cancel, Save as Draft, and Publish buttons', () => {
     render(
       <MemoryRouter>
         <CreatePitch />
       </MemoryRouter>
     )
     expect(screen.getByTestId('cancel-button')).toBeInTheDocument()
-    expect(screen.getByTestId('submit-button')).toBeInTheDocument()
+    expect(screen.getByTestId('save-draft-button')).toBeInTheDocument()
+    expect(screen.getByTestId('publish-button')).toBeInTheDocument()
   })
 
   it('shows credit cost overview notice', () => {

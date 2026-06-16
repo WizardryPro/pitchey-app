@@ -3,6 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { 
   Bell, 
   BellRing, 
@@ -175,12 +176,13 @@ export const PushSubscriptionManager: React.FC<PushSubscriptionManagerProps> = (
       loadSubscriptions(); // Reload to get updated list
       onSubscriptionChange?.(true);
 
-      // Show success message
       setTestNotificationSent(false);
+      toast.success('Push notifications enabled');
 
     } catch (error) {
       console.error('Error subscribing to push notifications:', error);
       setError(error instanceof Error ? error.message : 'Failed to subscribe');
+      toast.error(error instanceof Error ? error.message : 'Couldn\'t enable push notifications');
     } finally {
       setLoading(false);
     }
@@ -227,10 +229,12 @@ export const PushSubscriptionManager: React.FC<PushSubscriptionManagerProps> = (
 
       // Reload subscriptions
       loadSubscriptions();
+      toast.success('Push notifications disabled');
 
     } catch (error) {
       console.error('Error unsubscribing:', error);
       setError(error instanceof Error ? error.message : 'Failed to unsubscribe');
+      toast.error(error instanceof Error ? error.message : 'Couldn\'t disable push notifications');
     } finally {
       setLoading(false);
     }

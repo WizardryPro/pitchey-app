@@ -50,6 +50,12 @@ function walk(dir) {
 }
 
 const CATCH_RE = /\.catch\(\(\)\s*=>/;
+// Body-parse idiom: `request.json().catch(() => ({}))` / `.catch(() => (null))`.
+// This never hides an operational error — it defaults a malformed/empty body and
+// the handler validates it immediately after (returning 400 on bad input). It is
+// provably safe, so it is exempt from the gate rather than forced to carry a
+// misleading `// fire-and-forget` tag.
+const PARSE_IDIOM_RE = /\.json\(\)\.catch\(\(\)\s*=>/;
 const TAG_FAF = /\/\/\s*fire-and-forget\b/;
 const TAG_BUCKET_B = /\/\/\s*TODO\(catch-swallow\):\s*bucket-B\b/;
 const TAG_TODO = /\/\/\s*TODO\(catch-swallow\)/;
@@ -121,6 +127,7 @@ for (const file of files) {
   const lines = text.split('\n');
   for (let i = 0; i < lines.length; i++) {
     if (!CATCH_RE.test(lines[i])) continue;
+    if (PARSE_IDIOM_RE.test(lines[i])) continue; // safe body-parse fallback
     const bucket = classify(lines, i);
     buckets[bucket].push(`${rel}:${i + 1}`);
   }

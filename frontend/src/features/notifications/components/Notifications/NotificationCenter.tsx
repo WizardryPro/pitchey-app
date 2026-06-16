@@ -3,6 +3,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import toast from 'react-hot-toast';
 import {
   Bell,
   BellRing,
@@ -206,8 +207,10 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
       );
 
       setUnreadCount(0);
+      toast.success('All notifications marked as read');
     } catch (error) {
       console.error('Error marking all as read:', error);
+      toast.error('Couldn\'t mark notifications as read. Please try again.');
     }
   };
 

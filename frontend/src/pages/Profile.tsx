@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { Camera, Mail, Phone, MapPin, Building2, Calendar, Edit3, Save, X, Loader2 } from 'lucide-react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { API_URL } from '../config';
@@ -116,12 +117,15 @@ export default function Profile() {
         const updatedUser = (data['user'] as UserProfile) ?? editedProfile;
         setProfile(updatedUser);
         setIsEditing(false);
+        toast.success('Profile saved');
       } else {
         const errorData = await response.json().catch(() => ({ error: { message: 'Failed to save profile' } })) as { error?: { message?: string } };
         console.error('Failed to save profile:', errorData.error?.message);
+        toast.error(errorData.error?.message || 'Couldn\'t save your profile. Please try again.');
       }
     } catch (error) {
       console.error('Failed to save profile:', error);
+      toast.error('Couldn\'t save your profile. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -135,7 +139,7 @@ export default function Profile() {
     // lack a proper image/* MIME, so we don't gate on file.type here —
     // prepareImageForUpload will reject non-images via libheic/canvas.
     if (file.size > PRE_COMPRESSION_MAX_BYTES) {
-      alert('File too large. Please pick an image under 30MB.');
+      toast.error('File too large. Please pick an image under 30MB.');
       return;
     }
 
@@ -171,10 +175,13 @@ export default function Profile() {
       if (updateRes.ok) {
         setProfile(prev => prev ? { ...prev, profileImage: uploadData.url } : prev);
         setEditedProfile(prev => ({ ...prev, profileImage: uploadData.url }));
+        toast.success('Profile photo updated');
+      } else {
+        throw new Error('Failed to save the new photo');
       }
     } catch (error) {
       console.error('Image upload failed:', error);
-      alert(error instanceof Error ? error.message : 'Failed to upload image');
+      toast.error(error instanceof Error ? error.message : 'Failed to upload image');
     } finally {
       setUploadingImage(false);
       // Reset file input so same file can be re-selected

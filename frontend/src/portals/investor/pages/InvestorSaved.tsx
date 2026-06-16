@@ -193,11 +193,14 @@ export default function InvestorSaved() {
         await Promise.all(
           selectedPitches.map(pitchId => savedPitchesService.unsavePitch(Number(pitchId)))
         );
+        const removed = selectedPitches.length;
         setSavedPitches(prev => prev.filter(p => !selectedPitches.includes(p.id)));
         setSelectedPitches([]);
+        toast.success(`Removed ${removed} pitch${removed === 1 ? '' : 'es'} from saved`);
       } catch (err) {
         const e = err instanceof Error ? err : new Error(String(err));
         console.error('Bulk unsave failed:', e.message);
+        toast.error('Couldn\'t remove the selected pitches. Please try again.');
       }
     } else {
       // Folder/status actions not yet supported by API
@@ -209,9 +212,11 @@ export default function InvestorSaved() {
     try {
       await savedPitchesService.unsavePitch(Number(pitchId));
       setSavedPitches(prev => prev.filter(pitch => pitch.id !== pitchId));
+      toast.success('Removed from saved pitches');
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
       console.error('Failed to unsave pitch:', e.message);
+      toast.error('Couldn\'t remove this pitch. Please try again.');
     }
   };
 

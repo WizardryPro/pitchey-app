@@ -712,10 +712,11 @@ export async function submitPitchComment(request: Request, env: Env): Promise<Re
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
   try {
-    const body = await request.json() as { content?: string };
+    const body = await request.json() as { content?: string; isAnonymous?: boolean };
     const content = body.content?.trim();
     if (!content || content.length === 0) return errorResponse('Comment content is required', origin);
     if (content.length > 2000) return errorResponse('Comment must be 2000 characters or less', origin);
+    const isAnonymous = body.isAnonymous === true;
 
     const [pitch] = await sql`SELECT id, user_id FROM pitches WHERE id = ${pitchId} AND status = 'published'`;
     if (!pitch) return errorResponse('Pitch not found or not published', origin, 404);
@@ -736,8 +737,8 @@ export async function submitPitchComment(request: Request, env: Env): Promise<Re
     const ipHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 
     const result = await sql`
-      INSERT INTO pitch_comments (pitch_id, user_id, user_type, content, ip_hash)
-      VALUES (${pitchId}, ${userId ? Number(userId) : null}, ${userType}, ${content}, ${ipHash})
+      INSERT INTO pitch_comments (pitch_id, user_id, user_type, content, ip_hash, is_anonymous)
+      VALUES (${pitchId}, ${userId ? Number(userId) : null}, ${userType}, ${content}, ${ipHash}, ${isAnonymous})
       RETURNING id, created_at
     `;
 
@@ -778,9 +779,10 @@ export async function getPitchComments(request: Request, env: Env): Promise<Resp
 
     // Check if requester has NDA access (signed NDA or is the pitch owner)
     const userId = await getUserId(request, env);
+    const isOwner = !!userId && String(pitch.user_id) === String(userId);
     let hasNda = false;
     if (userId) {
-      if (String(pitch.user_id) === String(userId)) {
+      if (isOwner) {
         hasNda = true;
       } else {
         const ndaResult = await safeQuery(
@@ -798,7 +800,7 @@ export async function getPitchComments(request: Request, env: Env): Promise<Resp
     const comments = await sql`
       SELECT
         pc.id, pc.content, pc.created_at, pc.user_id,
-        pc.user_type,
+        pc.user_type, pc.is_anonymous,
         -- Canonical author rule (matches getPitchFeedbackPublic): chosen @username
         -- first, then real name, then the email local-part. Email-shaped usernames are
         -- skipped (no email leak). Never company_name — that surfaced Karl as "Sky Cloth".
@@ -816,8 +818,32 @@ export async function getPitchComments(request: Request, env: Env): Promise<Resp
       LIMIT 100
     `;
 
-    // Anonymize names based on NDA status
     const anonymized = comments.map((c: Record<string, unknown>) => {
+      // Author chose to post anonymously: hide identity from everyone EXCEPT the
+      // pitch owner, who can always see who wrote it (accountability + moderation).
+      if (c.is_anonymous) {
+        if (isOwner && c.user_id) {
+          return {
+            id: c.id,
+            content: c.content,
+            created_at: c.created_at,
+            display_name: c.author_name || 'User',
+            user_type: c.user_type,
+            is_anonymous: true,
+          };
+        }
+        return {
+          id: c.id,
+          content: c.content,
+          created_at: c.created_at,
+          display_name: 'Anonymous',
+          user_type: 'anonymous',
+          is_anonymous: true,
+        };
+      }
+
+      // Named comment — display name follows the existing NDA gate: real name to
+      // the owner + NDA-signed viewers, role-based pseudonym to everyone else.
       if (hasNda && c.user_id) {
         return {
           id: c.id,
@@ -825,9 +851,9 @@ export async function getPitchComments(request: Request, env: Env): Promise<Resp
           created_at: c.created_at,
           display_name: c.author_name || 'User',
           user_type: c.user_type,
+          is_anonymous: false,
         };
       }
-      // No NDA or anonymous — show role-based pseudonym
       const role = c.user_type || 'viewer';
       const suffix = c.user_id ? c.user_id : c.id;
       return {
@@ -836,6 +862,7 @@ export async function getPitchComments(request: Request, env: Env): Promise<Resp
         created_at: c.created_at,
         display_name: `${role}${suffix}`,
         user_type: c.user_type || 'anonymous',
+        is_anonymous: false,
       };
     });
 

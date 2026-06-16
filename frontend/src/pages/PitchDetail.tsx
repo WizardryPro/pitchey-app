@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
 import { ArrowLeft, Share2, Eye, Calendar, User, UserCircle, Clock, Tag, Film, LogIn, FileText, Lock, Shield, Briefcase, DollarSign, WifiOff, RefreshCw, Bookmark, Heart, MessageSquare } from 'lucide-react';
@@ -220,16 +221,19 @@ export default function PitchDetail() {
       const { API_URL } = await import('../config');
       if (originalSaved) {
         await fetch(`${API_URL}/api/saved-pitches/${pitch.id}`, { method: 'DELETE', credentials: 'include' });
+        toast.success('Removed from your saved pitches');
       } else {
         await fetch(`${API_URL}/api/saved-pitches`, {
           method: 'POST', credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ pitchId: pitch.id }),
         });
+        toast.success('Saved — find it under Saved Pitches');
       }
     } catch (err) {
       console.error('Error toggling save:', err);
       setIsSaved(isSaved); // revert
+      toast.error('Couldn\'t update saved pitches. Please try again.');
     }
   };
 
@@ -257,6 +261,7 @@ export default function PitchDetail() {
       // Revert
       setIsLiked(!next);
       setPitch(p => p ? ({ ...p, likeCount: (p.likeCount || 0) + (next ? -1 : 1) } as Pitch) : p);
+      toast.error('Couldn\'t update your like. Please try again.');
     }
   };
 

@@ -5,6 +5,7 @@ import type { FeedbackEntry, ConsumptionStatus, CommentEntry, FeedbackProgress }
 import StructuredFeedbackForm from './StructuredFeedbackForm';
 import FeedbackDisplay from './FeedbackDisplay';
 import PitcheyRating from '../PitcheyRating';
+import { useToast } from '@shared/components/feedback/ToastProvider';
 
 interface Props {
   pitchId: number;
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, userType, showScoreSummary = true }: Props) {
+  const { success, error } = useToast();
   const [myFeedback, setMyFeedback] = useState<FeedbackEntry | null>(null);
   const [feedbackProgress, setFeedbackProgress] = useState<FeedbackProgress | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -100,20 +102,29 @@ export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, use
     if (ok) {
       setRatingDone(true);
       setRefreshKey((k) => k + 1);
+      success('Rating saved', `You rated this pitch ${rating} star${rating === 1 ? '' : 's'}.`);
       // Refresh myFeedback so the structured form seeds with this rating instead of
       // opening with empty stars and forcing the user to pick it again.
       loadData();
+    } else {
+      error('Couldn\'t save your rating', 'Please try again.');
     }
   };
 
-  const handleCommentSubmit = async () => {
+  const handleCommentSubmit = async (isAnonymous = false) => {
     if (!commentText.trim() || commentSubmitting) return;
     setCommentSubmitting(true);
-    const ok = await FeedbackService.submitComment(pitchId, commentText.trim());
+    const ok = await FeedbackService.submitComment(pitchId, commentText.trim(), isAnonymous);
     setCommentSubmitting(false);
     if (ok) {
       setCommentText('');
       loadComments();
+      success(
+        isAnonymous ? 'Comment posted anonymously' : 'Comment posted',
+        isAnonymous ? 'Your name is hidden from other viewers.' : undefined,
+      );
+    } else {
+      error('Couldn\'t post your comment', 'Please try again.');
     }
   };
 
@@ -264,25 +275,35 @@ export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, use
 
         {showComments && (
           <>
-            {/* Comment input */}
+            {/* Comment input — two send options: post with your username shown, or anonymously */}
             {!isOwner && (
-              <div className="flex gap-2">
+              <div className="space-y-2">
                 <input
                   type="text"
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleCommentSubmit()}
+                  onKeyDown={(e) => e.key === 'Enter' && handleCommentSubmit(false)}
                   placeholder="Add a comment..."
                   maxLength={2000}
-                  className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
-                <button
-                  onClick={handleCommentSubmit}
-                  disabled={!commentText.trim() || commentSubmitting}
-                  className="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleCommentSubmit(false)}
+                    disabled={!commentText.trim() || commentSubmitting}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  >
+                    <Send className="w-4 h-4" />
+                    Comment
+                  </button>
+                  <button
+                    onClick={() => handleCommentSubmit(true)}
+                    disabled={!commentText.trim() || commentSubmitting}
+                    className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  >
+                    Comment anonymously
+                  </button>
+                </div>
               </div>
             )}
 
@@ -299,6 +320,11 @@ export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, use
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-gray-900">{c.display_name}</span>
+                        {c.is_anonymous && (
+                          <span className="text-[10px] uppercase tracking-wide font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+                            Anonymous
+                          </span>
+                        )}
                         <span className="text-xs text-gray-400">{new Date(c.created_at).toLocaleDateString()}</span>
                       </div>
                       <p className="text-sm text-gray-700 mt-0.5">{c.content}</p>

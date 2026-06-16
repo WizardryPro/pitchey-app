@@ -7,6 +7,7 @@ import {
   AlertCircle, Timer, Edit3, Bookmark
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@shared/components/ui/dialog';
+import toast from 'react-hot-toast';
 import { config, API_URL } from '@/config';
 
 interface Submission {
@@ -113,9 +114,13 @@ export default function ProductionSubmissionsReview() {
       const result = await response.json();
       if (result.success) {
         setSubmissions(prev => prev.filter(s => String(s.id) !== pitchId));
+        toast.success(`Submission ${status}`);
+      } else {
+        toast.error(result.error || 'Couldn\'t update the submission. Please try again.');
       }
     } catch (error) {
       console.error('Failed to update submission status:', error);
+      toast.error('Couldn\'t update the submission. Please try again.');
     }
   };
 

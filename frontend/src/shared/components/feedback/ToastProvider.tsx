@@ -27,10 +27,28 @@ interface ToastContextType {
 
 const ToastContext = createContext<ToastContextType | null>(null);
 
+// No-op fallback used when no ToastProvider is mounted. In the real app the
+// provider is mounted once at the root (App.tsx), so this only ever applies to
+// component tests that render a sub-tree in isolation. Degrading to a no-op is
+// far safer than throwing — a missing toast must never crash the surrounding
+// feature (e.g. FeedbackSection is embedded in many pages).
+const NOOP_TOAST: ToastContextType = {
+  toasts: [],
+  addToast: () => '',
+  removeToast: () => {},
+  success: () => '',
+  error: () => '',
+  warning: () => '',
+  info: () => '',
+};
+
 export const useToast = () => {
   const context = useContext(ToastContext);
   if (!context) {
-    throw new Error('useToast must be used within a ToastProvider');
+    if (import.meta.env?.DEV) {
+      console.warn('useToast called outside a ToastProvider — toasts will be no-ops here.');
+    }
+    return NOOP_TOAST;
   }
   return context;
 };

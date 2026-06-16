@@ -33,6 +33,7 @@ import {
   Globe,
   Scale
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import api from '../../lib/api';
 
 // Types
@@ -289,9 +290,11 @@ const LegalLibrary: React.FC = () => {
       await api.post('/api/legal/library/bulk-archive', { document_ids: documentIds });
       setDocuments(prev => prev.filter(doc => !documentIds.includes(doc.id)));
       clearSelection();
+      toast.success('Documents archived');
     } catch (error) {
       console.error('Archive error:', error);
       setError('Failed to archive documents');
+      toast.error('Failed to archive documents');
     }
   };
 

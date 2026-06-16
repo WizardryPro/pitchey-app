@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useBetterAuthStore } from './store/betterAuthStore';
 import { sessionCache } from './store/sessionCache';
 import { GlobalErrorBoundary } from '@shared/components/feedback/ConsoleErrorBoundary';
+import { Toaster } from 'react-hot-toast';
 import ToastProvider from '@shared/components/feedback/ToastProvider';
 import { NotificationToastProvider } from '@shared/components/feedback/NotificationToastContainer';
 import LogoSplash from '@/components/LogoSplash';
@@ -400,6 +401,10 @@ function App() {
       <AppContextProviderSafe>
         <NotificationToastProvider>
           <ToastProvider>
+            {/* react-hot-toast sink — ~39 files call toast.success/error directly; without
+                this <Toaster/> mounted, every one of those was a silent no-op (settings,
+                billing, slates, opportunities all "saved" with zero visible feedback). */}
+            <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
             <Router>
               <Suspense fallback={<LogoSplash message="Optimizing your experience…" />}>
                 <Routes>

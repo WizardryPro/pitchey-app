@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserPlus, Copy, Check, Link2, AlertCircle, RefreshCw } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { apiClient } from '@/lib/api-client';
 
 interface Invite {
@@ -51,10 +52,12 @@ export default function ProductionInvites() {
         setEmail('');
         await loadInvites();
         copyToClipboard(response.data.code);
+        toast.success('Invite link created');
       }
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
       setError(e.message);
+      toast.error(e.message || 'Failed to create invite link');
     } finally {
       setCreating(false);
     }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Save, X, Upload, FileText, Video, Image as ImageIcon, Shield, WifiOff } from 'lucide-react';
@@ -488,12 +489,14 @@ export default function PitchEdit() {
 
       await pitchService.update(parseInt(id!), updateData);
       if (failedDocs.length > 0) {
-        alert(`Pitch saved, but these documents failed to upload: ${failedDocs.join(', ')}. Please try uploading them again.`);
+        toast.error(`Pitch saved, but these documents failed to upload: ${failedDocs.join(', ')}. Please try uploading them again.`);
+      } else {
+        toast.success('Changes saved');
       }
       navigate(pitchesListPath);
     } catch (error) {
       console.error('Error updating pitch:', error);
-      alert(error instanceof Error ? error.message : 'Failed to update pitch');
+      toast.error(error instanceof Error ? error.message : 'Failed to update pitch');
     } finally {
       setIsSubmitting(false);
     }

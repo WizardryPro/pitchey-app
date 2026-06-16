@@ -4,6 +4,7 @@ import {
   Layers, Plus, Search, Eye, EyeOff, Trash2,
   Film, MoreVertical, Pencil, Globe
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { SlateService, type Slate } from '@/services/slate.service';
 import LogoLoader from '@/components/LogoLoader';
 
@@ -42,7 +43,10 @@ export default function CreatorSlates() {
       setNewTitle('');
       setNewDescription('');
       setShowCreate(false);
+      toast.success(`Slate "${slate.title}" created`);
       navigate(`/creator/slates/${slate.id}`);
+    } else {
+      toast.error('Couldn\'t create the slate. Please try again.');
     }
     setCreating(false);
   };
@@ -50,7 +54,12 @@ export default function CreatorSlates() {
   const handleDelete = async (id: number) => {
     if (!confirm('Delete this slate? This cannot be undone.')) return;
     const ok = await SlateService.remove(id);
-    if (ok) setSlates(prev => prev.filter(s => s.id !== id));
+    if (ok) {
+      setSlates(prev => prev.filter(s => s.id !== id));
+      toast.success('Slate deleted');
+    } else {
+      toast.error('Couldn\'t delete the slate. Please try again.');
+    }
     setMenuOpen(null);
   };
 
@@ -59,6 +68,9 @@ export default function CreatorSlates() {
     const updated = await SlateService.update(slate.id, { status: newStatus });
     if (updated) {
       setSlates(prev => prev.map(s => s.id === slate.id ? { ...s, status: newStatus } : s));
+      toast.success(newStatus === 'published' ? 'Slate published' : 'Slate set to draft');
+    } else {
+      toast.error('Couldn\'t update the slate. Please try again.');
     }
     setMenuOpen(null);
   };

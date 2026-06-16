@@ -1721,23 +1721,11 @@ class RouteRegistry {
 
       console.log(`[Auth] User registered: userId=${newUser.id}, email=${newUser.email}, userType=${newUser.user_type}`);
 
-      // Seed starter credits for new users (non-blocking)
-      try {
-        const starterCredits = 10; // Free starter credits for all new accounts
-        await this.db.query(
-          `INSERT INTO user_credits (user_id, balance, total_purchased, total_used, last_updated)
-           VALUES ($1, $2, $2, 0, NOW())
-           ON CONFLICT (user_id) DO NOTHING`,
-          [newUser.id, starterCredits]
-        );
-        await this.db.query(
-          `INSERT INTO credit_transactions (user_id, type, amount, description, balance_before, balance_after, created_at)
-           VALUES ($1, 'bonus', $2, 'Welcome bonus credits', 0, $2, NOW())`,
-          [newUser.id, starterCredits]
-        );
-      } catch (creditErr) {
-        console.warn('[Auth] Failed to seed starter credits:', creditErr);
-      }
+      // NOTE: starter credits are intentionally NOT granted at registration.
+      // The one-off welcome credits (enough for one pitch incl. its cover image)
+      // are released only once the user verifies their email — see the
+      // /api/auth/verify-email handler. This ensures the freebie goes to people
+      // who actually complete signup, not to unverified/throwaway registrations.
 
       // Send verification email (non-blocking — don't fail sign-up if email fails)
       try {
@@ -1997,6 +1985,33 @@ class RouteRegistry {
           [token]
         );
 
+        // Release the one-off welcome credits now that signup is actually complete
+        // (10 credits = enough for one pitch incl. its cover image). Idempotent:
+        // ON CONFLICT (user_id) DO NOTHING means re-verifying never double-grants,
+        // and the matching transaction row is written ONLY when a fresh balance row
+        // was inserted (RETURNING is empty otherwise). Non-blocking — a grant hiccup
+        // must not fail verification.
+        try {
+          const STARTER_CREDITS = 10;
+          const granted = await this.db.query(
+            `INSERT INTO user_credits (user_id, balance, total_purchased, total_used, last_updated)
+             SELECT id, $2, $2, 0, NOW() FROM users WHERE email = $1
+             ON CONFLICT (user_id) DO NOTHING
+             RETURNING user_id`,
+            [email, STARTER_CREDITS]
+          ) as any[];
+          if (granted.length > 0) {
+            await this.db.query(
+              `INSERT INTO credit_transactions (user_id, type, amount, description, balance_before, balance_after, created_at)
+               VALUES ($1, 'bonus', $2, 'Welcome bonus credits', 0, $2, NOW())`,
+              [granted[0].user_id, STARTER_CREDITS]
+            );
+            console.log(`[Auth] Granted ${STARTER_CREDITS} welcome credits to user ${granted[0].user_id} on verification`);
+          }
+        } catch (creditErr) {
+          console.warn('[Auth] Failed to grant welcome credits on verification:', creditErr);
+        }
+
         console.log(`[Auth] Email verified for ${email}`);
         return Response.redirect(`${frontendUrl}/login?verified=true`, 302);
       } catch (error) {
@@ -2074,6 +2089,9 @@ class RouteRegistry {
         return new Response(JSON.stringify({ success: true }), { headers: jsonHeaders });
       } catch (error) {
         console.error('[Auth] Resend verification error:', error);
+        // INTENTIONAL: always return success regardless of outcome — anti-enumeration.
+        // A differing response on failure would let an attacker probe which emails
+        // exist. The error is logged above for ops. Do NOT "fix" this into a 500.
         return new Response(JSON.stringify({ success: true }), { headers: jsonHeaders });
       }
     });
@@ -14441,8 +14459,9 @@ pitchey_analytics_datapoints_per_minute 1250
     const builder = new ApiResponseBuilder(request);
     const params = (request as any).params;
     try {
-      // fire-and-forget — DELETE scheduled_reports; non-fatal cleanup
-      await this.db.query(`DELETE FROM scheduled_reports WHERE id = $1 AND user_id = $2`, [params.id, authResult.user!.id]).catch(() => {});
+      // The user asked to delete this report — surface a real failure rather
+      // than reporting success on a swallowed error.
+      await this.db.query(`DELETE FROM scheduled_reports WHERE id = $1 AND user_id = $2`, [params.id, authResult.user!.id]);
       return builder.success({ success: true });
     } catch (error) {
       return errorHandler(error, request);
@@ -14722,10 +14741,10 @@ pitchey_analytics_datapoints_per_minute 1250
     try {
       // Store verification request
       const verificationId = `ver_${Date.now()}_${authResult.user!.id}`;
-      // fire-and-forget — verification status flip; non-fatal
+      // Don't report "submitted" if the status flip never persisted.
       await this.db.query(`
         UPDATE users SET verification_status = 'pending', updated_at = NOW() WHERE id = $1
-      `, [authResult.user!.id]).catch(() => {});
+      `, [authResult.user!.id]);
 
       return builder.success({
         verificationId,
@@ -14768,10 +14787,11 @@ pitchey_analytics_datapoints_per_minute 1250
     const builder = new ApiResponseBuilder(request);
     try {
       const body = await request.json() as Record<string, unknown>;
-      // fire-and-forget — company-name update; non-fatal
+      // The user is submitting company details — a failed write must surface,
+      // not be reported as a pending success.
       await this.db.query(`
         UPDATE users SET company_name = $1, verification_status = 'pending', updated_at = NOW() WHERE id = $2
-      `, [body.companyName as string | null, authResult.user!.id]).catch(() => {});
+      `, [body.companyName as string | null, authResult.user!.id]);
 
       return builder.success({ success: true, status: 'pending' });
     } catch (error) {
@@ -14895,7 +14915,8 @@ pitchey_analytics_datapoints_per_minute 1250
         { authorized: false, user: null },
       );
 
-      // fire-and-forget — demo-request insert; non-fatal
+      // A lost demo request is a lost lead — let a failed insert surface as a
+      // real error instead of silently dropping it behind a success message.
       await this.db.query(`
         INSERT INTO demo_requests (user_id, name, email, company, request_type, message, preferred_time, created_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
@@ -14907,11 +14928,11 @@ pitchey_analytics_datapoints_per_minute 1250
         body.requestType || 'general',
         body.message || null,
         body.preferredTime || null
-      ]).catch(() => {});
+      ]);
 
       return builder.success({ success: true, message: 'Demo request submitted' });
     } catch (error) {
-      return builder.success({ success: true, message: 'Demo request submitted' });
+      return errorHandler(error, request);
     }
   }
 
