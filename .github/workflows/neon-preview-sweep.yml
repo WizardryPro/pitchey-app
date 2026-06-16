@@ -1,0 +1,86 @@
+name: Neon Preview Branch Sweep
+
+# Belt-and-suspenders cleanup for Neon preview branches. The per-PR
+# `cleanup-preview` job in neon-preview.yml deletes a PR's `preview/pr-<N>`
+# branch when the PR closes, and works for ~all PRs — but the occasional leak
+# (a transient delete failure, a close event that never fired) accumulated until
+# the project hit its branch cap and `setup-preview` started failing with
+# "branches limit exceeded" (2026-06-15). This sweep reconciles daily: any
+# `preview/pr-<N>` branch whose PR is no longer open gets deleted.
+#
+# Safety: only ever touches branches matching ^preview/pr-<N>$. It never deletes
+# `production` (or any non-preview branch), never deletes a branch whose PR is
+# still OPEN, and skips (does not delete) any branch whose PR state can't be
+# resolved. Use the workflow_dispatch `dry_run` input to preview without deleting.
+
+on:
+  schedule:
+    - cron: '17 4 * * *'   # daily 04:17 UTC (low traffic)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'List what would be deleted without deleting anything'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: neon-preview-sweep
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sweep stale Neon preview branches
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${NEON_API_KEY:-}" ] || [ -z "${NEON_PROJECT_ID:-}" ]; then
+            echo "::error::NEON_API_KEY / NEON_PROJECT_ID secrets are not set"
+            exit 1
+          fi
+
+          npm i -g neonctl@v2 >/dev/null 2>&1
+
+          echo "Project: $NEON_PROJECT_ID   dry-run: ${DRY_RUN}"
+          branches="$(neonctl branches list --project-id "$NEON_PROJECT_ID" -o json)"
+
+          kept=0; deleted=0; skipped=0; failed=0
+
+          # Only preview/pr-<N> branches are ever considered. production / default
+          # and any other branch name is invisible to this loop by construction.
+          while IFS=$'\t' read -r bid bname; do
+            [ -n "$bname" ] || continue
+            pr="${bname#preview/pr-}"
+            state="$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json state -q .state 2>/dev/null || echo UNKNOWN)"
+            case "$state" in
+              OPEN)
+                echo "keep    $bname  (PR #$pr OPEN)"; kept=$((kept+1)) ;;
+              CLOSED|MERGED)
+                if [ "$DRY_RUN" = "true" ]; then
+                  echo "DELETE  $bname  (PR #$pr $state) [dry-run]"; deleted=$((deleted+1))
+                elif neonctl branches delete "$bid" --project-id "$NEON_PROJECT_ID" >/dev/null 2>&1; then
+                  echo "DELETE  $bname  (PR #$pr $state)"; deleted=$((deleted+1))
+                else
+                  echo "::warning::failed to delete $bname (non-fatal)"; failed=$((failed+1))
+                fi ;;
+              *)
+                # Unknown PR (deleted/never existed/API hiccup) — never delete on doubt.
+                echo "skip    $bname  (PR #$pr state=$state)"; skipped=$((skipped+1)) ;;
+            esac
+          done < <(echo "$branches" | jq -r '.[] | select(.name | test("^preview/pr-[0-9]+$")) | [.id, .name] | @tsv')
+
+          echo ""
+          echo "Sweep complete — deleted:$deleted kept:$kept skipped:$skipped failed:$failed"
+          # Surface delete failures in the run summary but don't fail the job;
+          # next daily run retries, and a persistent failure shows in the count.
+          if [ "$failed" -gt 0 ]; then echo "::warning::$failed branch deletion(s) failed"; fi
