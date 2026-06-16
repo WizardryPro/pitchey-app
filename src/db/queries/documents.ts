@@ -558,7 +558,7 @@ export async function rejectNDARequest(
         'NDA Rejected',
         ${reason || 'Your NDA request has been rejected'},
         ${nda.pitch_id}, ${rejectorId},
-        'medium', NOW()
+        'normal', NOW()
       )
     `;
 
