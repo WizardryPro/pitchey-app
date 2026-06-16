@@ -8712,7 +8712,7 @@ pitchey_analytics_datapoints_per_minute 1250
             priority, created_at
           ) VALUES (
             $1, 'nda_rejected', 'NDA Request Rejected',
-            $2, $3, $4, 'medium', NOW()
+            $2, $3, $4, 'normal', NOW()
           )
         `, [
           this.safeParseInt(nda.signer_id),
