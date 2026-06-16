@@ -127,11 +127,13 @@ jobs:
       - name: 🪝 Catch-swallow gate (untagged residue)
         # Blocks regression: every new `.catch(() => …)` site must carry an
         # A/B/C tag (`// fire-and-forget` | `// TODO(catch-swallow): bucket-B`
-        # | `// TODO(catch-swallow)`). Default scope excludes worker-integrated.ts
-        # — that file's enforcement is a follow-up after PR #87 + #88 land.
-        # See docs/catch-swallow-prep-2026-05-05.md and
-        # docs/catch-swallow-audit-2026-04-17.md.
-        run: node scripts/catch-swallow-gate.mjs --threshold 0 --list
+        # | `// TODO(catch-swallow)`). Scope now INCLUDES worker-integrated.ts
+        # (2026-06-16): the API router is the largest endpoint surface, so it is
+        # gated like everything else. The safe `request.json().catch(() => ({}))`
+        # body-parse idiom is exempt in the gate itself (defaults-then-validates,
+        # never hides an operational error). See docs/catch-swallow-prep-2026-05-05.md
+        # and docs/catch-swallow-audit-2026-04-17.md.
+        run: node scripts/catch-swallow-gate.mjs --include-worker --threshold 0 --list
 
   # =================================================================
   # DATABASE TESTS
