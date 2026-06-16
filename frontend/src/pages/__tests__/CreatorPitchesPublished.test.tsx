@@ -142,7 +142,9 @@ describe('CreatorPitchesPublished', () => {
 
     expect(screen.getByText('Total Views')).toBeInTheDocument()
     expect(screen.getByText('Avg. Rating')).toBeInTheDocument()
-    expect(screen.getByText('Investment Interest')).toBeInTheDocument()
+    // "Investment Interest" summary card was replaced with "Total NDAs" — the old
+    // card always rendered $0 (no backend source); NDAs are real. See #287/#288.
+    expect(screen.getByText('Total NDAs')).toBeInTheDocument()
   })
 
   it('shows correct total published count', async () => {

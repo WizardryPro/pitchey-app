@@ -52,8 +52,6 @@ const Transactions: React.FC = () => {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [refundAmount, setRefundAmount] = useState(0);
-  const [refundReason, setRefundReason] = useState('');
 
   useEffect(() => {
     loadTransactions();
@@ -69,22 +67,6 @@ const Transactions: React.FC = () => {
       console.error('Transactions error:', err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleProcessRefund = async (transactionId: string, amount: number, reason: string) => {
-    try {
-      setActionLoading(transactionId);
-      await adminService.processRefund(transactionId, amount, reason);
-      await loadTransactions();
-      setShowTransactionModal(false);
-      setRefundAmount(0);
-      setRefundReason('');
-    } catch (err) {
-      console.error('Process refund error:', err);
-      alert('Failed to process refund');
-    } finally {
-      setActionLoading(null);
     }
   };
 
@@ -141,11 +123,7 @@ const Transactions: React.FC = () => {
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-semibold">Transaction Details</h2>
               <button
-                onClick={() => {
-                  setShowTransactionModal(false);
-                  setRefundAmount(0);
-                  setRefundReason('');
-                }}
+                onClick={() => setShowTransactionModal(false)}
                 className="text-gray-400 hover:text-gray-600"
               >
                 ✕
@@ -267,55 +245,29 @@ const Transactions: React.FC = () => {
               </div>
             )}
 
-            {/* Refund Section */}
+            {/* Refunds are issued directly in Stripe — the platform intentionally
+                does not automate refunds (the admin bulk-action handler refuses
+                them). Point the admin at Stripe instead of offering an in-app
+                control that always errors. */}
             {canRefund && (
               <div className="border-t pt-6">
-                <h3 className="text-lg font-semibold mb-4">Process Refund</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Refund Amount
-                    </label>
-                    <div className="flex space-x-2">
-                      <input
-                        type="number"
-                        value={refundAmount}
-                        onChange={(e) => setRefundAmount(Number(e.target.value))}
-                        max={transaction.refundableAmount}
-                        min={0}
-                        step="0.01"
-                        className="flex-1 border border-gray-300 rounded-md px-3 py-2"
-                      />
-                      <button
-                        onClick={() => setRefundAmount(transaction.refundableAmount || 0)}
-                        className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-                      >
-                        Max
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Refund Reason
-                    </label>
-                    <textarea
-                      value={refundReason}
-                      onChange={(e) => setRefundReason(e.target.value)}
-                      rows={3}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2"
-                      placeholder="Reason for refund..."
-                    />
-                  </div>
-
-                  <button
-                    onClick={() => handleProcessRefund(transaction.id, refundAmount, refundReason)}
-                    disabled={actionLoading === transaction.id || refundAmount <= 0 || !refundReason.trim()}
-                    className="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700 disabled:opacity-50"
+                <h3 className="text-lg font-semibold mb-2">Refunds</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Refunds are issued from the Stripe dashboard, not from this panel.
+                  Up to {formatCurrency(transaction.refundableAmount || 0, transaction.currency)} is refundable.
+                </p>
+                {transaction.stripeTransactionId ? (
+                  <a
+                    href={`https://dashboard.stripe.com/payments/${transaction.stripeTransactionId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700"
                   >
-                    {actionLoading === transaction.id ? 'Processing...' : 'Process Refund'}
-                  </button>
-                </div>
+                    Open in Stripe to refund →
+                  </a>
+                ) : (
+                  <p className="text-sm text-gray-500">No Stripe payment ID is attached to this transaction.</p>
+                )}
               </div>
             )}
           </div>

@@ -92,6 +92,7 @@ export async function hotPitchesHandler(
           COALESCE(p.view_count, 0)::int AS view_count,
           COALESCE(p.like_count, 0)::int AS like_count,
           p.heat_score::float AS heat_score,
+          COALESCE(p.pitchey_score_avg, 0)::float AS pitchey_score_avg,
           p.created_at,
           u.id AS creator_id, u.name AS creator_name, u.username AS creator_username,
           u.profile_image AS creator_avatar
@@ -110,6 +111,7 @@ export async function hotPitchesHandler(
           COALESCE(p.view_count, 0)::int AS view_count,
           COALESCE(p.like_count, 0)::int AS like_count,
           p.heat_score::float AS heat_score,
+          COALESCE(p.pitchey_score_avg, 0)::float AS pitchey_score_avg,
           p.created_at,
           u.id AS creator_id, u.name AS creator_name, u.username AS creator_username,
           u.profile_image AS creator_avatar
@@ -128,6 +130,7 @@ export async function hotPitchesHandler(
           COALESCE(p.view_count, 0)::int AS view_count,
           COALESCE(p.like_count, 0)::int AS like_count,
           p.heat_score::float AS heat_score,
+          COALESCE(p.pitchey_score_avg, 0)::float AS pitchey_score_avg,
           p.created_at,
           u.id AS creator_id, u.name AS creator_name, u.username AS creator_username,
           u.profile_image AS creator_avatar
@@ -146,6 +149,7 @@ export async function hotPitchesHandler(
           COALESCE(p.view_count, 0)::int AS view_count,
           COALESCE(p.like_count, 0)::int AS like_count,
           p.heat_score::float AS heat_score,
+          COALESCE(p.pitchey_score_avg, 0)::float AS pitchey_score_avg,
           p.created_at,
           u.id AS creator_id, u.name AS creator_name, u.username AS creator_username,
           u.profile_image AS creator_avatar

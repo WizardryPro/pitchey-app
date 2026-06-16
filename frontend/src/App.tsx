@@ -507,6 +507,9 @@ function App() {
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="onboarding" element={<OnboardingPage />} />
             <Route path="dashboard" element={<CreatorDashboard />} />
+            {/* In-portal opportunities + compare — keep PortalLayout sidebar chrome. */}
+            <Route path="opportunities" element={<OpportunitiesBoard />} />
+            <Route path="compare" element={<ComparePage />} />
             {/* In-portal browse — keeps the creator PortalLayout chrome (see getBrowsePath). */}
             <Route path="browse" element={<Marketplace />} />
             <Route path="pitch/new" element={<CreatePitch />} />
@@ -538,6 +541,8 @@ function App() {
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="onboarding" element={<OnboardingPage />} />
             <Route path="dashboard" element={<InvestorDashboard />} />
+            <Route path="opportunities" element={<OpportunitiesBoard />} />
+            <Route path="compare" element={<ComparePage />} />
             {import.meta.env.DEV && <Route path="dashboard/debug" element={<InvestorDashboardDebug />} />}
             <Route path="following" element={<Following />} />
             <Route path="browse" element={<InvestorBrowse />} />
@@ -572,6 +577,8 @@ function App() {
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="onboarding" element={<OnboardingPage />} />
             <Route path="dashboard" element={<ProductionDashboard />} />
+            <Route path="opportunities" element={<OpportunitiesBoard />} />
+            <Route path="compare" element={<ComparePage />} />
             {/* In-portal browse — keeps the production PortalLayout chrome instead of
                 dumping the user onto the standalone /marketplace (old layout).
                 MarketplaceEnhanced hides its own top nav when isInsidePortal matches /production/. */}

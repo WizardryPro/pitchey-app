@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
+import { useBetterAuthStore } from '../store/betterAuthStore';
+import { getPortalPath } from '@/utils/navigation';
+import { normalizeUserType } from '@shared/types/user-type';
 import {
   BarChart3, Plus, X, Search, Loader2, Flame, Eye, Heart, Star, BadgeCheck, Crown, Layers,
   Share2, Bookmark, Trash2, Copy, Check,
@@ -339,6 +342,23 @@ function SavedMenu({ onLoad }: { onLoad: (c: SavedComparison) => void }) {
 // ---------------------------------------------------------------------------
 
 export default function ComparePage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user, isAuthenticated } = useBetterAuthStore();
+
+  // Keep portal chrome consistent (same fix as /marketplace + /opportunities):
+  // authenticated creator/investor/production users land inside their PortalLayout
+  // sidebar (/<portal>/compare) rather than the standalone top-nav page. Query
+  // string (type/ids/token) preserved; watcher/admin/anon keep the standalone page.
+  const isInsidePortal = /^\/(watcher|creator|investor|production|admin)\//.test(location.pathname);
+  const portalSeg = getPortalPath(normalizeUserType(user?.userType));
+  const inPortalPath = (isAuthenticated && ['creator', 'investor', 'production'].includes(portalSeg)) ? `/${portalSeg}/compare` : null;
+  useEffect(() => {
+    if (!isInsidePortal && inPortalPath) {
+      navigate(`${inPortalPath}${location.search}`, { replace: true });
+    }
+  }, [isInsidePortal, inPortalPath, location.search, navigate]);
+
   const [saveOpen, setSaveOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const rawType = searchParams.get('type');
@@ -384,7 +404,7 @@ export default function ComparePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-stone-50 via-white to-stone-50">
-      <PortalTopNav />
+      {!isInsidePortal && <PortalTopNav />}
 
       <section className="relative overflow-hidden bg-gradient-to-r from-purple-700 via-purple-600 to-indigo-600 text-white">
         <div aria-hidden className="absolute inset-0 bg-[radial-gradient(50%_60%_at_85%_0%,rgba(245,158,11,0.18),transparent_60%)]" />

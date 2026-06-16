@@ -18,11 +18,10 @@ import { getPortalTheme } from '@shared/hooks/usePortalTheme';
 
 type NavItem = { label: string; to: string };
 
-// "Hot" surfaces the heat-score discovery path (Bayesian + role-weighted)
-// from anywhere in the app — deep-links to the marketplace with the Hot sort
-// pill pre-selected. Kept as a top-level item across every role so users don't
-// have to remember it lives under a filter.
-const HOT_LINK: NavItem = { label: 'Hot', to: '/marketplace?sort=hot' };
+// Note: "Hot" (2026-06-16) and "Messages" (2026-06-16) were removed from this
+// top nav to keep the desktop bar from over-filling. Hot is now a marketplace
+// sort pill; Messages remains reachable from each portal's dashboard quick-actions
+// (creator/investor/production all expose a Messages action).
 
 const NAV_BY_ROLE: Partial<Record<UserTypeCanonical, NavItem[]>> = {
   creator: [
@@ -30,8 +29,6 @@ const NAV_BY_ROLE: Partial<Record<UserTypeCanonical, NavItem[]>> = {
     { label: 'My Pitches', to: CREATOR_ROUTES.pitches },
     { label: 'Marketplace', to: '/marketplace' },
     { label: 'Opportunities', to: '/opportunities' },
-    HOT_LINK,
-    { label: 'Messages', to: CREATOR_ROUTES.messages },
     { label: 'NDAs', to: CREATOR_ROUTES.ndas },
     { label: 'Portfolio', to: CREATOR_ROUTES.portfolio },
   ],
@@ -40,10 +37,8 @@ const NAV_BY_ROLE: Partial<Record<UserTypeCanonical, NavItem[]>> = {
     { label: 'Browse', to: INVESTOR_ROUTES.browse },
     { label: 'Opportunities', to: '/opportunities' },
     { label: 'Compare', to: '/compare' },
-    HOT_LINK,
     { label: 'Watchlist', to: INVESTOR_ROUTES.watchlist },
     { label: 'Portfolio', to: INVESTOR_ROUTES.portfolio },
-    { label: 'Messages', to: '/messages' },
     { label: 'NDAs', to: INVESTOR_ROUTES.ndaRequests },
   ],
   production: [
@@ -51,14 +46,11 @@ const NAV_BY_ROLE: Partial<Record<UserTypeCanonical, NavItem[]>> = {
     { label: 'Browse', to: '/marketplace' },
     { label: 'Opportunities', to: '/opportunities' },
     { label: 'Compare', to: '/compare' },
-    HOT_LINK,
     { label: 'NDAs', to: '/production/ndas' },
-    { label: 'Messages', to: PRODUCTION_ROUTES.messages },
   ],
   watcher: [
     { label: 'Dashboard', to: WATCHER_ROUTES.dashboard },
     { label: 'Marketplace', to: '/marketplace' },
-    HOT_LINK,
     { label: 'Library', to: WATCHER_ROUTES.library },
     { label: 'Saved', to: WATCHER_ROUTES.saved },
     { label: 'Following', to: WATCHER_ROUTES.following },
@@ -68,7 +60,6 @@ const NAV_BY_ROLE: Partial<Record<UserTypeCanonical, NavItem[]>> = {
 const ANON_NAV: NavItem[] = [
   { label: 'Marketplace', to: '/marketplace' },
   { label: 'Opportunities', to: '/opportunities' },
-  HOT_LINK,
   { label: 'How It Works', to: '/how-it-works' },
   { label: 'About', to: '/about' },
 ];

@@ -21,6 +21,26 @@ function errorResponse(message: string, origin: string | null, status = 400): Re
   return jsonResponse({ success: false, error: message }, origin, status);
 }
 
+// Fire-and-forget in-app notification to a pitch's owner. Mirrors the live insert
+// pattern used across handlers: OMIT `priority` (prod's notifications_priority_check
+// rejects 'normal'; the column default applies) and never let a notify failure break
+// the user's action. Skips self-notification (a creator acting on their own pitch).
+async function notifyPitchOwner(
+  sql: ReturnType<typeof getDb>,
+  opts: { ownerId: number; actorId: number | null; pitchId: number; type: string; title: string; message: string },
+): Promise<void> {
+  if (!sql) return;
+  if (opts.actorId != null && String(opts.actorId) === String(opts.ownerId)) return;
+  try {
+    await sql`
+      INSERT INTO notifications (user_id, type, title, message, related_pitch_id, related_user_id, action_url, is_read, created_at)
+      VALUES (${opts.ownerId}, ${opts.type}, ${opts.title}, ${opts.message}, ${opts.pitchId}, ${opts.actorId ?? null}, ${`/pitch/${opts.pitchId}`}, false, NOW())
+    `;
+  } catch (err) {
+    console.error('notifyPitchOwner error:', err instanceof Error ? err.message : String(err));
+  }
+}
+
 function extractPitchId(request: Request): number {
   const url = new URL(request.url);
   const parts = url.pathname.split('/');
@@ -253,6 +273,17 @@ export async function submitPitchFeedback(request: Request, env: Env): Promise<R
     `;
 
     await updateRatingStats(sql, pitchId);
+
+    // Notify the pitch owner of new feedback (previously a silent gap). Respect
+    // the anonymous flag — null the actor so related_user_id can't unmask the reviewer.
+    await notifyPitchOwner(sql, {
+      ownerId: Number(pitch.user_id),
+      actorId: isAnonymous ? null : Number(userId),
+      pitchId,
+      type: 'pitch_feedback',
+      title: 'New feedback on your pitch',
+      message: rating ? `Your pitch received new feedback (${rating}★).` : 'Your pitch received new feedback.',
+    });
 
     return jsonResponse({ success: true, data: result[0] }, origin, 201);
   } catch (err) {
@@ -709,6 +740,18 @@ export async function submitPitchComment(request: Request, env: Env): Promise<Re
       VALUES (${pitchId}, ${userId ? Number(userId) : null}, ${userType}, ${content}, ${ipHash})
       RETURNING id, created_at
     `;
+
+    // Notify the pitch owner that someone commented (previously a silent gap —
+    // the comment was stored but the creator got no signal). Anonymous commenter
+    // → actorId null so we don't expose a non-existent/identifiable user.
+    await notifyPitchOwner(sql, {
+      ownerId: Number(pitch.user_id),
+      actorId: userId ? Number(userId) : null,
+      pitchId,
+      type: 'pitch_comment',
+      title: 'New comment on your pitch',
+      message: 'Someone left a comment on your pitch.',
+    });
 
     return jsonResponse({ success: true, data: result[0] }, origin, 201);
   } catch (err) {

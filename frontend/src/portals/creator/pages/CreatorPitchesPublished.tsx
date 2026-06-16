@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Globe, Eye, Heart, MessageSquare, Star, TrendingUp,
+  Globe, Eye, Heart, Star, TrendingUp,
   Calendar, Clock, Edit, MoreVertical, Filter, Search,
-  Download, Share2, BarChart3, DollarSign, Users, AlertCircle
+  Download, Share2, BarChart3, Users, AlertCircle
 } from 'lucide-react';
 import { PitchService, type Pitch } from '@features/pitches/services/pitch.service';
 
@@ -19,10 +19,8 @@ interface PublishedPitch {
   stats: {
     views: number;
     likes: number;
-    comments: number;
-    shares: number;
+    ndas: number;
     rating: number;
-    investmentInterest: number;
   };
   thumbnail?: string;
   visibility: 'public' | 'private' | 'nda_required';
@@ -56,12 +54,12 @@ function transformPitch(apiPitch: Pitch): PublishedPitch {
     publishedDate: new Date(apiPitch.publishedAt || apiPitch.createdAt),
     lastModified: new Date(apiPitch.updatedAt),
     stats: {
+      // All real, from the creator-pitches API. Comments/shares/investment-interest
+      // were dropped — no backend source exists (they only ever rendered 0).
       views: apiPitch.viewCount || 0,
       likes: apiPitch.likeCount || 0,
-      comments: 0, // Not tracked in API yet
-      shares: 0, // Not tracked in API yet
-      rating: 0, // Not tracked in API yet
-      investmentInterest: 0 // Would need to aggregate from investments
+      ndas: apiPitch.ndaCount || 0,
+      rating: Number(apiPitch.ratingAverage) || 0,
     },
     thumbnail: apiPitch.titleImage,
     visibility
@@ -150,7 +148,7 @@ export default function CreatorPitchesPublished() {
       case 'views':
         return b.stats.views - a.stats.views;
       case 'engagement':
-        return (b.stats.likes + b.stats.comments) - (a.stats.likes + a.stats.comments);
+        return (b.stats.likes + b.stats.ndas) - (a.stats.likes + a.stats.ndas);
       case 'rating':
         return b.stats.rating - a.stats.rating;
       default:
@@ -229,12 +227,12 @@ export default function CreatorPitchesPublished() {
           <div className="bg-white rounded-lg shadow-sm border p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Investment Interest</p>
+                <p className="text-sm text-gray-600">Total NDAs</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  ${formatNumber(pitches.reduce((acc, p) => acc + p.stats.investmentInterest, 0))}
+                  {formatNumber(pitches.reduce((acc, p) => acc + p.stats.ndas, 0))}
                 </p>
               </div>
-              <DollarSign className="w-8 h-8 text-green-600" />
+              <Users className="w-8 h-8 text-green-600" />
             </div>
           </div>
         </div>
@@ -341,11 +339,11 @@ export default function CreatorPitchesPublished() {
                       <p className="text-xs text-gray-500">Likes</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-lg font-semibold text-gray-900">{pitch.stats.comments}</p>
-                      <p className="text-xs text-gray-500">Comments</p>
+                      <p className="text-lg font-semibold text-gray-900">{formatNumber(pitch.stats.ndas)}</p>
+                      <p className="text-xs text-gray-500">NDAs</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-lg font-semibold text-gray-900">{pitch.stats.rating}</p>
+                      <p className="text-lg font-semibold text-gray-900">{pitch.stats.rating.toFixed(1)}</p>
                       <p className="text-xs text-gray-500">Rating</p>
                     </div>
                   </div>
