@@ -463,12 +463,11 @@ describe('ApiClient', () => {
 
   // ── empty/malformed body ──────────────────────────────────────────
   describe('empty response body', () => {
-    it('handles empty body without throwing — returns a result (note: source does not gate on empty body for 200 OK)', async () => {
-      // BUG NOTE: The source's safeJsonParse returns { error: 'Empty response body' }
-      // for an empty string, but makeRequest only checks for 'Invalid JSON' in the error
-      // string, not 'Empty response body'. So an empty 200 response is returned as
-      // success:true with { error: 'Empty response body' } as data. This test documents
-      // the actual (buggy) behavior — do NOT "fix" the source.
+    it('empty-body 200 is a clean success with null data, not an error object as data', async () => {
+      // An empty-body 2xx response must report success WITHOUT handing the caller
+      // an error-shaped object as data. Previously safeJsonParse returned
+      // { error: 'Empty response body' } and makeRequest only gated on 'Invalid JSON',
+      // so an empty 200 surfaced as success:true with { error: ... } as data.
       const emptyResp = {
         ok: true,
         status: 200,
@@ -478,9 +477,22 @@ describe('ApiClient', () => {
       }
       mockFetch.mockResolvedValueOnce(emptyResp)
       const result = await apiClient.get('/api/empty')
-      // Does not throw — either success or failure is acceptable, but must resolve
-      expect(result).toBeDefined()
-      expect(typeof result.success).toBe('boolean')
+      expect(result.success).toBe(true)
+      expect(result.data).toBeNull()
+    })
+
+    it('empty-body non-2xx surfaces as a failure', async () => {
+      const emptyErrResp = {
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        headers: { get: (h: string) => (h === 'content-type' ? 'application/json' : null) },
+        text: async () => '',
+      }
+      mockFetch.mockResolvedValueOnce(emptyErrResp)
+      const result = await apiClient.get('/api/empty-error')
+      expect(result.success).toBe(false)
+      expect(result.error?.status).toBe(500)
     })
 
     it('malformed JSON returns a result without throwing', async () => {

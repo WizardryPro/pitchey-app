@@ -391,12 +391,13 @@ describe('serverErrorResponse', () => {
     expect(body.error).toBe('Internal server error')
   })
 
-  it('includes requestId nested in metadata.details.details (double-nesting from errorResponse wrapping)', async () => {
-    // serverErrorResponse passes { code: 'INTERNAL_ERROR', details: { requestId } } as ErrorDetails
+  it('includes requestId at metadata.details.requestId (single level, no double-nesting)', async () => {
+    // serverErrorResponse spreads { code: 'INTERNAL_ERROR', requestId } as ErrorDetails
     // errorResponse sets response.metadata.details = that object
-    // So requestId lives at metadata.details.details.requestId (one extra level)
+    // So requestId lives at metadata.details.requestId (one sane level)
     const body = await parseBody(serverErrorResponse('boom', 'req-abc'))
-    expect(body.metadata.details.details.requestId).toBe('req-abc')
+    expect(body.metadata.details.requestId).toBe('req-abc')
+    expect(body.metadata.details.code).toBe('INTERNAL_ERROR')
   })
 })
 
@@ -491,12 +492,13 @@ describe('createErrorResponse', () => {
 // jsonResponse
 // ---------------------------------------------------------------------------
 describe('jsonResponse', () => {
-  it('custom status code is honored when data is already standard format; otherwise successResponse always 200', () => {
-    // Non-standard data (no `success` key) goes through successResponse() which always returns 200.
-    // The status param is only applied directly for already-shaped standard-format objects.
-    expect(jsonResponse({ ok: true }, 201).status).toBe(200)
-    // Verify: if the object already has `success`, the status IS used directly.
+  it('honors the custom status code for both standard and non-standard data', () => {
+    // Non-standard data (no `success` key) is wrapped but still respects the passed status.
+    expect(jsonResponse({ ok: true }, 201).status).toBe(201)
+    // Already-shaped standard-format objects also use the passed status directly.
     expect(jsonResponse({ success: true, data: {} }, 201).status).toBe(201)
+    // Default status is still 200 when none is supplied.
+    expect(jsonResponse({ ok: true }).status).toBe(200)
   })
 
   it('returns already-shaped standard response without re-wrapping', async () => {

@@ -173,18 +173,17 @@ describe('parseDatabaseError — message pattern fallbacks', () => {
     expect(r.statusCode).toBe(400)
   })
 
-  it('not null message with exact "not null" substring → 400', () => {
-    // Code checks message.includes('not null') — note: no hyphen.
-    // 'violates not-null constraint' contains 'not-null', not 'not null', so it falls to default (500).
-    // Use the exact pattern the code matches:
+  it('spaced "not null" message → 400', () => {
+    // Spaced form is matched for hand-rolled / non-PG error strings.
     const r = parseDatabaseError({ message: 'violates not null constraint' })
     expect(r.statusCode).toBe(400)
   })
 
-  it('hyphenated not-null message does NOT match — falls to 500 default', () => {
-    // 'not-null' ≠ 'not null' in includes() check; falls to generic 500 fallback
-    const r = parseDatabaseError({ message: 'violates not-null constraint' })
-    expect(r.statusCode).toBe(500)
+  it('hyphenated real-Postgres "not-null" message → 400', () => {
+    // Postgres actually emits "violates not-null constraint" (hyphen).
+    // The matcher now accepts both 'not null' and 'not-null', so this classifies correctly.
+    const r = parseDatabaseError({ message: 'null value in column "email" violates not-null constraint' })
+    expect(r.statusCode).toBe(400)
   })
 
   it('timeout message → 503', () => {

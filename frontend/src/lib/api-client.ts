@@ -123,7 +123,10 @@ class ApiClient {
   private async safeJsonParse(text: string): Promise<unknown> {
     try {
       if (!text || text.trim() === '') {
-        return { error: 'Empty response body' };
+        // Empty body is not an error — return a distinct marker so makeRequest
+        // can treat an empty-body success as clean (null) data rather than
+        // mistaking an error-shaped object for the response payload.
+        return { __emptyBody: true };
       }
       return JSON.parse(text);
     } catch (error) {
@@ -204,15 +207,28 @@ class ApiClient {
 
       const data = await this.safeJsonParse(responseText) as any;
 
+      // Empty-body responses: not an error. For a successful (2xx) response,
+      // hand the caller clean null data rather than an error-shaped object.
+      // For a non-2xx empty body, fall through to the HTTP-error handling below
+      // with a normalized empty object so it surfaces as a failure.
+      const isEmptyBody = data && data.__emptyBody === true;
+      if (isEmptyBody && response.ok) {
+        return {
+          success: true,
+          data: null as T
+        };
+      }
+      const normalizedData = isEmptyBody ? {} : data;
+
       // Handle parsing errors
-      if (data.error && typeof data.error === 'string' && data.error.includes('Invalid JSON')) {
+      if (normalizedData.error && typeof normalizedData.error === 'string' && normalizedData.error.includes('Invalid JSON')) {
         return {
           success: false,
           error: {
             message: 'Server response parsing failed',
             status: response?.status || 500,
             code: 'PARSE_ERROR',
-            details: data.details
+            details: normalizedData.details
           }
         };
       }
@@ -262,10 +278,10 @@ class ApiClient {
         return {
           success: false,
           error: {
-            message: (typeof data.error === 'string' ? data.error : (data.error as any)?.message) || data.message || `HTTP ${response?.status || 'unknown'}: ${response?.statusText || 'unknown'}`,
+            message: (typeof normalizedData.error === 'string' ? normalizedData.error : (normalizedData.error as any)?.message) || normalizedData.message || `HTTP ${response?.status || 'unknown'}: ${response?.statusText || 'unknown'}`,
             status: response?.status || 500,
-            code: data.code,
-            details: data.details
+            code: normalizedData.code,
+            details: normalizedData.details
           }
         };
       }
@@ -273,7 +289,7 @@ class ApiClient {
       // Successful response
       return {
         success: true,
-        data: (data.data || data) as T
+        data: (normalizedData.data || normalizedData) as T
       };
 
     } catch (error: unknown) {

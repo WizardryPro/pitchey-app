@@ -118,7 +118,9 @@ export function parseDatabaseError(error: any): UserFriendlyError {
         return handleGenericForeignKeyError(message);
       }
       
-      if (message.includes('not null')) {
+      // Postgres emits "violates not-null constraint" (hyphen); also accept the
+      // spaced form "not null" for hand-rolled / non-PG error strings.
+      if (message.includes('not null') || message.includes('not-null')) {
         return handleGenericNotNullError(message);
       }
       

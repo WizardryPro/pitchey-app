@@ -181,12 +181,11 @@ describe('RedisWithFallback.set', () => {
     const wrapper = new RedisWithFallback(redis)
     // Should not throw — the catch block swallows the redis error
     await expect(wrapper.set('k', 'v')).resolves.toBeUndefined()
-    // BUG DOCUMENTED: set() catches the redis error and writes 'v' to the
-    // in-memory cache, but get() on the same wrapper will try redis.get first
-    // (redis.get succeeds here, returning null) so it never consults memory.
-    // The value written to memory on set-failure is therefore silently lost
-    // from the caller's perspective. This is existing behavior — not fixed here.
-    expect(await wrapper.get('k')).toBeNull()
+    // FIXED (read-after-write fallback): set() catches the redis error and
+    // writes 'v' to the in-memory cache. get() tries redis.get first (which
+    // succeeds here returning null — a MISS because the write never reached
+    // redis), then falls through to the memory cache and returns the value.
+    expect(await wrapper.get('k')).toBe('v')
   })
 })
 
@@ -216,10 +215,10 @@ describe('RedisWithFallback.setex', () => {
     const redis = makeMockRedis({ setex: vi.fn().mockRejectedValue(new Error('setex failed')) })
     const wrapper = new RedisWithFallback(redis)
     await expect(wrapper.setex('k', 10, 'v')).resolves.toBeUndefined()
-    // BUG DOCUMENTED (same as set): setex() writes to memory after redis error,
-    // but get() checks redis.get first (which works and returns null here),
-    // so the memory write is silently invisible to get(). Existing behavior.
-    expect(await wrapper.get('k')).toBeNull()
+    // FIXED (same as set): setex() writes to memory after the redis error.
+    // get() checks redis.get first (returns null — a MISS), then falls through
+    // to the memory cache and returns the value written by the failed setex.
+    expect(await wrapper.get('k')).toBe('v')
   })
 
   it('falls back to memory when client has no setex method', async () => {

@@ -31,7 +31,14 @@ export class RedisWithFallback {
   async get(key: string): Promise<string | null> {
     try {
       if (this.redisAvailable && this.redis.get) {
-        return await this.redis.get(key);
+        const value = await this.redis.get(key);
+        // Only return on a real hit. On a redis MISS (null) fall through to the
+        // in-memory cache — a value written there by a set/setex whose redis
+        // write threw (write-only outage / read-replica failover) would
+        // otherwise be silently inaccessible (read-after-write data loss).
+        if (value !== null && value !== undefined) {
+          return value;
+        }
       }
     } catch (error) {
       this.showWarningOnce('get');
