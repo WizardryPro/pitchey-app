@@ -11,6 +11,10 @@
     "deploy:local": "./deploy-cloudflare.sh",
     "dev": "wrangler dev",
     "tail": "wrangler tail",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:ci": "vitest run --coverage --reporter=verbose --reporter=json --reporter=junit",
     "build": "cd frontend && npm install && npm run build",
     "build:full": "npm run build:worker && npm run build:frontend",
     "build:worker": "esbuild src/worker-integrated.ts --bundle --format=esm --outfile=dist/worker.js --platform=browser --target=es2020 --external:node:async_hooks --external:os --external:fs --external:crypto --external:path --external:stream --external:net --external:tls --external:perf_hooks --external:dns --external:buffer --external:util --external:events",
@@ -60,8 +64,10 @@
     "@cloudflare/workers-types": "^4.0.0",
     "@faker-js/faker": "^8.4.1",
     "@types/node": "^20.0.0",
+    "@vitest/coverage-v8": "^4.1.9",
     "esbuild": "^0.27.2",
     "form-data": "^4.0.5",
+    "vitest": "^4.1.9",
     "wrangler": "^4.95.0"
   },
   "overrides": {
