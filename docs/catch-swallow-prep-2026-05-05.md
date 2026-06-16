@@ -8,11 +8,67 @@ Read-only prep — no migrations performed on this branch.
 
 ## Status
 
-**The original gate-feeding bug surface is closed.** All six Tier-1 files from the 2026-04-17 audit are at zero `.catch(() => …)` residue: `follows`, `follows-enhanced`, `pitch-feedback`, `pitch-interactions`, plus the deleted `worker-modules/analytics-endpoints.ts`. The class of bug the audit was originally written to address — consumption-gate-style failures where a query exception looks identical to legitimate empty data on paths that feed quotas, trust signals, or gates — no longer has a hiding place in the live request paths.
+**Phase 2 structurally complete (2026-05-07)** — all bucket-C sites migrated to `safeQuery` across the entire `src/` tree. Four PRs (#92, #93, #94, #95) cover the 133-site migration. When all four land, the gate counts **0 untagged AND 0 bucket-C** in both scopes (with and without `worker-integrated.ts`). The orchestrator-prerequisite gate (a) — "<30 untagged residue" — is met with margin.
 
-**The remaining 114 untagged sites are second-tier residue, not Tier 1 leftover.** Most are dashboard-read fall-back-to-empty-state patterns where the user-facing UI behavior is acceptable but the operator-visibility cost is the issue. None of them are on a path that silently corrupts gate state.
+Phase 2 PR ledger:
 
-**The headline gate count (114) is currently uninterpretable.** See the next section: with zero `// fire-and-forget` tags applied anywhere in the tree, a count of "untagged residue" cannot distinguish genuine swallows from legitimate telemetry. Phase 1 of the work below is a tag-sweep that makes the count meaningful before any migration begins.
+| PR | Branch | Sites | Scope |
+|---|---|---:|---|
+| #92 | `phase-2.1/safequery-production-dashboard-extended` | 22 | `production-dashboard-extended.ts` (canary) |
+| #93 | `phase-2.2/safequery-production-family` | 42 | `production-sidebar.ts` (15) + `production-deals.ts` (13) + `production-dashboard.ts` (10) + `production-pitch-data.ts` (4) |
+| #94 | `phase-2.3/safequery-creator-and-grab-bag` | 33 | `creator-dashboard-extended.ts` (16) + `creator-dashboard.ts` (7) + `ai-production-autofill.ts` (1) + `ai-pitch-extract.ts` (1) + `file-validation.service.ts` (2) + `status-dashboard.ts` (2) + `investor-pitch-data.ts` (2) + `collaborator.ts` (2) |
+| #95 | `phase-2.4/safequery-worker-integrated` | 36 | `worker-integrated.ts` |
+| | | **133** | |
+
+**Gate-feeding sites — all closed in #94.** The three sites originally flagged as "Phase 2 priority" all received fail-closed-with-Sentry-report treatment:
+
+- `services/file-validation.service.ts:394` (quota usage + tier lookup) — was returning `currentUsage=0, tier=free` on SQL error, allowing uploads past quota. Now sets `quotaLookupFailed=true` and returns `allowed: false` so the caller refuses the upload.
+- `handlers/ai-pitch-extract.ts:72` (credit-balance gate) — was returning `balance=0` silently on outage (operator-blind). Now returns 503 "credit check temporarily unavailable" and reports to Sentry under `ai-pitch-extract.credit-check`.
+- `handlers/ai-production-autofill.ts:91` (credit-balance gate) — same pattern, same fix, context tag `ai-production-autofill.credit-check`.
+
+These were the original case study for why `.catch(() => default)` is dangerous. They are now operator-visible.
+
+**Pillar 1 acceptance gate (orchestrator prerequisite) — open after Phase 2 lands.** Post-Phase-2 numbers: **0 untagged**, 8 fire-and-forget (legitimate), 0 bucket-B (all wrapped via `observedSwallow` / `observedSwallowReturning`), 0 bucket-C (all migrated). The companion gate (b) — Phase C.1 rollback drill verified end-to-end — remains the open prerequisite for Phase D.4.
+
+**Mid-template comment fix (#90)** — Phase 1a's tagger had a `STMT_START` regex bug that inserted 5 `// TODO(catch-swallow)` comments *inside* `sql\`…\`` template literals, breaking those queries at parse time (PostgreSQL has no `//` comment syntax). The breakage was invisible because each affected query was wrapped in `.catch(() => [])`. PR #90 relocates the 5 comments, tightens the tagger regex (require `await` after `=` so SQL column-assignment lines like `updated_at = NOW()` no longer match), and adds a `findMidTemplateComments()` walker to the gate that hard-fails on any future occurrence.
+
+---
+
+**Phase 1a complete (2026-05-06)** — every `.catch(() => …)` site in `src/handlers/`, `src/services/`, `src/utils/` carries an A/B/C tag. Gate metric (untagged residue, excl. `worker-integrated.ts`): **0 of 109**.
+
+**What 0/109 means and doesn't mean.** The gate metric measures "tagged vs untagged" — Phase 1a hits zero because every site now carries a marker. It does **not** mean every site has received per-site human judgment of the kind the May-2 framing originally anticipated. The actual shape of the work:
+
+- **Bucket A (8 sites)**: per-site human classification — each judged as legitimately fire-and-forget (telemetry writes, request-body parse defaults).
+- **Bucket B (4 sites)**: per-site human classification — each judged as a defensible-default-with-visibility-gap that needs a breadcrumb wrap.
+- **Bucket C (97 sites)**: heuristic auto-classification — bulk tagger labelled them as migration candidates and the TODO marker carries that intent forward. The per-site judgment of "is this the right migration target?" is deferred to Phase 2, when each site gets ported to `safeQuery`.
+- **3 gate-feeding C sites**: per-site human classification, flagged with rationale text in the TODO.
+
+So the honest reading is: Phase 1a establishes A/B/C *classification* for every site; bucket-C sites are tagged as migration candidates, not yet individually-judged. Phase 1b covers `worker-integrated.ts`; Phase 2 is the per-site migration pass that retires the TODO markers. The gate count's interpretability problem (per the §"fire-and-forget tagging gap") is solved — A and C are now distinguishable in the count — but the orchestrator-prerequisite reading of "<30 untagged" should be understood as "<30 sites still pending any classification," not "<30 sites still pending migration."
+
+Phase 1a finalized counts:
+- **A — fire-and-forget**: 8 sites (telemetry writes, request-body parse fallbacks)
+- **B — breadcrumb pending**: 4 sites (credit deduction + transaction log writes; Phase 2 prerequisite)
+- **C — TODO(catch-swallow): migrate**: 97 sites (read-side dashboard fallbacks + 3 gate-feeding sites flagged in TODO text)
+
+**Worker-integrated baseline** (Phase 1b scope): ~~59 untagged sites, 0 tagged~~ — closed 2026-05-06 by Phase 1b PR. Tree-wide gate metric across `src/` is now **0 untagged / 156 total** (164 after Phase 1b tag sweep, then -8 by Phase 1b B-site wrap below).
+
+Phase 1b finalized counts (worker-integrated.ts only):
+- **A — fire-and-forget**: 15 sites (post-login password rehash, Stripe cleanup, Axiom logging, search-click tracking, session DELETEs, share-event INSERTs)
+- **B — breadcrumb pending**: ~~8 sites~~ → 0 sites (closed 2026-05-06 by Phase 1b B-site wrap; see below). Were: Stripe `getSubscription` reads (×2), INSERT/UPDATE-RETURNING with caller null-check (×5), auth-optional fallback (×1).
+- **C — TODO(catch-swallow): migrate**: 36 sites (analytics dashboard reads, browse aggregates, info_requests reads, NDA document lookups)
+
+Distribution: 25% A / 14% B / 61% C — close to the spot-check prediction of 25/25/50. Each site received per-site human classification (no bulk-by-file shortcut available — file is too mixed). Tagger config preserved as the audit artifact: see PR diff for the line→bucket mapping.
+
+**~~Residual risk this PR does not fix.~~ Closed 2026-05-06 by B-site wrap PR.** The 4 bucket-B sites (`ai-pitch-extract.ts:191/197`, `ai-production-autofill.ts:211/217`) were credit-deduction and transaction-log writes that could still fail silently. The B-site wrap landed `observedSwallow` (a `safeQuery`-style helper for best-effort writes) and converted all four sites; revenue/audit-trail leakage is now visible in Sentry under the `catch_swallow.context` tag. Bucket B count is now 0; total `.catch(() => …)` sites in scope dropped from 109 to 105.
+
+**Phase 1b B-site wrap (2026-05-06)** — sibling helper `observedSwallowReturning<T, F>` added to `src/db/safe-query.ts` for best-effort operations where the caller reads the result but accepts a fallback (typically `null`). Converted all 8 bucket-B sites in `worker-integrated.ts`: 2× `stripe.getSubscription` (Stripe webhook → invoice paid / checkout session), 3× INSERT-RETURNING with null-check (scheduled_reports, calendar_events, info_requests), 2× UPDATE-RETURNING with null-check (info_requests respond/update), 1× auth-optional fallback (demo request). Failures now produce a Sentry event tagged with the call site (e.g. `stripe-webhook.invoice-paid.get-subscription`, `info-request.update`, `demo-request.auth-optional`). Bucket B in `worker-integrated.ts` is 0; total `.catch(() => …)` sites in `src/` dropped from 164 to 156.
+
+**Gate-feeding sites identified during Phase 1a** — 3 sites on paths the original audit was written to address:
+- `services/file-validation.service.ts:394` — fail-open quota bypass; '0' on error lets user upload past quota
+- `handlers/ai-pitch-extract.ts:72` — credit-balance check before AI charge; fail-closed but operator-blind
+- `handlers/ai-production-autofill.ts:91` — same as above for autofill
+
+**The original gate-feeding bug surface from 2026-04-17 is closed.** All six Tier-1 files are at zero `.catch(() => …)` residue. The 3 gate-feeding sites listed above are Phase 1a discoveries — newly-surfaced sites worth Phase 2 priority, not Tier-1 leftover.
 
 ## Headline numbers
 
@@ -162,7 +218,21 @@ Before Phase 2's first migration PR opens:
 - [ ] Phase 1a + 1b both merged; gate count under <30 target *or* documented why the residue can't reach it without code changes
 - [ ] Confirm `safeQuery` API hasn't drifted since the exemplar in `handlers/creator-dashboard.ts:creatorRevenueHandler`
 
+## Tooling — Phase 1a deliverables
+
+Two scripts ship with the Phase 1a PR (branch `phase-1a/catch-swallow-tag-sweep`):
+
+- `scripts/catch-swallow-gate.mjs` — counts tagged vs untagged sites, breaks down by bucket. Supports `--list`, `--include-worker`, `--threshold N` (exit non-zero if untagged > N — for CI gate use). Default scope excludes `worker-integrated.ts`.
+- `scripts/catch-swallow-tag.mjs` — bulk tagger for buckets A and C. Idempotent: re-running skips already-tagged sites. Walks back from `.catch` line through statement body to statement-start (`await`, `const`, `sql\``, method-call openers like `db.query(`), then inserts tag on the line above. Bucket B sites must be hand-tagged with the special `// TODO(catch-swallow): bucket-B breadcrumb pending — <reason>` marker (the gate counter recognizes this distinct from regular C).
+
+Tag conventions (mirrors CLAUDE.md gate spec):
+- `// fire-and-forget` — bucket A
+- `// TODO(catch-swallow): bucket-B breadcrumb pending — <reason>` — bucket B
+- `// TODO(catch-swallow): migrate to safeQuery[ — <reason>]` — bucket C
+
 ## What this branch contains
 
-- This document (`docs/catch-swallow-prep-2026-05-05.md`) only.
-- No code changes. Phase 1a (tag sweep across `src/handlers` + `src/services` + `src/utils`) opens on a separate branch once main is green.
+Phase 1a PR (branch `phase-1a/catch-swallow-tag-sweep`):
+- 18 files, +110/-1 lines, comment-only diff
+- 2 new scripts (`catch-swallow-gate.mjs`, `catch-swallow-tag.mjs`)
+- Original prep doc (`docs/catch-swallow-prep-2026-05-05.md`) updated with finalized counts
