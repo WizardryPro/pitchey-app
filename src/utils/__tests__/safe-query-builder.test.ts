@@ -59,19 +59,19 @@ describe('SafeQueryBuilder.buildSelect — table whitelist', () => {
 // SafeQueryBuilder — ORDER BY whitelist (THROW on invalid column / direction)
 // ---------------------------------------------------------------------------
 describe('SafeQueryBuilder ORDER BY guards', () => {
-  it('accepts whitelisted sort columns that do not contain SQL keyword substrings', () => {
-    // NOTE: `updated_at` is in ALLOWED_SORT_COLUMNS but CANNOT be used as an ORDER BY
-    // column because `sanitizeIdentifier` rejects it (contains substring "update").
-    // This is a CORRECTNESS BUG documented below. We test only the columns that
-    // actually work end-to-end.
-    const workingWhitelisted = [
-      'id', 'created_at', 'published_at',
+  it('accepts every whitelisted sort column, including updated_at', () => {
+    // sanitizeIdentifier now scans per-token (split on `_`/`.`), so a column
+    // whose token merely *contains* a keyword substring — like `updated_at`
+    // (tokens ["updated", "at"]) — passes, while a token that IS a keyword is
+    // still rejected. Every ALLOWED_SORT_COLUMNS entry works end-to-end.
+    const allWhitelisted = [
+      'id', 'created_at', 'updated_at', 'published_at',
       'view_count', 'like_count', 'investment_count',
       'title', 'status', 'genre', 'format', 'budget_range',
       'username', 'email', 'role', 'last_login',
       'amount', 'transaction_date', 'priority',
     ]
-    for (const col of workingWhitelisted) {
+    for (const col of allWhitelisted) {
       expect(() => {
         const b = new SafeQueryBuilder()
         b.buildSelect({
@@ -82,18 +82,17 @@ describe('SafeQueryBuilder ORDER BY guards', () => {
     }
   })
 
-  it('BUG: updated_at is in ALLOWED_SORT_COLUMNS but sanitizeIdentifier throws on it', () => {
-    // "updated_at" is whitelisted for ORDER BY but the identifier sanitizer
-    // checks cleaned.toLowerCase().includes("update") and throws.
-    // This means you cannot actually sort by updated_at — a correctness gap.
-    // Documented here; do not fix without updating this test.
-    expect(() => {
-      const b = new SafeQueryBuilder()
-      b.buildSelect({
-        from: 'pitches',
-        orderBy: [{ field: 'updated_at', direction: 'DESC' }],
-      })
-    }).toThrow(/Suspicious identifier/)
+  it('sorts by updated_at without throwing (token-based sanitizer no longer false-positives on "update")', () => {
+    // Previously a BUG: `updated_at` is whitelisted but the old substring check
+    // (cleaned.includes("update")) rejected it, so ORDER BY updated_at 500'd.
+    // Per-token sanitization fixes this: ["updated", "at"] has no exact-keyword
+    // token, so it sanitizes to a quoted identifier and emits a valid clause.
+    const b = new SafeQueryBuilder()
+    const { query } = b.buildSelect({
+      from: 'pitches',
+      orderBy: [{ field: 'updated_at', direction: 'DESC' }],
+    })
+    expect(query).toContain('ORDER BY "updated_at" DESC')
   })
 
   it('throws when an ORDER BY column is not in the whitelist', () => {

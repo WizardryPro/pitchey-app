@@ -205,21 +205,30 @@ export class SafeQueryBuilder {
   /**
    * Sanitize identifiers (table/column names)
    */
+  private static readonly DANGEROUS_KEYWORDS = new Set([
+    'drop', 'delete', 'insert', 'update', 'alter', 'exec', 'script',
+    'truncate', 'union', 'select', 'grant', 'revoke',
+  ]);
+
   private sanitizeIdentifier(identifier: string): string {
     // Remove any quotes and special characters
     const cleaned = identifier.replace(/[^a-zA-Z0-9_.]/g, '');
-    
-    // Check for common injection patterns
-    if (cleaned.toLowerCase().includes('drop') ||
-        cleaned.toLowerCase().includes('delete') ||
-        cleaned.toLowerCase().includes('insert') ||
-        cleaned.toLowerCase().includes('update') ||
-        cleaned.toLowerCase().includes('alter') ||
-        cleaned.toLowerCase().includes('exec') ||
-        cleaned.toLowerCase().includes('script')) {
-      throw new Error(`Suspicious identifier detected: ${identifier}`);
+
+    // Check for SQL keyword injection on a per-token basis. Splitting on the
+    // legal identifier separators (`_` and `.`) means a whole-word keyword
+    // (`drop`, `user_drop`, `id; DROP` → cleaned `idDROP`... see below) is
+    // rejected, while legitimate snake_case columns whose tokens merely
+    // *contain* a keyword as a substring (`updated_at` → ["updated", "at"])
+    // are allowed. Pure-concatenation forms with no separator (e.g.
+    // "dropusers") are already blocked upstream by the ALLOWED_SORT_COLUMNS /
+    // ALLOWED_TABLES whitelists, so they never reach a real query.
+    const tokens = cleaned.toLowerCase().split(/[_.]/).filter(Boolean);
+    for (const token of tokens) {
+      if (SafeQueryBuilder.DANGEROUS_KEYWORDS.has(token)) {
+        throw new Error(`Suspicious identifier detected: ${identifier}`);
+      }
     }
-    
+
     // Quote the identifier for PostgreSQL
     return `"${cleaned}"`;
   }

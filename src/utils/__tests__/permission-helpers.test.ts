@@ -438,14 +438,12 @@ describe('PermissionHelpers.getUserMaxRoleLevel', () => {
     expect(await PermissionHelpers.getUserMaxRoleLevel(1)).toBe(5);
   });
 
-  it('returns -Infinity when no roles (Math.max spread of empty array — known edge case)', async () => {
-    // SECURITY NOTE: Math.max(...[]) === -Infinity. The implementation at line 315
-    // returns -Infinity for a user with no roles, NOT 0 as the error handler
-    // catch branch would return. Any downstream canAccessByHierarchy check will
-    // therefore correctly deny access (a -Infinity level user has no hierarchy).
+  it('returns 0 when the user has no roles (empty-array guard)', async () => {
+    // Math.max(...[]) === -Infinity; the implementation guards the empty case and
+    // returns 0 so a no-role user is not a poison value in hierarchy comparisons.
     mockPermissionService.getUserRoles.mockResolvedValue([]);
     const result = await PermissionHelpers.getUserMaxRoleLevel(1);
-    expect(result).toBe(-Infinity);
+    expect(result).toBe(0);
   });
 
   it('returns 0 on error', async () => {

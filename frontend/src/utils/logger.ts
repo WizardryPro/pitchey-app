@@ -55,7 +55,9 @@ class Logger {
     if (this.shouldLog('debug')) {
       const formatted = this.formatMessage('debug', message);
       if (data) {
+        console.debug(formatted, data);
       } else {
+        console.debug(formatted);
       }
     }
   }
@@ -64,7 +66,9 @@ class Logger {
     if (this.shouldLog('info')) {
       const formatted = this.formatMessage('info', message);
       if (data) {
+        console.info(formatted, data);
       } else {
+        console.info(formatted);
       }
     }
   }

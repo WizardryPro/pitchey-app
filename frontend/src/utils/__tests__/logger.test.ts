@@ -5,6 +5,8 @@ import { Logger, logger, createModuleLogger, authLogger, apiLogger, wsLogger, nd
 // Logger class behavior
 // ============================================================================
 describe('Logger', () => {
+  let debugSpy: ReturnType<typeof vi.spyOn>;
+  let infoSpy: ReturnType<typeof vi.spyOn>;
   let warnSpy: ReturnType<typeof vi.spyOn>;
   let errorSpy: ReturnType<typeof vi.spyOn>;
   let groupSpy: ReturnType<typeof vi.spyOn>;
@@ -13,6 +15,8 @@ describe('Logger', () => {
   let timeEndSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
+    debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+    infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
     warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     groupSpy = vi.spyOn(console, 'group').mockImplementation(() => {});
@@ -23,6 +27,68 @@ describe('Logger', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  // ─── debug ────────────────────────────────────────────────────────────────
+  describe('debug()', () => {
+    it('calls console.debug with formatted message containing DEBUG', () => {
+      const log = new Logger({ enableInProduction: true, logLevel: 'debug' });
+      log.debug('test debug');
+      expect(debugSpy).toHaveBeenCalled();
+      expect(debugSpy.mock.calls[0][0]).toContain('DEBUG');
+    });
+
+    it('passes data as second argument when provided', () => {
+      const log = new Logger({ enableInProduction: true, logLevel: 'debug' });
+      const data = { key: 'value' };
+      log.debug('with data', data);
+      expect(debugSpy).toHaveBeenCalledWith(expect.any(String), data);
+    });
+
+    it('calls console.debug with only the formatted string when no data', () => {
+      const log = new Logger({ enableInProduction: true, logLevel: 'debug' });
+      log.debug('no data');
+      expect(debugSpy).toHaveBeenCalled();
+      expect(debugSpy.mock.calls[0]).toHaveLength(1);
+    });
+
+    it('does not call console.debug when the level gates it out', () => {
+      // logLevel 'warn' means debug (value 0) < warn (value 2) → filtered
+      const log = new Logger({ enableInProduction: true, logLevel: 'warn' });
+      log.debug('gated out');
+      expect(debugSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── info ─────────────────────────────────────────────────────────────────
+  describe('info()', () => {
+    it('calls console.info with formatted message containing INFO', () => {
+      const log = new Logger({ enableInProduction: true, logLevel: 'info' });
+      log.info('test info');
+      expect(infoSpy).toHaveBeenCalled();
+      expect(infoSpy.mock.calls[0][0]).toContain('INFO');
+    });
+
+    it('passes data as second argument when provided', () => {
+      const log = new Logger({ enableInProduction: true, logLevel: 'info' });
+      const data = { key: 'value' };
+      log.info('with data', data);
+      expect(infoSpy).toHaveBeenCalledWith(expect.any(String), data);
+    });
+
+    it('calls console.info with only the formatted string when no data', () => {
+      const log = new Logger({ enableInProduction: true, logLevel: 'info' });
+      log.info('no data');
+      expect(infoSpy).toHaveBeenCalled();
+      expect(infoSpy.mock.calls[0]).toHaveLength(1);
+    });
+
+    it('does not call console.info when the level gates it out', () => {
+      // logLevel 'warn' means info (value 1) < warn (value 2) → filtered
+      const log = new Logger({ enableInProduction: true, logLevel: 'warn' });
+      log.info('gated out');
+      expect(infoSpy).not.toHaveBeenCalled();
+    });
   });
 
   // ─── warn ─────────────────────────────────────────────────────────────────

@@ -176,9 +176,9 @@ describe('filterPitchForPublic — sensitive field removal', () => {
 
 // ---------------------------------------------------------------------------
 // filterPitchForPublic — synopsis truncation
-// NOTE: The source truncates at 500 chars, NOT 300 chars.
-// CLAUDE.md says "synopsis truncated to 300 chars" but the implementation
-// uses maxLength=500. This is a discrepancy — documented below.
+// Public browse/search CARDS truncate at 500 chars. This is INTENTIONALLY longer
+// than the pitch-detail watcher/anon path (300, in getPitch) — different surfaces,
+// a product decision (2026-06-17), not drift. These tests lock in the 500-char card behavior.
 // ---------------------------------------------------------------------------
 describe('filterPitchForPublic — synopsis truncation', () => {
   it('passes through short synopsis unchanged', () => {
