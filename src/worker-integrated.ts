@@ -8390,15 +8390,18 @@ pitchey_analytics_datapoints_per_minute 1250
       }
       const newBalance = currentBalance - ndaCreditCost;
 
-      // Demo accounts are auto-approved AND immediately granted access.
-      const userEmail = authResult.user.email || '';
-      const isDemoAccount = userEmail.includes('@demo.com');
-      const ndaStatus = isDemoAccount ? 'signed' : 'pending';
+      // Every NDA request starts 'pending' and must be approved by the pitch owner
+      // — demo accounts included. (A prior shortcut auto-signed @demo.com requests
+      // for solo-demo convenience, but that made the demo + smoke-test path diverge
+      // from real users and is exactly what hid bug #284: the smoke test runs on
+      // demo accounts, so the real pending→approve path was never exercised.
+      // Removed so demo == production. Demos can still show unlocked content via the
+      // already-seeded signed NDAs in demo data.)
+      const ndaStatus = 'pending';
 
-      // 4) Insert the request into the canonical `ndas` table (signer_id = requester).
-      //    Demo accounts land 'signed' + access_granted; everyone else 'pending'
-      //    awaiting creator approval. Unique (pitch_id, signer_id) backstops dedup.
-      const demoTimestamp = isDemoAccount ? new Date().toISOString() : null;
+      // 4) Insert the request into the canonical `ndas` table (signer_id = requester),
+      //    'pending' with no access until the owner approves. signed_at/approved_at
+      //    stay NULL until then. Unique (pitch_id, signer_id) backstops dedup.
       let nda: DatabaseRow | null = null;
       try {
         const inserted = await this.db.query(`
@@ -8415,10 +8418,10 @@ pitchey_analytics_datapoints_per_minute 1250
           authResult.user.id,
           this.safeParseInt(pitchId),
           ndaStatus,
-          isDemoAccount,
+          false, // access_granted — not until the owner approves
           request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || null,
           request.headers.get('User-Agent') || null,
-          demoTimestamp,
+          null,  // signed_at / approved_at — NULL until approval
         ]) as DatabaseRow[];
         nda = inserted[0] || null;
       } catch (insertError) {
@@ -8442,8 +8445,8 @@ pitchey_analytics_datapoints_per_minute 1250
         [authResult.user.id, -ndaCreditCost, currentBalance, newBalance, this.safeParseInt(pitchId)]
       );
 
-      // Create notification for pitch owner if not auto-approved
-      if (!isDemoAccount && creatorId) {
+      // Notify the pitch owner that there's a request awaiting their approval.
+      if (creatorId) {
         try {
           await this.db.query(`
             INSERT INTO notifications (
@@ -8465,10 +8468,8 @@ pitchey_analytics_datapoints_per_minute 1250
       }
 
       // Log audit event for NDA request
-      const eventType = isDemoAccount ? AuditEventTypes.NDA_REQUEST_APPROVED : AuditEventTypes.NDA_REQUEST_CREATED;
-      const description = isDemoAccount
-        ? `NDA request ${nda.id} auto-approved for demo account`
-        : `NDA request ${nda.id} created by user ${authResult.user.id}`;
+      const eventType = AuditEventTypes.NDA_REQUEST_CREATED;
+      const description = `NDA request ${nda.id} created by user ${authResult.user.id}`;
 
       await logNDAEvent(this.auditService,
         eventType,
@@ -8483,14 +8484,13 @@ pitchey_analytics_datapoints_per_minute 1250
             ownerId: creatorId,
             message: this.safeString(data.reason) || 'NDA Request',
             expiresAt: nda.expires_at,
-            isDemoAccount,
-            autoApproved: isDemoAccount
+            autoApproved: false
           }
         }
       );
 
       // Push real-time NDA status update to pitch creator
-      if (!isDemoAccount && creatorId) {
+      if (creatorId) {
         try {
           await this.pushRealtimeEvent(String(creatorId), {
             type: 'nda_status_update',
