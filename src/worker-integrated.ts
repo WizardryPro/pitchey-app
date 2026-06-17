@@ -1426,7 +1426,7 @@ class RouteRegistry {
         SELECT id, email, username, name, user_type, first_name, last_name,
                bio, company_name, profile_image
         FROM users
-        WHERE email = $1 AND user_type = $2
+        WHERE email = $1 AND user_type = $2 AND deleted_at IS NULL
         LIMIT 1
       `;
 
