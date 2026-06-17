@@ -17,7 +17,12 @@ const sentryPlugins = sentryAuthToken
         org: process.env.SENTRY_ORG,
         project: process.env.SENTRY_PROJECT,
         authToken: sentryAuthToken,
-        release: { name: process.env.VITE_APP_VERSION || process.env.GITHUB_SHA || undefined },
+        // finalize:false skips the `sentry-cli releases finalize` API call, which
+        // has repeatedly 504'd and failed the whole frontend deploy (#316/#319).
+        // It only sets release "finalized" metadata — source-map upload + debug
+        // IDs (what actually de-minifies errors) happen regardless, so skipping it
+        // costs nothing and removes a recurring transient deploy-blocker.
+        release: { name: process.env.VITE_APP_VERSION || process.env.GITHUB_SHA || undefined, finalize: false },
         sourcemaps: { filesToDeleteAfterUpload: ['./dist/**/*.map'] },
         telemetry: false,
       }),
