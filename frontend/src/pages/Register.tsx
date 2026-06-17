@@ -5,6 +5,7 @@ import { UserPlus, Mail, User, Briefcase, AlertCircle, CheckCircle } from 'lucid
 import PasswordInput from '../components/PasswordInput';
 import Turnstile, { TURNSTILE_ENABLED } from '../components/Turnstile';
 import { setPendingReturnTo, isSafeReturnPath } from '@/utils/postLoginRedirect';
+import { OnboardingStepper } from '@/features/auth/components/OnboardingStepper';
 
 
 export default function Register() {
@@ -94,6 +95,7 @@ export default function Register() {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <OnboardingStepper current={1} className="mb-6" />
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           {registrationComplete ? (
             <div className="text-center">

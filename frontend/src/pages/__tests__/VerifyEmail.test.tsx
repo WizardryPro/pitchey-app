@@ -68,7 +68,7 @@ describe('VerifyEmail', () => {
       await waitFor(() => {
         expect(screen.getByText('Email verified successfully!')).toBeInTheDocument()
       })
-      expect(screen.getByText(/Your email has been verified/)).toBeInTheDocument()
+      expect(screen.getByText(/finish your profile/)).toBeInTheDocument()
       expect(screen.getByText('Redirecting to login page...')).toBeInTheDocument()
     })
 
@@ -81,7 +81,7 @@ describe('VerifyEmail', () => {
       })
     })
 
-    it('renders Go to login link after success', async () => {
+    it('renders Continue to login link after success', async () => {
       mockVerifyEmail.mockResolvedValue(undefined)
       renderComponent()
 
@@ -89,7 +89,7 @@ describe('VerifyEmail', () => {
         expect(screen.getByText('Email verified successfully!')).toBeInTheDocument()
       }, { timeout: 5000 })
 
-      const goToLogin = screen.getByRole('link', { name: 'Go to login' })
+      const goToLogin = screen.getByRole('link', { name: 'Continue to login' })
       expect(goToLogin).toBeInTheDocument()
       expect(goToLogin).toHaveAttribute('href', '/login')
     })
@@ -216,7 +216,7 @@ describe('VerifyEmail', () => {
     it('renders the Pitchey brand', () => {
       mockVerifyEmail.mockReturnValue(new Promise(() => {}))
       renderComponent()
-      expect(screen.getByText('Pitchey')).toBeInTheDocument()
+      expect(screen.getByAltText('Pitchey')).toBeInTheDocument()
     })
 
     it('renders the Email Verification heading', () => {

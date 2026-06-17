@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { UserService } from '@/services/user.service';
 import { getPortalPath } from '@/utils/navigation';
+import { OnboardingStepper } from '@/features/auth/components/OnboardingStepper';
 
 const MAX_BIO_LENGTH = 500;
 
@@ -133,13 +134,22 @@ export default function OnboardingPage() {
   return (
     <div className={`min-h-screen bg-gradient-to-br ${cfg.gradient} flex items-center justify-center px-4 py-12`}>
       <div className="w-full max-w-lg">
-        {/* Branding */}
+        {/* Branding — logo links home so the screen isn't a dead-end */}
         <div className="text-center mb-8">
-          <img src="/pitchey-logotype.png" alt="Pitchey" className="h-10 w-auto mx-auto" />
-          <p className="mt-2 text-gray-600">{cfg.subtitle}</p>
+          <Link to="/" className="inline-block">
+            <img src="/pitchey-logotype.png" alt="Pitchey" className="h-10 w-auto mx-auto" />
+          </Link>
+          <p className={`mt-3 text-sm font-medium ${colors.title}`}>Last step — you're almost in</p>
+          <p className="mt-1 text-gray-600">{cfg.subtitle}</p>
         </div>
 
+        {/* Journey progress — this is step 3 of 3, not a trap */}
+        <OnboardingStepper current={3} accent={cfg.accent} className="mb-8" />
+
         <form onSubmit={(e) => { void handleSubmit(e); }} className="bg-white rounded-2xl shadow-lg p-8 space-y-6">
+          <p className="text-sm text-gray-500 -mt-1">
+            Your name and bio appear on your pitches and profile so others know who they're dealing with.
+          </p>
           {/* Profile Photo */}
           <div className="flex flex-col items-center">
             <button
@@ -259,6 +269,13 @@ export default function OnboardingPage() {
             </button>
           </p>
         </form>
+
+        <p className="text-center text-sm text-gray-500 mt-6">
+          Need help?{' '}
+          <a href="mailto:support@pitchey.com" className={`${colors.title} hover:underline font-medium`}>
+            Contact support
+          </a>
+        </p>
       </div>
     </div>
   );
