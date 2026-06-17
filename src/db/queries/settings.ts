@@ -387,8 +387,10 @@ export async function deleteUserAccount(sql: Sql, userId: string): Promise<boole
         password_hash     = NULL,
         first_name        = NULL,
         last_name         = NULL,
-        -- `name` is a generated column (COALESCE(username, email)); it
-        -- auto-recomputes to the scrubbed username, so we must NOT set it here.
+        -- NOTE: do not set the "name" column here. It is a generated column
+        -- (COALESCE of username, email) and auto-recomputes to the scrubbed
+        -- username. Setting it errors; backticks are avoided in this comment
+        -- because the query is a tagged template literal.
         bio               = NULL,
         phone             = NULL,
         location          = NULL,
