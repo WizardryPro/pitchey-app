@@ -313,6 +313,9 @@ export class PermissionHelpers {
   static async getUserMaxRoleLevel(userId: number): Promise<number> {
     try {
       const userRoles = await PermissionService.getUserRoles({ userId, active: true });
+      // Guard the empty case: Math.max(...[]) === -Infinity, which would be a
+      // poison value in hierarchy comparisons. A user with no roles has level 0.
+      if (userRoles.length === 0) return 0;
       return Math.max(...userRoles.map(ur => ur.role?.level || 0));
     } catch (error) {
       console.error('Error getting user role level:', error);

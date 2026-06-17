@@ -257,7 +257,10 @@ export function filterUserForPublic(user: any): PublicUser | null {
 function truncateSynopsis(synopsis?: string): string | undefined {
   if (!synopsis) return undefined;
   
-  const maxLength = 500; // Limit synopsis to 500 characters for public
+  // Public browse/search CARDS intentionally show a longer teaser (500) than the
+  // pitch-DETAIL view for watchers/anon (300, in getPitch). Two different surfaces,
+  // not drift — product decision 2026-06-17. Don't "unify" without an owner call.
+  const maxLength = 500;
   if (synopsis.length <= maxLength) return synopsis;
   
   // Truncate at word boundary

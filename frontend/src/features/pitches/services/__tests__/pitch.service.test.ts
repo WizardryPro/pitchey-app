@@ -367,4 +367,39 @@ describe('PitchService', () => {
       expect(result).toEqual({ pitches: [], total: 0 })
     })
   })
+
+  describe('getEngagement', () => {
+    it('returns engagement data on success', async () => {
+      mockApiClient.get.mockResolvedValue({
+        success: true,
+        data: {
+          viewCount: 12,
+          likeCount: 3,
+          recentLikers: [{ userType: 'investor', name: 'Sam' }],
+          viewerBreakdown: { investor: 2 },
+          recentViewers: [{ id: 1, name: 'Sam', userType: 'investor', viewedAt: '2026-01-01' }],
+        },
+      })
+
+      const result = await PitchService.getEngagement(42)
+
+      expect(mockApiClient.get).toHaveBeenCalledWith('/api/pitches/42/engagement')
+      expect(result.viewCount).toBe(12)
+      expect(result.likeCount).toBe(3)
+      expect(result.recentLikers).toEqual([{ userType: 'investor', name: 'Sam' }])
+      expect(result.viewerBreakdown).toEqual({ investor: 2 })
+    })
+
+    it('throws on failure instead of leaking the {success:false} wrapper as zero data', async () => {
+      // Regression: previously `(response.data || response)` fell back to the
+      // failure wrapper, returning a fake all-zero engagement object instead of
+      // surfacing the error.
+      mockApiClient.get.mockResolvedValue({
+        success: false,
+        error: { message: 'Pitch not found' },
+      })
+
+      await expect(PitchService.getEngagement(42)).rejects.toThrow('Pitch not found')
+    })
+  })
 })

@@ -94,10 +94,24 @@ jobs:
           echo "Frontend coverage: ${frontend_coverage}%"
           echo "frontend_coverage=$frontend_coverage" >> $GITHUB_ENV
       
-      - name: Set Backend Coverage
+      - name: Generate Backend Coverage
         run: |
-          echo "ℹ️ Backend coverage not available (no test runner configured)"
-          echo "backend_coverage=0" >> $GITHUB_ENV
+          # Root vitest runner (node env) added 2026-06-16 — covers the backend
+          # pure-logic layer (auth/RBAC/validation/SQL-safety/response). Coverage
+          # is low because the denominator is the whole Worker; the gate is
+          # warn-only (below), so this reports a real number without blocking.
+          npm run test:coverage || true
+
+          if [ -f "coverage/coverage-summary.json" ]; then
+            backend_coverage=$(node -e "const c = require('./coverage/coverage-summary.json'); console.log(c.total.lines.pct)")
+          else
+            echo "⚠️ No backend coverage report found, using 0"
+            backend_coverage="0"
+          fi
+
+          backend_coverage=${backend_coverage:-0}
+          echo "Backend coverage: ${backend_coverage}%"
+          echo "backend_coverage=$backend_coverage" >> $GITHUB_ENV
 
       - name: Evaluate Coverage Quality Gate
         id: coverage

@@ -907,7 +907,16 @@ export class PitchService {
   // Get engagement data for a pitch
   static async getEngagement(pitchId: number): Promise<PitchEngagement> {
     const response = await apiClient.get(`/api/pitches/${pitchId}/engagement`);
-    const data = (response.data || response) as Record<string, unknown>;
+
+    // apiClient never throws — it returns { success: false, error } on failure.
+    // Reading `.data ?? response` here would leak the {success:false} wrapper and
+    // surface as a fake all-zero engagement object. Honor success explicitly.
+    if (response.success !== true) {
+      const errorMessage = typeof response.error === 'object' && response.error !== null ? response.error.message : response.error;
+      throw new Error(errorMessage ?? 'Failed to fetch pitch engagement');
+    }
+
+    const data = (response.data ?? {}) as Record<string, unknown>;
     return {
       viewCount: (data.viewCount as number) || 0,
       likeCount: (data.likeCount as number) || 0,

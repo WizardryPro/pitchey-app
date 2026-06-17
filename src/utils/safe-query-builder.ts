@@ -205,21 +205,36 @@ export class SafeQueryBuilder {
   /**
    * Sanitize identifiers (table/column names)
    */
+  private static readonly DANGEROUS_KEYWORDS = new Set([
+    'drop', 'delete', 'insert', 'update', 'alter', 'exec', 'script',
+    'truncate', 'union', 'select', 'grant', 'revoke',
+  ]);
+
   private sanitizeIdentifier(identifier: string): string {
     // Remove any quotes and special characters
     const cleaned = identifier.replace(/[^a-zA-Z0-9_.]/g, '');
-    
-    // Check for common injection patterns
-    if (cleaned.toLowerCase().includes('drop') ||
-        cleaned.toLowerCase().includes('delete') ||
-        cleaned.toLowerCase().includes('insert') ||
-        cleaned.toLowerCase().includes('update') ||
-        cleaned.toLowerCase().includes('alter') ||
-        cleaned.toLowerCase().includes('exec') ||
-        cleaned.toLowerCase().includes('script')) {
-      throw new Error(`Suspicious identifier detected: ${identifier}`);
+
+    // Reject SQL keywords on a per-token basis. Splitting on the legal identifier
+    // separators (`_` and `.`) rejects a whole-word keyword (`drop`, `user_drop`)
+    // while allowing legitimate snake_case columns whose tokens merely *contain* a
+    // keyword as a substring (`updated_at` → ["updated", "at"]).
+    //
+    // This token scan is a SECONDARY heuristic, not the real barrier — and it does
+    // NOT catch separator-less concatenations (e.g. "dropusers" → one token). The
+    // actual protection against an identifier becoming executable SQL is the
+    // char-strip above (removes quotes/operators/whitespace) plus the double-quote
+    // wrapping below: a cleaned, quoted identifier is at worst a non-existent
+    // column name, never runnable SQL. For sort fields and table names the
+    // concatenation gap is additionally closed by ALLOWED_SORT_COLUMNS /
+    // ALLOWED_TABLES; select/groupBy/condition fields are NOT whitelisted and rely
+    // on the strip+quote barrier (do not treat this scan as their guarantee).
+    const tokens = cleaned.toLowerCase().split(/[_.]/).filter(Boolean);
+    for (const token of tokens) {
+      if (SafeQueryBuilder.DANGEROUS_KEYWORDS.has(token)) {
+        throw new Error(`Suspicious identifier detected: ${identifier}`);
+      }
     }
-    
+
     // Quote the identifier for PostgreSQL
     return `"${cleaned}"`;
   }

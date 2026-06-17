@@ -26,6 +26,7 @@ export interface ErrorDetails {
   code?: string;
   field?: string;
   details?: any;
+  requestId?: string;
 }
 
 // CORS configuration — centralized.
@@ -351,7 +352,7 @@ export function serverErrorResponse(
   
   return errorResponse(message, 500, {
     code: "INTERNAL_ERROR",
-    details: requestId ? { requestId } : undefined,
+    ...(requestId ? { requestId } : {}),
   }, origin);
 }
 
@@ -431,6 +432,22 @@ export function jsonResponse(data: any, status = 200, origin?: string): Response
     });
   }
 
-  // Wrap legacy responses in standard format
-  return successResponse(data, undefined, undefined, origin);
+  // Wrap legacy responses in standard format, honoring the requested status code.
+  const response: StandardResponse = {
+    success: true,
+    data,
+    metadata: {
+      timestamp: new Date().toISOString(),
+    },
+  };
+
+  return new Response(JSON.stringify(response), {
+    status,
+    headers: {
+      ...getCorsHeaders(origin),
+      ...getSecurityHeaders(),
+      ...getCacheHeaders("application/json"),
+      "content-type": "application/json"
+    },
+  });
 }

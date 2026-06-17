@@ -320,7 +320,10 @@ const mockCreatorUser = {
 }
 
 describe('PitchForm (CreatePitch)', () => {
-  const user = userEvent.setup()
+  // delay: null removes the inter-keystroke delay; under coverage-instrumented
+  // runs the default delay interleaves with React re-renders and garbles typed
+  // input (e.g. "AMAyA ...") while tripping the 10s test timeout.
+  const user = userEvent.setup({ delay: null })
 
   // Helper to wait for async component loading
   const _waitForFormReady = async () => {
@@ -437,7 +440,10 @@ describe('PitchForm (CreatePitch)', () => {
       }, { timeout: 2000 })
 
       const titleInput = screen.getByLabelText(/title/i)
-      await user.type(titleInput, 'A'.repeat(101)) // Assuming max length is 100
+      // paste (single input event) instead of per-char type — typing 100+ chars
+      // one keystroke at a time causes 100+ re-renders and times out under coverage.
+      await user.click(titleInput)
+      await user.paste('A'.repeat(101)) // Assuming max length is 100
       await user.tab() // Trigger blur
 
       // Check that input shows validation error
@@ -454,7 +460,9 @@ describe('PitchForm (CreatePitch)', () => {
       }, { timeout: 2000 })
 
       const loglineInput = screen.getByLabelText(/logline/i)
-      await user.type(loglineInput, 'A'.repeat(501)) // Assuming max length is 500
+      // paste (single input event) instead of per-char type — see title-length note.
+      await user.click(loglineInput)
+      await user.paste('A'.repeat(501)) // Assuming max length is 500
       await user.tab()
 
       // Check that input shows validation error
