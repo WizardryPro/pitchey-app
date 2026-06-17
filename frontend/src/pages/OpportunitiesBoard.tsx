@@ -247,18 +247,20 @@ function ChipGroup({ label, options, selected, onToggle }: { label: string; opti
   );
 }
 
-function PostCallModal({ editing, onClose, onSaved }: { editing: OpenCall | null; onClose: () => void; onSaved: () => void }) {
+function PostCallModal({ editing, prefill, onClose, onSaved }: { editing: OpenCall | null; prefill?: Partial<OpenCall> | null; onClose: () => void; onSaved: () => void }) {
   const toast = useToast();
   const allGenres = useMemo(() => [...getGenresSync()], []);
   const allFormats = useMemo(() => [...getFormatsSync()], []);
   const [saving, setSaving] = useState(false);
-  const [title, setTitle] = useState(editing?.title ?? '');
-  const [mandate, setMandate] = useState(editing?.mandate ?? '');
-  const [genres, setGenres] = useState<string[]>(splitList(editing?.seeking_genres ?? null));
-  const [formats, setFormats] = useState<string[]>(splitList(editing?.seeking_formats ?? null));
-  const [budgetMin, setBudgetMin] = useState(editing?.budget_min_usd != null ? String(editing.budget_min_usd) : '');
-  const [budgetMax, setBudgetMax] = useState(editing?.budget_max_usd != null ? String(editing.budget_max_usd) : '');
-  const [region, setRegion] = useState(editing?.region ?? '');
+  // `prefill` seeds a NEW call (from the saved-search bridge) without flipping to
+  // edit mode — submit still branches on `editing` only, so prefill → create.
+  const [title, setTitle] = useState(editing?.title ?? prefill?.title ?? '');
+  const [mandate, setMandate] = useState(editing?.mandate ?? prefill?.mandate ?? '');
+  const [genres, setGenres] = useState<string[]>(splitList(editing?.seeking_genres ?? prefill?.seeking_genres ?? null));
+  const [formats, setFormats] = useState<string[]>(splitList(editing?.seeking_formats ?? prefill?.seeking_formats ?? null));
+  const [budgetMin, setBudgetMin] = useState(editing?.budget_min_usd != null ? String(editing.budget_min_usd) : (prefill?.budget_min_usd != null ? String(prefill.budget_min_usd) : ''));
+  const [budgetMax, setBudgetMax] = useState(editing?.budget_max_usd != null ? String(editing.budget_max_usd) : (prefill?.budget_max_usd != null ? String(prefill.budget_max_usd) : ''));
+  const [region, setRegion] = useState(editing?.region ?? prefill?.region ?? '');
   const [slots, setSlots] = useState(editing?.slots != null ? String(editing.slots) : '');
   const [deadline, setDeadline] = useState(editing?.deadline ?? '');
 
@@ -564,10 +566,38 @@ export default function OpportunitiesBoard() {
   }, [isInsidePortal, inPortalPath, location.search, navigate]);
 
   const [calls, setCalls] = useState<OpenCall[]>([]);
+
+  // Saved-search → Open Call bridge: /opportunities?post=1&title=&mandate=&genres=&formats=
+  // opens the create form pre-filled so demand is reviewed before it publishes +
+  // notifies matching creators. We wait for the in-portal redirect to land first,
+  // then consume the params (and strip them so a refresh doesn't reopen the modal).
+  useEffect(() => {
+    if (!isInsidePortal && inPortalPath) return; // let the redirect above land first
+    const params = new URLSearchParams(location.search);
+    if (params.get('post') !== '1') return;
+    if (canPost) {
+      const csv = (k: string) => {
+        const v = params.get(k);
+        return v ? v.split(',').map((s) => s.trim()).filter(Boolean).join(', ') : undefined;
+      };
+      setPrefill({
+        title: params.get('title') ?? undefined,
+        mandate: params.get('mandate') ?? undefined,
+        seeking_genres: csv('genres'),
+        seeking_formats: csv('formats'),
+      } as Partial<OpenCall>);
+      setEditing(null);
+      setShowPost(true);
+    }
+    // strip the consumed params either way (canPost or not)
+    navigate(location.pathname, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isInsidePortal, inPortalPath, location.search, canPost]);
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState('all');
   const [showPost, setShowPost] = useState(false);
   const [editing, setEditing] = useState<OpenCall | null>(null);
+  const [prefill, setPrefill] = useState<Partial<OpenCall> | null>(null);
   const [viewing, setViewing] = useState<OpenCall | null>(null);
   const [submitting, setSubmitting] = useState<OpenCall | null>(null);
   const [submissionsFor, setSubmissionsFor] = useState<OpenCall | null>(null);
@@ -716,8 +746,9 @@ export default function OpportunitiesBoard() {
       {showPost && (
         <PostCallModal
           editing={editing}
-          onClose={() => { setShowPost(false); setEditing(null); }}
-          onSaved={() => { setShowPost(false); setEditing(null); load(); }}
+          prefill={editing ? null : prefill}
+          onClose={() => { setShowPost(false); setEditing(null); setPrefill(null); }}
+          onSaved={() => { setShowPost(false); setEditing(null); setPrefill(null); load(); }}
         />
       )}
       {viewing && (

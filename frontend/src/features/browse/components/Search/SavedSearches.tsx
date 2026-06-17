@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Play, Edit, Bell, Clock, Plus, Trash2, Users, TrendingUp } from 'lucide-react';
+import { Search, Play, Edit, Bell, Clock, Plus, Trash2, Users, TrendingUp, Megaphone } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useBetterAuthStore } from '@/store/betterAuthStore';
 
 interface SearchFilters {
   genres?: string[];
@@ -40,6 +42,28 @@ export const SavedSearches: React.FC<SavedSearchesProps> = ({
   const [activeTab, setActiveTab] = useState<'mine' | 'popular'>('mine');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [_editingSearch, setEditingSearch] = useState<SavedSearch | null>(null);
+
+  const navigate = useNavigate();
+  const { user } = useBetterAuthStore();
+  // A saved search is private demand intent; only investors/production can turn
+  // it into a public Open Call (the demand→supply bridge). The Open Call create
+  // form opens pre-filled so demand is reviewed before it publishes + notifies
+  // matching creators.
+  const canPostCalls = user?.userType === 'investor' || user?.userType === 'production';
+
+  const postAsOpenCall = (search: SavedSearch) => {
+    const f = (search.filters || {}) as SearchFilters;
+    const genres = Array.isArray(f.genres) ? f.genres : [];
+    const fmt = Array.isArray(f.format)
+      ? (f.format as unknown as string[])
+      : (typeof f.format === 'string' && f.format ? [f.format] : []);
+    const params = new URLSearchParams({ post: '1' });
+    if (search.name) params.set('title', search.name);
+    if (search.search_query) params.set('mandate', search.search_query);
+    if (genres.length) params.set('genres', genres.join(','));
+    if (fmt.length) params.set('formats', fmt.join(','));
+    navigate(`/opportunities?${params.toString()}`);
+  };
 
   useEffect(() => {
     void loadSavedSearches();
@@ -290,6 +314,16 @@ export const SavedSearches: React.FC<SavedSearchesProps> = ({
               >
                 <Edit className="h-4 w-4" />
               </button>
+
+              {canPostCalls && (
+                <button
+                  onClick={() => postAsOpenCall(search)}
+                  className="p-2 text-purple-600 hover:bg-purple-50 rounded"
+                  title="Post as Open Call — notify matching creators"
+                >
+                  <Megaphone className="h-4 w-4" />
+                </button>
+              )}
 
               <button
                 onClick={() => { void deleteSearch(search.id); }}
