@@ -5,8 +5,9 @@ import {
   Star, Clock, DollarSign, Calendar, Users,
   MapPin, Film, Award, Eye, Heart, ChevronDown,
   X, RefreshCw, Download, ArrowUpDown, User,
-  ArrowLeft, Home, ShoppingBag, LogOut
+  ArrowLeft, Home, ShoppingBag, LogOut, Bookmark
 } from 'lucide-react';
+import { SavedSearches } from '../features/browse/components/Search';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
 import { Badge } from '@shared/components/ui/badge';
@@ -63,6 +64,7 @@ export default function AdvancedSearch() {
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
+  const [savedOpen, setSavedOpen] = useState(false);
   
   const [filters, setFilters] = useState<SearchFilters>({
     query: '',
@@ -428,6 +430,31 @@ export default function AdvancedSearch() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  {/* Saved Searches */}
+                  <div className="border-b border-gray-100 pb-4">
+                    <button
+                      type="button"
+                      onClick={() => setSavedOpen(o => !o)}
+                      className="flex w-full items-center justify-between text-sm font-medium text-gray-700"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Bookmark className="w-4 h-4" /> Saved Searches
+                      </span>
+                      <ChevronDown className={`w-4 h-4 transition-transform ${savedOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {savedOpen && (
+                      <div className="mt-3">
+                        <SavedSearches
+                          onSearchExecute={(query) => {
+                            // Apply the saved query and let the debounced effect re-run the search.
+                            setFilters(prev => ({ ...prev, query }));
+                            setShowFilters(false);
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+
                   {/* Search Type */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Search Type</label>
