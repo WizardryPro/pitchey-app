@@ -359,21 +359,27 @@ export const SavedSearches: React.FC<SavedSearchesProps> = ({
           >
             My Searches ({savedSearches.length})
           </button>
-          <button
-            onClick={() => setActiveTab('popular')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'popular'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Popular ({popularSearches.length})
-          </button>
+          {/* Only surface the Popular tab once there's real community search
+              volume — an empty trending list reads as broken. It auto-appears
+              when populated. */}
+          {popularSearches.length > 0 && (
+            <button
+              onClick={() => setActiveTab('popular')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'popular'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Popular ({popularSearches.length})
+            </button>
+          )}
         </nav>
       </div>
       
-      {/* Search Lists */}
-      {activeTab === 'mine' && (
+      {/* Search Lists. Fall back to "mine" whenever Popular is empty/hidden so
+          a stale activeTab='popular' can never strand the user on a blank tab. */}
+      {(activeTab === 'mine' || popularSearches.length === 0) && (
         <>
           {savedSearches.length === 0 ? (
             <div className="text-center py-8 bg-gray-50 rounded-lg">
@@ -391,21 +397,13 @@ export const SavedSearches: React.FC<SavedSearchesProps> = ({
         </>
       )}
       
-      {activeTab === 'popular' && (
+      {activeTab === 'popular' && popularSearches.length > 0 && (
         <>
-          {popularSearches.length === 0 ? (
-            <div className="text-center py-8 bg-gray-50 rounded-lg">
-              <TrendingUp className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No popular searches yet</h3>
-              <p className="text-gray-600">Popular community searches will appear here</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {popularSearches.map(search => (
-                <SearchCard key={search.id} search={search} isPopular />
-              ))}
-            </div>
-          )}
+          <div className="space-y-3">
+            {popularSearches.map(search => (
+              <SearchCard key={search.id} search={search} isPopular />
+            ))}
+          </div>
         </>
       )}
       
