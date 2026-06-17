@@ -228,6 +228,42 @@ export async function createCallHandler(request: Request, env: Env): Promise<Res
         ${region}, ${slots}, ${deadline}
       ) RETURNING id
     `;
+
+    // Demand → supply signal: notify creators whose PUBLISHED pitches match the
+    // call's genres/formats. Targeted (not spam-all): a criteria-less call (no
+    // genres/formats) matches no one. Tolerant case-insensitive substring match
+    // because genre/format values are inconsistent ("Sci-Fi" vs "Science Fiction
+    // (Sci-Fi)"). Fire-and-forget — a notify failure must never fail the call.
+    try {
+      const seeking = [seekingGenres, seekingFormats].filter(Boolean).join(', ');
+      if (seekingGenres || seekingFormats) {
+        const msg = `A ${userType} posted "${title.slice(0, 80)}" seeking ${seeking}. Tap to submit a matching pitch.`;
+        await sql`
+          INSERT INTO notifications (user_id, type, title, message, related_user_id, action_url, is_read, created_at)
+          SELECT m.uid, 'open_call', 'New open call matching your work', ${msg}, ${userId}, '/opportunities', false, NOW()
+          FROM (
+            SELECT DISTINCT p.user_id AS uid
+            FROM pitches p
+            JOIN users u ON u.id = p.user_id
+            WHERE p.status = 'published'
+              AND u.user_type = 'creator'
+              AND u.deleted_at IS NULL
+              AND p.user_id <> ${userId}
+              AND (
+                (${seekingGenres}::text IS NOT NULL AND p.genre IS NOT NULL
+                   AND position(lower(p.genre) IN lower(${seekingGenres}::text)) > 0)
+                OR
+                (${seekingFormats}::text IS NOT NULL AND p.format IS NOT NULL
+                   AND position(lower(p.format) IN lower(${seekingFormats}::text)) > 0)
+              )
+            LIMIT 500
+          ) m
+        `;
+      }
+    } catch (err) {
+      console.error('createCallHandler notify error:', err instanceof Error ? err.message : String(err));
+    }
+
     return jsonResponse({ id: row?.id, created: true }, origin, 201);
   } catch (err) {
     console.error('createCallHandler error:', err instanceof Error ? err.message : String(err));
