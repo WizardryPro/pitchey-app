@@ -338,22 +338,27 @@ export class SearchFiltersHandler {
 
   // Save search
   // ── Saved searches ─────────────────────────────────────────────────────────
-  // Maps a saved_searches row to the shape SavedSearches.tsx reads: search_query
-  // (db column `query`), use_count (db `execution_count`), notify_on_results
-  // (db `alert_enabled`). `filters` is normalized to an object.
+  // The LIVE table (migration 012) stores: search_query JSONB ({"query":"..."}),
+  // search_filters JSONB, notification_enabled BOOLEAN. Migration 107 adds
+  // description, is_public, alert_frequency, execution_count, last_executed_at.
+  // This maps a row to the shape SavedSearches.tsx reads (search_query as a STRING,
+  // use_count, notify_on_results).
   private toSavedSearch(row: any) {
-    let filters: any = row?.filters ?? {};
-    if (typeof filters === 'string') {
-      try { filters = JSON.parse(filters); } catch { filters = {}; }
-    }
+    // search_query is jsonb {"query": "..."} — extract the string; tolerate legacy
+    // bare-string/stringified values.
+    let sq: any = row?.search_query;
+    if (typeof sq === 'string') { try { sq = JSON.parse(sq); } catch { sq = { query: sq }; } }
+    const queryStr = (sq && typeof sq === 'object') ? (sq.query ?? '') : (sq ?? '');
+    let filters: any = row?.search_filters ?? {};
+    if (typeof filters === 'string') { try { filters = JSON.parse(filters); } catch { filters = {}; } }
     return {
       id: row.id,
       name: row.name,
       description: row.description ?? '',
-      search_query: row.query ?? '',
+      search_query: queryStr,
       filters: filters ?? {},
       is_public: row.is_public ?? false,
-      notify_on_results: row.alert_enabled ?? false,
+      notify_on_results: row.notification_enabled ?? false,
       alert_frequency: row.alert_frequency ?? 'never',
       use_count: row.execution_count ?? 0,
       created_at: row.created_at,
@@ -364,20 +369,20 @@ export class SearchFiltersHandler {
     try {
       const name = (data?.name ?? '').toString().trim();
       if (!name) return { success: false, error: 'Name is required' };
-      // Accept the frontend field name (search_query) and the legacy one (query).
-      const query = (data?.search_query ?? data?.query ?? '').toString();
+      const queryStr = (data?.search_query ?? data?.query ?? '').toString();
       const filters = data?.filters ?? {};
       const description = (data?.description ?? '').toString();
       const isPublic = data?.is_public === true;
-      const notify = data?.notify_on_results === true || data?.alertEnabled === true;
+      const notify = data?.notify_on_results === true;
       const alertFrequency = (data?.alert_frequency ?? 'never').toString();
 
       const rows = await this.db.query(
         `INSERT INTO saved_searches
-           (user_id, name, description, query, filters, is_public, alert_enabled, alert_frequency)
+           (user_id, name, description, search_query, search_filters, is_public, notification_enabled, alert_frequency)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING *`,
-        [userId, name, description, query, JSON.stringify(filters), isPublic, notify, alertFrequency]
+        // search_query is jsonb {"query": "..."} to match the existing data model.
+        [userId, name, description, JSON.stringify({ query: queryStr }), JSON.stringify(filters), isPublic, notify, alertFrequency]
       );
       return { success: true, data: this.toSavedSearch(rows[0]) };
     } catch (error) {
@@ -400,15 +405,17 @@ export class SearchFiltersHandler {
   }
 
   // Anonymized community trending: the most-executed PUBLIC saved searches,
-  // one card per distinct query, with no saver identity exposed.
+  // one card per distinct query text, with no saver identity exposed.
   async getPopularSearches(limit = 10) {
     try {
       const lim = Math.min(Math.max(parseInt(String(limit), 10) || 10, 1), 50);
       const rows = await this.db.query(
-        `SELECT DISTINCT ON (query) *
+        `SELECT DISTINCT ON (search_query->>'query') *
            FROM saved_searches
-          WHERE is_public = TRUE AND query IS NOT NULL AND query <> ''
-          ORDER BY query, execution_count DESC, created_at DESC`,
+          WHERE is_public = TRUE
+            AND search_query->>'query' IS NOT NULL
+            AND search_query->>'query' <> ''
+          ORDER BY search_query->>'query', execution_count DESC, created_at DESC`,
         []
       );
       const ranked = rows
