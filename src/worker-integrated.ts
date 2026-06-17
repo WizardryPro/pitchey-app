@@ -317,6 +317,20 @@ function toRelativeMediaUrl<T>(url: T): T {
   return url.replace(/^https?:\/\/[^/]+(\/api\/media\/file\/)/, '$1') as unknown as T;
 }
 
+// Normalize the image URL fields on a pitch-shaped row to same-origin relative
+// paths, so every emitted image URL routes through the Pages proxy regardless of
+// how it was stored (legacy rows held absolute workers.dev URLs). Belt-and-braces
+// against a future write reintroducing an absolute URL; the stored data is also
+// backfilled to relative (migration 108). Safe no-op for relative/null values.
+function normalizePitchMedia<T extends Record<string, any>>(pitch: T): T {
+  if (!pitch || typeof pitch !== 'object') return pitch;
+  if (typeof pitch.title_image === 'string') pitch.title_image = toRelativeMediaUrl(pitch.title_image);
+  if (typeof pitch.thumbnail_url === 'string') pitch.thumbnail_url = toRelativeMediaUrl(pitch.thumbnail_url);
+  if (typeof pitch.titleImage === 'string') pitch.titleImage = toRelativeMediaUrl(pitch.titleImage);
+  if (typeof pitch.thumbnailUrl === 'string') pitch.thumbnailUrl = toRelativeMediaUrl(pitch.thumbnailUrl);
+  return pitch;
+}
+
 function getOrCreateRouter(env: Env): RouteRegistry {
   const currentHash = getEnvHash(env);
 
@@ -6084,8 +6098,8 @@ pitchey_analytics_datapoints_per_minute 1250
           like_count: pitch.like_count || 0,
           createdAt: pitch.created_at,
           updatedAt: pitch.updated_at,
-          title_image: pitch.title_image,
-          thumbnail_url: pitch.thumbnail_url,
+          title_image: toRelativeMediaUrl(pitch.title_image),
+          thumbnail_url: toRelativeMediaUrl(pitch.thumbnail_url),
           target_audience: pitch.target_audience,
           comparable_films: pitch.comparable_films,
           production_timeline: pitch.production_timeline,
@@ -9231,7 +9245,7 @@ pitchey_analytics_datapoints_per_minute 1250
       // Return the response in the expected format
       const responseData = {
         success: true,
-        items: pitches || [],
+        items: (pitches || []).map(normalizePitchMedia),
         tab: tab,
         total: totalCount,
         page: page,
@@ -12047,7 +12061,7 @@ pitchey_analytics_datapoints_per_minute 1250
       }
 
       const pitches = await getPublicTrendingPitches(sql, limit, offset);
-      const filteredPitches = filterPitchesForPublic(pitches);
+      const filteredPitches = filterPitchesForPublic(pitches).map(normalizePitchMedia);
 
       return createPublicResponse({
         pitches: filteredPitches,

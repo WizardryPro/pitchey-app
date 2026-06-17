@@ -61,6 +61,12 @@ function getPitchImageUrl(pitch: Pitch): string | undefined {
     (p.thumbnailUrl as string | undefined) || (p.thumbnail_url as string | undefined) ||
     (p.posterUrl as string | undefined) || (p.poster_url as string | undefined);
   if (!url) return undefined;
+  // Root-relative media URLs (e.g. /api/media/file/...) are valid — they resolve
+  // against the page origin via the Pages /api/* proxy, and the backend now emits
+  // relative URLs for ALL pitches. new URL(url) throws on these (no base), so allow
+  // them before the absolute-URL guard. Do NOT remove: without this, the marketplace
+  // blanks every pitch image (see media-URL normalization, migration 108).
+  if (url.startsWith('/')) return url;
   try {
     const parsed = new URL(url);
     if (parsed.protocol === 'https:' || parsed.protocol === 'http:') return parsed.href;
