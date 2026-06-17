@@ -337,52 +337,114 @@ export class SearchFiltersHandler {
   }
 
   // Save search
+  // ── Saved searches ─────────────────────────────────────────────────────────
+  // Maps a saved_searches row to the shape SavedSearches.tsx reads: search_query
+  // (db column `query`), use_count (db `execution_count`), notify_on_results
+  // (db `alert_enabled`). `filters` is normalized to an object.
+  private toSavedSearch(row: any) {
+    let filters: any = row?.filters ?? {};
+    if (typeof filters === 'string') {
+      try { filters = JSON.parse(filters); } catch { filters = {}; }
+    }
+    return {
+      id: row.id,
+      name: row.name,
+      description: row.description ?? '',
+      search_query: row.query ?? '',
+      filters: filters ?? {},
+      is_public: row.is_public ?? false,
+      notify_on_results: row.alert_enabled ?? false,
+      alert_frequency: row.alert_frequency ?? 'never',
+      use_count: row.execution_count ?? 0,
+      created_at: row.created_at,
+    };
+  }
+
   async saveSearch(userId: number, data: any) {
     try {
-      const { name, query, filters, alertEnabled = false } = data;
+      const name = (data?.name ?? '').toString().trim();
+      if (!name) return { success: false, error: 'Name is required' };
+      // Accept the frontend field name (search_query) and the legacy one (query).
+      const query = (data?.search_query ?? data?.query ?? '').toString();
+      const filters = data?.filters ?? {};
+      const description = (data?.description ?? '').toString();
+      const isPublic = data?.is_public === true;
+      const notify = data?.notify_on_results === true || data?.alertEnabled === true;
+      const alertFrequency = (data?.alert_frequency ?? 'never').toString();
 
-      const savedSearch = await this.db.query(
-        `INSERT INTO saved_searches (user_id, name, query, filters, alert_enabled)
-         VALUES ($1, $2, $3, $4, $5)
+      const rows = await this.db.query(
+        `INSERT INTO saved_searches
+           (user_id, name, description, query, filters, is_public, alert_enabled, alert_frequency)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING *`,
-        [userId, name, query, JSON.stringify(filters), alertEnabled]
+        [userId, name, description, query, JSON.stringify(filters), isPublic, notify, alertFrequency]
       );
-
-      return { success: true, data: { savedSearch: savedSearch[0] } };
+      return { success: true, data: this.toSavedSearch(rows[0]) };
     } catch (error) {
       console.error('Save search error:', error);
       return { success: false, error: 'Failed to save search' };
     }
   }
 
-  // Get saved searches
   async getSavedSearches(userId: number) {
     try {
-      const searches = await this.db.query(
-        `SELECT *, 
-          (SELECT COUNT(*) FROM search_alerts WHERE search_id = ss.id) as alert_count
-         FROM saved_searches ss
-         WHERE user_id = $1
-         ORDER BY created_at DESC`,
+      const rows = await this.db.query(
+        `SELECT * FROM saved_searches WHERE user_id = $1 ORDER BY created_at DESC`,
         [userId]
       );
-
-      return { success: true, data: { searches } };
+      return { success: true, data: rows.map((r: any) => this.toSavedSearch(r)) };
     } catch (error) {
       console.error('Get saved searches error:', error);
-      return { success: true, data: { searches: [] } };
+      return { success: true, data: [] };
     }
   }
 
-  // Delete saved search
+  // Anonymized community trending: the most-executed PUBLIC saved searches,
+  // one card per distinct query, with no saver identity exposed.
+  async getPopularSearches(limit = 10) {
+    try {
+      const lim = Math.min(Math.max(parseInt(String(limit), 10) || 10, 1), 50);
+      const rows = await this.db.query(
+        `SELECT DISTINCT ON (query) *
+           FROM saved_searches
+          WHERE is_public = TRUE AND query IS NOT NULL AND query <> ''
+          ORDER BY query, execution_count DESC, created_at DESC`,
+        []
+      );
+      const ranked = rows
+        .map((r: any) => this.toSavedSearch(r))
+        .sort((a: any, b: any) => b.use_count - a.use_count)
+        .slice(0, lim);
+      return { success: true, data: ranked };
+    } catch (error) {
+      console.error('Get popular searches error:', error);
+      return { success: true, data: [] };
+    }
+  }
+
+  async executeSavedSearch(userId: number, searchId: number) {
+    try {
+      const rows = await this.db.query(
+        `UPDATE saved_searches
+            SET execution_count = execution_count + 1, last_executed_at = NOW()
+          WHERE id = $1 AND user_id = $2
+          RETURNING *`,
+        [searchId, userId]
+      );
+      if (!rows || rows.length === 0) return { success: false, error: 'Saved search not found' };
+      return { success: true, data: this.toSavedSearch(rows[0]) };
+    } catch (error) {
+      console.error('Execute saved search error:', error);
+      return { success: false, error: 'Failed to execute search' };
+    }
+  }
+
   async deleteSavedSearch(userId: number, searchId: number) {
     try {
       await this.db.query(
-        `DELETE FROM saved_searches 
-         WHERE id = $1 AND user_id = $2`,
+        `DELETE FROM saved_searches WHERE id = $1 AND user_id = $2`,
         [searchId, userId]
       );
-
       return { success: true, data: { message: 'Search deleted successfully' } };
     } catch (error) {
       console.error('Delete saved search error:', error);

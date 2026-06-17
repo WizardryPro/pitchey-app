@@ -2524,7 +2524,11 @@ class RouteRegistry {
     // (→ this.search) was dead. Removed to kill the duplicate-route confusion.
     this.register('GET', '/api/search/advanced', this.advancedSearch.bind(this));
     this.register('GET', '/api/filters', this.getFilters.bind(this));
-    this.register('POST', '/api/search/save', this.saveSearch.bind(this));
+    // Saved searches — register specific paths before the :id param route.
+    this.register('GET', '/api/search/saved/popular', this.getPopularSearches.bind(this));
+    this.register('POST', '/api/search/saved/:id/execute', this.executeSavedSearch.bind(this));
+    this.register('POST', '/api/search/save', this.saveSearch.bind(this));      // legacy alias
+    this.register('POST', '/api/search/saved', this.saveSearch.bind(this));     // SavedSearches.tsx create
     this.register('GET', '/api/search/saved', this.getSavedSearches.bind(this));
     this.register('DELETE', '/api/search/saved/:id', this.deleteSavedSearch.bind(this));
 
@@ -20845,7 +20849,8 @@ Signatures: [To be completed upon signing]
       const result = await handler.saveSearch(authCheck.user.id, data);
 
       const origin = request.headers.get('Origin');
-      return new Response(JSON.stringify(result), {
+      // SavedSearches.tsx reads the created object directly from the response body.
+      return new Response(JSON.stringify(result.success ? result.data : result), {
         headers: getCorsHeaders(origin),
         status: result.success ? 201 : 400
       });
@@ -20863,9 +20868,52 @@ Signatures: [To be completed upon signing]
       const result = await handler.getSavedSearches(authCheck.user.id);
 
       const origin = request.headers.get('Origin');
-      return new Response(JSON.stringify(result), {
+      // SavedSearches.tsx reads `data.savedSearches`.
+      return new Response(JSON.stringify({ savedSearches: result.data ?? [] }), {
         headers: getCorsHeaders(origin),
         status: 200
+      });
+    } catch (error) {
+      return errorHandler(error, request);
+    }
+  }
+
+  private async getPopularSearches(request: Request): Promise<Response> {
+    try {
+      // Popular/trending is a read of public searches — no auth required.
+      const url = new URL(request.url);
+      const limit = url.searchParams.get('limit') ?? '10';
+
+      const handler = new (await import('./handlers/search-filters')).SearchFiltersHandler(this.db);
+      const result = await handler.getPopularSearches(Number(limit));
+
+      const origin = request.headers.get('Origin');
+      // SavedSearches.tsx reads `data.popularSearches`.
+      return new Response(JSON.stringify({ popularSearches: result.data ?? [] }), {
+        headers: getCorsHeaders(origin),
+        status: 200
+      });
+    } catch (error) {
+      return errorHandler(error, request);
+    }
+  }
+
+  private async executeSavedSearch(request: Request): Promise<Response> {
+    try {
+      const authCheck = await this.requireAuth(request);
+      if (!authCheck.authorized) return authCheck.response;
+
+      // /api/search/saved/:id/execute → ['', 'api', 'search', 'saved', ':id', 'execute']
+      const url = new URL(request.url);
+      const searchId = parseInt(url.pathname.split('/')[4] || '0');
+
+      const handler = new (await import('./handlers/search-filters')).SearchFiltersHandler(this.db);
+      const result = await handler.executeSavedSearch(authCheck.user.id, searchId);
+
+      const origin = request.headers.get('Origin');
+      return new Response(JSON.stringify(result), {
+        headers: getCorsHeaders(origin),
+        status: result.success ? 200 : 404
       });
     } catch (error) {
       return errorHandler(error, request);
