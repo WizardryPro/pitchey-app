@@ -197,19 +197,27 @@ export default function Settings() {
 
   const handleDeleteAccount = async () => {
     try {
-    const response = await fetch(`${API_URL}/api/user/settings`, {
-      method: 'DELETE',
-      credentials: 'include' // Send cookies for Better Auth session
-    });
-      
+      // Live delete endpoint is DELETE /api/user/account and requires the
+      // explicit confirmation token (the previous /api/user/settings DELETE had
+      // no route registered, so the button silently no-op'd).
+      const response = await fetch(`${API_URL}/api/user/account`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmation: 'DELETE_MY_ACCOUNT' }),
+      });
+
       if (response.ok) {
+        toast.success('Your account has been deleted.');
         logout();
         navigate('/');
       } else {
-        console.error('Failed to delete account');
+        const data = await response.json().catch(() => ({} as { error?: string }));
+        toast.error(data?.error || 'Failed to delete account. Please try again.');
       }
     } catch (error) {
       console.error('Failed to delete account:', error);
+      toast.error('Failed to delete account. Please try again.');
     }
   };
 

@@ -399,6 +399,16 @@ export async function deleteAccountHandler(request: Request, env: Env): Promise<
 
     const db = neon(env.DATABASE_URL);
 
+    // Demo accounts are shared public credentials (and referenced by the admin
+    // allowlist + demo flows) — refuse to anonymize them.
+    const demoRows = await db`SELECT is_demo_account FROM users WHERE id = ${authResult.user.id}` as Array<{ is_demo_account: boolean | null }>;
+    if (demoRows[0]?.is_demo_account) {
+      return new Response(JSON.stringify({ error: 'Demo accounts cannot be deleted' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     // Log the action before deletion
     await logAccountAction(db as any, {
       userId: authResult.user.id.toString(),

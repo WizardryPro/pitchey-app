@@ -363,20 +363,61 @@ export async function disableTwoFactor(sql: Sql, userId: string): Promise<boolea
 }
 
 /**
- * Delete user account and all related data
+ * Delete a user account via anonymization (soft-delete).
+ *
+ * NOT a hard DELETE:
+ *  - GDPR right-to-erasure is satisfied by scrubbing PII.
+ *  - Financial/legal records (transactions, deals, signed NDAs, generated
+ *    documents) must be retained — and the FK graph blocks a hard delete
+ *    anyway: pitches/ndas/user_roles/etc. reference users with NO ACTION /
+ *    RESTRICT, so `DELETE FROM users` throws a FK violation for any real user.
+ *  - email/username are UNIQUE, so we scrub them to per-id sentinels (this also
+ *    frees the original email for re-registration).
+ * Returns false if the user was already deleted (idempotent).
  */
 export async function deleteUserAccount(sql: Sql, userId: string): Promise<boolean> {
   try {
-    // The CASCADE will handle deleting related data
     const result = await sql`
-      DELETE FROM users
-      WHERE id = ${userId}
+      UPDATE users SET
+        deleted_at        = NOW(),
+        is_active         = false,
+        email             = 'deleted_' || id || '@deleted.invalid',
+        username          = 'deleted_' || id,
+        password          = 'DELETED_ACCOUNT',
+        password_hash     = NULL,
+        first_name        = NULL,
+        last_name         = NULL,
+        -- NOTE: do not set the "name" column here. It is a generated column
+        -- (COALESCE of username, email) and auto-recomputes to the scrubbed
+        -- username. Setting it errors; backticks are avoided in this comment
+        -- because the query is a tagged template literal.
+        bio               = NULL,
+        phone             = NULL,
+        location          = NULL,
+        company_name      = NULL,
+        company_website   = NULL,
+        company_address   = NULL,
+        profile_image     = NULL,
+        profile_image_url = NULL,
+        avatar_url        = NULL,
+        image             = NULL,
+        two_factor_secret = NULL,
+        backup_codes      = NULL,
+        stripe_customer_id = NULL,
+        preferences       = NULL,
+        metadata          = NULL,
+        updated_at        = NOW()
+      WHERE id = ${userId} AND deleted_at IS NULL
       RETURNING id
     `;
-    
-    return result.length > 0;
+
+    if (result.length === 0) return false;
+
+    // Invalidate every session so the cookie is dead and they're logged out.
+    await sql`DELETE FROM sessions WHERE user_id = ${userId}`;
+    return true;
   } catch (error) {
-    console.error('Error deleting user account:', error);
+    console.error('Error anonymizing user account:', error);
     throw error;
   }
 }
