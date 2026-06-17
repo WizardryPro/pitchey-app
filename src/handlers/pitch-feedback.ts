@@ -480,16 +480,16 @@ export async function getPitchFeedbackPublic(request: Request, env: Env): Promis
         pf.id, pf.reviewer_type, pf.rating, pf.strengths, pf.weaknesses,
         pf.suggestions, pf.overall_feedback, pf.is_interested, pf.is_anonymous, pf.created_at,
         CASE WHEN pf.is_anonymous THEN NULL ELSE u.id END as reviewer_id,
-        -- Canonical author rule (matches getPitchComments): chosen @username first,
-        -- then real name, then the email local-part. Email-shaped usernames are
-        -- skipped (no '@handle' that's really an address; no email leak). company_name
-        -- is never the author identity — it leaked in as "Slycloth/Sky Cloth" before.
+        -- Canonical author rule (matches getPitchComments): show the chosen @username
+        -- only. Never real first/last name (Karl wants handles, not legal names) and
+        -- never company_name — it leaked in as "Slycloth/Sky Cloth" before. Email-shaped
+        -- usernames are skipped (no email leak); the email local-part is a last-ditch
+        -- fallback for accounts that never set a username.
         CASE
           WHEN pf.is_anonymous THEN 'Anonymous'
           ELSE COALESCE(
             CASE WHEN u.username IS NOT NULL AND TRIM(u.username) <> '' AND u.username NOT LIKE '%@%'
                  THEN '@' || u.username END,
-            NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''),
             split_part(u.email, '@', 1),
             'User'
           )
@@ -777,37 +777,24 @@ export async function getPitchComments(request: Request, env: Env): Promise<Resp
     const [pitch] = await sql`SELECT id, user_id FROM pitches WHERE id = ${pitchId} AND status = 'published'`;
     if (!pitch) return errorResponse('Pitch not found or not published', origin, 404);
 
-    // Check if requester has NDA access (signed NDA or is the pitch owner)
+    // Only the pitch owner gets to see who is behind an anonymous comment
+    // (accountability + moderation). Named comments show the real author to
+    // everyone, so no NDA lookup is needed here.
     const userId = await getUserId(request, env);
     const isOwner = !!userId && String(pitch.user_id) === String(userId);
-    let hasNda = false;
-    if (userId) {
-      if (isOwner) {
-        hasNda = true;
-      } else {
-        const ndaResult = await safeQuery(
-          () => sql`
-            SELECT 1 FROM pitch_ndas
-            WHERE pitch_id = ${pitchId} AND user_id = ${Number(userId)} AND status = 'signed'
-            LIMIT 1
-          `,
-          { fallback: [], context: 'pitch-feedback.nda-access-check', tags: { pitchId, userId: String(userId) } },
-        );
-        hasNda = ndaResult.rows.length > 0;
-      }
-    }
 
     const comments = await sql`
       SELECT
         pc.id, pc.content, pc.created_at, pc.user_id,
         pc.user_type, pc.is_anonymous,
-        -- Canonical author rule (matches getPitchFeedbackPublic): chosen @username
-        -- first, then real name, then the email local-part. Email-shaped usernames are
-        -- skipped (no email leak). Never company_name — that surfaced Karl as "Sky Cloth".
+        -- Canonical author rule (matches getPitchFeedbackPublic): show the chosen
+        -- @username only. Never real first/last name (Karl wants handles, not legal
+        -- names) and never company_name (surfaced Karl as "Sky Cloth"). Email-shaped
+        -- usernames are skipped (no email leak); the email local-part is a last-ditch
+        -- fallback for accounts that never set a username.
         COALESCE(
           CASE WHEN u.username IS NOT NULL AND TRIM(u.username) <> '' AND u.username NOT LIKE '%@%'
                THEN '@' || u.username END,
-          NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''),
           split_part(u.email, '@', 1),
           'User'
         ) as author_name
@@ -842,26 +829,18 @@ export async function getPitchComments(request: Request, env: Env): Promise<Resp
         };
       }
 
-      // Named comment — display name follows the existing NDA gate: real name to
-      // the owner + NDA-signed viewers, role-based pseudonym to everyone else.
-      if (hasNda && c.user_id) {
-        return {
-          id: c.id,
-          content: c.content,
-          created_at: c.created_at,
-          display_name: c.author_name || 'User',
-          user_type: c.user_type,
-          is_anonymous: false,
-        };
-      }
-      const role = c.user_type || 'viewer';
-      const suffix = c.user_id ? c.user_id : c.id;
+      // Named comment — the commenter chose to post under their identity, so the
+      // real author name is shown to every viewer. This matches getPitchFeedbackPublic
+      // (P5: poster's own anonymous/named choice decides, no owner/NDA gate). The old
+      // behaviour gated named comments behind an NDA and fell through to a `role+id`
+      // pseudonym (e.g. "production1025"), which read as "random production names" to
+      // signed-in non-owners while their ratings already showed the real @username.
       return {
         id: c.id,
         content: c.content,
         created_at: c.created_at,
-        display_name: `${role}${suffix}`,
-        user_type: c.user_type || 'anonymous',
+        display_name: c.author_name || 'User',
+        user_type: c.user_type,
         is_anonymous: false,
       };
     });
