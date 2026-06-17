@@ -71,7 +71,7 @@ export class SlateService {
     try {
       const res = await apiClient.get<SlateDetail>(`/api/slates/${id}`);
       if (isFailure(res)) return null;
-      return (res as any)?.data ?? res ?? null;
+      return (res as any)?.data ?? null;
     } catch {
       return null;
     }
@@ -84,7 +84,7 @@ export class SlateService {
         console.error('[slate] create failed', (res as any)?.error);
         return null;
       }
-      return (res as any)?.data ?? res ?? null;
+      return (res as any)?.data ?? null;
     } catch (e) {
       console.error('[slate] create failed', e);
       return null;
@@ -98,7 +98,7 @@ export class SlateService {
         console.error('[slate] update failed', (res as any)?.error);
         return null;
       }
-      return (res as any)?.data ?? res ?? null;
+      return (res as any)?.data ?? null;
     } catch (e) {
       console.error('[slate] update failed', e);
       return null;

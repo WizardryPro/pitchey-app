@@ -187,6 +187,26 @@ describe('RedisWithFallback.set', () => {
     // redis), then falls through to the memory cache and returns the value.
     expect(await wrapper.get('k')).toBe('v')
   })
+
+  it('a later successful write clears the degraded-mode memory copy (no stale read)', async () => {
+    // Write-only outage then recovery: the memory fallback must not resurrect a
+    // value older than the last durable redis write.
+    let redisStore: string | null = null
+    const redis = {
+      get: vi.fn().mockImplementation(async () => redisStore),
+      set: vi.fn()
+        .mockRejectedValueOnce(new Error('write blip'))                 // 1st write fails → memory
+        .mockImplementation(async (_k: string, v: string) => { redisStore = v; return 'OK' }),
+    }
+    const wrapper = new RedisWithFallback(redis)
+
+    await wrapper.set('k', 'v1')                 // fails → memory['k']='v1'
+    expect(await wrapper.get('k')).toBe('v1')    // redis miss → memory fallback
+
+    await wrapper.set('k', 'v2')                 // succeeds → redis has v2, memory cleared
+    redisStore = null                            // key later evicted/deleted in redis
+    expect(await wrapper.get('k')).toBeNull()    // must NOT return stale 'v1'
+  })
 })
 
 // ---------------------------------------------------------------------------

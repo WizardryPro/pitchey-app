@@ -138,13 +138,14 @@ describe('SlateService', () => {
       expect(result?.pitches).toHaveLength(1);
     });
 
-    it('handles response without data wrapper (direct result)', async () => {
-      mockGet.mockResolvedValue(mockSlateDetail);
+    it('returns null on an empty-body success (no wrapper leak)', async () => {
+      // api-client returns { success:true, data:null } for an empty-body 2xx.
+      // get() must return null, NOT the { success, data } wrapper object.
+      mockGet.mockResolvedValue({ success: true, data: null });
 
       const result = await SlateService.get(1);
 
-      // The service returns res.data ?? res ?? null — if no data prop, uses the response itself
-      expect(result).not.toBeNull();
+      expect(result).toBeNull();
     });
 
     it('returns null when API throws', async () => {
@@ -178,12 +179,12 @@ describe('SlateService', () => {
       expect(result?.title).toBe('Horror Collection');
     });
 
-    it('handles response without data wrapper', async () => {
-      mockPost.mockResolvedValue(mockSlate);
+    it('returns null on an empty-body success (no wrapper leak)', async () => {
+      mockPost.mockResolvedValue({ success: true, data: null });
 
       const result = await SlateService.create({ title: 'Horror Collection' });
 
-      expect(result).not.toBeNull();
+      expect(result).toBeNull();
     });
 
     it('returns null when API throws', async () => {

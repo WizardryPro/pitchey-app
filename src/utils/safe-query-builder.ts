@@ -214,14 +214,20 @@ export class SafeQueryBuilder {
     // Remove any quotes and special characters
     const cleaned = identifier.replace(/[^a-zA-Z0-9_.]/g, '');
 
-    // Check for SQL keyword injection on a per-token basis. Splitting on the
-    // legal identifier separators (`_` and `.`) means a whole-word keyword
-    // (`drop`, `user_drop`, `id; DROP` → cleaned `idDROP`... see below) is
-    // rejected, while legitimate snake_case columns whose tokens merely
-    // *contain* a keyword as a substring (`updated_at` → ["updated", "at"])
-    // are allowed. Pure-concatenation forms with no separator (e.g.
-    // "dropusers") are already blocked upstream by the ALLOWED_SORT_COLUMNS /
-    // ALLOWED_TABLES whitelists, so they never reach a real query.
+    // Reject SQL keywords on a per-token basis. Splitting on the legal identifier
+    // separators (`_` and `.`) rejects a whole-word keyword (`drop`, `user_drop`)
+    // while allowing legitimate snake_case columns whose tokens merely *contain* a
+    // keyword as a substring (`updated_at` → ["updated", "at"]).
+    //
+    // This token scan is a SECONDARY heuristic, not the real barrier — and it does
+    // NOT catch separator-less concatenations (e.g. "dropusers" → one token). The
+    // actual protection against an identifier becoming executable SQL is the
+    // char-strip above (removes quotes/operators/whitespace) plus the double-quote
+    // wrapping below: a cleaned, quoted identifier is at worst a non-existent
+    // column name, never runnable SQL. For sort fields and table names the
+    // concatenation gap is additionally closed by ALLOWED_SORT_COLUMNS /
+    // ALLOWED_TABLES; select/groupBy/condition fields are NOT whitelisted and rely
+    // on the strip+quote barrier (do not treat this scan as their guarantee).
     const tokens = cleaned.toLowerCase().split(/[_.]/).filter(Boolean);
     for (const token of tokens) {
       if (SafeQueryBuilder.DANGEROUS_KEYWORDS.has(token)) {

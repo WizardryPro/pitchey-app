@@ -36,6 +36,10 @@ export class RedisWithFallback {
         // in-memory cache — a value written there by a set/setex whose redis
         // write threw (write-only outage / read-replica failover) would
         // otherwise be silently inaccessible (read-after-write data loss).
+        // Safe against stale reads because set/setex/del clear the memory copy
+        // whenever redis durably takes a write/delete, so memory only ever holds
+        // values from a failed (degraded-mode) write — never one staler than the
+        // last durable redis write.
         if (value !== null && value !== undefined) {
           return value;
         }
@@ -64,6 +68,9 @@ export class RedisWithFallback {
         } else {
           await this.redis.set(key, value);
         }
+        // Redis durably took the write — drop any degraded-mode memory copy so a
+        // later redis miss can't resurrect a value older than this write.
+        this.memoryCache.delete(key);
         return;
       }
     } catch (error) {
@@ -83,6 +90,8 @@ export class RedisWithFallback {
     try {
       if (this.redisAvailable && this.redis.setex) {
         await this.redis.setex(key, seconds, value);
+        // Redis durably took the write — drop any degraded-mode memory copy.
+        this.memoryCache.delete(key);
         return;
       }
     } catch (error) {
