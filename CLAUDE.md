@@ -114,11 +114,15 @@ Available slash commands: `/deploy`, `/test`, `/migrate`
 - **Malware Scanning**: VirusTotal integration deferred — needs `VIRUSTOTAL_API_KEY` (free tier: 4 req/min)
 - **Full Crew Features**: Availability calendars, rate cards — deferred post-launch
 
-### Current Numbers (2026-04-22)
-- 664 API routes, 161 pages, 182 components, 30 frontend services, 4 stores
-- 112 backend services, 71 handlers, 89 migrations (tracked in `schema_migrations`, runner at `scripts/migrate.mjs`)
+### Current Numbers (2026-06-18)
+- 705 API routes, 189 pages, 172 components (69 in `components/` + 103 in `features/`), 32 frontend services, 3 stores
+- 93 backend services, 68 handlers, 110 migrations (highest numbered; tracked in `schema_migrations`, runner at `scripts/migrate.mjs`)
 - 4 portals (Creator, Investor, Production, Watcher — audience-only) + Admin shell
-- 13 CI/CD workflows, 7 R2 buckets, 5 KV namespaces, 2 Durable Objects, 2 Analytics Engine datasets
+- 19 CI/CD workflows, 7 R2 buckets, 5 KV namespaces, 2 Durable Objects, 2 Analytics Engine datasets
+
+### Test Coverage Reality (2026-06-18) — see [[reference_coverage_reality]]
+- Frontend **38.8% lines** (services/stores 80–90% solid; `components/` 4.7%, `features/` 26% bare). Backend **2.9%** — the *entire live worker path* (`worker-integrated.ts` 22.5k lines / all 705 routes, every handler & service, Stripe webhook, NDA flow, trust code) has **zero** coverage. The 1,029 backend tests are an excellent pure-logic ring around utils/lib only.
+- **CI coverage gate cannot fail** (all `quality-gates.yml` branches are "don't fail for now"; FE `|| true` swallows the threshold). Two CI bugs: codecov backend path mismatch (`coverage_backend/` vs `coverage/`), and the FE `thresholds.global:60` is dead. Tests guard the safest code, not what actually broke.
 
 ### Session 2026-04-22 — shipped
 - **Marketplace nav refresh** (`ba8aff3`) — pill-tab sort replacing `<select>`, genre quick-chips, mobile hamburger + slide-down menu; color-coded active states (`brand.featured` Hot, `brand.trending` Trending, `brand.new` New); homepage parity (adds "How It Works").
@@ -160,6 +164,21 @@ Available slash commands: `/deploy`, `/test`, `/migrate`
 **Smoke test (test mode) passed end-to-end**: alex.creator@demo.com subscribed to Creator (€19.99/mo) via UI with card `4242 4242 4242 4242` → checkout.session.completed populated stripe_customer_id + flipped subscription_tier='creator' → invoice.paid granted +10 credits (500→510) → clicked "Open portal" → redirected to Stripe's hosted portal showing Visa •••• 4242 + £18.00 invoice + cancel link. All 4 new handlers proven (charge.refunded captured live via wrangler tail with the expected action='refund_received_manual_action_required' log line). Worker auth bypass for `/api/webhooks/stripe` proven via Stripe-signed delivery returning 200.
 
 **Open items tracked in [[project_stripe_live]]** (post-launch, none blocking): idempotency-on-receipt poisoning, duplicate `subscription_history` rows from event race, Stripe Adaptive Pricing EUR→GBP, ProductionSettingsBilling mock data, single-mode config, cold-start Neon DNS race.
+
+### Sessions 2026-06-14 → 2026-06-18 — shipped: Trust Pillar + Demand→Supply Loop + bug sweep
+
+Moat status is tracked in [[project_moat_inventory]] (single source of truth). Highlights this run:
+
+- **Trust Pillar (Pillar 3) — three layers, all live** ([[project_trust_provenance_identity]]):
+  - **Pitch Provenance "Sealed on [date]"** (PRs #321/#322/#324, migration 109) — content-hash seal at publish (`src/services/pitch-provenance.ts`, Workers `crypto.subtle`), public `GET /api/verify/p/:hash` (date+creator+title only), `SealBadge` on PitchDetail + `/verify/p/:hash` page. Protects the **idea**. Backfilled 11 existing pitches at their `published_at`. GOTCHA: publicEndpoints entry needs NO trailing slash.
+  - **Creator Identity (Silver)** (PR #323, migration 110) — Stripe Identity via **retrieve-on-return** (NOT a webhook → zero change to live Stripe webhook config → can't break billing). `POST /api/identity/start|refresh`, `IdentityVerificationCard` in creator settings. Verifies the **person**. ⚠️ NEEDS dashboard enable (Settings→Identity) for live mode.
+  - **Platform-earned GOLD** (PR #325) — `src/services/creator-reputation.ts` daily cron, promote-only: ≥2 sealed pitches + ≥3 honored NDAs → gold; never downgrades. The moat-native tier.
+- **Demand→Supply Loop (Pillar 1)**: Open-Call post now notifies genre/format-matched creators (#318, `createCallHandler` INSERT…SELECT — closed the zero-notify gap); saved-search → Open Call bridge (#319).
+- **Saved Searches revive** (#314, real-schema rebuild superseding abandoned #312; migration 107; empty "Popular" tab hidden #317; alerts deferred).
+- **Bug-fix sweep**: Delete Account now works (anonymize + correct wiring, #316 — hard-delete was FK-blocked); NDA request/approve/access unified on the `ndas` table (#284/#285); stopped fabricating investor/creator analytics (#287/#288); media-URL normalization (migration 108, relative canonical); comment anonymity @username (migration 106, #313); onboarding de-trapped (#315); success-signals + silent-error sweep (#306).
+- **Orphan-code retirement** (#309/#310/#311, issue #308 — dead auth-era, never-deployed scaling infra, dup monitoring; protected paths #60/#61 untouched).
+- **Sentry deploy fix** (#320): `release.finalize=false` — the `sentry-cli releases finalize` 504 had failed frontend deploys 3×.
+- **Karl product decisions (locked)**: keep the 10-credit NDA-request charge (a seriousness filter, NOT a tax — do not remove); publishing seals the *idea* but does NOT confer a verified *person* badge (separate, earned).
 
 ### #20 near-misses from 2026-04-22/23
 
