@@ -21981,6 +21981,12 @@ const websocketSafeHandler = {
           await Promise.all([
             sweepExpiredSubscriptionGrants(env, ctx),
             topUpDemoAccountCredits(env, ctx),
+            // Platform-earned GOLD: promote creators with a sealed catalogue +
+            // honored NDAs. Promote-only; never downgrades. See creator-reputation.ts.
+            (async () => {
+              const { recomputeCreatorReputationTiers } = await import('./services/creator-reputation');
+              await recomputeCreatorReputationTiers(env, ctx);
+            })(),
           ]);
           break;
 
