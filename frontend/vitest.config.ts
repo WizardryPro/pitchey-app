@@ -18,6 +18,12 @@ export default defineConfig({
     },
     coverage: {
       provider: 'v8',
+      // Write the coverage report even when a test fails. Vitest otherwise skips
+      // report generation on any failure, so one flaky/env-dependent test in CI
+      // leaves coverage-summary.json missing → the gate reads 0% and (now that it
+      // enforces) fails. Coverage % and test pass/fail are separate concerns: the
+      // test job gates pass/fail; the coverage gate gates the %.
+      reportOnFailure: true,
       // json-summary writes coverage/coverage-summary.json, which the CI
       // coverage-gate (quality-gates.yml) reads for the headline %. Without it,
       // CI silently fell back to scraping the HTML report (or 0).
