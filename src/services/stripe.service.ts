@@ -298,4 +298,34 @@ export class StripeService {
     }
     return mismatch === 0;
   }
+
+  // ── Identity (creator verification) ───────────────────────────────────────
+  // Deliberately ISOLATED from the subscription/checkout/webhook paths above.
+  // The verification result is read via retrieve-on-return (see the identity
+  // handlers), NOT a webhook — so adding this requires ZERO change to the live
+  // Stripe webhook config and cannot disturb billing.
+
+  // Creates a hosted document+selfie verification session. Returns the redirect
+  // URL the creator completes the flow at.
+  async createIdentityVerificationSession(params: {
+    userId: number;
+    returnUrl: string;
+  }): Promise<{ id: string; url: string; client_secret: string; status: string }> {
+    return this.request('POST', '/identity/verification_sessions', {
+      type: 'document',
+      'metadata[userId]': String(params.userId),
+      'metadata[purpose]': 'creator_identity',
+      return_url: params.returnUrl,
+    });
+  }
+
+  // Reads back a session's status on return: 'requires_input' | 'processing' |
+  // 'verified' | 'canceled'. metadata.userId lets the handler bind it to the user.
+  async retrieveIdentityVerificationSession(sessionId: string): Promise<{
+    id: string;
+    status: string;
+    metadata?: Record<string, string>;
+  }> {
+    return this.request('GET', `/identity/verification_sessions/${sessionId}`);
+  }
 }
