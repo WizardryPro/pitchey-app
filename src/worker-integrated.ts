@@ -4248,7 +4248,7 @@ class RouteRegistry {
       // (Removing it here 401'd cover images for logged-out users — regression.)
       '/api/media/file',
       '/ws',            // WebSocket endpoint handles its own auth
-      '/api/verify/',   // Public provenance certificate (verify-by-hash; no content exposed)
+      '/api/verify',    // Public provenance certificate (verify-by-hash; no content exposed). NO trailing slash — matcher does startsWith(endpoint + '/').
       '/api/config',    // App configuration (genres, formats, etc.)
       '/api/browse/genres',     // Browse by genre
       '/api/browse/top-rated',  // Top rated pitches
