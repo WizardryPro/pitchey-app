@@ -6507,6 +6507,13 @@ pitchey_analytics_datapoints_per_minute 1250
         createdAt: pitch.created_at || pitch.createdAt
       };
 
+      // Provenance seal (public, non-sensitive): drives the "Sealed [date]" badge
+      // on PitchDetail. Protects the idea; independent of verification_tier.
+      try {
+        const { getPitchSeal } = await import('./services/pitch-provenance');
+        (fullPitch as any).provenance = await getPitchSeal(this.db.getSql() as any, pitchId);
+      } catch (_) { /* non-critical */ }
+
       return builder.success({ pitch: fullPitch });
     } catch (error) {
       return errorHandler(error, request);
