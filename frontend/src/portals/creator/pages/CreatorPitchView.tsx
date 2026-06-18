@@ -26,6 +26,7 @@ import apiClient from '@/lib/api-client';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import FormatDisplay from '@/components/FormatDisplay';
 import FeedbackDisplay from '@/components/feedback/FeedbackDisplay';
+import WhoViewedPanel from '@features/analytics/components/WhoViewedPanel';
 import FollowButton from '@features/browse/components/FollowButton';
 import InterestedCard from '@features/pitches/components/InterestedCard';
 import CollaborationWorkspace from '@features/pitches/components/CollaborationWorkspace';
@@ -541,6 +542,13 @@ const CreatorPitchView: React.FC = () => {
                     ))}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* "Who viewed your deck" — owner-only, tier-gated (moat #2) */}
+            {activeTab === 'analytics' && isOwner && id && (
+              <div className="mt-6">
+                <WhoViewedPanel pitchId={parseInt(id)} />
               </div>
             )}
 

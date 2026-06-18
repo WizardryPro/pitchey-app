@@ -2998,7 +2998,10 @@ class RouteRegistry {
     // View tracking endpoints
     this.register('POST', '/api/views/track', (req) => this.trackViewWithRealtimePush(req));
     this.register('GET', '/api/views/analytics', (req) => getViewAnalyticsHandler(req, this.env));
-    this.register('GET', '/api/views/pitch/*', (req) => getPitchViewersHandler(req, this.env));
+    // NOTE: was '/api/views/pitch/*' — the router's pathToRegex only supports :params,
+    // not '*' (the star quantified the slash), so the wildcard form never matched a
+    // real pitch id and the route was dead. Fixed to :id (moat #2 needs it live).
+    this.register('GET', '/api/views/pitch/:id', (req) => getPitchViewersHandler(req, this.env));
 
     // Pitch engagement (social proof) — registered with view routes, but needs to be before /api/pitches/:id catch-all
 
