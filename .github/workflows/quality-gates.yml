@@ -36,11 +36,12 @@ env:
   # Per-tier coverage FLOORS — a ratchet, not an aspiration. Each is set just below
   # the current actual so the gate catches REGRESSIONS (a drop) without blocking
   # today's PRs. Raise these deliberately as coverage climbs; never lower them.
-  # Actuals 2026-06-18: frontend 43.4% lines (after the risk-targeted UI test push:
-  # NDA/gating, dashboards, marketplace filters, slate/compare/opportunities),
-  # backend 2.93% lines (unit tier only — the live worker path is covered by the
-  # separate integration tier, which gates via its own job passing, not via a %).
-  FRONTEND_COVERAGE_FLOOR: 40
+  # Actuals 2026-06-18: frontend 45.2% lines (after the risk-targeted UI test push:
+  # NDA/gating, dashboards, notifications, marketplace+saved filters, search, team
+  # invite, slate/compare/opportunities), backend 2.93% lines (unit tier only — the
+  # live worker path is covered by the separate integration tier, which gates via
+  # its own job passing, not via a %).
+  FRONTEND_COVERAGE_FLOOR: 42
   BACKEND_COVERAGE_FLOOR: 2
   SECURITY_THRESHOLD: 'medium'
   PERFORMANCE_SCORE_MIN: 80
