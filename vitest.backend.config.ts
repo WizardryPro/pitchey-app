@@ -46,6 +46,12 @@ export default defineConfig({
     },
     coverage: {
       provider: 'v8',
+      // Always write the report, even if a test fails (e.g. the env-dependent
+      // worker-jwt crypto test that only trips under coverage instrumentation in
+      // CI). Otherwise a single failure leaves coverage-summary.json missing and
+      // the quality gate reads 0% → false-fails. Test pass/fail is gated by the
+      // separate test job, not here.
+      reportOnFailure: true,
       reporter: ['text', 'json', 'json-summary', 'html', 'lcov'],
       reportsDirectory: './coverage',
       include: ['src/**/*.ts'],
