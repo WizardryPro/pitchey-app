@@ -12,6 +12,7 @@ import { sessionCache } from '@/store/sessionCache';
 import { UserService } from '@/services/user.service';
 import { API_URL } from '@/config';
 import { prepareImageForUpload, PRE_COMPRESSION_MAX_BYTES } from '@/utils/imageUpload';
+import IdentityVerificationCard from '@/features/auth/components/IdentityVerificationCard';
 
 // Creator-facing profile settings. A creator is an individual filmmaker, so this
 // leads with personal identity and a creative statement (the pitch investors and
@@ -361,6 +362,8 @@ export default function CreatorSettingsProfile() {
               </div>
             </CardContent>
           </Card>
+
+          <IdentityVerificationCard />
         </div>
       </div>
     </div>

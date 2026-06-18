@@ -2950,6 +2950,11 @@ class RouteRegistry {
     this.register('PUT', '/api/payments/payment-methods', this.setDefaultPaymentMethod.bind(this));
     this.register('POST', '/api/webhooks/stripe', this.handleStripeWebhook.bind(this));
 
+    // Creator identity verification (Stripe Identity). Self-gated to creator/
+    // production inside the handlers. Retrieve-on-return — no webhook config.
+    this.register('POST', '/api/identity/start', this.startIdentityVerification.bind(this));
+    this.register('POST', '/api/identity/refresh', this.refreshIdentityVerification.bind(this));
+
     // Pitch Validation Routes
     this.register('POST', '/api/validation/analyze', (req) => validationHandlers.analyze(req));
     this.register('GET', '/api/validation/score/:pitchId', (req) => validationHandlers.getScore(req));
@@ -11031,6 +11036,86 @@ pitchey_analytics_datapoints_per_minute 1250
         ErrorCode.INTERNAL_ERROR,
         'Failed to open billing portal'
       );
+    }
+  }
+
+  // ── Creator Identity Verification (Stripe Identity) ──
+  // ISOLATED from billing: result is read via retrieve-on-return (the stored
+  // session id), NOT a webhook — so this adds ZERO Stripe webhook config and
+  // cannot disturb subscriptions. Promotes verification_tier → silver on verified.
+
+  private async startIdentityVerification(request: Request): Promise<Response> {
+    const builder = new ApiResponseBuilder(request);
+    const authResult = await this.requireAuth(request);
+    if (!authResult.authorized) return authResult.response!;
+    const userId = authResult.user.id;
+
+    const sql = this.db.getSql() as any;
+    const [me] = await sql`SELECT user_type FROM users WHERE id = ${userId}`;
+    if (!me || (me.user_type !== 'creator' && me.user_type !== 'production')) {
+      return builder.error(ErrorCode.FORBIDDEN, 'Only creators and production companies can verify identity');
+    }
+
+    const stripeKey = (this.env as any).STRIPE_SECRET_KEY;
+    if (!stripeKey) return builder.error(ErrorCode.INTERNAL_ERROR, 'Identity verification is not configured');
+
+    try {
+      const { StripeService } = await import('./services/stripe.service');
+      const stripe = new StripeService(stripeKey);
+      const origin = request.headers.get('Origin') || (this.env as any).FRONTEND_URL || 'https://pitchey-5o8.pages.dev';
+      const returnUrl = `${origin}/creator/settings/profile?identity=return`;
+      const session = await stripe.createIdentityVerificationSession({ userId: Number(userId), returnUrl });
+      await sql`UPDATE users SET identity_session_id = ${session.id}, identity_status = ${session.status} WHERE id = ${userId}`;
+      return builder.success({ url: session.url, status: session.status });
+    } catch (err) {
+      console.error('startIdentityVerification error:', err instanceof Error ? err.message : String(err));
+      return builder.error(ErrorCode.INTERNAL_ERROR, 'Could not start identity verification');
+    }
+  }
+
+  // Read back the stored session on return; promote tier on a verified result.
+  private async refreshIdentityVerification(request: Request): Promise<Response> {
+    const builder = new ApiResponseBuilder(request);
+    const authResult = await this.requireAuth(request);
+    if (!authResult.authorized) return authResult.response!;
+    const userId = authResult.user.id;
+
+    const sql = this.db.getSql() as any;
+    const [me] = await sql`
+      SELECT identity_session_id, identity_status, identity_verified_at, verification_tier
+      FROM users WHERE id = ${userId}
+    `;
+    if (!me?.identity_session_id) {
+      return builder.success({ status: me?.identity_status ?? 'none', verified: !!me?.identity_verified_at });
+    }
+
+    const stripeKey = (this.env as any).STRIPE_SECRET_KEY;
+    if (!stripeKey) return builder.error(ErrorCode.INTERNAL_ERROR, 'Identity verification is not configured');
+
+    try {
+      const { StripeService } = await import('./services/stripe.service');
+      const stripe = new StripeService(stripeKey);
+      const session = await stripe.retrieveIdentityVerificationSession(me.identity_session_id);
+      // Bind: the session must belong to this user.
+      if (session.metadata?.userId && String(session.metadata.userId) !== String(userId)) {
+        return builder.error(ErrorCode.FORBIDDEN, 'Verification session mismatch');
+      }
+      if (session.status === 'verified' && !me.identity_verified_at) {
+        // Promote to silver — but NEVER downgrade an existing gold tier.
+        await sql`
+          UPDATE users SET
+            identity_status = ${session.status},
+            identity_verified_at = NOW(),
+            verification_tier = CASE WHEN verification_tier = 'gold' THEN 'gold' ELSE 'silver' END
+          WHERE id = ${userId}
+        `;
+      } else {
+        await sql`UPDATE users SET identity_status = ${session.status} WHERE id = ${userId}`;
+      }
+      return builder.success({ status: session.status, verified: session.status === 'verified' });
+    } catch (err) {
+      console.error('refreshIdentityVerification error:', err instanceof Error ? err.message : String(err));
+      return builder.error(ErrorCode.INTERNAL_ERROR, 'Could not check identity verification');
     }
   }
 
