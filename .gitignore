@@ -127,3 +127,4 @@ files(1)/
 
 # Local backup of the gitignored MCP config (contains the Neon API key — never commit)
 .mcp.json.bak
+coverage-integration/
