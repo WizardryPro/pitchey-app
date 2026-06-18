@@ -1,0 +1,65 @@
+name: Backend Integration Tests
+
+# Runs the backend integration tier (test/integration/**) — drives the REAL
+# worker fetch() against an ephemeral Neon branch. This is the tier that covers
+# the live router/handler/SQL path the unit suite can't reach.
+#
+# Quota discipline (#65 — shared Neon quota once caused an outage): the branch is
+# created at job start and DELETED at job end (always()), so it lives only for the
+# duration of the run — not until PR close. One short-lived branch per run.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    paths:
+      - 'src/**'
+      - 'test/integration/**'
+      - 'vitest.integration.config.ts'
+      - 'package.json'
+      - '.github/workflows/integration-tests.yml'
+
+# One in-flight run per PR; newer pushes cancel older runs (and their branch
+# cleanup still fires via always()).
+concurrency:
+  group: integration-tests-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create ephemeral Neon branch
+        id: branch
+        uses: neondatabase/create-branch-action@v4
+        with:
+          project_id: ${{ secrets.NEON_PROJECT_ID }}
+          # Unique per run so reruns never collide; deleted in cleanup below.
+          branch_name: itest/pr-${{ github.event.pull_request.number }}-${{ github.run_id }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+
+      - name: Run integration tier
+        env:
+          TEST_DATABASE_URL: ${{ steps.branch.outputs.db_url_with_pooler }}
+        run: npm run test:integration
+
+      - name: Delete ephemeral Neon branch
+        if: always()
+        uses: neondatabase/delete-branch-action@v3
+        with:
+          project_id: ${{ secrets.NEON_PROJECT_ID }}
+          branch: itest/pr-${{ github.event.pull_request.number }}-${{ github.run_id }}
+          api_key: ${{ secrets.NEON_API_KEY }}

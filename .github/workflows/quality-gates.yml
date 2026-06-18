@@ -33,7 +33,14 @@ permissions:
   statuses: write
 
 env:
-  COVERAGE_THRESHOLD: 20  # Realistic threshold for current codebase (actual ~25%)
+  # Per-tier coverage FLOORS — a ratchet, not an aspiration. Each is set just below
+  # the current actual so the gate catches REGRESSIONS (a drop) without blocking
+  # today's PRs. Raise these deliberately as coverage climbs; never lower them.
+  # Actuals 2026-06-18: frontend 38.8% lines, backend 2.93% lines (unit tier only —
+  # the live worker path is covered by the separate integration tier, which gates
+  # via its own job passing, not via a %).
+  FRONTEND_COVERAGE_FLOOR: 35
+  BACKEND_COVERAGE_FLOOR: 2
   SECURITY_THRESHOLD: 'medium'
   PERFORMANCE_SCORE_MIN: 80
   BUNDLE_SIZE_LIMIT_MB: 5
@@ -118,44 +125,53 @@ jobs:
         run: |
           frontend_cov="${{ env.frontend_coverage }}"
           backend_cov="${{ env.backend_coverage }}"
-          threshold="${{ env.COVERAGE_THRESHOLD }}"
+          fe_floor="${{ env.FRONTEND_COVERAGE_FLOOR }}"
+          be_floor="${{ env.BACKEND_COVERAGE_FLOOR }}"
 
           # Set defaults if empty
           frontend_cov=${frontend_cov:-0}
           backend_cov=${backend_cov:-0}
 
-          echo "📊 Coverage Quality Gate Evaluation:"
-          echo "  Frontend Coverage: ${frontend_cov}%"
-          echo "  Backend Coverage: ${backend_cov}%"
-          echo "  Required Threshold: ${threshold}%"
+          echo "📊 Coverage Quality Gate Evaluation (per-tier floors):"
+          echo "  Frontend: ${frontend_cov}%  (floor ${fe_floor}%)"
+          echo "  Backend:  ${backend_cov}%  (floor ${be_floor}%)"
 
+          # A coverage of literally 0 means the report was never produced (run
+          # failed / wrong path) rather than a real regression — treat as a hard
+          # error so a broken coverage step can't masquerade as "0% but passing".
           coverage_passed=true
 
-          # Use bc with error handling
-          frontend_below=$(echo "$frontend_cov < $threshold" | bc -l 2>/dev/null || echo "0")
-          backend_below=$(echo "$backend_cov < $threshold" | bc -l 2>/dev/null || echo "0")
+          frontend_below=$(echo "$frontend_cov < $fe_floor" | bc -l 2>/dev/null || echo "0")
+          backend_below=$(echo "$backend_cov < $be_floor" | bc -l 2>/dev/null || echo "0")
 
           if [[ "$frontend_below" == "1" ]]; then
-            echo "⚠️ Frontend coverage ${frontend_cov}% below threshold ${threshold}%"
-            # Don't fail for now - just warn
+            echo "❌ Frontend coverage ${frontend_cov}% is below the floor ${fe_floor}%."
+            echo "   Add tests for the code you changed, or (if intentional) lower"
+            echo "   FRONTEND_COVERAGE_FLOOR in quality-gates.yml with justification."
+            coverage_passed=false
           fi
 
           if [[ "$backend_below" == "1" ]]; then
-            echo "⚠️ Backend coverage ${backend_cov}% below threshold ${threshold}%"
-            # Don't fail for now - just warn
+            echo "❌ Backend coverage ${backend_cov}% is below the floor ${be_floor}%."
+            echo "   A drop this size usually means a test file stopped running."
+            coverage_passed=false
           fi
-
-          # Always pass for now until we improve coverage
-          echo "✅ Coverage quality gate passed (informational only)"
-          echo "status=passed" >> $GITHUB_OUTPUT
 
           echo "frontend_coverage=$frontend_cov" >> $GITHUB_OUTPUT
           echo "backend_coverage=$backend_cov" >> $GITHUB_OUTPUT
+
+          if [[ "$coverage_passed" == "true" ]]; then
+            echo "✅ Coverage quality gate passed (both tiers at/above floor)."
+            echo "status=passed" >> $GITHUB_OUTPUT
+          else
+            echo "status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
       
       - name: Upload Coverage Reports
         uses: codecov/codecov-action@v3
         with:
-          files: ./frontend/coverage/lcov.info,./coverage_backend/lcov.info
+          files: ./frontend/coverage/lcov.info,./coverage/lcov.info
           flags: quality-gate
           name: quality-gate-coverage
           fail_ci_if_error: false
@@ -788,7 +804,7 @@ jobs:
           
           | Gate | Status | Metric | Threshold | Result |
           |------|---------|---------|-----------|--------|
-          | Coverage | ${{ needs.coverage-gate.outputs.coverage-status == 'passed' && '✅ PASS' || '❌ FAIL' }} | Code Coverage | ≥ ${{ env.COVERAGE_THRESHOLD }}% | F: ${{ needs.coverage-gate.outputs.frontend-coverage }}%, B: ${{ needs.coverage-gate.outputs.backend-coverage }}% |
+          | Coverage | ${{ needs.coverage-gate.outputs.coverage-status == 'passed' && '✅ PASS' || '❌ FAIL' }} | Code Coverage | F ≥ ${{ env.FRONTEND_COVERAGE_FLOOR }}%, B ≥ ${{ env.BACKEND_COVERAGE_FLOOR }}% | F: ${{ needs.coverage-gate.outputs.frontend-coverage }}%, B: ${{ needs.coverage-gate.outputs.backend-coverage }}% |
           | Security | ${{ needs.security-gate.outputs.security-status == 'passed' && '✅ PASS' || '❌ FAIL' }} | Vulnerabilities | 0 Critical, ≤ 2 High | ${{ needs.security-gate.outputs.vulnerabilities-found }} found |
           | Code Quality | ${{ needs.code-quality-gate.outputs.quality-status == 'passed' && '✅ PASS' || '❌ FAIL' }} | Technical Debt | ≤ ${{ env.TECHNICAL_DEBT_RATIO_MAX }}% | ${{ needs.code-quality-gate.outputs.debt-ratio }}% |
           | Dependencies | ${{ needs.dependencies-gate.outputs.dependencies-status == 'passed' && '✅ PASS' || '❌ FAIL' }} | Outdated Packages | ≤ 10 | ${{ needs.dependencies-gate.outputs.outdated-count }} |
