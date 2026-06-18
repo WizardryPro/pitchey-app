@@ -20,6 +20,7 @@ import { formatCurrency } from '@shared/utils/formatters';
 import FeedbackSection from '../components/feedback/FeedbackSection';
 import { getHeatScore } from '../components/HeatBadge';
 import VerificationBadge from '../components/VerificationBadge';
+import SealBadge from '../components/SealBadge';
 import HumanMadeBadge from '../components/HumanMadeBadge';
 import { viewService } from '@features/analytics/services/view.service';
 import PortalTopNav from '@shared/components/layout/PortalTopNav';
@@ -458,6 +459,7 @@ export default function PitchDetail() {
                       {pitch.creator?.name || pitch.creator?.username || 'Unknown Creator'}
                     </span>
                     <VerificationBadge tier={(pitch as any).creator_verification_tier || (pitch.creator as any)?.verificationTier} />
+                    <SealBadge provenance={(pitch as any).provenance} />
                     {/* Follow lives in the unified InterestedCard below — no inline duplicate */}
                   </div>
                 ) : (

@@ -114,6 +114,7 @@ const Marketplace = lazyRetry(() => import('./pages/MarketplaceEnhanced'));
 const OpportunitiesBoard = lazyRetry(() => import('./pages/OpportunitiesBoard'));
 const ComparePage = lazyRetry(() => import('./pages/ComparePage'));
 const SharedComparePage = lazyRetry(() => import('./pages/SharedComparePage'));
+const ProvenanceVerify = lazyRetry(() => import('./pages/ProvenanceVerify'));
 const PublicPitchView = lazyRetry(() => import('./pages/PublicPitchView'));
 
 // Creator Pages
@@ -416,6 +417,7 @@ function App() {
           <Route path="/opportunities" element={<OpportunitiesBoard />} />
           <Route path="/compare" element={<ComparePage />} />
           <Route path="/compare/s/:token" element={<SharedComparePage />} />
+          <Route path="/verify/p/:hash" element={<ProvenanceVerify />} />
           <Route path="/marketplace-old" element={<Marketplace />} />
           
           {/* Browse Route */}
