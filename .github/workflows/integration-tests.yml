@@ -51,6 +51,15 @@ jobs:
           branch_name: itest/pr-${{ github.event.pull_request.number }}-${{ github.run_id }}
           api_key: ${{ secrets.NEON_API_KEY }}
 
+      # Apply any migrations not yet on prod to the ephemeral branch (it forks prod,
+      # so pending migrations aren't there). The integration tier exercises the real
+      # schema — e.g. migration 111 drops the broken production_deals triggers that
+      # otherwise block the deal-flow tests.
+      - name: Apply pending migrations to the branch
+        env:
+          DATABASE_URL: ${{ steps.branch.outputs.db_url_with_pooler }}
+        run: npm run db:migrate
+
       - name: Run integration tier
         env:
           TEST_DATABASE_URL: ${{ steps.branch.outputs.db_url_with_pooler }}

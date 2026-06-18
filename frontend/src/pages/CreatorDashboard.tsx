@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { TrendingUp, Eye, MessageSquare, Upload, BarChart3, Calendar, Plus, Shield, CreditCard, Wifi, WifiOff, AlertTriangle, RefreshCw, Sparkles, ArrowRight, Share2, Activity, Users } from 'lucide-react';
 import QuickActionsPanel, { type QuickAction } from '../components/dashboard/QuickActionsPanel';
 import YourPitcheyValue from '../components/dashboard/YourPitcheyValue';
+import CreatorDealInbox from '../components/dashboard/CreatorDealInbox';
 import ShareLinksModal from '../components/portfolio/ShareLinksModal';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { paymentsAPI } from '../lib/apiServices';
@@ -469,6 +470,9 @@ function CreatorDashboard() {
 
       {/* "Your Pitchey" accumulated-value summary (moat #8) */}
       <YourPitcheyValue />
+
+      {/* Deal Offers inbox — accept/counter/reject production deals (moat #6) */}
+      <CreatorDealInbox />
 
       {/* Connectivity Banners */}
       {!isOnline && (
