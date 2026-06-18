@@ -2723,6 +2723,19 @@ class RouteRegistry {
     this.register('DELETE', '/api/pitches/:id/save', (req) => realPitchUnsaveHandler(req, this.env));
 
     // Pitch Publish/Archive endpoints (with cache invalidation)
+    // Public provenance certificate — proves a pitch's content was sealed on a
+    // date. No auth (it's a public proof); returns date+creator+title+version
+    // only, NEVER the protected content. 404 if the hash isn't a known seal.
+    this.register('GET', '/api/verify/p/:hash', async (req) => {
+      const hash = new URL(req.url).pathname.split('/').pop() || '';
+      const { verifyProvenanceByHash } = await import('./services/pitch-provenance');
+      const result = await verifyProvenanceByHash(this.db.getSql() as any, hash);
+      return new Response(JSON.stringify(result), {
+        status: result.sealed ? 200 : 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+
     this.register('POST', '/api/pitches/:id/publish', async (req) => {
       // Publishing is the paywall: watchers (user_type='viewer') can create
       // drafts but must upgrade to a Creator account to publish. The VIEWER
@@ -2739,6 +2752,18 @@ class RouteRegistry {
       // Invalidate browse cache after publish so new pitch appears immediately
       if (response.status === 200) {
         try { await this.invalidateBrowseCache(); } catch (_) { /* non-blocking */ }
+
+        // Seal content provenance on publish — a hashed timestamp proving the
+        // idea existed on Pitchey at this date (the creator's priority-of-idea
+        // artifact). Fire-and-forget; sealPitchProvenance never throws.
+        try {
+          const sealBody = await response.clone().json() as { data?: { pitch?: { id: number } } };
+          const sealedPitchId = sealBody?.data?.pitch?.id;
+          if (sealedPitchId) {
+            const { sealPitchProvenance } = await import('./services/pitch-provenance');
+            await sealPitchProvenance(this.db.getSql() as any, sealedPitchId);
+          }
+        } catch (e) { console.error('provenance seal on publish failed:', e); }
 
         // Notify followers of newly published pitch
         try {
@@ -4223,6 +4248,7 @@ class RouteRegistry {
       // (Removing it here 401'd cover images for logged-out users — regression.)
       '/api/media/file',
       '/ws',            // WebSocket endpoint handles its own auth
+      '/api/verify/',   // Public provenance certificate (verify-by-hash; no content exposed)
       '/api/config',    // App configuration (genres, formats, etc.)
       '/api/browse/genres',     // Browse by genre
       '/api/browse/top-rated',  // Top rated pitches
@@ -6160,6 +6186,13 @@ pitchey_analytics_datapoints_per_minute 1250
             revenueModel: pitch.revenue_model
           };
         }
+
+        // Provenance seal (public, non-sensitive): drives the "Sealed [date]" badge.
+        // Protects the idea; independent of the creator's verification_tier.
+        try {
+          const { getPitchSeal } = await import('./services/pitch-provenance');
+          response.provenance = await getPitchSeal(this.db.getSql() as any, pitchId);
+        } catch (_) { /* non-critical */ }
 
         return builder.success(response);
       }
