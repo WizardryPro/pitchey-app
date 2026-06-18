@@ -3510,6 +3510,11 @@ class RouteRegistry {
       const { creatorStatsHandler } = await import('./handlers/creator-sidebar');
       return creatorStatsHandler(req, this.env);
     });
+    // "Your Pitchey" value dashboard (moat #8) — read-only accumulated-value totals.
+    this.register('GET', '/api/creator/value', async (req) => {
+      const { creatorValueHandler } = await import('./handlers/creator-value');
+      return creatorValueHandler(req, this.env);
+    });
     this.register('GET', '/api/creator/pitches/analytics', async (req) => {
       const { creatorPitchesAnalyticsHandler } = await import('./handlers/creator-sidebar');
       return creatorPitchesAnalyticsHandler(req, this.env);
