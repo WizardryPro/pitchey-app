@@ -3515,6 +3515,15 @@ class RouteRegistry {
       const { creatorValueHandler } = await import('./handlers/creator-value');
       return creatorValueHandler(req, this.env);
     });
+    // Creator Deal Inbox (moat #6) — receive + accept/counter/reject production deals.
+    this.register('GET', '/api/creator/deals', async (req) => {
+      const { getCreatorDeals } = await import('./handlers/creator-deals');
+      return getCreatorDeals(req, this.env);
+    });
+    this.register('POST', '/api/creator/deals/:id/respond', async (req) => {
+      const { respondToCreatorDeal } = await import('./handlers/creator-deals');
+      return respondToCreatorDeal(req, this.env);
+    });
     this.register('GET', '/api/creator/pitches/analytics', async (req) => {
       const { creatorPitchesAnalyticsHandler } = await import('./handlers/creator-sidebar');
       return creatorPitchesAnalyticsHandler(req, this.env);

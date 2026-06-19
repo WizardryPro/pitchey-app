@@ -34,8 +34,8 @@ function jsonResponse(data: unknown, origin: string | null, status = 200): Respo
 
 /**
  * Run a single-row aggregate query, returning `fallback` (and logging, not
- * swallowing) on any error. NOT a `.catch(() => default)` — the error is logged
- * with its metric label so drift is visible in observability.
+ * swallowing) on any error. This is NOT a silent swallow-to-default: the error is
+ * logged with its metric label so drift stays visible in observability.
  */
 async function guard<T extends Record<string, unknown>>(
   run: () => Promise<T[]>,
