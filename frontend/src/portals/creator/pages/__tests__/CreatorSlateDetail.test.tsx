@@ -46,6 +46,10 @@ vi.mock('@/services/slate.service', () => ({
     addPitch: (...args: any[]) => mockSlateAddPitch(...args),
     removePitch: (...args: any[]) => mockSlateRemovePitch(...args),
     reorderPitches: (...args: any[]) => mockSlateReorderPitches(...args),
+    // SlateShareLinks panel (moat #5) — stubbed so the editor renders cleanly.
+    listShareLinks: vi.fn().mockResolvedValue([]),
+    createShareLink: vi.fn().mockResolvedValue(null),
+    revokeShareLink: vi.fn().mockResolvedValue(true),
   },
 }))
 
@@ -383,19 +387,20 @@ describe('CreatorSlateDetail', () => {
   })
 
   // ─── Published slate public link ──────────────────────────────────
-  it('shows public link section when slate is published', async () => {
+  it('shows the tracked share panel without a publish hint when published', async () => {
     mockSlateGet.mockResolvedValue(mockPublishedSlate)
     renderComponent()
     await waitFor(() => {
-      expect(screen.getByText('Public link:')).toBeInTheDocument()
-      expect(screen.getByText('/slates/s/42')).toBeInTheDocument()
+      expect(screen.getByText('Share this slate')).toBeInTheDocument()
+      expect(screen.queryByText(/Publish this slate/i)).not.toBeInTheDocument()
     })
   })
 
-  it('does not show public link section when slate is draft', async () => {
+  it('shows the share panel with a publish hint when the slate is draft', async () => {
     renderComponent()
     await waitFor(() => screen.getByText('My Best Pitches'))
-    expect(screen.queryByText('Public link:')).not.toBeInTheDocument()
+    expect(screen.getByText('Share this slate')).toBeInTheDocument()
+    expect(screen.getByText(/Publish this slate/i)).toBeInTheDocument()
   })
 
   // ─── Edit title/description ───────────────────────────────────────

@@ -3662,6 +3662,24 @@ class RouteRegistry {
       const { publicSlateHandler } = await import('./handlers/slates');
       return publicSlateHandler(req, this.env);
     });
+    // Tokenized tracked slate shares (moat #5)
+    this.register('POST', '/api/slates/:id/share-links', async (req) => {
+      const { createSlateShareLinkHandler } = await import('./handlers/slate-share');
+      return createSlateShareLinkHandler(req, this.env);
+    });
+    this.register('GET', '/api/slates/:id/share-links', async (req) => {
+      const { listSlateShareLinksHandler } = await import('./handlers/slate-share');
+      return listSlateShareLinksHandler(req, this.env);
+    });
+    this.register('DELETE', '/api/slates/share-links/:linkId', async (req) => {
+      const { revokeSlateShareLinkHandler } = await import('./handlers/slate-share');
+      return revokeSlateShareLinkHandler(req, this.env);
+    });
+    // Public tracked slate view by token (no auth — listed in publicEndpoints)
+    this.register('GET', '/api/slates/s/:token', async (req) => {
+      const { publicSlateByTokenHandler } = await import('./handlers/slate-share');
+      return publicSlateByTokenHandler(req, this.env);
+    });
 
     // Heat Score — admin recalculate
     this.register('POST', '/api/admin/heat-scores/recalculate', async (req) => {
@@ -4277,6 +4295,7 @@ class RouteRegistry {
       '/api/demos/request',     // Demo request (anonymous OK)
       '/api/analytics/track-view', // View tracking (anonymous views)
       '/api/portfolio/s',  // Public shared portfolio (token-based)
+      '/api/slates/s',     // Public tracked slate share (token-based, moat #5)
       '/api/webhooks/stripe'  // Stripe webhooks (HMAC-SHA256 signature auth inside the handler, not session-based)
     ];
 
