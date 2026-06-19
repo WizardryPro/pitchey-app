@@ -94,9 +94,14 @@ export async function creatorValueHandler(request: Request, env: Env): Promise<R
       SELECT COUNT(*)::int AS v FROM follows WHERE following_id::text = ${userId}
     `, { v: 0 }, 'followers'),
 
+    // Tracked-link reach = portfolio share links + slate share links (moat #5).
+    // Both are the creator's own tokenized share links; sum their view counts so the
+    // tile reflects ALL share-link reach, not just the older portfolio links.
     guard(() => sql`
-      SELECT COALESCE(SUM(view_count), 0)::int AS v
-      FROM portfolio_share_links WHERE creator_id::text = ${userId}
+      SELECT (
+        COALESCE((SELECT SUM(view_count) FROM portfolio_share_links WHERE creator_id::text = ${userId}), 0)
+        + COALESCE((SELECT SUM(view_count) FROM slate_share_links WHERE creator_id::text = ${userId}), 0)
+      )::int AS v
     `, { v: 0 }, 'share_views'),
 
     // Honored/seriousness signal: NDAs across both historical tables on owned pitches.
