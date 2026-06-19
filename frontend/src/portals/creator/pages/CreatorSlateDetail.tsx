@@ -3,9 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Pencil, Check, X, Trash2,
   GripVertical, Film, Eye, Heart, Plus, Globe,
-  EyeOff, Search, ExternalLink, Camera, Loader2
+  EyeOff, Search, Camera, Loader2
 } from 'lucide-react';
 import { SlateService, type SlateDetail } from '@/services/slate.service';
+import SlateShareLinks from '../components/SlateShareLinks';
 import { apiClient } from '@/lib/api-client';
 import { API_URL } from '@/config';
 import { prepareImageForUpload, PRE_COMPRESSION_MAX_BYTES } from '@/utils/imageUpload';
@@ -364,21 +365,8 @@ export default function CreatorSlateDetailPage() {
         </div>
       </div>
 
-      {/* Public link (if published) */}
-      {slate.status === 'published' && (
-        <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 flex items-center gap-2 text-sm">
-          <Globe className="h-4 w-4 text-green-600 shrink-0" />
-          <span className="text-green-700">Public link:</span>
-          <code className="text-green-700 truncate font-mono">/slates/s/{slate.id}</code>
-          <button
-            onClick={() => navigator.clipboard.writeText(`${window.location.origin}/slates/s/${slate.id}`)}
-            className="ml-auto text-green-700 hover:text-green-800 shrink-0"
-            title="Copy link"
-          >
-            <ExternalLink className="h-4 w-4" />
-          </button>
-        </div>
-      )}
+      {/* Tracked share links (moat #5) — replaces the old raw, untracked link */}
+      <SlateShareLinks slateId={slate.id} published={slate.status === 'published'} />
 
       {/* Pitches */}
       {slate.pitches.length === 0 ? (

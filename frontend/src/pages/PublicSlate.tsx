@@ -1,7 +1,48 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Layers, Film, Eye, Heart, BadgeCheck } from 'lucide-react';
+import { Layers, Film, Eye, Heart, BadgeCheck, Sparkles, UserPlus } from 'lucide-react';
 import { API_URL } from '../config';
+import { useBetterAuthStore } from '../store/betterAuthStore';
+
+// Role-aware conversion CTA on the public slate landing (moat #5). The whole point
+// of a tracked share is to convert the recipient — so we tailor the call to action
+// to who's viewing: logged-out → join; signed-in non-owner → follow/browse; the
+// owner sees nothing.
+function SlateConversionCTA({ creator }: { creator: Creator }) {
+  const { user } = useBetterAuthStore();
+  if (user && String(user.id) === String(creator.id)) return null; // owner
+
+  if (!user) {
+    return (
+      <div data-testid="slate-cta" className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        <div className="rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-700 text-white p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
+          <div>
+            <h2 className="text-xl font-bold flex items-center gap-2"><Sparkles className="w-5 h-5" /> Discover more on Pitchey</h2>
+            <p className="text-purple-100 mt-1">Create a free account to follow {creator.name} and request access to their work.</p>
+          </div>
+          <div className="flex gap-3 shrink-0">
+            <Link to="/register" className="bg-white text-purple-700 font-medium rounded-lg px-5 py-2.5 hover:bg-purple-50">Join free</Link>
+            <Link to="/login" className="ring-1 ring-white/40 text-white font-medium rounded-lg px-5 py-2.5 hover:bg-white/10">Sign in</Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Signed-in non-owner (investor / production / watcher).
+  return (
+    <div data-testid="slate-cta" className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+      <div className="rounded-2xl bg-white ring-1 ring-purple-100 p-5 flex items-center gap-4 justify-between">
+        <p className="text-gray-700">
+          Interested in {creator.name}'s work? Follow them to get notified about new pitches.
+        </p>
+        <Link to={`/user/${creator.id}`} className="inline-flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg px-4 py-2 shrink-0">
+          <UserPlus className="w-4 h-4" /> View creator
+        </Link>
+      </div>
+    </div>
+  );
+}
 
 interface Creator {
   id: number;
@@ -47,7 +88,10 @@ export default function PublicSlate() {
     if (!id) return;
     (async () => {
       try {
-        const res = await fetch(`${API_URL}/api/slates/${id}/public`);
+        // A purely-numeric param is a legacy slate id; anything else is a tracked
+        // share token (moat #5) — the token endpoint also records the view.
+        const endpoint = /^\d+$/.test(id) ? `/api/slates/${id}/public` : `/api/slates/s/${id}`;
+        const res = await fetch(`${API_URL}${endpoint}`);
         if (res.status === 404) {
           setNotFound(true);
           return;
@@ -135,6 +179,9 @@ export default function PublicSlate() {
           </div>
         </div>
       </div>
+
+      {/* Role-aware conversion CTA (moat #5) */}
+      <SlateConversionCTA creator={slate.creator} />
 
       {/* Pitches */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

@@ -160,4 +160,38 @@ export class SlateService {
       return false;
     }
   }
+
+  // ── Tracked share links (moat #5) ──────────────────────────────────────────
+  static async listShareLinks(slateId: number): Promise<SlateShareLink[]> {
+    try {
+      const res = await apiClient.get<{ links: SlateShareLink[] }>(`/api/slates/${slateId}/share-links`);
+      if (isFailure(res)) return [];
+      return res.data?.links ?? [];
+    } catch { return []; }
+  }
+
+  static async createShareLink(slateId: number, label?: string): Promise<SlateShareLink | null> {
+    try {
+      const res = await apiClient.post<{ link: SlateShareLink }>(`/api/slates/${slateId}/share-links`, { label });
+      if (isFailure(res)) return null;
+      return res.data?.link ?? null;
+    } catch { return null; }
+  }
+
+  static async revokeShareLink(linkId: number): Promise<boolean> {
+    try {
+      const res = await apiClient.delete(`/api/slates/share-links/${linkId}`);
+      return !isFailure(res);
+    } catch { return false; }
+  }
+}
+
+export interface SlateShareLink {
+  id: number;
+  token: string;
+  label: string | null;
+  view_count: number;
+  last_viewed_at?: string | null;
+  revoked_at?: string | null;
+  created_at: string;
 }
