@@ -63,20 +63,52 @@ jobs:
             };
 
             const url = `https://api.cloudflare.com/client/v4/accounts/${process.env.CF_ACCOUNT_ID}/workers/observability/telemetry/query`;
-            const res = await fetch(url, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${process.env.CF_API_TOKEN}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(body),
-            });
-            const text = await res.text();
+
+            // Cloudflare's API throws transient 5xx/429s (502 Bad Gateway, 500, rate-limit)
+            // that have nothing to do with our app. Retry with exponential backoff so a
+            // single hiccup doesn't fail the sweep and fire a false-alarm issue/Slack page.
+            const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+            const MAX_ATTEMPTS = 4;
+            let res, text;
+            for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+              try {
+                res = await fetch(url, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${process.env.CF_API_TOKEN}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(body),
+                });
+                text = await res.text();
+                console.log(`HTTP ${res.status} (attempt ${attempt}/${MAX_ATTEMPTS})`);
+                // Retry transient server errors / rate limits; succeed or fall through otherwise.
+                if (res.status >= 500 || res.status === 429) {
+                  if (attempt < MAX_ATTEMPTS) {
+                    const backoff = 2000 * Math.pow(2, attempt - 1); // 2s, 4s, 8s
+                    console.log(`Transient HTTP ${res.status} from Cloudflare — retrying in ${backoff}ms`);
+                    await sleep(backoff);
+                    continue;
+                  }
+                }
+                break;
+              } catch (e) {
+                // Network-level failure (DNS, connection reset) — also transient.
+                console.log(`fetch threw on attempt ${attempt}/${MAX_ATTEMPTS}: ${e.message}`);
+                if (attempt < MAX_ATTEMPTS) {
+                  const backoff = 2000 * Math.pow(2, attempt - 1);
+                  await sleep(backoff);
+                  continue;
+                }
+                core.setFailed(`Cloudflare Observability query failed after ${MAX_ATTEMPTS} attempts: ${e.message}`);
+                return;
+              }
+            }
+
             // Log the raw response — used to verify/repair parsing on the first run.
-            console.log(`HTTP ${res.status}`);
             console.log(text.slice(0, 4000));
             if (!res.ok) {
-              core.setFailed(`Cloudflare Observability query failed: HTTP ${res.status}`);
+              core.setFailed(`Cloudflare Observability query failed: HTTP ${res.status} (after ${MAX_ATTEMPTS} attempts)`);
               return;
             }
 
