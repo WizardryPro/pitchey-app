@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Handshake, Flag, Check, CheckCircle2, Loader2 } from 'lucide-react';
+import { Handshake, Flag, Check, CheckCircle2, Loader2, MessageSquare } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 import { ProductionService } from '../services/production.service';
 import { formatNumber } from '@shared/utils/formatters';
+import DealThread from '@/components/deals/DealThread';
 
 // Production Deals page (disintermediation defense P1 — deal system-of-record).
 // The producer's view of deals they've proposed, with the both-sided "mark outcome"
@@ -57,6 +58,7 @@ export default function ProductionDeals() {
   const [outcomeAmount, setOutcomeAmount] = useState('');
   const [outcomeTerms, setOutcomeTerms] = useState('');
   const [outcomeDate, setOutcomeDate] = useState('');
+  const [threadFor, setThreadFor] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -240,6 +242,18 @@ export default function ProductionDeals() {
                     </div>
                   </div>
                 )}
+
+                {/* Negotiation thread (P3) */}
+                <div className="mt-3 border-t border-gray-100 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setThreadFor(threadFor === d.id ? null : d.id)}
+                    className="inline-flex items-center gap-1 text-gray-500 hover:text-brand-portal-production text-sm font-medium"
+                  >
+                    <MessageSquare className="w-4 h-4" /> {threadFor === d.id ? 'Hide discussion' : 'Discuss'}
+                  </button>
+                  {threadFor === d.id && <DealThread dealId={d.id} />}
+                </div>
               </li>
             );
           })}
