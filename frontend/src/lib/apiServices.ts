@@ -146,31 +146,10 @@ export const ndaAPI = {
   },
 };
 
-// Company Verification Services (Updated to use robust API client)
-export const companyAPI = {
-  // Get verification status
-  async getVerificationStatus() {
-    const response = await apiClient.get<any>('/api/company/verify');
-    if (response.success) {
-      return { success: true, ...(response.data as object || {}) };
-    }
-    return { success: false, error: response.error?.message };
-  },
-
-  // Submit verification request
-  async submitVerification(data: {
-    companyName: string;
-    companyNumber: string;
-    companyWebsite?: string;
-    companyAddress?: string;
-  }) {
-    const response = await apiClient.post<any>('/api/company/verify', data);
-    if (response.success) {
-      return { success: true, ...(response.data as object || {}) };
-    }
-    return { success: false, error: response.error?.message };
-  },
-};
+// Company verification wrappers removed 2026-06-21: they called the dead
+// /api/company/verify endpoint (now unregistered — it 500s on a phantom column).
+// The live company-verification path is /api/production/verify (ProductionVerification
+// page). Nothing called these wrappers (dead import only).
 
 // Analytics Services (Updated to use robust API client)
 export const analyticsAPI = {

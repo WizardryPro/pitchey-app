@@ -57,7 +57,6 @@ vi.mock('../../config', () => ({
 
 // ─── Dynamic import (after all vi.mock calls) ─────────────────────────
 let ndaAPI: any
-let companyAPI: any
 let analyticsAPI: any
 let messageAPI: any
 let pitchServicesAPI: any
@@ -68,7 +67,6 @@ let getUserId: any
 beforeAll(async () => {
   const mod = await import('../apiServices')
   ndaAPI = mod.ndaAPI
-  companyAPI = mod.companyAPI
   analyticsAPI = mod.analyticsAPI
   messageAPI = mod.messageAPI
   pitchServicesAPI = mod.pitchServicesAPI
@@ -168,36 +166,7 @@ describe('apiServices.ts', () => {
     })
   })
 
-  // ─── companyAPI ───────────────────────────────────────────────────
-  describe('companyAPI.getVerificationStatus', () => {
-    it('returns success with spread data', async () => {
-      mockApiGet.mockResolvedValueOnce(success({ status: 'pending', verified: false }))
-      const result = await companyAPI.getVerificationStatus()
-      expect(result.success).toBe(true)
-      expect(result.status).toBe('pending')
-    })
-
-    it('returns success:false on error', async () => {
-      mockApiGet.mockResolvedValueOnce(failure('Not found'))
-      const result = await companyAPI.getVerificationStatus()
-      expect(result.success).toBe(false)
-    })
-  })
-
-  describe('companyAPI.submitVerification', () => {
-    it('posts verification data and returns spread response', async () => {
-      mockApiPost.mockResolvedValueOnce(success({ submitted: true }))
-      const result = await companyAPI.submitVerification({
-        companyName: 'Acme',
-        companyNumber: '12345',
-      })
-      expect(result.success).toBe(true)
-      expect(mockApiPost).toHaveBeenCalledWith('/api/company/verify', {
-        companyName: 'Acme',
-        companyNumber: '12345',
-      })
-    })
-  })
+  // companyAPI removed 2026-06-21 — wrapped the dead /api/company/verify endpoint.
 
   // ─── analyticsAPI ─────────────────────────────────────────────────
   describe('analyticsAPI.getDashboardAnalytics', () => {
