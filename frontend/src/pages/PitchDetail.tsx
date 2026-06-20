@@ -460,6 +460,19 @@ export default function PitchDetail() {
                     </span>
                     <VerificationBadge tier={(pitch as any).creator_verification_tier || (pitch.creator as any)?.verificationTier} />
                     <SealBadge provenance={(pitch as any).provenance} />
+                    {isOwner && (pitch as any).provenance?.content_hash && (
+                      <button
+                        onClick={async () => {
+                          const { API_URL } = await import('../config');
+                          window.open(`${API_URL}/api/pitches/${id}/certificate`, '_blank');
+                        }}
+                        title="Download a printable Certificate of Provenance — your evidence of authorship and date"
+                        className="inline-flex items-center gap-1.5 rounded-full bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-700 ring-1 ring-inset ring-gray-200 transition hover:bg-gray-100"
+                      >
+                        <FileText className="h-3.5 w-3.5" aria-hidden />
+                        Certificate
+                      </button>
+                    )}
                     {/* Follow lives in the unified InterestedCard below — no inline duplicate */}
                   </div>
                 ) : (

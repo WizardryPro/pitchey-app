@@ -145,3 +145,71 @@ export async function sendNewPitchFromFollowedEmail(to: string, data: {
     subject: `${data.creatorName} published a new pitch: ${data.pitchTitle}`
   });
 }
+
+/**
+ * Send "Your pitch was sealed" provenance email. Doubles as an independent,
+ * third-party-dated record of the content hash (kept in the creator's inbox,
+ * outside our database) — the Phase-1 timestamp anchor for IP-theft evidence.
+ * Sent inline (not via a registered template) so it's fully self-contained.
+ * @param apiKey - Pass env.RESEND_API_KEY from Worker env
+ */
+export async function sendPitchSealedEmail(to: string, data: {
+  creatorName: string;
+  pitchTitle: string;
+  contentHash: string;
+  sealedAt: string;
+  verifyUrl: string;
+}, apiKey?: string) {
+  const service = getEmailService(apiKey);
+
+  const esc = (v: string) => String(v ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  let sealedDate = data.sealedAt;
+  try {
+    sealedDate = new Date(data.sealedAt).toLocaleString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric',
+      hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
+    });
+  } catch { /* keep raw */ }
+
+  const subject = `Your pitch "${data.pitchTitle}" is sealed — keep this email as proof`;
+  const html = `
+    <div style="font-family: system-ui, sans-serif; max-width: 560px; margin: 0 auto; color: #1a1a2e;">
+      <h2 style="color: #059669;">🛡️ Your pitch is sealed</h2>
+      <p>Hi ${esc(data.creatorName)},</p>
+      <p>The content of your pitch <strong>"${esc(data.pitchTitle)}"</strong> has been
+      cryptographically sealed (SHA-256) on Pitchey. This is your timestamped proof
+      that the idea existed in this form on this date.</p>
+      <p style="background:#f9fafb;border-left:3px solid #059669;padding:12px 16px;">
+        <strong>Sealed on:</strong> ${esc(sealedDate)}<br>
+        <strong>Content hash:</strong><br>
+        <code style="font-size:12px;word-break:break-all;">${esc(data.contentHash)}</code>
+      </p>
+      <p style="font-weight:bold;">Keep this email.</p>
+      <p>It is an independent, dated record of your seal held outside Pitchey's own
+      systems. If you ever need to prove authorship, this email plus your downloadable
+      Certificate of Provenance together establish priority of your idea.</p>
+      <p>Anyone can verify the seal at:<br>
+        <a href="${esc(data.verifyUrl)}">${esc(data.verifyUrl)}</a></p>
+      <p style="color:#6b7280;font-size:12px;">This is evidence of priority, not a
+      registration of copyright.</p>
+    </div>`;
+
+  const text = [
+    `Hi ${data.creatorName},`,
+    ``,
+    `Your pitch "${data.pitchTitle}" has been cryptographically sealed (SHA-256) on Pitchey.`,
+    ``,
+    `Sealed on: ${sealedDate}`,
+    `Content hash: ${data.contentHash}`,
+    ``,
+    `KEEP THIS EMAIL. It is an independent, dated record of your seal held outside`,
+    `Pitchey's systems. It helps establish priority of your idea if ever disputed.`,
+    ``,
+    `Verify the seal at: ${data.verifyUrl}`,
+    ``,
+    `This is evidence of priority, not a registration of copyright.`,
+  ].join('\n');
+
+  return await service.send({ to, subject, html, text }, { templateType: 'pitchSealed' });
+}

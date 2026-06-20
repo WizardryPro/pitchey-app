@@ -2736,6 +2736,80 @@ class RouteRegistry {
       });
     });
 
+    // Downloadable Certificate of Provenance — OWNER-ONLY, content-inclusive HTML
+    // the creator can save/print as evidence of authorship. Distinct from the public
+    // verify endpoint above (which never exposes content). Returns text/html so the
+    // browser renders it directly with a "Save as PDF" button.
+    this.register('GET', '/api/pitches/:id/certificate', async (req) => {
+      const authResult = await this.requirePortalAuth(req, ['creator', 'production']);
+      if (!authResult.authorized) return authResult.response!;
+      const userId = (authResult.user as any).id;
+
+      const parts = new URL(req.url).pathname.split('/');
+      const pitchId = parts[parts.indexOf('pitches') + 1];
+
+      const sql = this.db.getSql() as any;
+      const { getCertificateData, renderCertificateHTML, maybeUpgradeProvenanceOts } = await import('./services/pitch-provenance');
+      let data = await getCertificateData(sql, pitchId);
+      if (!data) {
+        return new Response('No provenance certificate is available for this pitch yet.', { status: 404 });
+      }
+      // Owner-only: the certificate embeds protected content.
+      if (String(data.pitch.user_id) !== String(userId)) {
+        return new Response('Only the pitch owner can download its certificate.', { status: 403 });
+      }
+      // Best-effort: if the OTS proof is still pending, try an upgrade now so the
+      // creator sees a fresh "Bitcoin-anchored" status (no-op if <1h old).
+      if (data.ots.status === 'pending') {
+        try {
+          await maybeUpgradeProvenanceOts(sql, data.latestHash);
+          data = (await getCertificateData(sql, pitchId)) || data;
+        } catch { /* keep the pending view */ }
+      }
+
+      const verifyBaseUrl = this.env.FRONTEND_URL || 'https://pitchey-5o8.pages.dev';
+      const html = renderCertificateHTML(data, { verifyBaseUrl });
+      return new Response(html, {
+        status: 200,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    });
+
+    // Download the raw .ots proof file (owner-only) — the machine-verifiable artifact
+    // that anyone can check against the Bitcoin blockchain with standard OpenTimestamps
+    // tooling. Triggers a best-effort upgrade first so the file is as complete as possible.
+    this.register('GET', '/api/pitches/:id/provenance.ots', async (req) => {
+      const authResult = await this.requirePortalAuth(req, ['creator', 'production']);
+      if (!authResult.authorized) return authResult.response!;
+      const userId = (authResult.user as any).id;
+
+      const parts = new URL(req.url).pathname.split('/');
+      const pitchId = parts[parts.indexOf('pitches') + 1];
+
+      const sql = this.db.getSql() as any;
+      const { getProvenanceOts, maybeUpgradeProvenanceOts } = await import('./services/pitch-provenance');
+      let rec = await getProvenanceOts(sql, pitchId);
+      if (!rec) {
+        return new Response('No OpenTimestamps proof is available for this pitch yet.', { status: 404 });
+      }
+      if (String(rec.ownerId) !== String(userId)) {
+        return new Response('Only the pitch owner can download its proof.', { status: 403 });
+      }
+      try {
+        await maybeUpgradeProvenanceOts(sql, rec.hash);
+        rec = (await getProvenanceOts(sql, pitchId)) || rec;
+      } catch { /* serve whatever we have */ }
+
+      const { fromBase64 } = await import('./services/opentimestamps');
+      return new Response(fromBase64(rec.otsBase64), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/octet-stream',
+          'Content-Disposition': `attachment; filename="pitch-${pitchId}.ots"`,
+        },
+      });
+    });
+
     this.register('POST', '/api/pitches/:id/publish', async (req) => {
       // Publishing is the paywall: watchers (user_type='viewer') can create
       // drafts but must upgrade to a Creator account to publish. The VIEWER
@@ -2757,11 +2831,35 @@ class RouteRegistry {
         // idea existed on Pitchey at this date (the creator's priority-of-idea
         // artifact). Fire-and-forget; sealPitchProvenance never throws.
         try {
-          const sealBody = await response.clone().json() as { data?: { pitch?: { id: number } } };
+          const sealBody = await response.clone().json() as { data?: { pitch?: { id: number; title?: string } } };
           const sealedPitchId = sealBody?.data?.pitch?.id;
           if (sealedPitchId) {
             const { sealPitchProvenance } = await import('./services/pitch-provenance');
-            await sealPitchProvenance(this.db.getSql() as any, sealedPitchId);
+            const seal = await sealPitchProvenance(this.db.getSql() as any, sealedPitchId);
+
+            // Email the creator their seal — exactly once per NEW seal. Besides
+            // notifying them, this lodges an independently-dated copy of the hash in
+            // their inbox (Phase-1 anchor: a third-party timestamp outside our DB).
+            // Best-effort; must never block or fail publishing.
+            if (seal?.isNew && this.env.RESEND_API_KEY) {
+              try {
+                const [creator] = await this.db.query(
+                  'SELECT email, name FROM users WHERE id = (SELECT user_id FROM pitches WHERE id = $1)',
+                  [sealedPitchId]
+                ) as { email?: string; name?: string }[];
+                if (creator?.email) {
+                  const frontend = this.env.FRONTEND_URL || 'https://pitchey-5o8.pages.dev';
+                  const { sendPitchSealedEmail } = await import('./services/email');
+                  await sendPitchSealedEmail(creator.email, {
+                    creatorName: creator.name || 'there',
+                    pitchTitle: sealBody?.data?.pitch?.title || 'your pitch',
+                    contentHash: seal.hash,
+                    sealedAt: seal.sealedAt || new Date().toISOString(),
+                    verifyUrl: `${frontend}/verify/p/${seal.hash}`,
+                  }, this.env.RESEND_API_KEY);
+                }
+              } catch (e) { console.error('pitch-sealed email failed (non-fatal):', e); }
+            }
           }
         } catch (e) { console.error('provenance seal on publish failed:', e); }
 
@@ -22010,7 +22108,15 @@ const websocketSafeHandler = {
           break;
 
         case "0 * * * *": // Hourly
-          await checkMoneyPathSLOs(env, ctx);
+          await Promise.all([
+            checkMoneyPathSLOs(env, ctx),
+            // Provenance OpenTimestamps anchor: submit new seals to the OTS calendars
+            // and upgrade pending proofs once Bitcoin confirms. Decoupled from publish.
+            (async () => {
+              const { sweepProvenanceOts } = await import('./services/pitch-provenance');
+              await sweepProvenanceOts(env);
+            })(),
+          ]);
           break;
 
         case "0 0 * * *": // Daily
