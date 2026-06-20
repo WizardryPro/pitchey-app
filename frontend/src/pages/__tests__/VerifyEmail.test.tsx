@@ -68,7 +68,7 @@ describe('VerifyEmail', () => {
       await waitFor(() => {
         expect(screen.getByText('Email verified successfully!')).toBeInTheDocument()
       })
-      expect(screen.getByText(/finish your profile/)).toBeInTheDocument()
+      expect(screen.getByText(/complete your profile/)).toBeInTheDocument()
       expect(screen.getByText('Redirecting to login page...')).toBeInTheDocument()
     })
 

@@ -267,9 +267,10 @@ export class StripeService {
 
     if (!timestamp || !signature) return false;
 
-    // Reject timestamps older than 5 minutes to prevent replay attacks
+    // Reject timestamps more than 5 minutes from now (either direction) to prevent
+    // replay attacks. Math.abs guards against future-dated forgeries, not just stale ones.
     const age = Math.floor(Date.now() / 1000) - parseInt(timestamp);
-    if (age > 300) return false;
+    if (Math.abs(age) > 300) return false;
 
     const signedPayload = `${timestamp}.${payload}`;
     const key = await crypto.subtle.importKey(

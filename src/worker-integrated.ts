@@ -1832,18 +1832,19 @@ class RouteRegistry {
       }
     }
 
+    // Clear BOTH the live `pitchey-session` cookie AND the legacy `better-auth-session`
+    // name. The old code cleared only the legacy name, so the real cookie lingered in
+    // the browser after logout (the session row is deleted above, so it was a dead
+    // cookie — but clearing it is correct hygiene). Two Set-Cookie headers require a
+    // Headers object (a plain object literal can only hold one).
+    const logoutHeaders = new Headers({ 'Content-Type': 'application/json', ...corsHeaders });
+    for (const cookie of (await import('./config/session.config')).createClearSessionCookie()) {
+      logoutHeaders.append('Set-Cookie', cookie);
+    }
     return new Response(JSON.stringify({
       success: true,
       data: { message: 'Logged out successfully' }
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        // Clear the Better Auth session cookie
-        'Set-Cookie': 'better-auth-session=; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT',
-        ...corsHeaders
-      }
-    });
+    }), { status: 200, headers: logoutHeaders });
   }
 
   /**
@@ -3085,8 +3086,10 @@ class RouteRegistry {
     this.register('POST', '/api/meetings/schedule', this.handleMeetingSchedule.bind(this));
     this.register('POST', '/api/export', this.handleExport.bind(this));
     this.register('POST', '/api/verification/start', this.handleVerificationStart.bind(this));
-    this.register('GET', '/api/company/verify', this.handleCompanyVerify.bind(this));
-    this.register('POST', '/api/company/verify', this.handleCompanyVerifySubmit.bind(this));
+    // NOTE: /api/company/verify was unregistered (2026-06-21) — it 500s on a phantom
+    // `users.verification_status` column and nothing live calls it. The live company
+    // verification path is /api/production/verify (ProductionVerification page). The
+    // dead handlers (handleCompanyVerify*) remain as orphans; do not re-wire.
     this.register('GET', '/api/info-requests', this.handleGetInfoRequests.bind(this));
     this.register('POST', '/api/info-requests', this.handleCreateInfoRequest.bind(this));
     this.register('POST', '/api/info-requests/:id/respond', this.handleRespondInfoRequest.bind(this));
@@ -9137,7 +9140,13 @@ pitchey_analytics_datapoints_per_minute 1250
 
       // Check if database is available
       if (!this.db) {
-        // Return demo/mock response if database is not available
+        // DB unreachable (e.g. Neon cold-start blip): we return a safe default so the
+        // UI doesn't break, but this hides real NDA state from a producer — surface it
+        // to ops so a transient outage isn't invisible. (Hardening to a 503 is deferred;
+        // needs a frontend retry-handling check first.)
+        if (typeof Sentry?.captureException === 'function') {
+          Sentry.captureException(new Error('getNDAStatus: DB unavailable, returning safe default'), { extra: { pitchId } });
+        }
         return builder.success({
           hasNDA: false,
           nda: null,
@@ -9165,7 +9174,11 @@ pitchey_analytics_datapoints_per_minute 1250
       });
     } catch (error) {
       console.error('NDA status error:', error);
-      // Return safe default response on error
+      // Report so a DB failure during NDA checks isn't invisible to ops; still return a
+      // safe default so the UI degrades rather than breaks.
+      if (typeof Sentry?.captureException === 'function') {
+        Sentry.captureException(error instanceof Error ? error : new Error(String(error)), { extra: { handler: 'getNDAStatus', pitchId } });
+      }
       return builder.success({
         hasNDA: false,
         nda: null,
@@ -9207,7 +9220,11 @@ pitchey_analytics_datapoints_per_minute 1250
 
       // Check if database is available
       if (!this.db) {
-        // Return demo/mock response if database is not available
+        // DB unreachable: safe default keeps the UI working, but report it so a
+        // transient outage isn't invisible to ops.
+        if (typeof Sentry?.captureException === 'function') {
+          Sentry.captureException(new Error('canRequestNDA: DB unavailable, returning safe default'), { extra: { pitchId } });
+        }
         return builder.success({
           canRequest: true,
           reason: null,
@@ -9254,7 +9271,10 @@ pitchey_analytics_datapoints_per_minute 1250
       });
     } catch (error) {
       console.error('Can request NDA error:', error);
-      // Return safe default response on error
+      // Report so a DB failure isn't invisible; still return a safe default.
+      if (typeof Sentry?.captureException === 'function') {
+        Sentry.captureException(error instanceof Error ? error : new Error(String(error)), { extra: { handler: 'canRequestNDA', pitchId } });
+      }
       return builder.success({
         canRequest: true,
         reason: null,
@@ -11756,7 +11776,11 @@ pitchey_analytics_datapoints_per_minute 1250
           // is the revocation path once Stripe gives up retrying. No new status
           // enum value introduced — surface failure via metadata.last_payment_failed_at.
           const invoice = event.data.object;
-          const subId = invoice.subscription;
+          // Stripe API v2025 drift: invoice.subscription moved to
+          // invoice.parent.subscription_details.subscription (same fallback as
+          // invoice.paid above). Without it, newer accounts skip dunning logging.
+          const subId = invoice.subscription
+            || invoice.parent?.subscription_details?.subscription;
           if (!subId) break;
 
           const [row] = await sql`
