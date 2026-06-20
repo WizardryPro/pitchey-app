@@ -27,9 +27,11 @@ failures; the open question is how many *unknown* ones remain.
 
 **The 6 highest-leverage weak parts** (across all dimensions, ranked):
 
-1. **Branch protection doesn't mark the now-working gates as REQUIRED** — *lowest effort,
-   highest leverage on the board.* The enforcing coverage gate + integration tier + 3 launch
-   guards are all advisory: a red gate merged anyway this session. One toggle gives them teeth.
+1. ~~**Branch protection doesn't mark the now-working gates as REQUIRED**~~ — ✅ **DONE
+   (2026-06-20).** `main` now requires *Code Coverage Quality Gate*, *⚡ Worker Tests*, and
+   *🎨 Frontend Tests* before merge (codified in `scripts/setup-branch-protection.sh`). A red
+   gate can no longer merge. Follow-up: make the path-filtered `integration` job an always-run
+   skip-pass gate so it too can be required.
 2. **The silent-wrong-answer class is only guarded at "didn't 500"** — integration tests assert
    status, not side-effects (DB row written? credit changed? access granted correctly?). Most
    expensive on the money (Stripe/credits) and trust (NDA/verification) paths.
