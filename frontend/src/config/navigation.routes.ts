@@ -134,6 +134,9 @@ export const PRODUCTION_ROUTES = {
   submissionsRejected: '/production/submissions/rejected',
   submissionsArchive: '/production/submissions/archive',
   
+  // Deals
+  deals: '/production/deals',
+
   // Operations
   saved: '/production/saved',
   collaborations: '/production/collaborations',
