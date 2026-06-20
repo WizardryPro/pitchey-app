@@ -3246,6 +3246,11 @@ class RouteRegistry {
     this.register('GET', '/api/production/deals/:dealId/contract', (req: Request) =>
       getProductionContract(req, this.env)
     );
+    // Deal outcome capture (disintermediation defense P1) — both-sided; production side.
+    this.register('POST', '/api/production/deals/:dealId/outcome', async (req) => {
+      const { markDealOutcome } = await import('./handlers/deal-outcome');
+      return markDealOutcome(req, this.env);
+    });
 
     // Distribution & Export
     this.register('GET', '/api/production/projects/:id/distribution', (req: Request) =>
@@ -3621,6 +3626,11 @@ class RouteRegistry {
     this.register('POST', '/api/creator/deals/:id/respond', async (req) => {
       const { respondToCreatorDeal } = await import('./handlers/creator-deals');
       return respondToCreatorDeal(req, this.env);
+    });
+    // Deal outcome capture (disintermediation defense P1) — both-sided; creator side.
+    this.register('POST', '/api/creator/deals/:id/outcome', async (req) => {
+      const { markDealOutcome } = await import('./handlers/deal-outcome');
+      return markDealOutcome(req, this.env);
     });
     this.register('GET', '/api/creator/pitches/analytics', async (req) => {
       const { creatorPitchesAnalyticsHandler } = await import('./handlers/creator-sidebar');

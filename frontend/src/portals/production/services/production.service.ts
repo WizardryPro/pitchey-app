@@ -371,6 +371,27 @@ export class ProductionService {
     return response.data.deal;
   }
 
+  // Mark or confirm a deal outcome (disintermediation defense P1 — deal
+  // system-of-record). Both-sided: the production side records how a deal ended
+  // even when money moved off-platform; the creator confirms (or vice versa).
+  static async markDealOutcome(dealId: number, data: {
+    outcome: 'closed_on_platform' | 'closed_off_platform' | 'dead';
+    amount?: number;
+    terms?: string;
+    closeDate?: string;
+  }): Promise<{ deal: ProductionDeal; mutuallyConfirmed: boolean }> {
+    const response = await apiClient.post<{ deal: ProductionDeal; mutuallyConfirmed: boolean }>(
+      `/api/production/deals/${dealId.toString()}/outcome`,
+      data
+    );
+
+    if (response.success !== true || response.data?.deal === undefined) {
+      throw new Error(getErrorMessage(response.error, 'Failed to mark deal outcome'));
+    }
+
+    return response.data;
+  }
+
   // Search for talent
   static async searchTalent(filters?: {
     role?: string;
