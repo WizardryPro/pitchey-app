@@ -24,7 +24,10 @@ jobs:
       - name: Check Frontend
         id: frontend
         run: |
-          if curl -f https://pitchey-5o8.pages.dev/ > /dev/null 2>&1; then
+          # Retry transient blips (CDN hiccup, cold start, momentary 5xx) so a single
+          # bad reading at the top of the hour doesn't page a false outage. A genuine
+          # sustained outage still fails after all retries exhaust.
+          if curl -f --retry 3 --retry-delay 2 --retry-all-errors --retry-connrefused --max-time 20 https://pitchey-5o8.pages.dev/ > /dev/null 2>&1; then
             echo "✅ Frontend is healthy"
           else
             echo "❌ Frontend is down"
@@ -34,7 +37,7 @@ jobs:
       - name: Check API
         id: api
         run: |
-          if curl -f https://pitchey-api-prod.ndlovucavelle.workers.dev/api/health > /dev/null 2>&1; then
+          if curl -f --retry 3 --retry-delay 2 --retry-all-errors --retry-connrefused --max-time 20 https://pitchey-api-prod.ndlovucavelle.workers.dev/api/health > /dev/null 2>&1; then
             echo "✅ API is healthy"
           else
             echo "❌ API is down"
@@ -50,7 +53,9 @@ jobs:
       - name: Check service statuses (email/db/redis/stripe/rateLimit)
         id: services
         run: |
-          BODY="$(curl -fsS https://pitchey-api-prod.ndlovucavelle.workers.dev/api/health)"
+          # Retry transport/5xx blips. A 200 carrying an unhealthy service status is NOT
+          # retried (curl sees success) — those still fire immediately, as intended.
+          BODY="$(curl -fsS --retry 3 --retry-delay 2 --retry-all-errors --retry-connrefused --max-time 20 https://pitchey-api-prod.ndlovucavelle.workers.dev/api/health)"
           BAD="$(echo "$BODY" | python3 -c '
           import sys, json
           services = (json.load(sys.stdin).get("data") or {}).get("services") or {}
