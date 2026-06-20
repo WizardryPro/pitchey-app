@@ -63,6 +63,8 @@ export async function getCreatorDeals(request: Request, env: Env): Promise<Respo
              d.deal_state AS status,
              COALESCE(d.option_amount, d.purchase_price, d.development_fee, 0) AS amount,
              d.backend_percentage, d.notes, d.created_at, d.state_changed_at,
+             d.outcome::text AS outcome, d.outcome_amount, d.outcome_terms, d.closed_at,
+             d.outcome_confirmed_by_creator, d.outcome_confirmed_by_production,
              p.title AS pitch_title, p.genre AS pitch_genre,
              COALESCE(NULLIF(TRIM(pc.first_name || ' ' || pc.last_name), ''), pc.company_name, pc.username, 'Production company') AS producer_name
       FROM production_deals d

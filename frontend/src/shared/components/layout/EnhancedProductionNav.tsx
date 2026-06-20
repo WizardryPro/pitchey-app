@@ -45,6 +45,12 @@ export const productionNavigationSections: NavigationSection[] = [
   // items here. ("Projects"/"Pipeline" and the "Submissions" review pipeline were parked
   // earlier the same way.) "Collaborations" (external business partners) stays.
   {
+    title: 'Deals',
+    items: [
+      { label: 'Deals', path: PRODUCTION_ROUTES.deals, icon: Handshake },
+    ],
+  },
+  {
     title: 'People',
     items: [
       { label: 'Invite Creators', path: PRODUCTION_ROUTES.invites, icon: UserPlus },

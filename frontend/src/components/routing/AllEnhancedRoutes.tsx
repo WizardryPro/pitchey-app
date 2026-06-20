@@ -63,6 +63,7 @@ const InvestorDiscover = lazy(() => import('@portals/investor/pages/InvestorDisc
 const ProductionActivity = lazy(() => import('@portals/production/pages/ProductionActivity'));
 const ProductionAnalytics = lazy(() => import('@portals/production/pages/ProductionAnalytics'));
 const ProductionStats = lazy(() => import('@portals/production/pages/ProductionStats'));
+const ProductionDeals = lazy(() => import('@portals/production/pages/ProductionDeals'));
 const ProductionSubmissions = lazy(() => import('@portals/production/pages/ProductionSubmissions'));
 const ProductionSubmissionsNew = lazy(() => import('@portals/production/pages/ProductionSubmissionsNew'));
 const ProductionSubmissionsReview = lazy(() => import('@portals/production/pages/ProductionSubmissionsReview'));
@@ -299,7 +300,12 @@ export function AllProductionRoutes({ isAuthenticated, userType }: RoutesProps) 
       <Route path={getRelativePath(PRODUCTION_ROUTES.stats, '/production')} element={
         isProduction ? <ProductionStats /> : <Navigate to="/login/production" />
       } />
-      
+
+      {/* Deals — outcome capture (disintermediation defense P1) */}
+      <Route path={getRelativePath(PRODUCTION_ROUTES.deals, '/production')} element={
+        isProduction ? <ProductionDeals /> : <Navigate to="/login/production" />
+      } />
+
       {/* Submissions */}
       <Route path={getRelativePath(PRODUCTION_ROUTES.submissions, '/production')} element={
         isProduction ? <ProductionSubmissions /> : <Navigate to="/login/production" />
