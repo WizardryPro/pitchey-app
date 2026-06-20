@@ -94,7 +94,7 @@ export default function VerifyEmail() {
                 Email verified successfully!
               </h3>
               <p className="text-sm text-gray-600 mb-6">
-                Next: log in and finish your profile — that's the last step before your dashboard.
+                Next: log in and complete your profile (name and a short bio) — it's required before you can reach your dashboard.
               </p>
               <p className="text-xs text-gray-500 mb-6">
                 Redirecting to login page...
