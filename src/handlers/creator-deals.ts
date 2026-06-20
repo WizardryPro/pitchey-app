@@ -153,6 +153,15 @@ export async function respondToCreatorDeal(request: Request, env: Env): Promise<
       )
     `, { fallback: [], context: 'creator-deals.respond.notify' });
 
+    // Mirror a counter into the structured negotiation thread (P3) — best-effort,
+    // so the deal thread is the complete record and not just the notes-blob.
+    if (action === 'counter') {
+      await safeQuery(() => sql`
+        INSERT INTO deal_messages (deal_id, sender_id, sender_role, kind, body, proposed_amount)
+        VALUES (${dealId}, ${Number(userId)}, 'creator', 'counter', ${message || null}, ${counterAmount})
+      `, { fallback: [], context: 'creator-deals.respond.thread-mirror' });
+    }
+
     return jsonResponse({ success: true, data: { deal: updated } }, origin);
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));

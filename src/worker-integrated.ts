@@ -3632,6 +3632,15 @@ class RouteRegistry {
       const { markDealOutcome } = await import('./handlers/deal-outcome');
       return markDealOutcome(req, this.env);
     });
+    // Deal negotiation thread (disintermediation defense P3) — role-neutral, both portals.
+    this.register('GET', '/api/deals/:id/messages', async (req) => {
+      const { getDealMessages } = await import('./handlers/deal-messages');
+      return getDealMessages(req, this.env);
+    });
+    this.register('POST', '/api/deals/:id/messages', async (req) => {
+      const { postDealMessage } = await import('./handlers/deal-messages');
+      return postDealMessage(req, this.env);
+    });
     this.register('GET', '/api/creator/pitches/analytics', async (req) => {
       const { creatorPitchesAnalyticsHandler } = await import('./handlers/creator-sidebar');
       return creatorPitchesAnalyticsHandler(req, this.env);

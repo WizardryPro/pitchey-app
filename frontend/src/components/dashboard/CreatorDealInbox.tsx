@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Handshake, Check, X, Reply, Flag, CheckCircle2 } from 'lucide-react';
+import { Handshake, Check, X, Reply, Flag, CheckCircle2, MessageSquare } from 'lucide-react';
 import apiClient from '../../lib/api-client';
 import { formatNumber } from '@shared/utils/formatters';
+import DealThread from '../deals/DealThread';
 
 // Creator Deal Inbox (moat #6) — production deals proposed to the creator, with
 // accept / counter / reject. Self-contained; renders null when there are no deals
@@ -63,6 +64,7 @@ export default function CreatorDealInbox() {
   const [outcomeAmount, setOutcomeAmount] = useState('');
   const [outcomeTerms, setOutcomeTerms] = useState('');
   const [outcomeDate, setOutcomeDate] = useState('');
+  const [threadFor, setThreadFor] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -305,6 +307,18 @@ export default function CreatorDealInbox() {
                   </div>
                 </div>
               )}
+
+              {/* Negotiation thread (P3) */}
+              <div className="mt-3 border-t border-gray-100 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setThreadFor(threadFor === d.id ? null : d.id)}
+                  className="inline-flex items-center gap-1 text-gray-500 hover:text-purple-700 text-sm font-medium"
+                >
+                  <MessageSquare className="w-4 h-4" /> {threadFor === d.id ? 'Hide discussion' : 'Discuss'}
+                </button>
+                {threadFor === d.id && <DealThread dealId={d.id} />}
+              </div>
             </li>
           );
         })}
