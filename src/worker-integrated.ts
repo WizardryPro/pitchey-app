@@ -993,8 +993,15 @@ class RouteRegistry {
       return { valid: false };
     }
 
-    // Get JWT secret from environment
-    const jwtSecret = this.env.JWT_SECRET || 'test-secret-key-for-development';
+    // Get JWT secret from environment. FAIL CLOSED in production: never fall back to a
+    // guessable hardcoded secret — that would let anyone forge tokens. JWT_SECRET is a
+    // required prod deploy secret (ci-cd gate); web auth is cookie-based, so rejecting a
+    // JWT bearer when the secret is misconfigured is safe (no live JWT-only clients).
+    const isProd = String(this.env.ENVIRONMENT || '').toLowerCase() === 'production';
+    const jwtSecret = this.env.JWT_SECRET || (isProd ? '' : 'test-secret-key-for-development');
+    if (!jwtSecret) {
+      return { valid: false };
+    }
 
     // Verify the token
     const payload = await verifyJWT(token, jwtSecret);
@@ -4297,7 +4304,9 @@ class RouteRegistry {
       rateLimitConfig = 'auth';
     } else if (path.startsWith('/api/upload')) {
       rateLimitConfig = 'upload';
-    } else if (path.includes('/investment') || path.includes('/nda')) {
+    } else if ((path.includes('/investment') || path.includes('/nda') || path.includes('/deals')) && request.method !== 'GET') {
+      // strict bucket for high-value WRITES only — GETs (deal inbox reads etc.) stay
+      // on the default 'api' bucket so dashboard polling isn't throttled.
       rateLimitConfig = 'strict';
     }
 
@@ -9140,18 +9149,14 @@ pitchey_analytics_datapoints_per_minute 1250
 
       // Check if database is available
       if (!this.db) {
-        // DB unreachable (e.g. Neon cold-start blip): we return a safe default so the
-        // UI doesn't break, but this hides real NDA state from a producer — surface it
-        // to ops so a transient outage isn't invisible. (Hardening to a 503 is deferred;
-        // needs a frontend retry-handling check first.)
+        // DB unreachable (e.g. Neon cold-start blip): 503 so the client shows
+        // "temporarily unavailable" and can retry, rather than a misleading
+        // "no NDA" that hides real state from a producer. NDAService.getNDAStatus
+        // catches non-200 and degrades gracefully (button disabled on ndaCheckError).
         if (typeof Sentry?.captureException === 'function') {
-          Sentry.captureException(new Error('getNDAStatus: DB unavailable, returning safe default'), { extra: { pitchId } });
+          Sentry.captureException(new Error('getNDAStatus: DB unavailable'), { extra: { pitchId } });
         }
-        return builder.success({
-          hasNDA: false,
-          nda: null,
-          canAccess: false
-        });
+        return builder.error(ErrorCode.SERVICE_UNAVAILABLE, 'NDA status temporarily unavailable');
       }
 
       // Check if user has an NDA for this pitch
@@ -9174,16 +9179,12 @@ pitchey_analytics_datapoints_per_minute 1250
       });
     } catch (error) {
       console.error('NDA status error:', error);
-      // Report so a DB failure during NDA checks isn't invisible to ops; still return a
-      // safe default so the UI degrades rather than breaks.
+      // A thrown query error is the same ops signal as DB-unavailable → 503 (not a
+      // misleading safe-default). Reported to Sentry; FE degrades gracefully.
       if (typeof Sentry?.captureException === 'function') {
         Sentry.captureException(error instanceof Error ? error : new Error(String(error)), { extra: { handler: 'getNDAStatus', pitchId } });
       }
-      return builder.success({
-        hasNDA: false,
-        nda: null,
-        canAccess: false
-      });
+      return builder.error(ErrorCode.SERVICE_UNAVAILABLE, 'NDA status temporarily unavailable');
     }
   }
 
@@ -9220,16 +9221,12 @@ pitchey_analytics_datapoints_per_minute 1250
 
       // Check if database is available
       if (!this.db) {
-        // DB unreachable: safe default keeps the UI working, but report it so a
-        // transient outage isn't invisible to ops.
+        // DB unreachable → 503 + Sentry, not a misleading canRequest:true (which could
+        // hide an existing NDA). FE degrades gracefully (button disabled on error).
         if (typeof Sentry?.captureException === 'function') {
-          Sentry.captureException(new Error('canRequestNDA: DB unavailable, returning safe default'), { extra: { pitchId } });
+          Sentry.captureException(new Error('canRequestNDA: DB unavailable'), { extra: { pitchId } });
         }
-        return builder.success({
-          canRequest: true,
-          reason: null,
-          existingNDA: null
-        });
+        return builder.error(ErrorCode.SERVICE_UNAVAILABLE, 'NDA availability temporarily unavailable');
       }
 
       // Check if pitch exists
@@ -9271,15 +9268,11 @@ pitchey_analytics_datapoints_per_minute 1250
       });
     } catch (error) {
       console.error('Can request NDA error:', error);
-      // Report so a DB failure isn't invisible; still return a safe default.
+      // 503 on a query failure (same ops signal as DB-unavailable), reported to Sentry.
       if (typeof Sentry?.captureException === 'function') {
         Sentry.captureException(error instanceof Error ? error : new Error(String(error)), { extra: { handler: 'canRequestNDA', pitchId } });
       }
-      return builder.success({
-        canRequest: true,
-        reason: null,
-        existingNDA: null
-      });
+      return builder.error(ErrorCode.SERVICE_UNAVAILABLE, 'NDA availability temporarily unavailable');
     }
   }
 
@@ -22076,10 +22069,45 @@ function checkProdAxiomTokenOnce(env: any): Response | null {
   );
 }
 
+// Fail-closed if a NON-live Stripe key is configured in production — a test key in
+// prod silently processes/discards real billing events. Mirrors the AXIOM guard.
+let stripeKeyPreflightChecked = false;
+function checkProdStripeKeyOnce(env: any): Response | null {
+  if (stripeKeyPreflightChecked) return null;
+  stripeKeyPreflightChecked = true;
+
+  const envName = (env.ENVIRONMENT || env.SENTRY_ENVIRONMENT || '').toLowerCase();
+  const isProd = envName === 'production' || envName === 'prod';
+  if (!isProd) return null;
+  const key = env.STRIPE_SECRET_KEY;
+  // Only guard against a clearly-wrong (test) key; an absent key is handled per-handler
+  // ("Stripe not configured") and shouldn't 503 the whole worker.
+  if (!key || key.startsWith('sk_live_')) return null;
+
+  try {
+    Sentry.captureMessage(
+      'STRIPE_SECRET_KEY is not a live key (sk_live_) in production — billing events would be mis-processed.',
+      'fatal',
+    );
+  } catch {
+    // Sentry not wrapped yet — the 503 below surfaces it.
+  }
+  console.error('[FATAL] Non-live STRIPE_SECRET_KEY in production. Refusing request.');
+  return new Response(
+    JSON.stringify({
+      error: 'Server misconfigured',
+      detail: 'A live Stripe key is required in production.',
+    }),
+    { status: 503, headers: { 'Content-Type': 'application/json' } },
+  );
+}
+
 const websocketSafeHandler = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const preflightFail = checkProdAxiomTokenOnce(env);
     if (preflightFail) return preflightFail;
+    const stripePreflightFail = checkProdStripeKeyOnce(env);
+    if (stripePreflightFail) return stripePreflightFail;
 
     const axiomLogger = createAxiomLogger(env);
     const startTime = Date.now();

@@ -37,10 +37,13 @@ export class AuthAdapter {
   constructor(config: AuthAdapterConfig) {
     this.env = config.env;
     this.enableJWTFallback = config.enableJWTFallback ?? true;
+    // FAIL CLOSED in production: no guessable hardcoded fallback (token forgery risk).
+    // JWT_SECRET is a required prod deploy secret; cookie auth is the live web path.
+    const isProd = String(config.env?.ENVIRONMENT || '').toLowerCase() === 'production';
     this.jwtSecret =
       config.env?.JWT_SECRET ||
       config.env?.BETTER_AUTH_SECRET ||
-      'fallback-secret';
+      (isProd ? '' : 'fallback-secret');
   }
 
   /**
@@ -135,6 +138,9 @@ export class AuthAdapter {
   }
 
   private async validateJWTToken(token: string): Promise<JWTPayload | null> {
+    // Fail closed: no usable secret (prod without JWT_SECRET) → reject the JWT bearer
+    // rather than verify against an empty/guessable key.
+    if (!this.jwtSecret) return null;
     try {
       const parts = token.split('.');
       if (parts.length !== 3) return null;
