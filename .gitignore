@@ -125,6 +125,12 @@ files(1)/
 # Claude Code runtime artifacts — lock files from the scheduled-tasks skill; keep config (settings.json etc) tracked
 .claude/scheduled_tasks.lock
 
+# Local-only skills (work on disk for this dev; not shared in the repo). The 5 official
+# project skills under .claude/skills/ stay tracked; these three are personal tooling.
+.claude/skills/catch-swallow-auditor/
+.claude/skills/pr-gate-generator/
+.claude/skills/system-cartographer/
+
 # Local backup of the gitignored MCP config (contains the Neon API key — never commit)
 .mcp.json.bak
 coverage-integration/
