@@ -3587,6 +3587,14 @@ class RouteRegistry {
       const { investorSettingsSaveHandler } = await import('./handlers/investor-sidebar');
       return investorSettingsSaveHandler(req, this.env);
     });
+    this.register('GET', '/api/investor/thesis', async (req) => {
+      const { getInvestorThesisHandler } = await import('./handlers/investor-thesis');
+      return getInvestorThesisHandler(req, this.env);
+    });
+    this.register('PUT', '/api/investor/thesis', async (req) => {
+      const { updateInvestorThesisHandler } = await import('./handlers/investor-thesis');
+      return updateInvestorThesisHandler(req, this.env);
+    });
     this.register('GET', '/api/investor/pitch/:pitchId/investment-detail', async (req) => {
       const { investorPitchInvestmentDetailHandler } = await import('./handlers/investor-sidebar');
       return investorPitchInvestmentDetailHandler(req, this.env);

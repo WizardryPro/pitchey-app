@@ -165,7 +165,50 @@ export async function userByIdHandler(request: Request, env: Env): Promise<Respo
       return jsonResponse({ success: false, error: { code: 'NOT_FOUND', message: 'User not found' } }, 404, origin);
     }
 
-    return jsonResponse({ success: true, data: user }, 200, origin);
+    // For investors, expose their structured investment thesis on the public
+    // profile only when they've opted in (investor_thesis.is_public = true).
+    // Non-investors get thesis: null. Missing table (migration 116 not applied)
+    // or any read error → thesis: null, never breaks the profile lookup.
+    let thesis: Record<string, unknown> | null = null;
+    if (user.user_type === 'investor') {
+      try {
+        const [t] = await sql`
+          SELECT genres, formats, stages, deal_types, territories, themes,
+                 budget_min_usd, budget_max_usd, check_size_min_usd, check_size_max_usd,
+                 positioning, is_public
+          FROM investor_thesis
+          WHERE investor_id = ${userId}
+          LIMIT 1
+        `;
+        if (t && t.is_public) {
+          const arr = (v: unknown): string[] => (Array.isArray(v) ? (v as unknown[]).map(String) : []);
+          const num = (v: unknown): number | null => {
+            if (v === null || v === undefined || v === '') return null;
+            const n = Number(v);
+            return Number.isFinite(n) ? Math.trunc(n) : null;
+          };
+          thesis = {
+            genres: arr(t.genres),
+            formats: arr(t.formats),
+            stages: arr(t.stages),
+            dealTypes: arr(t.deal_types),
+            territories: arr(t.territories),
+            themes: arr(t.themes),
+            budgetMinUsd: num(t.budget_min_usd),
+            budgetMaxUsd: num(t.budget_max_usd),
+            checkSizeMinUsd: num(t.check_size_min_usd),
+            checkSizeMaxUsd: num(t.check_size_max_usd),
+            positioning: typeof t.positioning === 'string' ? t.positioning : '',
+            isPublic: true,
+          };
+        }
+      } catch {
+        // investor_thesis table may not exist yet; leave thesis null.
+        thesis = null;
+      }
+    }
+
+    return jsonResponse({ success: true, data: { ...user, thesis } }, 200, origin);
   } catch (error) {
     console.error('User by ID error:', error);
     return jsonResponse({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch user' } }, 500, origin);

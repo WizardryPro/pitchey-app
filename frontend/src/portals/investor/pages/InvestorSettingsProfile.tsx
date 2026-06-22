@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   User, Camera, Mail, Phone, MapPin, Globe, Building2,
-  TrendingUp, FileSignature, Save, X, Loader2,
+  TrendingUp, FileSignature, Save, X, Loader2, Target, Plus,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
 import { toast } from 'react-hot-toast';
@@ -10,8 +10,15 @@ import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { sessionManager } from '@/lib/session-manager';
 import { sessionCache } from '@/store/sessionCache';
 import { UserService } from '@/services/user.service';
+import { InvestorThesisService, EMPTY_THESIS, type InvestorThesis } from '@/services/investor-thesis.service';
+import { getGenres, getFormats, getStages, getGenresSync, getFormatsSync, getStagesSync } from '@config/pitchConstants';
 import { API_URL } from '@/config';
 import { prepareImageForUpload, PRE_COMPRESSION_MAX_BYTES } from '@/utils/imageUpload';
+
+// Deal types are a fixed small platform set (not part of the pitch taxonomy).
+// Stored lower-cased; displayed title-cased.
+const DEAL_TYPES = ['option', 'acquisition', 'licensing', 'development', 'production'] as const;
+const titleCase = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 // Investor-facing profile settings. Deliberately NOT a clone of the production
 // company page — an investor cares about their fund identity, the thesis
@@ -24,7 +31,6 @@ interface InvestorProfileForm {
   lastName: string;
   email: string;
   companyName: string;   // Fund / firm name
-  bio: string;           // Investment thesis
   website: string;       // Firm website
   phone: string;
   location: string;
@@ -34,8 +40,81 @@ interface InvestorProfileForm {
 
 const EMPTY: InvestorProfileForm = {
   username: '', firstName: '', lastName: '', email: '', companyName: '',
-  bio: '', website: '', phone: '', location: '', companyAddress: '', profileImage: '',
+  website: '', phone: '', location: '', companyAddress: '', profileImage: '',
 };
+
+// Chip-style multi-select — matches the marketplace genre-chip pattern.
+function ChipMultiSelect({
+  options, selected, onToggle,
+}: { options: string[]; selected: string[]; onToggle: (value: string) => void }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map(opt => {
+        const active = selected.includes(opt);
+        return (
+          <button
+            key={opt}
+            type="button"
+            onClick={() => onToggle(opt)}
+            className={`px-3 py-1.5 rounded-full text-sm border transition ${
+              active
+                ? 'bg-[#5B4FC7] text-white border-[#5B4FC7]'
+                : 'bg-white text-gray-700 border-gray-300 hover:border-[#5B4FC7]'
+            }`}
+            aria-pressed={active}
+          >
+            {opt}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// Free-text tag input (Enter / comma adds; click x removes) for territories & themes.
+function TagInput({
+  tags, onChange, placeholder,
+}: { tags: string[]; onChange: (next: string[]) => void; placeholder: string }) {
+  const [draft, setDraft] = useState('');
+  const commit = () => {
+    const v = draft.trim();
+    if (v && !tags.includes(v)) onChange([...tags, v]);
+    setDraft('');
+  };
+  return (
+    <div>
+      <div className="flex flex-wrap gap-2 mb-2">
+        {tags.map(t => (
+          <span key={t} className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-indigo-50 text-[#5B4FC7] text-sm border border-indigo-200">
+            {t}
+            <button type="button" onClick={() => onChange(tags.filter(x => x !== t))} aria-label={`Remove ${t}`}>
+              <X className="w-3 h-3" />
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); commit(); }
+          }}
+          placeholder={placeholder}
+          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5B4FC7] focus:border-transparent"
+        />
+        <button
+          type="button"
+          onClick={commit}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center gap-1"
+        >
+          <Plus className="w-4 h-4" /> Add
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function InvestorSettingsProfile() {
   const navigate = useNavigate();
@@ -43,8 +122,33 @@ export default function InvestorSettingsProfile() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingThesis, setSavingThesis] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [form, setForm] = useState<InvestorProfileForm>(EMPTY);
+
+  // Structured investment mandate — separate resource from the profile above.
+  const [thesis, setThesis] = useState<InvestorThesis>(EMPTY_THESIS);
+
+  // Taxonomy lists — SAME source the pitch CREATE form uses (configService via
+  // @config/pitchConstants). Seed synchronously from the cached/fallback config,
+  // then refresh from the API.
+  const [genreOptions, setGenreOptions] = useState<string[]>([...getGenresSync()]);
+  const [formatOptions, setFormatOptions] = useState<string[]>([...getFormatsSync()]);
+  const [stageOptions, setStageOptions] = useState<string[]>([...getStagesSync()]);
+
+  useEffect(() => {
+    const loadTaxonomy = async () => {
+      try {
+        const [g, f, s] = await Promise.all([getGenres(), getFormats(), getStages()]);
+        setGenreOptions(g);
+        setFormatOptions(f);
+        setStageOptions(s);
+      } catch {
+        // Already seeded with sync fallback values.
+      }
+    };
+    void loadTaxonomy();
+  }, []);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -62,7 +166,6 @@ export default function InvestorSettingsProfile() {
             lastName: (d.lastName as string) ?? '',
             email: (d.email as string) ?? '',
             companyName: (d.companyName as string) ?? '',
-            bio: (d.bio as string) ?? '',
             website: (d.website as string) ?? '',
             phone: (d.phone as string) ?? '',
             location: (d.location as string) ?? '',
@@ -76,7 +179,6 @@ export default function InvestorSettingsProfile() {
             username: user.username ?? '',
             email: user.email ?? '',
             companyName: user.companyName ?? '',
-            bio: user.bio ?? '',
           }));
         }
       } catch (err) {
@@ -89,8 +191,57 @@ export default function InvestorSettingsProfile() {
     void fetchProfile();
   }, [user]);
 
+  // Load the structured thesis independently of the profile.
+  useEffect(() => {
+    const fetchThesis = async () => {
+      try {
+        const t = await InvestorThesisService.getThesis();
+        setThesis(t);
+      } catch (err) {
+        const e = err instanceof Error ? err : new Error(String(err));
+        console.error('Failed to load investment thesis:', e.message);
+      }
+    };
+    void fetchThesis();
+  }, []);
+
   const set = (field: keyof InvestorProfileForm, value: string) =>
     setForm(prev => ({ ...prev, [field]: value }));
+
+  // Toggle a value in one of the thesis multi-select arrays.
+  const toggleThesisArray = (
+    field: 'genres' | 'formats' | 'stages' | 'dealTypes',
+    value: string,
+  ) =>
+    setThesis(prev => ({
+      ...prev,
+      [field]: prev[field].includes(value)
+        ? prev[field].filter(v => v !== value)
+        : [...prev[field], value],
+    }));
+
+  // Parse a numeric input into number|null (empty → null), clamped non-negative.
+  const setThesisNum = (
+    field: 'budgetMinUsd' | 'budgetMaxUsd' | 'checkSizeMinUsd' | 'checkSizeMaxUsd',
+    raw: string,
+  ) => {
+    const digits = raw.replace(/[^0-9]/g, '');
+    setThesis(prev => ({ ...prev, [field]: digits ? Number(digits) : null }));
+  };
+
+  const handleSaveThesis = async () => {
+    setSavingThesis(true);
+    try {
+      const saved = await InvestorThesisService.updateThesis(thesis);
+      setThesis(saved);
+      toast.success('Investment thesis saved');
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      toast.error(e.message || 'Failed to save investment thesis');
+    } finally {
+      setSavingThesis(false);
+    }
+  };
 
   const refreshSession = async () => {
     // Same sequence Settings.tsx uses (the #280 fix): clear the dedup cache,
@@ -118,7 +269,6 @@ export default function InvestorSettingsProfile() {
         lastName: form.lastName.trim() || undefined,
         email: email && email !== originalEmail ? email : undefined,
         companyName: form.companyName,
-        bio: form.bio,
         website: form.website,
         phone: form.phone,
         location: form.location,
@@ -304,16 +454,173 @@ export default function InvestorSettingsProfile() {
                   />
                 </div>
               </div>
-              <div className="mt-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Investment Thesis</label>
-                <textarea
-                  value={form.bio}
-                  onChange={(e) => set('bio', e.target.value)}
-                  rows={4}
-                  placeholder="What you invest in — genres, stage, typical cheque size, what makes a project a fit. Creators and producers read this before they pitch you."
-                  className={inputCls}
-                />
-                <p className="text-xs text-gray-500 mt-1">Shown on your public investor profile.</p>
+            </CardContent>
+          </Card>
+
+          {/* Investment Thesis (structured mandate) */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5" />
+                Investment Thesis
+              </CardTitle>
+              <CardDescription>
+                Your structured mandate — what you back, at what stage, and for how much.
+                Creators and producers read this before they pitch you.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Genres</label>
+                  <ChipMultiSelect
+                    options={genreOptions}
+                    selected={thesis.genres}
+                    onToggle={(v) => toggleThesisArray('genres', v)}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Formats</label>
+                  <ChipMultiSelect
+                    options={formatOptions}
+                    selected={thesis.formats}
+                    onToggle={(v) => toggleThesisArray('formats', v)}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Development Stages</label>
+                  <ChipMultiSelect
+                    options={stageOptions}
+                    selected={thesis.stages}
+                    onToggle={(v) => toggleThesisArray('stages', v)}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Deal Types</label>
+                  <ChipMultiSelect
+                    options={DEAL_TYPES.map(titleCase)}
+                    selected={thesis.dealTypes.map(titleCase)}
+                    onToggle={(label) => toggleThesisArray('dealTypes', label.toLowerCase())}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Territories</label>
+                    <TagInput
+                      tags={thesis.territories}
+                      onChange={(next) => setThesis(prev => ({ ...prev, territories: next }))}
+                      placeholder="e.g. North America, EU, UK…"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Themes</label>
+                    <TagInput
+                      tags={thesis.themes}
+                      onChange={(next) => setThesis(prev => ({ ...prev, themes: next }))}
+                      placeholder="e.g. climate, female-led, sci-fi…"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Budget Range <span className="text-gray-400 font-normal">(project budget, USD)</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={thesis.budgetMinUsd != null ? thesis.budgetMinUsd.toLocaleString('en-US') : ''}
+                        onChange={(e) => setThesisNum('budgetMinUsd', e.target.value)}
+                        placeholder="Min"
+                        className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5B4FC7] focus:border-transparent"
+                      />
+                    </div>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={thesis.budgetMaxUsd != null ? thesis.budgetMaxUsd.toLocaleString('en-US') : ''}
+                        onChange={(e) => setThesisNum('budgetMaxUsd', e.target.value)}
+                        placeholder="Max"
+                        className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5B4FC7] focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Cheque Size <span className="text-gray-400 font-normal">(your typical investment, USD)</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={thesis.checkSizeMinUsd != null ? thesis.checkSizeMinUsd.toLocaleString('en-US') : ''}
+                        onChange={(e) => setThesisNum('checkSizeMinUsd', e.target.value)}
+                        placeholder="Min"
+                        className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5B4FC7] focus:border-transparent"
+                      />
+                    </div>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={thesis.checkSizeMaxUsd != null ? thesis.checkSizeMaxUsd.toLocaleString('en-US') : ''}
+                        onChange={(e) => setThesisNum('checkSizeMaxUsd', e.target.value)}
+                        placeholder="Max"
+                        className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5B4FC7] focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Positioning statement</label>
+                  <textarea
+                    value={thesis.positioning}
+                    onChange={(e) => setThesis(prev => ({ ...prev, positioning: e.target.value }))}
+                    rows={4}
+                    placeholder="What makes a project a fit beyond the filters above — your angle, the kind of stories you back, what makes a project a fit. Creators and producers read this before they pitch you."
+                    className={inputCls}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Shown on your public investor profile.</p>
+                </div>
+
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={thesis.isPublic}
+                    onChange={(e) => setThesis(prev => ({ ...prev, isPublic: e.target.checked }))}
+                    className="mt-1 w-4 h-4 text-[#5B4FC7] border-gray-300 rounded focus:ring-[#5B4FC7]"
+                  />
+                  <span>
+                    <span className="text-sm font-medium text-gray-900 block">Show my thesis on my public profile</span>
+                    <span className="text-xs text-gray-500">When off, your mandate stays private and is used only for matching.</span>
+                  </span>
+                </label>
+
+                <div className="pt-2">
+                  <button
+                    onClick={() => { void handleSaveThesis(); }}
+                    disabled={savingThesis}
+                    className="px-6 py-3 bg-[#5B4FC7] text-white rounded-lg hover:bg-[#4d42b0] transition disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {savingThesis ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                    Save Thesis
+                  </button>
+                </div>
               </div>
             </CardContent>
           </Card>
