@@ -7,6 +7,7 @@ import type { Env } from '../db/connection';
 import { getCorsHeaders } from '../utils/response';
 import { getUserId } from '../utils/auth-extract';
 import { safeQuery } from '../db/safe-query';
+import { recordActivity } from '../db/activity-feed';
 
 function jsonResponse(data: unknown, origin: string | null, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -120,6 +121,19 @@ export async function createProductionDeal(request: Request, env: Env): Promise<
       VALUES (${pitchId}, ${Number(userId)}, ${creatorId}, ${dealType}, ${amount}, ${royaltyPercentage}, ${terms})
       RETURNING *, deal_state AS status, option_amount AS amount
     `;
+
+    // Record cross-role activity-feed event — directed to the pitch's creator
+    // (private to that creator; deals are not public). Fire-and-forget, never throws.
+    if (creatorId) {
+      await recordActivity(env, {
+        actorId: Number(userId),
+        action: 'deal_created',
+        objectType: 'deal',
+        objectId: Number(result[0]?.id) || null,
+        recipientId: creatorId,
+        metadata: { dealType, amount },
+      });
+    }
 
     // Notify the creator — best-effort (Sentry-reported via safeQuery)
     if (creatorId) {

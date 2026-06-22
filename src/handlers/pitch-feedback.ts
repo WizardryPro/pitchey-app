@@ -9,6 +9,7 @@ import type { Env } from '../db/connection';
 import { getCorsHeaders } from '../utils/response';
 import { getUserId, getAuthenticatedUser } from '../utils/auth-extract';
 import { safeQuery } from '../db/safe-query';
+import { recordActivity } from '../db/activity-feed';
 
 function jsonResponse(data: unknown, origin: string | null, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -753,6 +754,29 @@ export async function submitPitchComment(request: Request, env: Env): Promise<Re
       title: 'New comment on your pitch',
       message: 'Someone left a comment on your pitch.',
     });
+
+    // Record an activity-feed event (fire-and-forget; recordActivity never throws).
+    // Only when there's an authenticated commenter — recordActivity requires a
+    // numeric actorId, and a truly-anonymous (logged-out) commenter has none.
+    //
+    // PRIVACY (Karl's rule): an ANONYMOUS comment must be HIDDEN FROM ALL EXCEPT
+    // THE PITCH OWNER. recipientId is what makes an event private — when set,
+    // getActivityFeed shows it ONLY to that recipient and NEVER fans it out to
+    // the actor's followers. Broadcasting an anonymous comment would leak the
+    // commenter's identity via the actor join, so we pin recipientId to the pitch
+    // owner (pitch.user_id, already in scope from the owner-notify above — no
+    // extra lookup needed). The owner is allowed to know who commented.
+    // A NAMED comment omits recipientId → broadcasts to followers/savers normally.
+    if (userId) {
+      await recordActivity(env, {
+        actorId: Number(userId),
+        action: 'pitch_commented',
+        objectType: 'pitch',
+        objectId: pitchId,
+        ...(isAnonymous ? { recipientId: Number(pitch.user_id) } : {}),
+        metadata: { isAnonymous },
+      });
+    }
 
     return jsonResponse({ success: true, data: result[0] }, origin, 201);
   } catch (err) {

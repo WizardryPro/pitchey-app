@@ -14,7 +14,18 @@ import * as Sentry from '@sentry/cloudflare';
 
 type DbEnv = { DATABASE_URL: string };
 
-export type ActivityAction = 'pitch_published' | 'pitch_updated' | 'user_followed' | 'message_attachment';
+export type ActivityAction =
+  | 'pitch_published'
+  | 'pitch_updated'
+  | 'user_followed'
+  | 'message_attachment'
+  | 'pitch_liked'
+  | 'pitch_saved'
+  | 'pitch_commented'
+  | 'nda_requested'
+  | 'nda_approved'
+  | 'deal_created'
+  | 'deal_outcome_reported';
 
 export interface RecordActivityInput {
   actorId: number;
@@ -92,12 +103,21 @@ export interface ActivityFeedItem {
 export async function getActivityFeed(
   env: DbEnv,
   viewerId: number,
-  opts: { limit?: number; offset?: number } = {}
+  opts: { limit?: number; offset?: number; viewerRole?: 'creator' | 'investor' | 'production' } = {}
 ): Promise<ActivityFeedItem[]> {
   const limit = Math.min(Math.max(opts.limit ?? 30, 1), 100);
   const offset = Math.max(opts.offset ?? 0, 0);
   try {
     const sql = postgres(env.DATABASE_URL);
+    // Creators also see broadcast events whose object is a pitch THEY OWN.
+    // Empty fragment when viewerRole !== 'creator' so the query is byte-identical
+    // to today for the existing /api/activity/feed caller (viewerRole undefined).
+    const ownedPitchBranch = opts.viewerRole === 'creator'
+      ? sql`OR (
+                af.object_type = 'pitch'
+                AND af.object_id IN (SELECT id FROM pitches WHERE creator_id = ${viewerId})
+              )`
+      : sql``;
     const rows = await sql`
       SELECT
         af.id, af.actor_id, af.action, af.object_type, af.object_id, af.metadata, af.created_at,
@@ -125,6 +145,7 @@ export async function getActivityFeed(
                 af.object_type = 'pitch'
                 AND af.object_id IN (SELECT pitch_id FROM saved_pitches WHERE user_id = ${viewerId})
               )
+              ${ownedPitchBranch}
             )
           )
         )

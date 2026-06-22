@@ -3259,7 +3259,29 @@ class RouteRegistry {
     // Deal outcome capture (disintermediation defense P1) — both-sided; production side.
     this.register('POST', '/api/production/deals/:dealId/outcome', async (req) => {
       const { markDealOutcome } = await import('./handlers/deal-outcome');
-      return markDealOutcome(req, this.env);
+      // Read the outcome + dealId BEFORE the handler consumes the body.
+      const outcomeFromBody = await req.clone().json().catch(() => ({})) as Record<string, unknown>;
+      const outcome = typeof outcomeFromBody.outcome === 'string' ? outcomeFromBody.outcome : undefined;
+      const parts = new URL(req.url).pathname.split('/');
+      const dealId = Number(parts[parts.length - 2]);
+      const response = await markDealOutcome(req, this.env);
+      // Record activity only on a successful outcome write.
+      if (response.ok && dealId && !Number.isNaN(dealId)) {
+        try {
+          const { getUserId } = await import('./utils/auth-extract');
+          const userId = await getUserId(req, this.env);
+          if (userId) {
+            await recordActivity(this.env, {
+              actorId: Number(userId),
+              action: 'deal_outcome_reported',
+              objectType: 'deal',
+              objectId: dealId,
+              metadata: outcome ? { outcome } : {},
+            });
+          }
+        } catch (_) { /* fire-and-forget telemetry */ }
+      }
+      return response;
     });
 
     // Distribution & Export
@@ -8691,6 +8713,17 @@ pitchey_analytics_datapoints_per_minute 1250
         [authResult.user.id, -ndaCreditCost, currentBalance, newBalance, this.safeParseInt(pitchId)]
       );
 
+      // Persist to the activity feed (directed to the pitch owner).
+      // recordActivity never throws — safe to await inline.
+      await recordActivity(this.env, {
+        actorId: Number(authResult.user.id),
+        action: 'nda_requested',
+        objectType: 'nda',
+        objectId: this.safeParseInt(nda.id),
+        recipientId: creatorId || undefined,
+        metadata: { pitchId: this.safeParseInt(pitchId) },
+      });
+
       // Notify the pitch owner that there's a request awaiting their approval.
       if (creatorId) {
         try {
@@ -8823,6 +8856,17 @@ pitchey_analytics_datapoints_per_minute 1250
       if (!nda) {
         return builder.error(ErrorCode.NOT_FOUND, 'NDA request not found or not authorized');
       }
+
+      // Persist to the activity feed (directed back to the requester/signer).
+      // recordActivity never throws — safe to await inline.
+      await recordActivity(this.env, {
+        actorId: Number(authResult.user.id),
+        action: 'nda_approved',
+        objectType: 'nda',
+        objectId: this.safeParseInt(params.id),
+        recipientId: this.safeParseInt(nda.signer_id) || undefined,
+        metadata: {},
+      });
 
       // Log audit event for NDA approval
       await logNDAEvent(this.auditService,
@@ -14125,11 +14169,36 @@ pitchey_analytics_datapoints_per_minute 1250
 
     const builder = new ApiResponseBuilder(request);
     const url = new URL(request.url);
-    const limit = parseInt(url.searchParams.get('limit') || '30');
+    const rawLimit = parseInt(url.searchParams.get('limit') || '30');
+    // Clamp limit to a small allowed set to bound cache-key cardinality. Anything
+    // not in {10,20,30} snaps to the nearest allowed value (default/upper = 30).
+    const ALLOWED_LIMITS = [10, 20, 30];
+    const limit = Number.isFinite(rawLimit)
+      ? ALLOWED_LIMITS.reduce((best, v) => Math.abs(v - rawLimit) < Math.abs(best - rawLimit) ? v : best, 30)
+      : 30;
     const offset = parseInt(url.searchParams.get('offset') || '0');
+    const viewerId = Number(authResult.user.id);
 
-    const items = await getActivityFeed(this.env, Number(authResult.user.id), { limit, offset });
-    return builder.success({ items });
+    // Short-TTL cache to cut cold-Neon reads. Acceptable staleness (~30s);
+    // this feed is not realtime, so there is no per-write invalidation.
+    const cacheKey = `activity:feed:${viewerId}:${limit}:${offset}`;
+    if (this.cache.isConnected) {
+      try {
+        const cached = await this.cache.get<any>(cacheKey);
+        if (cached) {
+          return builder.success(typeof cached === 'string' ? JSON.parse(cached) : cached);
+        }
+      } catch (_) { /* cache miss/error — fall through to live query */ }
+    }
+
+    const items = await getActivityFeed(this.env, viewerId, { limit, offset });
+    const payload = { items };
+
+    if (this.cache.isConnected) {
+      try { await this.cache.set(cacheKey, JSON.stringify(payload), 30); } catch (_) { /* non-blocking */ }
+    }
+
+    return builder.success(payload);
   }
 
   // GET /api/pitches/:id/feedback-progress — for the authenticated reviewer, has
@@ -19721,6 +19790,15 @@ Signatures: [To be completed upon signing]
         ON CONFLICT (user_id, pitch_id) DO UPDATE SET notes = $3
         RETURNING *
       `, [authCheck.user.id, pitchId, body.notes || null]);
+
+      // Persist to the activity feed (broadcast — no directed recipient).
+      // recordActivity never throws — safe to await inline.
+      await recordActivity(this.env, {
+        actorId: Number(authCheck.user.id),
+        action: 'pitch_saved',
+        objectType: 'pitch',
+        objectId: Number(pitchId),
+      });
 
       const origin = request.headers.get('Origin');
       return new Response(JSON.stringify({
