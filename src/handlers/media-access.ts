@@ -169,8 +169,11 @@ export class MediaAccessHandler {
   // Get user's media files
   async getUserMedia(userId: number, targetUserId: number) {
     try {
-      // Check if requesting own media or has permission
-      const isOwnMedia = userId === targetUserId;
+      // Check if requesting own media or has permission.
+      // Compare as strings: userId arrives as a string (getUserId) while
+      // targetUserId is parseInt'd to a number at the route, so a raw `===`
+      // is always false (own private media would be hidden from its owner).
+      const isOwnMedia = String(userId) === String(targetUserId);
       
       let query;
       let params;

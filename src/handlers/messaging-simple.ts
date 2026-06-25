@@ -354,7 +354,10 @@ export class SimpleMessagingHandler {
   // Find or create a direct conversation (without requiring a message)
   async findOrCreateConversation(userId: number, recipientId: number, pitchId?: number) {
     try {
-      if (!recipientId || recipientId === userId) {
+      // Block self-conversations. Compare as strings: userId arrives as a string
+      // (getUserId) while recipientId is coerced to a number at the route, so a raw
+      // `===` is always false and the self-DM guard never fires.
+      if (!recipientId || String(recipientId) === String(userId)) {
         return { success: false, error: 'Invalid recipient' };
       }
 
