@@ -203,7 +203,7 @@ export async function updateInvestmentStatus(
 // Investor portfolio queries
 export async function getInvestorPortfolio(
   sql: SqlQuery,
-  investorId: string,
+  investorId: number,
   filters?: InvestmentFilters
 ): Promise<Investment[]> {
   const wb = new WhereBuilder();

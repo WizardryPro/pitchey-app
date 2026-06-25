@@ -127,11 +127,11 @@ export async function markDealOutcome(request: Request, env: Env): Promise<Respo
             outcome_amount = ${amount},
             outcome_terms = ${terms},
             closed_at = ${closeDate}::timestamp,
-            outcome_reported_by = ${Number(userId)},
+            outcome_reported_by = ${userId},
             outcome_reported_at = NOW(),
             outcome_confirmed_by_creator = ${creatorConfirmed},
             outcome_confirmed_by_production = ${productionConfirmed},
-            state_changed_at = NOW(), state_changed_by = ${Number(userId)}, updated_at = NOW()
+            state_changed_at = NOW(), state_changed_by = ${userId}, updated_at = NOW()
         WHERE id = ${dealId}
         RETURNING id, deal_state AS status, outcome::text AS outcome,
                   outcome_amount, outcome_terms, closed_at,
@@ -166,7 +166,7 @@ export async function markDealOutcome(request: Request, env: Env): Promise<Respo
         ${'Deal outcome ' + verb},
         ${'The other party ' + verb + ' this deal as ' + outcome.replace(/_/g, ' ') +
           (mutuallyConfirmed ? ' (now mutually confirmed).' : '. Confirm to finalise the record.')},
-        ${Number(userId)}, ${deal.pitch_id}, NOW()
+        ${userId}, ${deal.pitch_id}, NOW()
       )
     `, { fallback: [], context: 'deal-outcome.notify' });
 

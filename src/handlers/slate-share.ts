@@ -45,7 +45,7 @@ export async function createSlateShareLinkHandler(request: Request, env: Env): P
     const slateId = parseInt(paramId(request, 'id', 2) || '', 10); // /api/slates/:id/share-links
     if (!slateId || Number.isNaN(slateId)) return errorResponse('Invalid slate id', origin);
 
-    const [owned] = await sql`SELECT id FROM slates WHERE id = ${slateId} AND user_id::text = ${String(userId)}`;
+    const [owned] = await sql`SELECT id FROM slates WHERE id = ${slateId} AND user_id = ${userId}`;
     if (!owned) return errorResponse('Slate not found', origin, 404);
 
     const body = await request.json().catch(() => ({})) as Record<string, unknown>;
@@ -54,7 +54,7 @@ export async function createSlateShareLinkHandler(request: Request, env: Env): P
 
     const [link] = await sql`
       INSERT INTO slate_share_links (token, slate_id, creator_id, label)
-      VALUES (${token}, ${slateId}, ${Number(userId)}, ${label})
+      VALUES (${token}, ${slateId}, ${userId}, ${label})
       RETURNING id, token, label, view_count, created_at
     `;
     return jsonResponse({ success: true, data: { link } }, origin, 201);
@@ -80,7 +80,7 @@ export async function listSlateShareLinksHandler(request: Request, env: Env): Pr
     const links = await sql`
       SELECT id, token, label, view_count, last_viewed_at, revoked_at, created_at
       FROM slate_share_links
-      WHERE slate_id = ${slateId} AND creator_id::text = ${String(userId)}
+      WHERE slate_id = ${slateId} AND creator_id = ${userId}
       ORDER BY created_at DESC
     `;
     return jsonResponse({ success: true, data: { links } }, origin);
@@ -105,7 +105,7 @@ export async function revokeSlateShareLinkHandler(request: Request, env: Env): P
 
     const [revoked] = await sql`
       UPDATE slate_share_links SET revoked_at = NOW()
-      WHERE id = ${linkId} AND creator_id::text = ${String(userId)} AND revoked_at IS NULL
+      WHERE id = ${linkId} AND creator_id = ${userId} AND revoked_at IS NULL
       RETURNING id
     `;
     if (!revoked) return errorResponse('Link not found', origin, 404);

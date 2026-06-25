@@ -70,7 +70,7 @@ export async function getCreatorDeals(request: Request, env: Env): Promise<Respo
       FROM production_deals d
       LEFT JOIN pitches p ON d.pitch_id = p.id
       LEFT JOIN users pc ON d.production_company_id = pc.id
-      WHERE d.creator_id = ${Number(userId)}
+      WHERE d.creator_id = ${userId}
         AND (${status} = '' OR d.deal_state::text = ${status})
       ORDER BY d.created_at DESC NULLS LAST
       LIMIT ${limit} OFFSET ${offset}
@@ -78,7 +78,7 @@ export async function getCreatorDeals(request: Request, env: Env): Promise<Respo
 
     const countResult = await safeQuery<{ total: number }>(() => sql`
       SELECT COUNT(*)::int AS total FROM production_deals
-      WHERE creator_id = ${Number(userId)}
+      WHERE creator_id = ${userId}
         AND (${status} = '' OR deal_state::text = ${status})
     `, { fallback: [{ total: 0 }], context: 'creator-deals.count' });
 
@@ -138,8 +138,8 @@ export async function respondToCreatorDeal(request: Request, env: Env): Promise<
       SET deal_state = ${map.state}::investment_deal_state,
           option_amount = COALESCE(${counterAmount}, option_amount),
           notes = COALESCE(notes, '') || ${noteSuffix},
-          state_changed_at = NOW(), state_changed_by = ${Number(userId)}, updated_at = NOW()
-      WHERE id = ${dealId} AND creator_id = ${Number(userId)}
+          state_changed_at = NOW(), state_changed_by = ${userId}, updated_at = NOW()
+      WHERE id = ${dealId} AND creator_id = ${userId}
       RETURNING id, deal_state AS status,
                 COALESCE(option_amount, purchase_price, development_fee, 0) AS amount, pitch_id
     `;
@@ -149,7 +149,7 @@ export async function respondToCreatorDeal(request: Request, env: Env): Promise<
       INSERT INTO notifications (user_id, type, title, message, related_user_id, related_pitch_id, created_at)
       VALUES (
         ${(deal as Record<string, unknown>).production_company_id}, ${map.type}, ${map.title}, ${map.message},
-        ${Number(userId)}, ${(deal as Record<string, unknown>).pitch_id}, NOW()
+        ${userId}, ${(deal as Record<string, unknown>).pitch_id}, NOW()
       )
     `, { fallback: [], context: 'creator-deals.respond.notify' });
 
@@ -158,7 +158,7 @@ export async function respondToCreatorDeal(request: Request, env: Env): Promise<
     if (action === 'counter') {
       await safeQuery(() => sql`
         INSERT INTO deal_messages (deal_id, sender_id, sender_role, kind, body, proposed_amount)
-        VALUES (${dealId}, ${Number(userId)}, 'creator', 'counter', ${message || null}, ${counterAmount})
+        VALUES (${dealId}, ${userId}, 'creator', 'counter', ${message || null}, ${counterAmount})
       `, { fallback: [], context: 'creator-deals.respond.thread-mirror' });
     }
 

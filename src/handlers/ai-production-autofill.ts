@@ -89,7 +89,7 @@ export async function aiProductionAutofill(request: Request, env: Env): Promise<
     // Credit check — gate-feeding. Fail closed on credit-table outage (don't grant
     // access on a query exception) AND surface the failure to Sentry so we know.
     const creditRows = await safeQuery<{ balance: number | string }>(() => sql`
-      SELECT balance FROM user_credits WHERE user_id = ${Number(userId)}
+      SELECT balance FROM user_credits WHERE user_id = ${userId}
     `, { fallback: [], context: 'ai-production-autofill.credit-check' });
 
     if (!creditRows.ok) {
@@ -215,7 +215,7 @@ export async function aiProductionAutofill(request: Request, env: Env): Promise<
     await observedSwallow(
       () => sql`
         UPDATE user_credits SET balance = balance - ${AUTOFILL_CREDIT_COST}, total_used = total_used + ${AUTOFILL_CREDIT_COST}, last_updated = NOW()
-        WHERE user_id = ${Number(userId)}
+        WHERE user_id = ${userId}
       `,
       'ai-production-autofill.credit-deduction',
     );
@@ -223,7 +223,7 @@ export async function aiProductionAutofill(request: Request, env: Env): Promise<
     await observedSwallow(
       () => sql`
         INSERT INTO credit_transactions (user_id, type, amount, description, balance_before, balance_after, usage_type, created_at)
-        VALUES (${Number(userId)}, 'usage', ${-AUTOFILL_CREDIT_COST}, 'AI production auto-fill', ${balance}, ${balance - AUTOFILL_CREDIT_COST}, 'ai_autofill', NOW())
+        VALUES (${userId}, 'usage', ${-AUTOFILL_CREDIT_COST}, 'AI production auto-fill', ${balance}, ${balance - AUTOFILL_CREDIT_COST}, 'ai_autofill', NOW())
       `,
       'ai-production-autofill.transaction-log',
     );
