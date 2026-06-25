@@ -21,10 +21,9 @@ import { execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 
 // ── The baseline. Lower it (never raise it) as worker type errors are fixed. ──
-const BASELINE = 40;
-// 2026-06-25: 40 on main at gate creation. 9 of these are the notification latent-bug
-// (issue #361, intentionally unfixed). The 5 fix PRs (#356–#360) drop it to 9 once
-// merged — lower BASELINE to 9 in a follow-up after they land.
+const BASELINE = 9;
+// 2026-06-25: lowered 40 -> 9 after the userId sweep (#365) + fix PRs (#356-360) merged.
+// The 9 remaining are the notification latent bug (issue #361, intentionally unfixed).
 
 const LIST = process.argv.includes('--list');
 
