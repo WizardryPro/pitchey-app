@@ -39,6 +39,12 @@ export interface Env {
   NDA_STORAGE?: R2Bucket;
   PROCESSED_STORAGE?: R2Bucket;
   TEMP_STORAGE?: R2Bucket;
+
+  // Secrets (set via `wrangler secret put`; already declared on the worker-integrated Env)
+  UPSTASH_REDIS_REST_URL?: string;
+  UPSTASH_REDIS_REST_TOKEN?: string;
+  STRIPE_SECRET_KEY?: string;
+  RESEND_API_KEY?: string;
 }
 
 export interface DatabaseService {
