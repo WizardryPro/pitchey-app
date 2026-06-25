@@ -85,7 +85,7 @@ export async function aiPitchExtract(request: Request, env: Env): Promise<Respon
   try {
     // Credit check — gate-feeding. Fail closed on credit-table outage AND surface to Sentry.
     const creditRows = await safeQuery<{ balance: number | string }>(() => sql`
-      SELECT balance FROM user_credits WHERE user_id = ${Number(userId)}
+      SELECT balance FROM user_credits WHERE user_id = ${userId}
     `, { fallback: [], context: 'ai-pitch-extract.credit-check' });
 
     if (!creditRows.ok) {
@@ -210,7 +210,7 @@ export async function aiPitchExtract(request: Request, env: Env): Promise<Respon
     await observedSwallow(
       () => sql`
         UPDATE user_credits SET balance = balance - ${AI_EXTRACT_CREDIT_COST}, total_used = total_used + ${AI_EXTRACT_CREDIT_COST}, last_updated = NOW()
-        WHERE user_id = ${Number(userId)}
+        WHERE user_id = ${userId}
       `,
       'ai-pitch-extract.credit-deduction',
     );
@@ -218,7 +218,7 @@ export async function aiPitchExtract(request: Request, env: Env): Promise<Respon
     await observedSwallow(
       () => sql`
         INSERT INTO credit_transactions (user_id, type, amount, description, balance_before, balance_after, usage_type, created_at)
-        VALUES (${Number(userId)}, 'usage', ${-AI_EXTRACT_CREDIT_COST}, 'AI pitch extraction', ${balance}, ${balance - AI_EXTRACT_CREDIT_COST}, 'ai_extract', NOW())
+        VALUES (${userId}, 'usage', ${-AI_EXTRACT_CREDIT_COST}, 'AI pitch extraction', ${balance}, ${balance - AI_EXTRACT_CREDIT_COST}, 'ai_extract', NOW())
       `,
       'ai-pitch-extract.transaction-log',
     );

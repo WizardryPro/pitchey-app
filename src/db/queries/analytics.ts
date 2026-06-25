@@ -145,7 +145,7 @@ export async function getUserViewsTimeSeries(
         )::date AS date
       ),
       user_pitches AS (
-        SELECT id FROM pitches WHERE creator_id::text = ${userId} OR user_id::text = ${userId}
+        SELECT id FROM pitches WHERE creator_id = ${userId} OR user_id = ${userId}
       )
       SELECT
         ds.date::text,
@@ -183,7 +183,7 @@ export async function getEngagementTimeSeries(
         )::date AS date
       ),
       user_pitches AS (
-        SELECT id FROM pitches WHERE creator_id::text = ${userId} OR user_id::text = ${userId}
+        SELECT id FROM pitches WHERE creator_id = ${userId} OR user_id = ${userId}
       ),
       daily_views AS (
         SELECT DATE(viewed_at) as date, COUNT(*) as views
@@ -245,7 +245,7 @@ export async function getFundingTimeSeries(
         )::date AS date
       ),
       user_pitches AS (
-        SELECT id FROM pitches WHERE creator_id::text = ${userId}
+        SELECT id FROM pitches WHERE creator_id = ${userId}
       ),
       daily_funding AS (
         SELECT
@@ -283,7 +283,7 @@ export async function getAudienceDemographics(
     // Get viewer user types
     const userTypeResult = await sql`
       WITH user_pitches AS (
-        SELECT id FROM pitches WHERE creator_id::text = ${userId}
+        SELECT id FROM pitches WHERE creator_id = ${userId}
       ),
       viewer_types AS (
         SELECT
@@ -311,7 +311,7 @@ export async function getAudienceDemographics(
     // Get views by pitch category/genre
     const categoryResult = await sql`
       WITH user_pitches AS (
-        SELECT id, genre FROM pitches WHERE creator_id::text = ${userId} OR user_id::text = ${userId}
+        SELECT id, genre FROM pitches WHERE creator_id = ${userId} OR user_id = ${userId}
       ),
       category_views AS (
         SELECT
@@ -373,7 +373,7 @@ export async function getTopPerformingPitchesForUser(
           0
         )::numeric as funding
       FROM pitches p
-      WHERE p.creator_id::text = ${userId}
+      WHERE p.creator_id = ${userId}
         AND p.status = 'published'
       ORDER BY views DESC, engagement_rate DESC
       LIMIT ${limit}
@@ -408,11 +408,11 @@ export async function getMonthlyPerformance(
           DATE_TRUNC('month', created_at)::date as month,
           COUNT(*) as pitches
         FROM pitches
-        WHERE creator_id::text = ${userId} OR user_id::text = ${userId}
+        WHERE creator_id = ${userId} OR user_id = ${userId}
         GROUP BY DATE_TRUNC('month', created_at)
       ),
       user_pitch_ids AS (
-        SELECT id FROM pitches WHERE creator_id::text = ${userId} OR user_id::text = ${userId}
+        SELECT id FROM pitches WHERE creator_id = ${userId} OR user_id = ${userId}
       ),
       monthly_views AS (
         SELECT
@@ -465,7 +465,7 @@ export async function getUserAverageRating(
       SELECT COALESCE(AVG(rating), 0)::numeric as avg_rating
       FROM pitch_ratings pr
       JOIN pitches p ON pr.pitch_id = p.id
-      WHERE p.creator_id::text = ${userId}
+      WHERE p.creator_id = ${userId}
     `;
 
     const data = extractFirst<{ avg_rating: number }>(result);
@@ -488,15 +488,15 @@ export async function getUserResponseRate(
       WITH received AS (
         SELECT COUNT(*) as total
         FROM messages
-        WHERE recipient_id::text = ${userId}
+        WHERE recipient_id = ${userId}
       ),
       responded AS (
         SELECT COUNT(DISTINCT m1.sender_id) as total
         FROM messages m1
-        WHERE m1.recipient_id::text = ${userId}
+        WHERE m1.recipient_id = ${userId}
           AND EXISTS (
             SELECT 1 FROM messages m2
-            WHERE m2.sender_id::text = ${userId}
+            WHERE m2.sender_id = ${userId}
               AND m2.recipient_id = m1.sender_id
               AND m2.sent_at > m1.sent_at
           )

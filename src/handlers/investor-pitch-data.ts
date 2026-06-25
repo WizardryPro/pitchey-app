@@ -50,7 +50,7 @@ export async function getInvestorNotes(request: Request, env: Env): Promise<Resp
     const notesResult = await safeQuery(() => sql`
       SELECT id, content, category, is_private, created_at, updated_at
       FROM investor_notes
-      WHERE user_id = ${Number(userId)} AND pitch_id = ${pitchId}
+      WHERE user_id = ${userId} AND pitch_id = ${pitchId}
       ORDER BY created_at ASC
     `, { fallback: [], context: 'investor-pitch-data.notes.list' });
 
@@ -87,7 +87,7 @@ export async function createInvestorNote(request: Request, env: Env): Promise<Re
 
     const [note] = await sql`
       INSERT INTO investor_notes (user_id, pitch_id, content, category, is_private)
-      VALUES (${Number(userId)}, ${pitchId}, ${content}, ${category}, ${isPrivate})
+      VALUES (${userId}, ${pitchId}, ${content}, ${category}, ${isPrivate})
       RETURNING id, content, category, is_private, created_at, updated_at
     `;
 
@@ -119,7 +119,7 @@ export async function deleteInvestorNote(request: Request, env: Env): Promise<Re
   try {
     await sql`
       DELETE FROM investor_notes
-      WHERE id = ${noteId} AND user_id = ${Number(userId)}
+      WHERE id = ${noteId} AND user_id = ${userId}
     `;
 
     return jsonResponse({ success: true }, origin);
@@ -152,7 +152,7 @@ export async function getInvestorDiligence(request: Request, env: Env): Promise<
     const rows = await safeQuery<{ checklist: Record<string, unknown> }>(() => sql`
       SELECT checklist
       FROM investor_diligence_checklists
-      WHERE user_id = ${Number(userId)} AND pitch_id = ${pitchId}
+      WHERE user_id = ${userId} AND pitch_id = ${pitchId}
     `, { fallback: [], context: 'investor-pitch-data.diligence.read' });
 
     const checklist = rows.rows[0]?.checklist || {};
@@ -184,7 +184,7 @@ export async function updateInvestorDiligence(request: Request, env: Env): Promi
 
     await sql`
       INSERT INTO investor_diligence_checklists (user_id, pitch_id, checklist)
-      VALUES (${Number(userId)}, ${pitchId}, ${JSON.stringify(checklist)}::jsonb)
+      VALUES (${userId}, ${pitchId}, ${JSON.stringify(checklist)}::jsonb)
       ON CONFLICT (user_id, pitch_id)
       DO UPDATE SET checklist = ${JSON.stringify(checklist)}::jsonb, updated_at = NOW()
     `;

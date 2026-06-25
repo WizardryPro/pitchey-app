@@ -196,7 +196,7 @@ export async function investorSavedPitchesHandler(request: Request, env: Env): P
         COALESCE(u.verified, false) AS creator_verified
       FROM saved_pitches sp
       JOIN pitches p ON p.id::text = sp.pitch_id::text
-      LEFT JOIN users u ON u.id::text = p.user_id::text
+      LEFT JOIN users u ON u.id = p.user_id
       WHERE sp.user_id = ${userId}
       ORDER BY sp.created_at DESC
     `;
@@ -665,12 +665,12 @@ export async function investorNetworkHandler(request: Request, env: Env): Promis
         f.created_at AS connected_since
       FROM follows f
       JOIN users u ON (
-        (f.follower_id::text = ${userId} AND u.id::text = f.following_id::text)
+        (f.follower_id = ${userId} AND u.id = f.following_id)
         OR
-        (f.following_id::text = ${userId} AND u.id::text = f.follower_id::text)
+        (f.following_id = ${userId} AND u.id = f.follower_id)
       )
-      WHERE f.follower_id::text = ${userId}
-         OR f.following_id::text = ${userId}
+      WHERE f.follower_id = ${userId}
+         OR f.following_id = ${userId}
       ORDER BY f.created_at DESC
     `;
 
@@ -707,7 +707,7 @@ export async function investorCoInvestorsHandler(request: Request, env: Env): Pr
       FROM investments i1
       JOIN investments i2 ON i2.pitch_id = i1.pitch_id
         AND i2.investor_id != i1.investor_id
-      JOIN users u ON u.id::text = i2.investor_id::text
+      JOIN users u ON u.id = i2.investor_id
       WHERE i1.investor_id = ${userId}
       GROUP BY u.id, u.name, u.email, u.avatar_url
       ORDER BY shared_investments DESC
@@ -747,7 +747,7 @@ export async function investorCreatorsHandler(request: Request, env: Env): Promi
         COALESCE(SUM(i.amount), 0)::numeric AS total_invested
       FROM investments i
       JOIN pitches p ON p.id::text = i.pitch_id::text
-      JOIN users u ON u.id::text = p.user_id::text
+      JOIN users u ON u.id = p.user_id
       WHERE i.investor_id = ${userId}
       GROUP BY u.id, u.name, u.email, u.avatar_url, u.bio
       ORDER BY total_invested DESC
@@ -1093,7 +1093,7 @@ export async function investorOpportunitiesHandler(request: Request, env: Env): 
           + COALESCE(p.rating_average,0) * 10
         )::int) AS match_score
       FROM pitches p
-      JOIN users u ON u.id::text = p.user_id::text
+      JOIN users u ON u.id = p.user_id
       LEFT JOIN LATERAL (
         SELECT avg_roi FROM market_data
         WHERE genre ILIKE p.genre
@@ -1349,13 +1349,13 @@ export async function investorPitchInvestmentDetailHandler(request: Request, env
       // Watchlist check for current user
       sql`
         SELECT id FROM investor_watchlist
-        WHERE investor_id::text = ${userId} AND pitch_id::text = ${pitchId}
+        WHERE investor_id = ${userId} AND pitch_id::text = ${pitchId}
         LIMIT 1
       `,
       // Interest check for current user
       sql`
         SELECT id, interest_level FROM investment_interests
-        WHERE investor_id::text = ${userId} AND pitch_id::text = ${pitchId}
+        WHERE investor_id = ${userId} AND pitch_id::text = ${pitchId}
         LIMIT 1
       `,
     ]);

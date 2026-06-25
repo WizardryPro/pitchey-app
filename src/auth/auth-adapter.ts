@@ -21,7 +21,7 @@ export interface AuthAdapterConfig {
 }
 
 interface JWTPayload {
-  userId: string;
+  userId: number;
   email: string;
   userType: PortalType;
   name: string;
@@ -63,7 +63,7 @@ export class AuthAdapter {
             return {
               valid: true,
               user: {
-                id: cached.userId,
+                id: Number(cached.userId),
                 email: cached.userEmail,
                 name: cached.userName || cached.userEmail,
                 userType: cached.userType,
@@ -79,7 +79,7 @@ export class AuthAdapter {
                  u.first_name, u.last_name, u.company_name, u.bio,
                  COALESCE(u.name, u.username, u.email) as name
           FROM sessions s
-          JOIN users u ON s.user_id::text = u.id::text
+          JOIN users u ON s.user_id = u.id
           WHERE s.id = ${sessionId}
           AND s.expires_at > NOW()
           LIMIT 1`;
@@ -104,7 +104,7 @@ export class AuthAdapter {
           return {
             valid: true,
             user: {
-              id: row.user_id,
+              id: Number(row.user_id),
               email: row.email,
               name: row.name,
               username: row.username,
@@ -128,8 +128,11 @@ export class AuthAdapter {
         const token = authHeader.substring(7);
         const payload = await this.validateJWTToken(token);
         if (payload) {
-          const user = await this.getUserFromDatabase(payload.userId);
-          if (user) return { valid: true, user };
+          const userId = Number(payload.userId);
+          if (!Number.isNaN(userId)) {
+            const user = await this.getUserFromDatabase(userId);
+            if (user) return { valid: true, user };
+          }
         }
       }
     }
@@ -178,7 +181,7 @@ export class AuthAdapter {
     }
   }
 
-  private async getUserFromDatabase(userId: string, requiredType?: PortalType): Promise<any> {
+  private async getUserFromDatabase(userId: number, requiredType?: PortalType): Promise<any> {
     const demoUsers: Record<string, any> = {
       'alex.creator@demo.com': {
         id: '1', email: 'alex.creator@demo.com', username: 'alexcreator',
@@ -204,7 +207,7 @@ export class AuthAdapter {
       },
     };
 
-    const demoUser = Object.values(demoUsers).find(u => u.id === userId || u.email === userId);
+    const demoUser = Object.values(demoUsers).find(u => Number(u.id) === userId);
     if (demoUser) {
       if (requiredType && demoUser.userType !== requiredType) return null;
       return demoUser;
@@ -218,14 +221,14 @@ export class AuthAdapter {
                  first_name, last_name, company_name, bio,
                  COALESCE(name, username, email) as name
           FROM users
-          WHERE id::text = ${userId} OR email = ${userId}
+          WHERE id = ${userId}
           LIMIT 1`;
 
         if (result && result.length > 0) {
           const row = result[0];
           if (requiredType && row.user_type !== requiredType) return null;
           return {
-            id: row.id,
+            id: Number(row.id),
             email: row.email,
             username: row.username,
             name: row.name,

@@ -141,7 +141,7 @@ export async function createBatchNotifications(
 
 export async function getUserNotifications(
   sql: SqlQuery,
-  userId: string,
+  userId: number,
   options?: {
     includeRead?: boolean;
     type?: string;

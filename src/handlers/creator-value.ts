@@ -9,9 +9,11 @@
  * - Every metric is fetched INDEPENDENTLY and guarded, so schema drift in one
  *   table degrades that single tile to its fallback rather than 500ing the whole
  *   card (the live worker has well-documented id/column drift — see CLAUDE.md).
- * - All id comparisons cast `::text` on both sides — pitch/creator ids drift
- *   between INTEGER and UUID across history; `::text` is the established
- *   defensive join pattern in this codebase (e.g. creator-dashboard).
+ * - The authenticated user's id is a NUMBER (users.id is INTEGER), so user-id
+ *   comparisons (creator_id/user_id/following_id = ${userId}) are plain numeric.
+ *   Pitch-id comparisons keep `::text` on both sides — pitch ids drift between
+ *   INTEGER and UUID across history; `::text` is the established defensive
+ *   pattern in this codebase (e.g. creator-dashboard).
  * - Pitch ownership is `creator_id OR user_id` (both columns coexist due to drift).
  */
 
@@ -77,7 +79,7 @@ export async function creatorValueHandler(request: Request, env: Env): Promise<R
   const [user, pitchAgg, followers, shareViews, ndaAgg, seals] = await Promise.all([
     guard(() => sql`
       SELECT verification_tier, created_at, username
-      FROM users WHERE id::text = ${userId}
+      FROM users WHERE id = ${userId}
     `, { verification_tier: 'grey', created_at: null, username: null }, 'user'),
 
     guard(() => sql`
@@ -87,11 +89,11 @@ export async function creatorValueHandler(request: Request, env: Env): Promise<R
         COALESCE(SUM(view_count), 0)::int AS views,
         COALESCE(MAX(heat_score), 0)::float AS top_heat
       FROM pitches
-      WHERE creator_id::text = ${userId} OR user_id::text = ${userId}
+      WHERE creator_id = ${userId} OR user_id = ${userId}
     `, { total: 0, published: 0, views: 0, top_heat: 0 }, 'pitches'),
 
     guard(() => sql`
-      SELECT COUNT(*)::int AS v FROM follows WHERE following_id::text = ${userId}
+      SELECT COUNT(*)::int AS v FROM follows WHERE following_id = ${userId}
     `, { v: 0 }, 'followers'),
 
     // Tracked-link reach = portfolio share links + slate share links (moat #5).
@@ -99,8 +101,8 @@ export async function creatorValueHandler(request: Request, env: Env): Promise<R
     // tile reflects ALL share-link reach, not just the older portfolio links.
     guard(() => sql`
       SELECT (
-        COALESCE((SELECT SUM(view_count) FROM portfolio_share_links WHERE creator_id::text = ${userId}), 0)
-        + COALESCE((SELECT SUM(view_count) FROM slate_share_links WHERE creator_id::text = ${userId}), 0)
+        COALESCE((SELECT SUM(view_count) FROM portfolio_share_links WHERE creator_id = ${userId}), 0)
+        + COALESCE((SELECT SUM(view_count) FROM slate_share_links WHERE creator_id = ${userId}), 0)
       )::int AS v
     `, { v: 0 }, 'share_views'),
 
@@ -109,11 +111,11 @@ export async function creatorValueHandler(request: Request, env: Env): Promise<R
       SELECT (
         COALESCE((SELECT COUNT(*) FROM ndas n
           WHERE n.pitch_id::text IN (
-            SELECT id::text FROM pitches WHERE creator_id::text = ${userId} OR user_id::text = ${userId}
+            SELECT id::text FROM pitches WHERE creator_id = ${userId} OR user_id = ${userId}
           )), 0)
         + COALESCE((SELECT COUNT(*) FROM nda_requests nr
           WHERE nr.pitch_id::text IN (
-            SELECT id::text FROM pitches WHERE creator_id::text = ${userId} OR user_id::text = ${userId}
+            SELECT id::text FROM pitches WHERE creator_id = ${userId} OR user_id = ${userId}
           )), 0)
       )::int AS v
     `, { v: 0 }, 'ndas'),
@@ -122,7 +124,7 @@ export async function creatorValueHandler(request: Request, env: Env): Promise<R
       SELECT COUNT(DISTINCT pp.pitch_id)::int AS v
       FROM pitch_provenance pp
       WHERE pp.pitch_id::text IN (
-        SELECT id::text FROM pitches WHERE creator_id::text = ${userId} OR user_id::text = ${userId}
+        SELECT id::text FROM pitches WHERE creator_id = ${userId} OR user_id = ${userId}
       )
     `, { v: 0 }, 'seals'),
   ]);

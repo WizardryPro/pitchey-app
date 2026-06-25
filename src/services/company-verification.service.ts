@@ -35,7 +35,7 @@ export interface AutoCheckResults {
 }
 
 export interface VerificationSubmission {
-  userId: string;
+  userId: number;
   companyName: string;
   region: 'usa' | 'uk' | 'other';
   ein?: string;
@@ -448,7 +448,7 @@ export async function submitVerification(
 
 export async function getVerificationStatus(
   sql: ReturnType<typeof neon<false, false>>,
-  userId: string,
+  userId: number,
 ): Promise<Record<string, unknown> | null> {
   const rows = await sql`
     SELECT id, company_name, region, ein, company_number, website_url,
@@ -478,7 +478,7 @@ export async function listVerifications(
     ? await sql`
         SELECT cv.*, u.email, u.name as user_name, u.username
         FROM company_verifications cv
-        JOIN users u ON cv.user_id::text = u.id::text
+        JOIN users u ON cv.user_id = u.id
         WHERE cv.status = ${statusFilter}
         ORDER BY cv.submitted_at DESC
         LIMIT ${limit} OFFSET ${offset}
@@ -486,7 +486,7 @@ export async function listVerifications(
     : await sql`
         SELECT cv.*, u.email, u.name as user_name, u.username
         FROM company_verifications cv
-        JOIN users u ON cv.user_id::text = u.id::text
+        JOIN users u ON cv.user_id = u.id
         ORDER BY cv.submitted_at DESC
         LIMIT ${limit} OFFSET ${offset}
       `
@@ -498,7 +498,7 @@ export async function listVerifications(
 export async function reviewVerification(
   sql: ReturnType<typeof neon<false, false>>,
   verificationId: string,
-  reviewerId: string,
+  reviewerId: number,
   approved: boolean,
   rejectionReason?: string,
 ): Promise<Record<string, unknown> | null> {
@@ -515,7 +515,7 @@ export async function reviewVerification(
 
   // Update trust badge tier on user
   if (rows.length > 0) {
-    await updateUserVerificationTier(sql, String(rows[0].user_id));
+    await updateUserVerificationTier(sql, Number(rows[0].user_id));
   }
 
   return rows.length > 0 ? rows[0] : null;
@@ -523,7 +523,7 @@ export async function reviewVerification(
 
 export async function isProductionVerified(
   sql: ReturnType<typeof neon<false, false>>,
-  userId: string,
+  userId: number,
 ): Promise<boolean> {
   const rows = await sql`
     SELECT 1 FROM company_verifications
@@ -558,7 +558,7 @@ export function calculateVerificationTier(
 
 export async function updateUserVerificationTier(
   sql: ReturnType<typeof neon<false, false>>,
-  userId: string,
+  userId: number,
 ): Promise<void> {
   const rows = await sql`
     SELECT status, auto_checks FROM company_verifications
@@ -569,5 +569,5 @@ export async function updateUserVerificationTier(
     ? calculateVerificationTier(rows[0].status, rows[0].auto_checks)
     : null;
 
-  await sql`UPDATE users SET verification_tier = ${tier} WHERE id::text = ${userId}`;
+  await sql`UPDATE users SET verification_tier = ${tier} WHERE id = ${userId}`;
 }

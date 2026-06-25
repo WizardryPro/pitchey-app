@@ -171,7 +171,7 @@ export async function getProductionNotes(request: Request, env: Env): Promise<Re
   if (!sql) return jsonResponse({ success: true, data: { notes: [] } }, origin);
 
   try {
-    const ws = await resolveWorkspace(sql, Number(userId), pitchId);
+    const ws = await resolveWorkspace(sql, userId, pitchId);
     if (!ws || !ws.canView) return jsonResponse({ success: true, data: { notes: [] } }, origin);
 
     // Notes are read across the workspace's authors (`teamUserIds`): a private
@@ -207,7 +207,7 @@ export async function createProductionNote(request: Request, env: Env): Promise<
   const sql = getDb(env);
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
-  const ws = await resolveWorkspace(sql, Number(userId), pitchId);
+  const ws = await resolveWorkspace(sql, userId, pitchId);
   if (!ws || !ws.canEdit) {
     return errorResponse('Not authorized to add production notes to this pitch', origin, 403);
   }
@@ -229,7 +229,7 @@ export async function createProductionNote(request: Request, env: Env): Promise<
 
     const result = await sql`
       INSERT INTO production_notes (user_id, pitch_id, content, category, author, shared)
-      VALUES (${Number(userId)}, ${pitchId}, ${content}, ${category}, ${author}, ${shared})
+      VALUES (${userId}, ${pitchId}, ${content}, ${category}, ${author}, ${shared})
       RETURNING id, content, category, author, shared, created_at, updated_at
     `;
 
@@ -259,7 +259,7 @@ export async function deleteProductionNote(request: Request, env: Env): Promise<
   const sql = getDb(env);
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
-  const ws = await resolveWorkspace(sql, Number(userId), pitchId);
+  const ws = await resolveWorkspace(sql, userId, pitchId);
   if (!ws || !ws.canEdit) return errorResponse('Not authorized to delete this note', origin, 403);
 
   try {
@@ -272,7 +272,7 @@ export async function deleteProductionNote(request: Request, env: Env): Promise<
           RETURNING id`
       : await sql`
           DELETE FROM production_notes
-          WHERE id = ${noteId} AND pitch_id = ${pitchId} AND user_id = ${Number(userId)}
+          WHERE id = ${noteId} AND pitch_id = ${pitchId} AND user_id = ${userId}
           RETURNING id`;
 
     if (result.length === 0) {
@@ -306,7 +306,7 @@ export async function getProductionChecklist(request: Request, env: Env): Promis
   if (!sql) return jsonResponse({ success: true, data: { checklist: {} } }, origin);
 
   try {
-    const ws = await resolveWorkspace(sql, Number(userId), pitchId);
+    const ws = await resolveWorkspace(sql, userId, pitchId);
     if (!ws || !ws.canView) return jsonResponse({ success: true, data: { checklist: {} } }, origin);
 
     const result = await safeQuery<{ checklist: Record<string, unknown> }>(() => sql`
@@ -337,7 +337,7 @@ export async function updateProductionChecklist(request: Request, env: Env): Pro
   const sql = getDb(env);
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
-  const ws = await resolveWorkspace(sql, Number(userId), pitchId);
+  const ws = await resolveWorkspace(sql, userId, pitchId);
   if (!ws || !ws.canEdit) {
     return errorResponse('Not authorized to update production data on this pitch', origin, 403);
   }
@@ -387,7 +387,7 @@ export async function getProductionTeam(request: Request, env: Env): Promise<Res
   if (!sql) return jsonResponse({ success: true, data: { team: [] } }, origin);
 
   try {
-    const ws = await resolveWorkspace(sql, Number(userId), pitchId);
+    const ws = await resolveWorkspace(sql, userId, pitchId);
     if (!ws || !ws.canView) return jsonResponse({ success: true, data: { team: [] } }, origin);
 
     const result = await safeQuery<{ team: unknown[] }>(() => sql`
@@ -418,7 +418,7 @@ export async function updateProductionTeam(request: Request, env: Env): Promise<
   const sql = getDb(env);
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
-  const ws = await resolveWorkspace(sql, Number(userId), pitchId);
+  const ws = await resolveWorkspace(sql, userId, pitchId);
   if (!ws || !ws.canEdit) {
     return errorResponse('Not authorized to update production data on this pitch', origin, 403);
   }
@@ -470,7 +470,7 @@ export async function toggleNoteShared(request: Request, env: Env): Promise<Resp
   const sql = getDb(env);
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
-  const ws = await resolveWorkspace(sql, Number(userId), pitchId);
+  const ws = await resolveWorkspace(sql, userId, pitchId);
   if (!ws || !ws.canEdit) return errorResponse('Not authorized to share this note', origin, 403);
 
   try {
@@ -485,7 +485,7 @@ export async function toggleNoteShared(request: Request, env: Env): Promise<Resp
           RETURNING id, shared`
       : await sql`
           UPDATE production_notes SET shared = ${shared}, updated_at = NOW()
-          WHERE id = ${noteId} AND pitch_id = ${pitchId} AND user_id = ${Number(userId)}
+          WHERE id = ${noteId} AND pitch_id = ${pitchId} AND user_id = ${userId}
           RETURNING id, shared`;
 
     if (result.length === 0) {
@@ -525,7 +525,7 @@ export async function getCreatorPitchFeedback(request: Request, env: Env): Promi
   try {
     // Verify the caller owns this pitch
     const pitchCheck = await sql`
-      SELECT id FROM pitches WHERE id = ${pitchId} AND user_id = ${Number(userId)}
+      SELECT id FROM pitches WHERE id = ${pitchId} AND user_id = ${userId}
     `;
     if (pitchCheck.length === 0) {
       return errorResponse('Not your pitch', origin, 403);
@@ -627,7 +627,7 @@ export async function getProductionSlate(request: Request, env: Env): Promise<Re
   const origin = request.headers.get('Origin');
   const userId = await getUserId(request, env);
   if (!userId) return errorResponse('Unauthorized', origin, 401);
-  const me = Number(userId);
+  const me = userId;
 
   const emptyCounts = { evaluating: 0, reviewing: 0, packaging: 0, ready: 0 };
   const sql = getDb(env);

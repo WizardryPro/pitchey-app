@@ -335,7 +335,7 @@ export async function creatorNdasHandler(
         COALESCE(u.name, u.email) AS requester_name
       FROM nda_requests nr
       JOIN pitches p ON p.id = nr.pitch_id
-      LEFT JOIN users u ON u.id::text = nr.requester_id::text
+      LEFT JOIN users u ON u.id = nr.requester_id
       WHERE (nr.pitch_owner_id = ${userId} OR nr.creator_id = ${userId} OR nr.owner_id = ${userId} OR p.user_id = ${userId})
       ORDER BY nr.requested_at DESC
     `;
@@ -571,7 +571,7 @@ export async function creatorEarningsHandler(
         COALESCE(u.name, u.email) AS investor_name
       FROM investments i
       JOIN pitches p ON p.id = i.pitch_id
-      LEFT JOIN users u ON u.id::text = i.investor_id::text
+      LEFT JOIN users u ON u.id = i.investor_id
       WHERE p.user_id = ${userId}
       ORDER BY i.created_at DESC
       LIMIT 50
@@ -630,7 +630,7 @@ export async function creatorFollowersHandler(
         u.bio,
         f.created_at AS followed_at
       FROM follows f
-      JOIN users u ON u.id::text = f.follower_id::text
+      JOIN users u ON u.id = f.follower_id
       WHERE f.following_id = ${userId}
       ORDER BY f.created_at DESC
       LIMIT 100
@@ -771,12 +771,12 @@ export async function creatorNetworkHandler(
         f.created_at AS connected_since
       FROM follows f
       JOIN users u ON (
-        (f.follower_id::text = ${userId} AND u.id::text = f.following_id::text)
+        (f.follower_id = ${userId} AND u.id = f.following_id)
         OR
-        (f.following_id::text = ${userId} AND u.id::text = f.follower_id::text)
+        (f.following_id = ${userId} AND u.id = f.follower_id)
       )
-      WHERE f.follower_id::text = ${userId}
-         OR f.following_id::text = ${userId}
+      WHERE f.follower_id = ${userId}
+         OR f.following_id = ${userId}
       ORDER BY f.created_at DESC
     `;
 
