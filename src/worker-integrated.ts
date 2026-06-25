@@ -324,10 +324,15 @@ function toRelativeMediaUrl<T>(url: T): T {
 // backfilled to relative (migration 108). Safe no-op for relative/null values.
 function normalizePitchMedia<T extends Record<string, any>>(pitch: T): T {
   if (!pitch || typeof pitch !== 'object') return pitch;
-  if (typeof pitch.title_image === 'string') pitch.title_image = toRelativeMediaUrl(pitch.title_image);
-  if (typeof pitch.thumbnail_url === 'string') pitch.thumbnail_url = toRelativeMediaUrl(pitch.thumbnail_url);
-  if (typeof pitch.titleImage === 'string') pitch.titleImage = toRelativeMediaUrl(pitch.titleImage);
-  if (typeof pitch.thumbnailUrl === 'string') pitch.thumbnailUrl = toRelativeMediaUrl(pitch.thumbnailUrl);
+  // Mutate through a non-generic view: a bare generic T can't be indexed for
+  // writing (TS2862) and dot-access on it misses the index signature (TS2339).
+  // T extends Record<string, any>, so this is a safe, cast-free widening of the
+  // same object reference.
+  const p: Record<string, any> = pitch;
+  if (typeof p.title_image === 'string') p.title_image = toRelativeMediaUrl(p.title_image);
+  if (typeof p.thumbnail_url === 'string') p.thumbnail_url = toRelativeMediaUrl(p.thumbnail_url);
+  if (typeof p.titleImage === 'string') p.titleImage = toRelativeMediaUrl(p.titleImage);
+  if (typeof p.thumbnailUrl === 'string') p.thumbnailUrl = toRelativeMediaUrl(p.thumbnailUrl);
   return pitch;
 }
 
@@ -22233,12 +22238,17 @@ const websocketSafeHandler = {
 // which is exactly where you'd want to be paged. `fetch` is left untouched (it's
 // already wrapped + WebSocket-bypassed + Axiom-logged internally).
 const sentryScheduled = Sentry.withSentry(
-  (env: Env) => ({
-    dsn: env.SENTRY_DSN,
-    release: env.CF_VERSION_METADATA?.id,
-    environment: env.SENTRY_ENVIRONMENT || env.ENVIRONMENT || 'production',
-    tracesSampleRate: parseFloat(env.SENTRY_TRACES_SAMPLE_RATE || '0.1'),
-  }),
+  // withSentry types the injected env as `unknown` here (the handler below is
+  // `as any`, so E can't be inferred); narrow it once — it is the worker Env.
+  (env: unknown) => {
+    const e = env as Env;
+    return {
+      dsn: e.SENTRY_DSN,
+      release: e.CF_VERSION_METADATA?.id,
+      environment: e.SENTRY_ENVIRONMENT || e.ENVIRONMENT || 'production',
+      tracesSampleRate: parseFloat(e.SENTRY_TRACES_SAMPLE_RATE || '0.1'),
+    };
+  },
   { scheduled: websocketSafeHandler.scheduled } as any,
 );
 
