@@ -35,7 +35,10 @@ function jsonResponse(
   });
 }
 
-function authGuard(sql: any, userId: number | null, origin: string | null) {
+// userId is a string|null (getUserId returns the id as a string); authGuard only
+// truthiness-checks it and the handlers pass it as a SQL template param, so the
+// param type must match the real string id — not number.
+function authGuard(sql: any, userId: string | null, origin: string | null) {
   if (!sql || !userId) {
     return jsonResponse({ success: false, error: 'Authentication required' }, origin, 401);
   }
