@@ -208,7 +208,7 @@ export async function listCollaborators(request: Request, env: Env): Promise<Res
       ORDER BY pc.invited_at DESC
     `;
 
-    const mapped = collaborators.map(c => ({
+    const mapped = collaborators.map((c: any) => ({
       id: c.id,
       user_id: c.user_id,
       invited_email: c.invited_email,
@@ -483,7 +483,7 @@ export async function getAllTeamCollaborators(request: Request, env: Env): Promi
       ORDER BY pc.invited_at DESC
     `;
 
-    const mapped = collaborators.map(c => ({
+    const mapped = collaborators.map((c: any) => ({
       id: c.id,
       project_id: c.project_id,
       project_title: c.project_title,
@@ -501,9 +501,9 @@ export async function getAllTeamCollaborators(request: Request, env: Env): Promi
       } : null,
     }));
 
-    const active = mapped.filter(c => c.status === 'active').length;
-    const pending = mapped.filter(c => c.status === 'pending').length;
-    const projects = new Set(mapped.map(c => c.project_id)).size;
+    const active = mapped.filter((c: any) => c.status === 'active').length;
+    const pending = mapped.filter((c: any) => c.status === 'pending').length;
+    const projects = new Set(mapped.map((c: any) => c.project_id)).size;
 
     return jsonResponse({
       success: true,
@@ -548,7 +548,7 @@ export async function getMyCollaborations(request: Request, env: Env): Promise<R
       ORDER BY pc.accepted_at DESC
     `;
 
-    const mapped = collaborations.map(c => ({
+    const mapped = collaborations.map((c: any) => ({
       project_id: c.project_id,
       project_title: c.project_title,
       project_stage: c.project_stage,
@@ -874,7 +874,7 @@ export async function getCollaborationActivity(request: Request, env: Env): Prom
       LIMIT ${limit} OFFSET ${offset}
     `;
 
-    const mapped = activity.map(a => ({
+    const mapped = activity.map((a: any) => ({
       id: a.id,
       action: a.action,
       entity_id: a.entity_id,
