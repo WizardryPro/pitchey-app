@@ -135,6 +135,15 @@ jobs:
         # and docs/catch-swallow-audit-2026-04-17.md.
         run: node scripts/catch-swallow-gate.mjs --include-worker --threshold 0 --list
 
+      - name: 🔒 Worker type-check gate (ratchet)
+        # The Worker (src/, wrangler `main`) ships via esbuild, which does NOT
+        # type-check, and CI's `type-check` step only covers frontend/. So worker
+        # type errors accumulated invisibly (38+ live ones, found 2026-06-25). This
+        # runs `tsc` over the root tsconfig and FAILS if the error count rises above
+        # the committed baseline — no new type errors can land unseen. Lower the
+        # baseline in the script as errors are fixed (it only ratchets down).
+        run: node scripts/worker-typecheck-gate.mjs --list
+
   # =================================================================
   # DATABASE TESTS
   # =================================================================

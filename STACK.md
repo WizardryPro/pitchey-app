@@ -23,7 +23,7 @@
 | Frontend build | `cd frontend && npm run build` | Vite |
 | Worker bundle | `npm run build:worker` | esbuild → `dist/worker.js`; doubles as a worker syntax/bundle check |
 | Frontend type-check | `cd frontend && npm run type-check` | `tsc --noEmit -p tsconfig.app.json` — **the gate for any FE type fix** |
-| Worker type-check | `./frontend/node_modules/.bin/tsc --noEmit -p tsconfig.json` | root tsconfig (strict). ⚠️ **No tsc at root** — worker is esbuild-bundled (no type-check), CI never runs this; use the frontend binary. Surfaces silent worker type drift (38 errors as of 2026-06-25). |
+| Worker type-check | `npx tsc --noEmit -p tsconfig.json` | root tsconfig (strict). `typescript` is now a root devDep. esbuild (the deploy build) still doesn't type-check, so **CI gates this** via the ratchet `node scripts/worker-typecheck-gate.mjs` in the `⚡ Worker Tests` job — fails on any error count above the baseline. Lower the baseline in that script as errors are fixed. |
 | Lint | `cd frontend && npm run lint` (`eslint .`) | **frontend only — no backend ESLint exists** |
 | Test (backend) | `npm test` → `vitest --config vitest.backend.config.ts` | pure-logic ring around utils/lib |
 | Test (integration) | `npm run test:integration` → `vitest.integration.config.ts` | real `worker.fetch()` vs throwaway Neon branch (`TEST_DATABASE_URL`) |
