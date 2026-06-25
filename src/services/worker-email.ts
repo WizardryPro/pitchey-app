@@ -43,7 +43,7 @@ export class WorkerEmailService {
   /**
    * Send a single email and log to database
    */
-  async send(message: EmailMessage, meta?: { userId?: number; templateType?: string }): Promise<{ success: boolean; id?: string; error?: string }> {
+  async send(message: EmailMessage, meta?: { userId?: string | number; templateType?: string }): Promise<{ success: boolean; id?: string; error?: string }> {
     const recipient = Array.isArray(message.to) ? message.to.join(', ') : message.to;
     try {
       const response = await fetch(this.resendApiUrl, {
@@ -86,7 +86,7 @@ export class WorkerEmailService {
   /** Fire-and-forget log to email_logs table */
   private logEmail(
     recipient: string, subject: string, templateType: string | undefined,
-    providerId: string | null, status: string, error: string | null, userId?: number
+    providerId: string | null, status: string, error: string | null, userId?: string | number
   ) {
     if (!this.db) return;
     this.db.query(

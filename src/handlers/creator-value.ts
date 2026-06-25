@@ -80,7 +80,7 @@ export async function creatorValueHandler(request: Request, env: Env): Promise<R
     guard(() => sql`
       SELECT verification_tier, created_at, username
       FROM users WHERE id = ${userId}
-    `, { verification_tier: 'grey', created_at: null, username: null }, 'user'),
+    `, { verification_tier: 'grey', created_at: null as string | null, username: null as string | null }, 'user'),
 
     guard(() => sql`
       SELECT
