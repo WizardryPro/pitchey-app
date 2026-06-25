@@ -92,7 +92,7 @@ export async function productionStatsHandler(
           COUNT(*) FILTER (WHERE status = 'completed')::int AS completed_projects,
           COALESCE(SUM(budget_allocated), 0) AS total_budget_allocated
         FROM production_pipeline
-        WHERE production_company_id::text = ${String(userId)}
+        WHERE production_company_id = ${userId}
       `, { fallback: [], context: 'production-sidebar.stats.project-stats' });
       degraded = degraded || projectStats.errored;
 
@@ -117,7 +117,7 @@ export async function productionStatsHandler(
           ), 0) AS monthly_revenue
         FROM investments i
         JOIN production_pipeline pp ON i.pitch_id = pp.pitch_id
-        WHERE pp.production_company_id::text = ${String(userId)}
+        WHERE pp.production_company_id = ${userId}
           AND i.status IN ('active', 'funded', 'committed', 'completed')
       `, { fallback: [], context: 'production-sidebar.stats.revenue' });
       degraded = degraded || revenueStats.errored;
@@ -220,7 +220,7 @@ export async function productionActivityHandler(
           priority,
           created_at
         FROM notifications
-        WHERE user_id = ${Number(userId)}
+        WHERE user_id = ${userId}
         ${timeFilter}
         ORDER BY created_at DESC
         LIMIT ${limit}
@@ -229,7 +229,7 @@ export async function productionActivityHandler(
       safeQuery<{ total: number }>(() => sql`
         SELECT COUNT(*)::int AS total
         FROM notifications
-        WHERE user_id = ${Number(userId)}
+        WHERE user_id = ${userId}
         ${timeFilter}
       `, { fallback: [{ total: 0 }], context: 'production-sidebar.activity.count' }),
     ]);
@@ -505,7 +505,7 @@ export async function productionRevenueHandler(
         ), 0) AS yearly_revenue
       FROM investments i
       JOIN production_pipeline pp ON i.pitch_id = pp.pitch_id
-      WHERE pp.production_company_id::text = ${String(userId)}
+      WHERE pp.production_company_id = ${userId}
         AND i.status IN ('active', 'funded', 'committed', 'completed')
     `, { fallback: [], context: 'production-sidebar.revenue.summary' });
 
@@ -525,7 +525,7 @@ export async function productionRevenueHandler(
       LEFT JOIN pitches p ON pp.pitch_id = p.id
       LEFT JOIN investments i ON i.pitch_id = pp.pitch_id
         AND i.status IN ('active', 'funded', 'committed', 'completed')
-      WHERE pp.production_company_id::text = ${String(userId)}
+      WHERE pp.production_company_id = ${userId}
       GROUP BY pp.id, pp.title, p.title
       ORDER BY revenue DESC
       LIMIT 20
@@ -540,7 +540,7 @@ export async function productionRevenueHandler(
         COUNT(i.id)::int AS investment_count
       FROM investments i
       JOIN production_pipeline pp ON i.pitch_id = pp.pitch_id
-      WHERE pp.production_company_id::text = ${String(userId)}
+      WHERE pp.production_company_id = ${userId}
         AND i.status IN ('active', 'funded', 'committed', 'completed')
         AND i.created_at >= NOW() - INTERVAL '12 months'
       GROUP BY DATE_TRUNC('month', i.created_at)
@@ -573,7 +573,7 @@ export async function productionRevenueHandler(
         SELECT
           AVG(COALESCE(NULLIF(option_amount, 0), NULLIF(purchase_price, 0), NULLIF(development_fee, 0))) AS avg_deal
         FROM production_deals
-        WHERE production_company_id = ${Number(userId)}
+        WHERE production_company_id = ${userId}
           AND deal_state NOT IN ('rejected', 'cancelled')
       `, { fallback: [], context: 'production-sidebar.revenue.deal-stats' });
 
@@ -597,7 +597,7 @@ export async function productionRevenueHandler(
       JOIN pitches p ON pp.pitch_id = p.id
       LEFT JOIN investments i ON i.pitch_id = pp.pitch_id
         AND i.status IN ('active', 'funded', 'committed', 'completed')
-      WHERE pp.production_company_id::text = ${String(userId)}
+      WHERE pp.production_company_id = ${userId}
       GROUP BY p.format
       ORDER BY revenue DESC
     `, { fallback: [], context: 'production-sidebar.revenue.by-category' });
@@ -690,14 +690,14 @@ export async function productionSavedPitchesHandler(
         FROM saved_pitches sp
         JOIN pitches p ON sp.pitch_id = p.id
         JOIN users u ON p.user_id = u.id
-        WHERE sp.user_id = ${Number(userId)}
+        WHERE sp.user_id = ${userId}
         ORDER BY sp.saved_at DESC
         LIMIT 50
       `, { fallback: [], context: 'production-sidebar.saved-pitches.list' }),
       safeQuery<{ total: number }>(() => sql`
         SELECT COUNT(*)::int AS total
         FROM saved_pitches
-        WHERE user_id = ${Number(userId)}
+        WHERE user_id = ${userId}
       `, { fallback: [{ total: 0 }], context: 'production-sidebar.saved-pitches.count' }),
     ]);
 

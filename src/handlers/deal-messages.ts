@@ -120,7 +120,7 @@ export async function postDealMessage(request: Request, env: Env): Promise<Respo
 
     const [message] = await sql`
       INSERT INTO deal_messages (deal_id, sender_id, sender_role, kind, body, proposed_amount, proposed_terms)
-      VALUES (${dealId}, ${Number(userId)}, ${role}, ${kind}, ${text || null}, ${proposedAmount}, ${proposedTerms || null})
+      VALUES (${dealId}, ${userId}, ${role}, ${kind}, ${text || null}, ${proposedAmount}, ${proposedTerms || null})
       RETURNING id, sender_id, sender_role, kind, body, proposed_amount, proposed_terms, created_at
     ` as unknown as Record<string, unknown>[];
 
@@ -134,7 +134,7 @@ export async function postDealMessage(request: Request, env: Env): Promise<Respo
         ${kind === 'counter'
           ? 'The other party proposed new terms on your deal'
           : 'The other party sent a message on your deal'},
-        ${Number(userId)}, ${deal.pitch_id}, NOW()
+        ${userId}, ${deal.pitch_id}, NOW()
       )
     `, { fallback: [], context: 'deal-messages.notify' });
 

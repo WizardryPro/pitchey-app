@@ -176,7 +176,7 @@ export async function uploadInsuranceHandler(
 
   await bucket.put(key, fileBuffer, {
     httpMetadata: { contentType },
-    customMetadata: { userId, purpose: 'proof_of_insurance', uploadedAt: new Date().toISOString() },
+    customMetadata: { userId: String(userId), purpose: 'proof_of_insurance', uploadedAt: new Date().toISOString() },
   });
 
   // Upsert the insurance URL into company_verifications (create row if needed)

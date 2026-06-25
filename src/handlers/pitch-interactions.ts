@@ -333,7 +333,7 @@ export async function pitchPublishHandler(request: Request, env: Env): Promise<R
       `;
       if (referral?.inviter_id) {
         const [creatorInfo] = await sql`
-          SELECT name, first_name, last_name FROM users WHERE id = ${Number(userId)} LIMIT 1
+          SELECT name, first_name, last_name FROM users WHERE id = ${userId} LIMIT 1
         `;
         const creatorName = creatorInfo?.name
           || `${creatorInfo?.first_name || ''} ${creatorInfo?.last_name || ''}`.trim()
@@ -349,7 +349,7 @@ export async function pitchPublishHandler(request: Request, env: Env): Promise<R
               'pitch_published',
               ${`New pitch from ${creatorName}`},
               ${`${creatorName} published "${pitchTitle}" — they signed up through your invite`},
-              ${Number(userId)},
+              ${userId},
               ${Number(pitchId)},
               NOW()
             )

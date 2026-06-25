@@ -86,8 +86,8 @@ export async function creatorDashboardHandler(request: Request, env: Env): Promi
     ] = await Promise.all([
       safeQuery<{ totalPitches: number; totalFollowers: number }>(() => sql`
         SELECT
-          (SELECT COUNT(*)::int FROM pitches WHERE creator_id::text = ${userId} OR user_id::text = ${userId}) as "totalPitches",
-          (SELECT COUNT(*)::int FROM follows WHERE following_id::text = ${userId}) as "totalFollowers"
+          (SELECT COUNT(*)::int FROM pitches WHERE creator_id = ${userId} OR user_id = ${userId}) as "totalPitches",
+          (SELECT COUNT(*)::int FROM follows WHERE following_id = ${userId}) as "totalFollowers"
       `, { fallback: [{ totalPitches: 0, totalFollowers: 0 }], context: 'creator-dashboard.stats' }),
       safeQuery(() => sql`
         SELECT id, title, logline, genre, status,
@@ -97,7 +97,7 @@ export async function creatorDashboardHandler(request: Request, env: Env): Promi
                COALESCE((SELECT COUNT(*) FROM ndas n WHERE n.pitch_id = pitches.id), 0)::int as "ndaRequests",
                rating, rating_average
         FROM pitches
-        WHERE creator_id::text = ${userId} OR user_id::text = ${userId}
+        WHERE creator_id = ${userId} OR user_id = ${userId}
         ORDER BY updated_at DESC
         LIMIT 5
       `, { fallback: [], context: 'creator-dashboard.recent-pitches' }),
@@ -106,7 +106,7 @@ export async function creatorDashboardHandler(request: Request, env: Env): Promi
           COALESCE(SUM(view_count), 0)::int as total_views,
           COALESCE(AVG(CASE WHEN view_count > 0 THEN (like_count::float / view_count * 100) ELSE 0 END), 0) as avg_engagement
         FROM pitches
-        WHERE creator_id::text = ${userId} OR user_id::text = ${userId}
+        WHERE creator_id = ${userId} OR user_id = ${userId}
       `, { fallback: [{ total_views: 0, avg_engagement: 0 }], context: 'creator-dashboard.analytics' }),
       safeQuery<documentQueries.NDARequest>(() => documentQueries.getUserNDARequests(sql as any, userId, 'received'), { fallback: [], context: 'creator-dashboard.ndas' }),
       safeQuery<investmentQueries.Investment>(() => investmentQueries.getInvestorPortfolio(sql as any, userId, {}), { fallback: [], context: 'creator-dashboard.investments' }),
@@ -251,7 +251,7 @@ export async function creatorRevenueHandler(request: Request, env: Env): Promise
           i.status
         FROM investments i
         JOIN pitches p ON i.pitch_id = p.id
-        WHERE p.user_id::text = ${userId}
+        WHERE p.user_id = ${userId}
           AND i.created_at BETWEEN ${startDate} AND ${endDate}
         GROUP BY DATE_TRUNC('day', i.created_at), i.status
         ORDER BY date DESC
@@ -271,7 +271,7 @@ export async function creatorRevenueHandler(request: Request, env: Env): Promise
           COALESCE(MAX(i.amount), 0) as maximum
         FROM investments i
         JOIN pitches p ON i.pitch_id = p.id
-        WHERE p.user_id::text = ${userId}
+        WHERE p.user_id = ${userId}
           AND i.created_at BETWEEN ${startDate} AND ${endDate}
         GROUP BY i.status
       `,
@@ -288,8 +288,8 @@ export async function creatorRevenueHandler(request: Request, env: Env): Promise
           COALESCE(SUM(i.amount), 0) as total_invested
         FROM investments i
         JOIN pitches p ON i.pitch_id = p.id
-        JOIN users u ON i.investor_id::text = u.id::text
-        WHERE p.user_id::text = ${userId}
+        JOIN users u ON i.investor_id = u.id
+        WHERE p.user_id = ${userId}
           AND i.status IN ('committed', 'funded', 'active')
         GROUP BY u.location, u.company_name
         ORDER BY total_invested DESC
@@ -402,8 +402,8 @@ export async function creatorContractsHandler(request: Request, env: Env): Promi
         i.updated_at as last_updated
       FROM investments i
       JOIN pitches p ON i.pitch_id = p.id
-      LEFT JOIN users u ON i.investor_id::text = u.id::text
-      WHERE p.user_id::text = ${userId}
+      LEFT JOIN users u ON i.investor_id = u.id
+      WHERE p.user_id = ${userId}
         ${status ? sql`AND i.status = ${status}` : sql``}
       ORDER BY COALESCE(i.updated_at, i.created_at) DESC
       LIMIT 100
@@ -420,7 +420,7 @@ export async function creatorContractsHandler(request: Request, env: Env): Promi
         COALESCE(SUM(i.amount) FILTER (WHERE i.status IN ('committed', 'pending')), 0) as total_pipeline_value
       FROM investments i
       JOIN pitches p ON i.pitch_id = p.id
-      WHERE p.user_id::text = ${userId}
+      WHERE p.user_id = ${userId}
     `;
 
     return new Response(JSON.stringify({
@@ -531,7 +531,7 @@ export async function creatorPitchAnalyticsHandler(request: Request, env: Env): 
           FROM investments
           GROUP BY pitch_id
         ) inv_count ON p.id = inv_count.pitch_id
-        WHERE p.user_id::text = ${userId}
+        WHERE p.user_id = ${userId}
         ORDER BY p.created_at DESC
       `, { fallback: [], context: 'creator-dashboard.analytics.all-pitches' });
 
@@ -547,7 +547,7 @@ export async function creatorPitchAnalyticsHandler(request: Request, env: Env): 
         LEFT JOIN pitch_views pv ON p.id = pv.pitch_id
         LEFT JOIN saved_pitches sp ON p.id = sp.pitch_id
         LEFT JOIN nda_requests nr ON p.id = nr.pitch_id
-        WHERE p.user_id::text = ${userId}
+        WHERE p.user_id = ${userId}
       `, { fallback: [{ total_views: 0, unique_viewers: 0, total_saves: 0, total_nda_requests: 0 }], context: 'creator-dashboard.analytics.summary' });
 
       return new Response(JSON.stringify({
@@ -717,9 +717,9 @@ export async function creatorInvestorsHandler(request: Request, env: Env): Promi
           ELSE 'inactive'
         END as activity_status
       FROM users u
-      JOIN investments i ON i.investor_id::text = u.id::text
+      JOIN investments i ON i.investor_id = u.id
       JOIN pitches p ON i.pitch_id = p.id
-      WHERE p.user_id::text = ${userId}
+      WHERE p.user_id = ${userId}
         ${filter === 'active' ? sql`AND i.status IN ('committed', 'funded', 'active')` : sql``}
       GROUP BY u.id, u.name, u.first_name, u.last_name, u.email, u.company_name, u.profile_image, u.location, u.bio
       ORDER BY total_invested DESC
@@ -757,7 +757,7 @@ export async function creatorInvestorsHandler(request: Request, env: Env): Promi
 }
 
 // Helper functions
-async function getRevenueMetrics(sql: any, userId: string) {
+async function getRevenueMetrics(sql: any, userId: number) {
   // `status` exists on both investments (i) and pitches (p); qualify or Postgres
   // throws `column reference "status" is ambiguous`.
   const result = await sql`
@@ -769,7 +769,7 @@ async function getRevenueMetrics(sql: any, userId: string) {
       AVG(CASE WHEN i.status = 'funded' THEN i.amount END) as avg_deal_size
     FROM investments i
     JOIN pitches p ON i.pitch_id = p.id
-    WHERE p.user_id::text = ${userId}
+    WHERE p.user_id = ${userId}
   `;
 
   return {
@@ -781,14 +781,14 @@ async function getRevenueMetrics(sql: any, userId: string) {
   };
 }
 
-async function getViewTrend(sql: any, userId: string) {
+async function getViewTrend(sql: any, userId: number) {
   const result = await sql`
     SELECT
       DATE_TRUNC('day', pv.viewed_at) as date,
       COUNT(*) as views
     FROM pitch_views pv
     JOIN pitches p ON pv.pitch_id = p.id
-    WHERE (p.creator_id::text = ${userId} OR p.user_id::text = ${userId})
+    WHERE (p.creator_id = ${userId} OR p.user_id = ${userId})
       AND pv.viewed_at >= NOW() - INTERVAL '30 days'
     GROUP BY DATE_TRUNC('day', pv.viewed_at)
     ORDER BY date ASC
@@ -807,7 +807,7 @@ async function getContractAlerts(sql: any, userId: string) {
       i.updated_at
     FROM investments i
     JOIN pitches p ON i.pitch_id = p.id
-    WHERE p.user_id::text = ${userId}
+    WHERE p.user_id = ${userId}
       AND i.status = 'pending'
       AND i.created_at < NOW() - INTERVAL '30 days'
   `;

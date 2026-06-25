@@ -412,7 +412,7 @@ export async function getNDARequest(
 
 export async function getUserNDARequests(
   sql: SqlQuery,
-  userId: string,
+  userId: number,
   type: 'sent' | 'received' | 'all' = 'all'
 ): Promise<NDARequest[]> {
   const wb = new WhereBuilder();

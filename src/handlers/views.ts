@@ -136,7 +136,7 @@ export async function getViewAnalyticsHandler(request: Request, env: Env): Promi
         COUNT(DISTINCT v.viewer_id)::int AS unique_viewers
       FROM views v
       JOIN pitches p ON p.id = v.pitch_id
-      WHERE p.user_id::text = ${userId}
+      WHERE p.user_id = ${userId}
         ${pitchId ? sql`AND v.pitch_id = ${parseInt(pitchId)}` : sql``}
       GROUP BY period
       ORDER BY period DESC
@@ -154,7 +154,7 @@ export async function getViewAnalyticsHandler(request: Request, env: Env): Promi
       FROM views v
       JOIN pitches p ON p.id = v.pitch_id
       LEFT JOIN users u ON u.id = v.viewer_id
-      WHERE p.user_id::text = ${userId}
+      WHERE p.user_id = ${userId}
         AND v.viewer_id IS NOT NULL
       GROUP BY u.id, u.name, u.user_type
       ORDER BY view_count DESC
@@ -248,7 +248,7 @@ export async function getPitchViewersHandler(request: Request, env: Env): Promis
     const PAID_TIERS = new Set(['creator', 'creator_plus', 'creator_unlimited']);
     let isPaid = false;
     try {
-      const [u] = await sql`SELECT subscription_tier FROM users WHERE id::text = ${String(userId)}`;
+      const [u] = await sql`SELECT subscription_tier FROM users WHERE id = ${userId}`;
       isPaid = PAID_TIERS.has(String((u as Record<string, unknown>)?.subscription_tier ?? ''));
     } catch { isPaid = false; }
 
