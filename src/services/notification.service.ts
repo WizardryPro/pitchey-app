@@ -85,6 +85,15 @@ export interface NotificationPreferences {
   messageNotifications: boolean;
   systemNotifications: boolean;
 
+  // Quiet-hours (optional): the columns are NOT in the live notification_preferences
+  // table yet, so getUserPreferences() never sets these — they are always undefined,
+  // and isInQuietHours() therefore returns false (the feature is inert until the
+  // columns + loader mapping are added). Typed optional so the type matches reality.
+  quietHoursEnabled?: boolean;
+  quietHoursStart?: string;
+  quietHoursEnd?: string;
+  timezone?: string;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -969,13 +978,18 @@ export class NotificationService {
       case 'nda_rejection':
       case 'nda_expiration':
       case 'nda_reminder':
-        return preferences.ndaNotifications;
+        // No dedicated pref column — NDA notifications are transactional/important,
+        // always allowed (previously read a non-existent `ndaNotifications` → undefined
+        // → silently blocked). See issue #361.
+        return true;
       case 'investment':
-        return preferences.investmentNotifications;
+        return preferences.investmentAlerts; // was `investmentNotifications` (not a loaded field) → always blocked
       case 'message':
         return preferences.messageNotifications;
       case 'pitch_update':
-        return preferences.pitchUpdateNotifications;
+        // No dedicated pref column — relevant to followers, allowed by default
+        // (previously read a non-existent `pitchUpdateNotifications` → silently blocked).
+        return true;
       case 'system':
         return preferences.systemNotifications;
       case 'marketing':
