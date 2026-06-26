@@ -194,6 +194,15 @@ export async function updateInvestorThesisHandler(request: Request, env: Env): P
   const isPublic = body.isPublic === undefined ? true : Boolean(body.isPublic);
 
   try {
+    // Capture the prior genres BEFORE the upsert, to detect newly-added interest for
+    // the reverse notify below (so re-saving an unchanged thesis never re-notifies).
+    let prevGenres: string[] = [];
+    try {
+      const prev = await sql`SELECT genres FROM investor_thesis WHERE investor_id = ${userId} LIMIT 1`;
+      const g = (prev[0] as { genres?: unknown } | undefined)?.genres;
+      if (Array.isArray(g)) prevGenres = g as string[];
+    } catch { /* table may be absent — treat as no prior genres */ }
+
     const rows = await sql`
       INSERT INTO investor_thesis (
         investor_id, genres, formats, stages, deal_types, territories, themes,
@@ -225,6 +234,31 @@ export async function updateInvestorThesisHandler(request: Request, env: Env): P
                 positioning, is_public
     `;
     const row = rows[0];
+
+    // Reverse notify (moat #7): when the investor ADDS a genre to their thesis, alert
+    // creators with published pitches in that genre that a new mandate matches their work.
+    // Diff-on-save (only newly-added genres) + capped + fire-and-forget — never blocks the
+    // save, and an absent notifications/pitches column degrades silently.
+    const addedGenres = genres.filter((g) => !prevGenres.includes(g));
+    if (addedGenres.length > 0) {
+      const title = 'An investor is looking for your genre';
+      const message = `An investor's thesis now matches your published work — they're interested in ${addedGenres.join(', ')}.`;
+      try {
+        await sql`
+          INSERT INTO notifications (user_id, type, title, message, related_pitch_id, related_user_id, action_url, is_read, created_at)
+          SELECT DISTINCT p.user_id, 'pitch_update', ${title}, ${message}, NULL::int, ${userId}, '/opportunities', false, NOW()
+          FROM pitches p
+          WHERE p.status = 'published'
+            AND p.genre = ANY(${addedGenres}::text[])
+            AND p.user_id IS NOT NULL
+            AND p.user_id <> ${userId}
+          LIMIT 50
+        `;
+      } catch (e) {
+        console.debug('reverse thesis-match notify failed (non-blocking):', e instanceof Error ? e.message : String(e));
+      }
+    }
+
     return jsonResponse({ success: true, thesis: row ? rowToThesis(row) : emptyThesis() }, origin);
   } catch (error) {
     if (isMissingTable(error)) {
