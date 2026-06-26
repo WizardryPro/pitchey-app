@@ -31,7 +31,8 @@
     "release:sentry": "bash ./scripts/sentry-release.sh",
     "release:sentry:finalize": "SENTRY_RELEASE=${SENTRY_RELEASE:-$(git rev-parse --short HEAD)} sentry-cli releases finalize \"$SENTRY_RELEASE\"",
     "deploy:pages": "vite build --mode production && wrangler pages deploy dist",
-    "deploy:pages:with-sentry": "SENTRY_RELEASE=${SENTRY_RELEASE:-$(git rev-parse --short HEAD)} npm run release:sentry && SENTRY_RELEASE=$SENTRY_RELEASE vite build --mode production && wrangler pages deploy dist && npm run release:sentry:finalize"
+    "deploy:pages:with-sentry": "SENTRY_RELEASE=${SENTRY_RELEASE:-$(git rev-parse --short HEAD)} npm run release:sentry && SENTRY_RELEASE=$SENTRY_RELEASE vite build --mode production && wrangler pages deploy dist && npm run release:sentry:finalize",
+    "knip": "npx --yes knip"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",
