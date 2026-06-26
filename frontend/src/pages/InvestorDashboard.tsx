@@ -32,6 +32,7 @@ import {
   Search
 } from 'lucide-react';
 import QuickActionsPanel, { type QuickAction } from '../components/dashboard/QuickActionsPanel';
+import ThesisMatchesSection from '../components/ThesisMatchesSection';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import api from '../lib/api';
 // Using the enhanced Investor-specific navigation
@@ -488,6 +489,9 @@ function InvestorDashboard() {
 
         {/* Quick Actions */}
         <QuickActionsPanel className="mb-8" actions={quickActions} columns={3} />
+
+        {/* Demand→supply (moat #7): published pitches matching the investor's thesis */}
+        <ThesisMatchesSection />
 
         {/* Tab Navigation — segmented control (investor-indigo active pill, icons).
             Natural-width tabs with horizontal scroll since there are seven. */}
