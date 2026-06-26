@@ -27,6 +27,30 @@ export interface InvestorThesis {
   isPublic: boolean;
 }
 
+// An investor whose thesis matches a given pitch (camelCase, surfaced to the creator).
+export interface MatchingInvestor {
+  investorId: number;
+  username: string | null;
+  companyName: string | null;
+  genres: string[];
+  formats: string[];
+  positioning: string;
+  checkSizeMinUsd: number | null;
+  checkSizeMaxUsd: number | null;
+}
+
+// The raw snake_case shape the backend returns for matching investors.
+interface RawMatchingInvestor {
+  investor_id: number;
+  username?: string | null;
+  company_name?: string | null;
+  genres?: string[];
+  formats?: string[];
+  positioning?: string | null;
+  check_size_min_usd?: number | null;
+  check_size_max_usd?: number | null;
+}
+
 // A clean empty mandate — used as the initial form state and as a safe default
 // when the backend returns an as-yet-unfilled thesis.
 export const EMPTY_THESIS: InvestorThesis = {
@@ -87,6 +111,30 @@ export class InvestorThesisService {
     }
     // Backend echoes the saved thesis; fall back to the submitted value if it doesn't.
     return normalize(response.data?.thesis ?? thesis);
+  }
+
+  // Public investor theses whose genres include this pitch's genre — the
+  // creator-facing demand signal (moat #7 matching). Read-only; returns [] on any
+  // error so the panel degrades to nothing rather than breaking the pitch view.
+  static async getMatchingInvestors(pitchId: number): Promise<MatchingInvestor[]> {
+    try {
+      const response = await apiClient.get<{ success: boolean; investors: RawMatchingInvestor[] }>(
+        `/api/pitches/${pitchId}/matching-investors`,
+      );
+      if (!response.success) return [];
+      return (response.data?.investors ?? []).map((r) => ({
+        investorId: r.investor_id,
+        username: r.username ?? null,
+        companyName: r.company_name ?? null,
+        genres: Array.isArray(r.genres) ? r.genres : [],
+        formats: Array.isArray(r.formats) ? r.formats : [],
+        positioning: r.positioning ?? '',
+        checkSizeMinUsd: r.check_size_min_usd ?? null,
+        checkSizeMaxUsd: r.check_size_max_usd ?? null,
+      }));
+    } catch {
+      return [];
+    }
   }
 }
 

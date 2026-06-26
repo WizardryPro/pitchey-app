@@ -27,6 +27,7 @@ import { useBetterAuthStore } from '@/store/betterAuthStore';
 import FormatDisplay from '@/components/FormatDisplay';
 import FeedbackDisplay from '@/components/feedback/FeedbackDisplay';
 import WhoViewedPanel from '@features/analytics/components/WhoViewedPanel';
+import MatchingInvestorsPanel from '@/components/MatchingInvestorsPanel';
 import FollowButton from '@features/browse/components/FollowButton';
 import InterestedCard from '@features/pitches/components/InterestedCard';
 import CollaborationWorkspace from '@features/pitches/components/CollaborationWorkspace';
@@ -496,6 +497,11 @@ const CreatorPitchView: React.FC = () => {
                   )}
                 </div>
               </div>
+            )}
+
+            {/* Demand signal (moat #7): investors whose thesis matches this pitch */}
+            {activeTab === 'overview' && isOwner && id && (
+              <MatchingInvestorsPanel pitchId={Number(id)} />
             )}
 
             {activeTab === 'analytics' && isOwner && analytics && (
