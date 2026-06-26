@@ -51,6 +51,25 @@ interface RawMatchingInvestor {
   check_size_max_usd?: number | null;
 }
 
+// A published pitch that matches the investor's thesis (camelCase, for the dashboard view).
+export interface ThesisMatch {
+  id: number;
+  title: string;
+  genre: string | null;
+  format: string | null;
+  creatorId: number | null;
+  matchScore: number;
+}
+
+interface RawThesisMatch {
+  id: number;
+  title?: string | null;
+  genre?: string | null;
+  format?: string | null;
+  creator_id?: number | null;
+  match_score?: number | null;
+}
+
 // A clean empty mandate — used as the initial form state and as a safe default
 // when the backend returns an as-yet-unfilled thesis.
 export const EMPTY_THESIS: InvestorThesis = {
@@ -131,6 +150,28 @@ export class InvestorThesisService {
         positioning: r.positioning ?? '',
         checkSizeMinUsd: r.check_size_min_usd ?? null,
         checkSizeMaxUsd: r.check_size_max_usd ?? null,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  // Published pitches that match the authenticated investor's thesis (the investor-facing
+  // demand→supply view). Read-only; returns [] on any error so the section stays invisible
+  // rather than breaking the dashboard.
+  static async getThesisMatches(): Promise<ThesisMatch[]> {
+    try {
+      const response = await apiClient.get<{ success: boolean; matches: RawThesisMatch[] }>(
+        '/api/investor/thesis/matches',
+      );
+      if (!response.success) return [];
+      return (response.data?.matches ?? []).map((r) => ({
+        id: r.id,
+        title: r.title ?? 'Untitled',
+        genre: r.genre ?? null,
+        format: r.format ?? null,
+        creatorId: r.creator_id ?? null,
+        matchScore: r.match_score ?? 0,
       }));
     } catch {
       return [];
