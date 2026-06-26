@@ -560,6 +560,7 @@ export class InvestorPortfolioHandler {
       `);
       const hasTransactions = transTableCheck && transTableCheck[0]?.exists;
 
+      // (a) HISTORICAL OVERLAY — the existing investments-table read, unchanged.
       let activity;
       if (hasTransactions) {
         activity = await this.db.query(
@@ -614,18 +615,190 @@ export class InvestorPortfolioHandler {
         );
       }
 
+      const investmentItems = activity || [];
+
+      // (b) RECENT ENGAGEMENT — events from the unified activity_feed table that are
+      //     directed to / relevant to this investor.
+      //
+      //     NOTE on env: getActivityFeed(env, viewerId, opts) requires an object with
+      //     { DATABASE_URL }. This handler is constructed as
+      //     `new InvestorPortfolioHandler(this.db)` (worker-integrated.ts) and is given
+      //     ONLY a WorkerDatabase instance — its connectionString is `private readonly`
+      //     with no public accessor, and the handler holds no Env. There is therefore no
+      //     clean `{ DATABASE_URL }` to pass without changing the constructor signature
+      //     (which lives in worker-integrated.ts and is out of scope for this change).
+      //     Rather than fabricate an env, we read the feed through the DB connection the
+      //     handler already legitimately holds (`this.db`), replicating the exact
+      //     viewerRole:'investor' semantics of getActivityFeed: PRIVATE events directed
+      //     to the investor (recipient_id) plus BROADCAST events from creators they
+      //     follow or on pitches they've saved. Returns [] on error (never throws),
+      //     mirroring getActivityFeed's contract.
+      const feedItems = await this.getActivityFeedItems(userId, limit);
+
+      // (c) MERGE both lists, sort by timestamp DESC, apply the existing limit.
+      const merged = [...investmentItems, ...feedItems].sort((a: any, b: any) => {
+        const ta = a?.timestamp ? new Date(a.timestamp).getTime() : 0;
+        const tb = b?.timestamp ? new Date(b.timestamp).getTime() : 0;
+        return tb - ta;
+      }).slice(0, limit);
+
+      // (d) Preserve the outer response envelope exactly.
       return {
         success: true,
         data: {
-          activities: activity || [],
-          feed: activity || [],
-          pagination: { limit, offset, hasMore: (activity?.length || 0) === limit }
+          activities: merged,
+          feed: merged,
+          pagination: { limit, offset, hasMore: merged.length === limit }
         }
       };
     } catch (error) {
       console.error('Get activity error:', error);
       return { success: true, data: { activities: [], feed: [] } };
     }
+  }
+
+  // Read recent activity_feed events relevant to this investor and map each one
+  // into the SAME flat item shape getActivity already returns:
+  //   { type, id, amount, timestamp, related_title, description, genre, status }
+  // plus additive optional fields the frontend already understands
+  //   (title, pitch{ id,title,genre }, creator{ id,name }).
+  //
+  // Replicates getActivityFeed(env, viewerId, { viewerRole: 'investor' }) using the
+  // DB connection the handler already holds. Returns [] on any error (never throws).
+  private async getActivityFeedItems(investorId: number, limit: number): Promise<any[]> {
+    try {
+      // Cheap existence guard so a pre-migration env (no activity_feed table) can't
+      // turn this into an error and lose the investments overlay.
+      const tableCheck = await this.db.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables
+          WHERE table_schema = 'public' AND table_name = 'activity_feed'
+        ) as exists
+      `);
+      if (!tableCheck || !tableCheck[0]?.exists) return [];
+
+      const rows = await this.db.query(
+        `SELECT
+            af.id,
+            af.actor_id,
+            af.action,
+            af.object_type,
+            af.object_id,
+            af.metadata,
+            af.created_at,
+            u.name      AS actor_name,
+            u.username  AS actor_username,
+            p.title     AS pitch_title,
+            p.genre     AS pitch_genre
+          FROM activity_feed af
+          LEFT JOIN users u   ON u.id = af.actor_id
+          LEFT JOIN pitches p ON af.object_type = 'pitch' AND p.id = af.object_id
+          WHERE af.actor_id <> $1
+            AND (
+              -- PRIVATE events directed to this investor (e.g. nda_approved, deal events).
+              af.recipient_id = $1
+              OR (
+                -- BROADCAST events fanned out to followers + saved-pitch watchers.
+                af.recipient_id IS NULL
+                AND (
+                  af.actor_id IN (SELECT following_id FROM follows WHERE follower_id = $1)
+                  OR (
+                    af.object_type = 'pitch'
+                    AND af.object_id IN (SELECT pitch_id FROM saved_pitches WHERE user_id = $1)
+                  )
+                )
+              )
+            )
+            -- Drop pitch events whose pitch has since been unpublished/removed.
+            AND (af.object_type <> 'pitch' OR p.id IS NOT NULL)
+          ORDER BY af.created_at DESC
+          LIMIT $2`,
+        [investorId, Math.min(Math.max(limit, 1), 100)]
+      );
+
+      return (rows || []).map((r: any) => this.presentActivityFeedItem(r));
+    } catch (error) {
+      // Mirror getActivityFeed's contract: best-effort, never throw.
+      console.error('getActivityFeedItems failed:', error instanceof Error ? error.message : String(error));
+      return [];
+    }
+  }
+
+  // Inline presenter: activity_feed row -> the endpoint's flat item shape.
+  private presentActivityFeedItem(r: any): any {
+    const action = String(r.action ?? '');
+    const pitchTitle: string = r.pitch_title ?? '';
+    const titleLabel = pitchTitle || 'this pitch';
+    let metadata: Record<string, unknown> = {};
+    if (r.metadata) {
+      if (typeof r.metadata === 'string') {
+        try { metadata = JSON.parse(r.metadata); } catch { metadata = {}; }
+      } else if (typeof r.metadata === 'object') {
+        metadata = r.metadata as Record<string, unknown>;
+      }
+    }
+
+    let title: string;
+    let description: string;
+    switch (action) {
+      case 'pitch_saved':
+        title = 'Pitch saved';
+        description = `You saved "${titleLabel}"`;
+        break;
+      case 'nda_approved':
+        title = 'NDA approved';
+        description = `Your NDA for "${titleLabel}" was approved`;
+        break;
+      case 'deal_created':
+        title = 'Deal proposed';
+        description = `A production company proposed a deal${pitchTitle ? ` on "${pitchTitle}"` : ''}`;
+        break;
+      case 'deal_outcome_reported':
+        title = 'Deal outcome reported';
+        description = `A deal outcome was reported${pitchTitle ? ` on "${pitchTitle}"` : ''}`;
+        break;
+      case 'nda_requested':
+        title = 'NDA requested';
+        description = `An NDA was requested for "${titleLabel}"`;
+        break;
+      case 'pitch_published':
+        title = 'New pitch published';
+        description = `A new pitch "${titleLabel}" was published`;
+        break;
+      case 'pitch_updated':
+        title = 'Pitch updated';
+        description = `"${titleLabel}" was updated`;
+        break;
+      default:
+        // Sensible default for any future action — DEFAULTED FIELD (reported).
+        title = 'Activity';
+        description = pitchTitle ? `Activity on "${pitchTitle}"` : 'New activity';
+        break;
+    }
+
+    const objectId = r.object_id == null ? null : Number(r.object_id);
+    const actorId = r.actor_id == null ? null : Number(r.actor_id);
+    const actorName = r.actor_username || r.actor_name || null;
+
+    return {
+      // Existing flat fields the endpoint already returns:
+      type: action || 'activity',
+      id: Number(r.id),
+      amount: typeof metadata.amount === 'number' ? metadata.amount : null, // DEFAULTED: activity_feed carries no investment amount
+      timestamp: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at),
+      related_title: pitchTitle,
+      description,
+      genre: r.pitch_genre ?? null,
+      status: (metadata.status as string) ?? null, // DEFAULTED: no status column on activity_feed
+      // Additive optional fields the frontend already understands:
+      title,
+      pitch: r.object_type === 'pitch' && objectId != null
+        ? { id: objectId, title: pitchTitle, genre: r.pitch_genre ?? null }
+        : undefined,
+      creator: actorId != null
+        ? { id: actorId, name: actorName ?? 'Unknown' }
+        : undefined,
+    };
   }
 
   // Get transactions

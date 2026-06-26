@@ -349,6 +349,53 @@ export async function creatorActivitiesHandler(request: Request, env: Env): Prom
         LEFT JOIN creator_pitches cp ON cp.id = m.pitch_id
         LEFT JOIN users u ON u.id = m.sender_id
         WHERE m.receiver_id = ${userId} OR m.recipient_id = ${userId}
+
+        UNION ALL
+
+        -- Saves on creator's pitches (mapped to the 'like' convention on the frontend)
+        SELECT
+          s.id as source_id,
+          'pitch_like' as type,
+          COALESCE(u.username, 'Someone') || ' saved "' || cp.title || '"' as description,
+          COALESCE(s.saved_at, s.created_at) as created_at,
+          COALESCE(u.username, 'Anonymous') as actor_name,
+          COALESCE(u.user_type, 'user') as actor_role,
+          jsonb_build_object('pitchId', cp.id, 'pitchTitle', cp.title, 'action', 'save') as metadata
+        FROM saved_pitches s
+        JOIN creator_pitches cp ON cp.id = s.pitch_id
+        LEFT JOIN users u ON u.id = s.user_id
+
+        UNION ALL
+
+        -- Comments on creator's pitches. Anonymous comments (is_anonymous) are masked
+        -- to "Someone" with no identity; named comments show the commenter to the owner.
+        SELECT
+          c.id as source_id,
+          'message_sent' as type,
+          CASE WHEN c.is_anonymous THEN 'Someone commented on "' || cp.title || '"'
+               ELSE COALESCE(u.username, u.name, 'Someone') || ' commented on "' || cp.title || '"'
+          END as description,
+          c.created_at,
+          CASE WHEN c.is_anonymous THEN NULL ELSE COALESCE(u.username, u.name) END as actor_name,
+          CASE WHEN c.is_anonymous THEN NULL ELSE u.user_type END as actor_role,
+          jsonb_build_object('pitchId', cp.id, 'pitchTitle', cp.title, 'action', 'comment') as metadata
+        FROM pitch_comments c
+        JOIN creator_pitches cp ON cp.id = c.pitch_id
+        LEFT JOIN users u ON u.id = c.user_id
+
+        UNION ALL
+
+        -- Deals proposed on creator's pitches (new production-deal model, mapped to 'investment' convention)
+        SELECT
+          d.id as source_id,
+          'investment' as type,
+          'A production company proposed a deal on "' || cp.title || '"' as description,
+          d.created_at,
+          NULL as actor_name,
+          NULL as actor_role,
+          jsonb_build_object('pitchId', cp.id, 'pitchTitle', cp.title, 'dealId', d.id, 'dealType', d.deal_type) as metadata
+        FROM production_deals d
+        JOIN creator_pitches cp ON cp.id = d.pitch_id
       )
       SELECT * FROM all_activities
       WHERE (${allowedTypes}::text[] IS NULL OR type = ANY(${allowedTypes}::text[]))
@@ -369,6 +416,9 @@ export async function creatorActivitiesHandler(request: Request, env: Env): Prom
         UNION ALL SELECT 'nda_request' FROM nda_requests WHERE pitch_id IN (SELECT id FROM creator_pitches)
         UNION ALL SELECT 'investment' FROM investments WHERE pitch_id IN (SELECT id FROM creator_pitches)
         UNION ALL SELECT 'message_sent' FROM messages WHERE (receiver_id = ${userId} OR recipient_id = ${userId})
+        UNION ALL SELECT 'pitch_like' FROM saved_pitches WHERE pitch_id IN (SELECT id FROM creator_pitches)
+        UNION ALL SELECT 'message_sent' FROM pitch_comments WHERE pitch_id IN (SELECT id FROM creator_pitches)
+        UNION ALL SELECT 'investment' FROM production_deals WHERE pitch_id IN (SELECT id FROM creator_pitches)
       )
       SELECT COUNT(*) as total FROM all_activities
       WHERE (${allowedTypes}::text[] IS NULL OR type = ANY(${allowedTypes}::text[]))

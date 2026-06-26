@@ -9,6 +9,7 @@ import { getCorsHeaders } from '../utils/response';
 import { getUserId } from '../utils/auth-extract';
 import { sendNewPitchFromFollowedEmail } from '../services/email/index';
 import { safeQuery } from '../db/safe-query';
+import { recordActivity } from '../db/activity-feed';
 import * as Sentry from '@sentry/cloudflare';
 
 function jsonResponse(data: unknown, status: number, origin: string | null): Response {
@@ -138,6 +139,16 @@ export async function pitchLikeHandler(request: Request, env: Env): Promise<Resp
       UPDATE pitches SET like_count = ${countResult.count} WHERE id = ${pitchId}
     `;
 
+    // Record activity-feed event (fire-and-forget; never throws). No creator_id
+    // in scope here, so recipientId is omitted — event fans out to followers/savers.
+    await recordActivity(env, {
+      actorId: Number(userId),
+      action: 'pitch_liked',
+      objectType: 'pitch',
+      objectId: Number(pitchId),
+      metadata: {},
+    });
+
     return jsonResponse({
       success: true,
       data: { liked: true, likeCount: countResult.count }
@@ -210,6 +221,14 @@ export async function pitchSaveHandler(request: Request, env: Env): Promise<Resp
       VALUES (${userId}, ${pitchId}, NOW())
       ON CONFLICT (user_id, pitch_id) DO NOTHING
     `;
+
+    // Record activity-feed event (fire-and-forget; never throws).
+    await recordActivity(env, {
+      actorId: Number(userId),
+      action: 'pitch_saved',
+      objectType: 'pitch',
+      objectId: Number(pitchId),
+    });
 
     return jsonResponse({ success: true, data: { saved: true } }, 200, origin);
   } catch (error) {

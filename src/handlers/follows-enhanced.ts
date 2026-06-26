@@ -18,6 +18,7 @@ async function resolveFollowUser(request: Request, env: Env) {
   return { ...auth.user, id: toIntId(auth.user.id) };
 }
 import { sendNewFollowerEmail } from '../services/email/index';
+import { recordActivity } from '../db/activity-feed';
 import * as Sentry from '@sentry/cloudflare';
 
 // Schema for follow/unfollow actions
@@ -153,6 +154,17 @@ export async function followActionHandler(request: Request, env: Env): Promise<R
         // Non-blocking — don't fail the follow action if email fails
         console.error('New follower email lookup error:', emailErr);
       }
+
+      // Record activity-feed event so the Following feed surfaces this follow
+      // (fire-and-forget by contract — recordActivity never throws). This
+      // standalone handler has env but no ctx, so we use a loose await.
+      await recordActivity(env, {
+        actorId: followerId,
+        action: 'user_followed',
+        objectType: 'user',
+        objectId: followingId,
+        metadata: {}
+      });
 
       // Get updated counts
       const [counts] = await sql`
