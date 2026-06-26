@@ -1,0 +1,8 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": ["src/main.tsx", "index.html", "functions/**/*.ts"],
+  "project": ["src/**/*.{ts,tsx}"],
+  "ignore": ["**/*.test.{ts,tsx}", "**/__tests__/**", "**/*.d.ts"],
+  "ignoreDependencies": [],
+  "vite": { "config": ["vite.config.ts"] }
+}
