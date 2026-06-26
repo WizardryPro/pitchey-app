@@ -2916,6 +2916,25 @@ class RouteRegistry {
                 console.debug('Failed to persist follower pitch-published notifications:', e);
               }
 
+              // Notify matching investors (moat #7 phase 2): public theses whose genres
+              // include this pitch's genre get a bell notification — turning stated
+              // investor intent into curated deal flow. Capped + fire-and-forget; an
+              // absent investor_thesis table (migration not applied) degrades silently.
+              try {
+                await this.db.query(
+                  `INSERT INTO notifications (user_id, type, title, message, related_pitch_id, related_user_id, action_url, is_read, created_at)
+                   SELECT it.investor_id, 'pitch_update', $1, $2, $3, $4, $5, false, NOW()
+                   FROM investor_thesis it
+                   WHERE it.is_public = TRUE
+                     AND it.investor_id <> $4
+                     AND (SELECT genre FROM pitches WHERE id = $3) = ANY(it.genres)
+                   LIMIT 25`,
+                  ['A new pitch matches your thesis', `"${pitch.title}" — a newly published pitch fits your investment thesis.`, pitch.id, Number(userId), `/pitch/${pitch.id}`]
+                );
+              } catch (e) {
+                console.debug('Failed to persist matching-investor notifications (investor_thesis may be absent):', e);
+              }
+
               // Persist to the activity feed (one actor row; fanned out at read time).
               // recordActivity never throws — safe to await inline.
               await recordActivity(this.env, {
