@@ -3622,6 +3622,15 @@ class RouteRegistry {
       const { updateInvestorThesisHandler } = await import('./handlers/investor-thesis');
       return updateInvestorThesisHandler(req, this.env);
     });
+    // Thesis matching (moat #7 phase 2) — demand↔supply signal off the structured thesis
+    this.register('GET', '/api/investor/thesis/matches', async (req) => {
+      const { getThesisMatchesHandler } = await import('./handlers/thesis-matching');
+      return getThesisMatchesHandler(req, this.env);
+    });
+    this.register('GET', '/api/pitches/:id/matching-investors', async (req) => {
+      const { getMatchingInvestorsHandler } = await import('./handlers/thesis-matching');
+      return getMatchingInvestorsHandler(req, this.env);
+    });
     this.register('GET', '/api/investor/pitch/:pitchId/investment-detail', async (req) => {
       const { investorPitchInvestmentDetailHandler } = await import('./handlers/investor-sidebar');
       return investorPitchInvestmentDetailHandler(req, this.env);
