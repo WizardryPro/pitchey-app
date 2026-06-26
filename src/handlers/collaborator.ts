@@ -103,7 +103,7 @@ export async function inviteCollaborator(request: Request, env: Env): Promise<Re
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
   try {
-    const isOwner = await verifyProjectOwnership(sql, projectId, Number(userId));
+    const isOwner = await verifyProjectOwnership(sql, projectId, userId);
     if (!isOwner) return errorResponse('Forbidden: not project owner', origin, 403);
 
     const body = await request.json() as Record<string, unknown>;
@@ -150,15 +150,15 @@ export async function inviteCollaborator(request: Request, env: Env): Promise<Re
 
     const result = await sql`
       INSERT INTO project_collaborators (project_id, user_id, invited_email, role, custom_role_name, invited_by, invite_token)
-      VALUES (${projectId}, ${inviteeUserId}, ${email}, ${role}, ${customRoleName}, ${Number(userId)}, ${token})
+      VALUES (${projectId}, ${inviteeUserId}, ${email}, ${role}, ${customRoleName}, ${userId}, ${token})
       RETURNING id, project_id, user_id, invited_email, role, custom_role_name, status, invited_at, invite_token
     `;
 
-    await logActivity(sql, projectId, Number(userId), 'collaborator_invited', result[0].id);
+    await logActivity(sql, projectId, userId, 'collaborator_invited', result[0].id);
 
     // Send invite email (fire-and-forget)
     const projectInfo = await sql`SELECT title FROM production_pipeline WHERE id = ${projectId}`;
-    const inviterInfo = await sql`SELECT name, company_name FROM users WHERE id = ${Number(userId)}`;
+    const inviterInfo = await sql`SELECT name, company_name FROM users WHERE id = ${userId}`;
     const roleLabel = role === 'custom' ? (customRoleName || 'Collaborator') : role.replace(/_/g, ' ');
     sendCollaboratorInviteEmail(email, {
       inviterName: inviterInfo[0]?.name || inviterInfo[0]?.company_name || 'A production company',
@@ -194,8 +194,8 @@ export async function listCollaborators(request: Request, env: Env): Promise<Res
   if (!sql) return jsonResponse({ success: true, data: { collaborators: [] } }, origin);
 
   try {
-    const isOwner = await verifyProjectOwnership(sql, projectId, Number(userId));
-    const collab = await isActiveCollaborator(sql, projectId, Number(userId));
+    const isOwner = await verifyProjectOwnership(sql, projectId, userId);
+    const collab = await isActiveCollaborator(sql, projectId, userId);
     if (!isOwner && !collab.active) return errorResponse('Forbidden', origin, 403);
 
     const collaborators = await sql`
@@ -208,7 +208,7 @@ export async function listCollaborators(request: Request, env: Env): Promise<Res
       ORDER BY pc.invited_at DESC
     `;
 
-    const mapped = collaborators.map(c => ({
+    const mapped = collaborators.map((c: any) => ({
       id: c.id,
       user_id: c.user_id,
       invited_email: c.invited_email,
@@ -247,7 +247,7 @@ export async function removeCollaborator(request: Request, env: Env): Promise<Re
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
   try {
-    const isOwner = await verifyProjectOwnership(sql, projectId, Number(userId));
+    const isOwner = await verifyProjectOwnership(sql, projectId, userId);
     if (!isOwner) return errorResponse('Forbidden: not project owner', origin, 403);
 
     const result = await sql`
@@ -259,7 +259,7 @@ export async function removeCollaborator(request: Request, env: Env): Promise<Re
 
     if (result.length === 0) return errorResponse('Collaborator not found', origin, 404);
 
-    await logActivity(sql, projectId, Number(userId), 'collaborator_removed', collaboratorId);
+    await logActivity(sql, projectId, userId, 'collaborator_removed', collaboratorId);
     return jsonResponse({ success: true }, origin);
   } catch (err) {
     const e = err instanceof Error ? err : new Error(String(err));
@@ -284,7 +284,7 @@ export async function updateCollaboratorRole(request: Request, env: Env): Promis
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
   try {
-    const isOwner = await verifyProjectOwnership(sql, projectId, Number(userId));
+    const isOwner = await verifyProjectOwnership(sql, projectId, userId);
     if (!isOwner) return errorResponse('Forbidden: not project owner', origin, 403);
 
     const body = await request.json() as Record<string, unknown>;
@@ -331,7 +331,7 @@ export async function resendInvite(request: Request, env: Env): Promise<Response
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
   try {
-    const isOwner = await verifyProjectOwnership(sql, projectId, Number(userId));
+    const isOwner = await verifyProjectOwnership(sql, projectId, userId);
     if (!isOwner) return errorResponse('Forbidden: not project owner', origin, 403);
 
     // Check if pending and rate limit (1 per 5 min)
@@ -410,11 +410,11 @@ export async function acceptInvite(request: Request, env: Env): Promise<Response
 
     await sql`
       UPDATE project_collaborators
-      SET user_id = ${Number(authResult.user.id)}, status = 'active', accepted_at = NOW()
+      SET user_id = ${authResult.user.id}, status = 'active', accepted_at = NOW()
       WHERE id = ${invite.id}
     `;
 
-    await logActivity(sql, invite.project_id, Number(authResult.user.id), 'invitation_accepted');
+    await logActivity(sql, invite.project_id, authResult.user.id, 'invitation_accepted');
 
     // Notify project owner (fire-and-forget)
     const ownerInfo = await sql`
@@ -479,11 +479,11 @@ export async function getAllTeamCollaborators(request: Request, env: Env): Promi
       FROM project_collaborators pc
       JOIN production_pipeline pp ON pc.project_id = pp.id
       LEFT JOIN users u ON pc.user_id = u.id
-      WHERE pp.production_company_id = ${Number(userId)} AND pc.status != 'removed'
+      WHERE pp.production_company_id = ${userId} AND pc.status != 'removed'
       ORDER BY pc.invited_at DESC
     `;
 
-    const mapped = collaborators.map(c => ({
+    const mapped = collaborators.map((c: any) => ({
       id: c.id,
       project_id: c.project_id,
       project_title: c.project_title,
@@ -501,9 +501,9 @@ export async function getAllTeamCollaborators(request: Request, env: Env): Promi
       } : null,
     }));
 
-    const active = mapped.filter(c => c.status === 'active').length;
-    const pending = mapped.filter(c => c.status === 'pending').length;
-    const projects = new Set(mapped.map(c => c.project_id)).size;
+    const active = mapped.filter((c: any) => c.status === 'active').length;
+    const pending = mapped.filter((c: any) => c.status === 'pending').length;
+    const projects = new Set(mapped.map((c: any) => c.project_id)).size;
 
     return jsonResponse({
       success: true,
@@ -544,11 +544,11 @@ export async function getMyCollaborations(request: Request, env: Env): Promise<R
       FROM project_collaborators pc
       JOIN production_pipeline pp ON pc.project_id = pp.id
       JOIN users u ON pp.production_company_id = u.id
-      WHERE pc.user_id = ${Number(userId)} AND pc.status = 'active'
+      WHERE pc.user_id = ${userId} AND pc.status = 'active'
       ORDER BY pc.accepted_at DESC
     `;
 
-    const mapped = collaborations.map(c => ({
+    const mapped = collaborations.map((c: any) => ({
       project_id: c.project_id,
       project_title: c.project_title,
       project_stage: c.project_stage,
@@ -586,7 +586,7 @@ export async function getCollaborationProject(request: Request, env: Env): Promi
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
   try {
-    const collab = await isActiveCollaborator(sql, projectId, Number(userId));
+    const collab = await isActiveCollaborator(sql, projectId, userId);
     if (!collab.active) return errorResponse('Forbidden', origin, 403);
 
     const result = await sql`
@@ -652,7 +652,7 @@ export async function getCollaborationChecklist(request: Request, env: Env): Pro
   if (!sql) return jsonResponse({ success: true, data: { checklist: {} } }, origin);
 
   try {
-    const collab = await isActiveCollaborator(sql, projectId, Number(userId));
+    const collab = await isActiveCollaborator(sql, projectId, userId);
     if (!collab.active) return errorResponse('Forbidden', origin, 403);
 
     // Get checklist from production_checklists (keyed by project owner)
@@ -692,7 +692,7 @@ export async function toggleCollaborationChecklist(request: Request, env: Env): 
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
   try {
-    const collab = await isActiveCollaborator(sql, projectId, Number(userId));
+    const collab = await isActiveCollaborator(sql, projectId, userId);
     if (!collab.active) return errorResponse('Forbidden', origin, 403);
 
     const body = await request.json() as Record<string, unknown>;
@@ -729,7 +729,7 @@ export async function toggleCollaborationChecklist(request: Request, env: Env): 
       WHERE user_id = ${ownerId} AND pitch_id = ${projectId}
     `;
 
-    await logActivity(sql, projectId, Number(userId), 'checklist_toggled', parseInt(itemId, 10) || undefined);
+    await logActivity(sql, projectId, userId, 'checklist_toggled', parseInt(itemId, 10) || undefined);
 
     return jsonResponse({ success: true, data: { item_id: itemId, completed } }, origin);
   } catch (err) {
@@ -754,7 +754,7 @@ export async function getCollaborationNotes(request: Request, env: Env): Promise
   if (!sql) return jsonResponse({ success: true, data: { notes: [] } }, origin);
 
   try {
-    const collab = await isActiveCollaborator(sql, projectId, Number(userId));
+    const collab = await isActiveCollaborator(sql, projectId, userId);
     if (!collab.active) return errorResponse('Forbidden', origin, 403);
 
     // Get project owner's pitch_id for production_notes lookup
@@ -772,7 +772,7 @@ export async function getCollaborationNotes(request: Request, env: Env): Promise
       SELECT id, content, category, author, created_at, updated_at
       FROM production_notes
       WHERE pitch_id = ${pitchId}
-        AND (shared = true OR user_id = ${Number(userId)})
+        AND (shared = true OR user_id = ${userId})
       ORDER BY created_at ASC
     `, { fallback: [], context: 'collaborator.notes.read' });
 
@@ -801,7 +801,7 @@ export async function addCollaborationNote(request: Request, env: Env): Promise<
   if (!sql) return errorResponse('Database unavailable', origin, 503);
 
   try {
-    const collab = await isActiveCollaborator(sql, projectId, Number(authResult.user.id));
+    const collab = await isActiveCollaborator(sql, projectId, authResult.user.id);
     if (!collab.active) return errorResponse('Forbidden', origin, 403);
 
     const body = await request.json() as Record<string, unknown>;
@@ -824,11 +824,11 @@ export async function addCollaborationNote(request: Request, env: Env): Promise<
 
     const result = await sql`
       INSERT INTO production_notes (user_id, pitch_id, content, category, author)
-      VALUES (${Number(authResult.user.id)}, ${pitchId}, ${content}, ${category}, ${author})
+      VALUES (${authResult.user.id}, ${pitchId}, ${content}, ${category}, ${author})
       RETURNING id, content, category, author, created_at, updated_at
     `;
 
-    await logActivity(sql, projectId, Number(authResult.user.id), 'note_added', result[0].id);
+    await logActivity(sql, projectId, authResult.user.id, 'note_added', result[0].id);
 
     return jsonResponse({ success: true, data: { note: result[0] } }, origin, 201);
   } catch (err) {
@@ -854,8 +854,8 @@ export async function getCollaborationActivity(request: Request, env: Env): Prom
 
   try {
     // Allow project owner or active collaborator
-    const isOwner = await verifyProjectOwnership(sql, projectId, Number(userId));
-    const collab = await isActiveCollaborator(sql, projectId, Number(userId));
+    const isOwner = await verifyProjectOwnership(sql, projectId, userId);
+    const collab = await isActiveCollaborator(sql, projectId, userId);
     if (!isOwner && !collab.active) return errorResponse('Forbidden', origin, 403);
 
     const url = new URL(request.url);
@@ -874,7 +874,7 @@ export async function getCollaborationActivity(request: Request, env: Env): Prom
       LIMIT ${limit} OFFSET ${offset}
     `;
 
-    const mapped = activity.map(a => ({
+    const mapped = activity.map((a: any) => ({
       id: a.id,
       action: a.action,
       entity_id: a.entity_id,

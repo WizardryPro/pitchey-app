@@ -324,10 +324,15 @@ function toRelativeMediaUrl<T>(url: T): T {
 // backfilled to relative (migration 108). Safe no-op for relative/null values.
 function normalizePitchMedia<T extends Record<string, any>>(pitch: T): T {
   if (!pitch || typeof pitch !== 'object') return pitch;
-  if (typeof pitch.title_image === 'string') pitch.title_image = toRelativeMediaUrl(pitch.title_image);
-  if (typeof pitch.thumbnail_url === 'string') pitch.thumbnail_url = toRelativeMediaUrl(pitch.thumbnail_url);
-  if (typeof pitch.titleImage === 'string') pitch.titleImage = toRelativeMediaUrl(pitch.titleImage);
-  if (typeof pitch.thumbnailUrl === 'string') pitch.thumbnailUrl = toRelativeMediaUrl(pitch.thumbnailUrl);
+  // Mutate through a non-generic view: a bare generic T can't be indexed for
+  // writing (TS2862) and dot-access on it misses the index signature (TS2339).
+  // T extends Record<string, any>, so this is a safe, cast-free widening of the
+  // same object reference.
+  const p: Record<string, any> = pitch;
+  if (typeof p.title_image === 'string') p.title_image = toRelativeMediaUrl(p.title_image);
+  if (typeof p.thumbnail_url === 'string') p.thumbnail_url = toRelativeMediaUrl(p.thumbnail_url);
+  if (typeof p.titleImage === 'string') p.titleImage = toRelativeMediaUrl(p.titleImage);
+  if (typeof p.thumbnailUrl === 'string') p.thumbnailUrl = toRelativeMediaUrl(p.thumbnailUrl);
   return pitch;
 }
 
@@ -928,7 +933,7 @@ class RouteRegistry {
                   u.bio, u.profile_image,
                   COALESCE(u.name, u.username, u.email) as name
            FROM sessions s
-           JOIN users u ON s.user_id::text = u.id::text
+           JOIN users u ON s.user_id = u.id
            WHERE s.id = $1
            AND s.expires_at > NOW()
            LIMIT 1`,
@@ -3609,6 +3614,14 @@ class RouteRegistry {
       const { investorSettingsSaveHandler } = await import('./handlers/investor-sidebar');
       return investorSettingsSaveHandler(req, this.env);
     });
+    this.register('GET', '/api/investor/thesis', async (req) => {
+      const { getInvestorThesisHandler } = await import('./handlers/investor-thesis');
+      return getInvestorThesisHandler(req, this.env);
+    });
+    this.register('PUT', '/api/investor/thesis', async (req) => {
+      const { updateInvestorThesisHandler } = await import('./handlers/investor-thesis');
+      return updateInvestorThesisHandler(req, this.env);
+    });
     this.register('GET', '/api/investor/pitch/:pitchId/investment-detail', async (req) => {
       const { investorPitchInvestmentDetailHandler } = await import('./handlers/investor-sidebar');
       return investorPitchInvestmentDetailHandler(req, this.env);
@@ -4715,7 +4728,7 @@ class RouteRegistry {
 
         // Create session
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-        const sessionId = await this.sessionStore!.createSession(String(user.id), expiresAt);
+        const sessionId = await this.sessionStore!.createSession(user.id, expiresAt);
 
         // Store session in KV if available
         const kvStore = this.env.SESSION_STORE || this.env.SESSIONS_KV || this.env.KV || this.env.CACHE;
@@ -4979,7 +4992,7 @@ class RouteRegistry {
 
         // Create new session
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-        const sessionId = await this.sessionStore!.createSession(String(user.id), expiresAt);
+        const sessionId = await this.sessionStore!.createSession(user.id, expiresAt);
 
         // Store session in KV if available (check for all possible KV bindings)
         const kvStore = this.env.SESSION_STORE || this.env.SESSIONS_KV || this.env.KV || this.env.CACHE;
@@ -6456,13 +6469,13 @@ pitchey_analytics_datapoints_per_minute 1250
             SELECT 1 FROM likes WHERE user_id = ${authResult.user.id} AND pitch_id = ${pitchId} LIMIT 1
           `;
           isLiked = likeResult.length > 0;
-          // Per-user save state. saved_pitches uses user_id::text comparison to
-          // tolerate id-type drift (matches checkPitchSaved). Wrapped so a missing
+          // Per-user save state. saved_pitches.user_id is an integer users FK
+          // compared directly against the numeric auth user id. Wrapped so a missing
           // table in older envs can't 500 the whole pitch view.
           try {
             const saveResult = await sql`
               SELECT 1 FROM saved_pitches
-              WHERE user_id::text = ${String(authResult.user.id)} AND pitch_id = ${pitchId}
+              WHERE user_id = ${authResult.user.id} AND pitch_id = ${pitchId}
               LIMIT 1
             `;
             isSaved = saveResult.length > 0;
@@ -8629,7 +8642,7 @@ pitchey_analytics_datapoints_per_minute 1250
       const creatorId: number = this.safeParseInt(pitch.user_id) || 0;
 
       // Can't request an NDA on your own pitch.
-      if (creatorId === Number(authResult.user.id)) {
+      if (creatorId === authResult.user.id) {
         return builder.error(ErrorCode.BAD_REQUEST, 'You cannot request an NDA on your own pitch');
       }
 
@@ -11281,7 +11294,7 @@ pitchey_analytics_datapoints_per_minute 1250
       const stripe = new StripeService(stripeKey);
       const origin = request.headers.get('Origin') || (this.env as any).FRONTEND_URL || 'https://pitchey-5o8.pages.dev';
       const returnUrl = `${origin}/creator/settings/profile?identity=return`;
-      const session = await stripe.createIdentityVerificationSession({ userId: Number(userId), returnUrl });
+      const session = await stripe.createIdentityVerificationSession({ userId, returnUrl });
       await sql`UPDATE users SET identity_session_id = ${session.id}, identity_status = ${session.status} WHERE id = ${userId}`;
       return builder.success({ url: session.url, status: session.status });
     } catch (err) {
@@ -14215,7 +14228,7 @@ pitchey_analytics_datapoints_per_minute 1250
       return builder.error(ErrorCode.VALIDATION_ERROR, 'Invalid pitch id');
     }
 
-    const progress = await getFeedbackProgress(this.env, pitchId, Number(authResult.user.id));
+    const progress = await getFeedbackProgress(this.env, pitchId, authResult.user.id);
     return builder.success({ progress });
   }
 
@@ -16420,7 +16433,7 @@ pitchey_analytics_datapoints_per_minute 1250
         FROM ndas n
         JOIN pitches p ON n.pitch_id = p.id
         LEFT JOIN users u ON n.signer_id = u.id
-        WHERE p.user_id::text = ${String(authResult.user.id)}
+        WHERE p.user_id = ${authResult.user.id}
           AND n.status = 'signed'
         ORDER BY n.signed_at DESC
       `;
@@ -18798,12 +18811,12 @@ Signatures: [To be completed upon signing]
         LEFT JOIN LATERAL (
           SELECT n.status, n.expires_at
           FROM ndas n
-          WHERE n.pitch_id = p.id AND n.signer_id::text = $1::text
+          WHERE n.pitch_id = p.id AND n.signer_id = $1
           ORDER BY n.created_at DESC
           LIMIT 1
         ) nda ON true
-        WHERE sp.user_id::text = $1::text
-        AND p.user_id::text != $1::text
+        WHERE sp.user_id = $1
+        AND p.user_id != $1
         ${genreFilter ? `AND p.genre = $2` : ''}
         ORDER BY sp.created_at DESC
       `, genreFilter ? [authCheck.user.id, genreFilter] : [authCheck.user.id]);
@@ -19033,7 +19046,7 @@ Signatures: [To be completed upon signing]
       }
 
       const rows = await this.db.query(
-        'SELECT id, created_at FROM saved_pitches WHERE user_id::text = $1::text AND pitch_id = $2',
+        'SELECT id, created_at FROM saved_pitches WHERE user_id = $1 AND pitch_id = $2',
         [authCheck.user.id, pitchId]
       );
 
@@ -19080,7 +19093,7 @@ Signatures: [To be completed upon signing]
       const body = await request.json() as { notes?: string };
 
       const rows = await this.db.query(
-        `UPDATE saved_pitches SET notes = $1 WHERE id = $2 AND user_id::text = $3::text
+        `UPDATE saved_pitches SET notes = $1 WHERE id = $2 AND user_id = $3
          RETURNING id, pitch_id, notes, created_at as saved_at`,
         [body.notes ?? null, savedPitchId, authCheck.user.id]
       );
@@ -19118,7 +19131,7 @@ Signatures: [To be completed upon signing]
 
       // Total saved count
       const totalRows = await this.db.query(
-        'SELECT COUNT(*)::int as count FROM saved_pitches WHERE user_id::text = $1::text',
+        'SELECT COUNT(*)::int as count FROM saved_pitches WHERE user_id = $1',
         [userId]
       );
       const totalSaved = totalRows?.[0]?.count || 0;
@@ -19127,7 +19140,7 @@ Signatures: [To be completed upon signing]
       const genreRows = await this.db.query(
         `SELECT p.genre, COUNT(*)::int as count
          FROM saved_pitches sp JOIN pitches p ON p.id = sp.pitch_id
-         WHERE sp.user_id::text = $1::text AND p.genre IS NOT NULL
+         WHERE sp.user_id = $1 AND p.genre IS NOT NULL
          GROUP BY p.genre`,
         [userId]
       );
@@ -19142,7 +19155,7 @@ Signatures: [To be completed upon signing]
       const formatRows = await this.db.query(
         `SELECT p.format, COUNT(*)::int as count
          FROM saved_pitches sp JOIN pitches p ON p.id = sp.pitch_id
-         WHERE sp.user_id::text = $1::text AND p.format IS NOT NULL
+         WHERE sp.user_id = $1 AND p.format IS NOT NULL
          GROUP BY p.format`,
         [userId]
       );
@@ -19156,7 +19169,7 @@ Signatures: [To be completed upon signing]
       // Recently added (last 7 days)
       const recentRows = await this.db.query(
         `SELECT COUNT(*)::int as count FROM saved_pitches
-         WHERE user_id::text = $1::text AND created_at >= NOW() - INTERVAL '7 days'`,
+         WHERE user_id = $1 AND created_at >= NOW() - INTERVAL '7 days'`,
         [userId]
       );
       const recentlyAdded = recentRows?.[0]?.count || 0;
@@ -19687,7 +19700,7 @@ Signatures: [To be completed upon signing]
           FROM saved_pitches sp
           JOIN pitches p ON sp.pitch_id = p.id
           LEFT JOIN "user" u ON p.user_id::text = u.id::text
-          WHERE sp.user_id::text = $1::text
+          WHERE sp.user_id = $1
           ORDER BY sp.created_at DESC
           LIMIT $2 OFFSET $3
         `, [authCheck.user.id, limit, offset]);
@@ -19709,7 +19722,7 @@ Signatures: [To be completed upon signing]
           FROM saved_pitches sp
           JOIN pitches p ON sp.pitch_id = p.id
           LEFT JOIN users u ON p.user_id = u.id
-          WHERE sp.user_id::text = $1::text
+          WHERE sp.user_id = $1
           ORDER BY sp.created_at DESC
           LIMIT $2 OFFSET $3
         `, [authCheck.user.id, limit, offset]);
@@ -20293,7 +20306,7 @@ Signatures: [To be completed upon signing]
           COALESCE(SUM(p.view_count), 0) as total_views
         FROM pitches p
         WHERE p.status = 'published'
-          AND p.user_id::text != $1::text
+          AND p.user_id != $1
           AND p.created_at >= NOW() - INTERVAL '${days} days'
         GROUP BY p.genre
         ORDER BY project_count DESC
@@ -22311,12 +22324,17 @@ const websocketSafeHandler = {
 // which is exactly where you'd want to be paged. `fetch` is left untouched (it's
 // already wrapped + WebSocket-bypassed + Axiom-logged internally).
 const sentryScheduled = Sentry.withSentry(
-  (env: Env) => ({
-    dsn: env.SENTRY_DSN,
-    release: env.CF_VERSION_METADATA?.id,
-    environment: env.SENTRY_ENVIRONMENT || env.ENVIRONMENT || 'production',
-    tracesSampleRate: parseFloat(env.SENTRY_TRACES_SAMPLE_RATE || '0.1'),
-  }),
+  // withSentry types the injected env as `unknown` here (the handler below is
+  // `as any`, so E can't be inferred); narrow it once — it is the worker Env.
+  (env: unknown) => {
+    const e = env as Env;
+    return {
+      dsn: e.SENTRY_DSN,
+      release: e.CF_VERSION_METADATA?.id,
+      environment: e.SENTRY_ENVIRONMENT || e.ENVIRONMENT || 'production',
+      tracesSampleRate: parseFloat(e.SENTRY_TRACES_SAMPLE_RATE || '0.1'),
+    };
+  },
   { scheduled: websocketSafeHandler.scheduled } as any,
 );
 

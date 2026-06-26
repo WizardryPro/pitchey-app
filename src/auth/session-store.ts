@@ -31,8 +31,8 @@ function toArray<T>(result: any): T[] {
 
 export interface SessionStore {
   findUser(email: string): Promise<Record<string, unknown> | undefined>;
-  findUserById(id: string): Promise<Record<string, unknown> | undefined>;
-  createSession(userId: string, expiresAt: Date): Promise<string>;
+  findUserById(id: number): Promise<Record<string, unknown> | undefined>;
+  createSession(userId: number, expiresAt: Date): Promise<string>;
   findSession(sessionId: string): Promise<Record<string, unknown> | undefined>;
   deleteSession(sessionId: string): Promise<void>;
   deleteExpiredSessions(): Promise<number>;
@@ -64,7 +64,7 @@ export function createSessionStore(env: SessionStoreEnv): SessionStore {
       return rows[0];
     },
 
-    async findUserById(id: string) {
+    async findUserById(id: number) {
       const result = await sql`
         SELECT id, email, username, user_type,
                first_name, last_name, company_name, profile_image, subscription_tier,
@@ -78,7 +78,7 @@ export function createSessionStore(env: SessionStoreEnv): SessionStore {
       return rows[0];
     },
 
-    async createSession(userId: string, expiresAt: Date) {
+    async createSession(userId: number, expiresAt: Date) {
       const sessionId = crypto.randomUUID();
       const sessionToken = crypto.randomUUID();
       await sql`

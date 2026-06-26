@@ -58,7 +58,7 @@ export async function getProductionDeals(request: Request, env: Env): Promise<Re
       FROM production_deals d
       LEFT JOIN pitches p ON d.pitch_id = p.id
       LEFT JOIN users cu ON d.creator_id = cu.id
-      WHERE d.production_company_id = ${Number(userId)}
+      WHERE d.production_company_id = ${userId}
         AND (${status} = '' OR d.deal_state::text = ${status})
       ORDER BY
         CASE WHEN ${orderCol} = 'signed_at' THEN d.state_changed_at END DESC NULLS LAST,
@@ -70,7 +70,7 @@ export async function getProductionDeals(request: Request, env: Env): Promise<Re
 
     const countResult = await safeQuery<{ total: number }>(() => sql`
       SELECT COUNT(*)::int AS total FROM production_deals
-      WHERE production_company_id = ${Number(userId)}
+      WHERE production_company_id = ${userId}
         AND (${status} = '' OR deal_state::text = ${status})
     `, { fallback: [{ total: 0 }], context: 'production-deals.count' });
 
@@ -118,7 +118,7 @@ export async function createProductionDeal(request: Request, env: Env): Promise<
 
     const result = await sql`
       INSERT INTO production_deals (pitch_id, production_company_id, creator_id, deal_type, option_amount, backend_percentage, notes)
-      VALUES (${pitchId}, ${Number(userId)}, ${creatorId}, ${dealType}, ${amount}, ${royaltyPercentage}, ${terms})
+      VALUES (${pitchId}, ${userId}, ${creatorId}, ${dealType}, ${amount}, ${royaltyPercentage}, ${terms})
       RETURNING *, deal_state AS status, option_amount AS amount
     `;
 
@@ -142,7 +142,7 @@ export async function createProductionDeal(request: Request, env: Env): Promise<
         VALUES (
           ${creatorId}, 'deal_proposed', 'New Deal Proposal',
           ${'A production company has proposed a ' + dealType + ' deal for your pitch'},
-          ${Number(userId)}, ${pitchId}, NOW()
+          ${userId}, ${pitchId}, NOW()
         )
       `, { fallback: [], context: 'production-deals.create.notify' });
     }
@@ -180,7 +180,7 @@ export async function getProductionContract(request: Request, env: Env): Promise
       LEFT JOIN pitches p ON d.pitch_id = p.id
       LEFT JOIN users cu ON d.creator_id = cu.id
       LEFT JOIN users pu ON d.production_company_id = pu.id
-      WHERE d.id = ${dealId} AND d.production_company_id = ${Number(userId)}
+      WHERE d.id = ${dealId} AND d.production_company_id = ${userId}
     `, { fallback: [], context: 'production-deals.contract' });
 
     if (!result.ok) return errorResponse('Failed to generate contract', origin, 500);
@@ -242,7 +242,7 @@ export async function getDistributionChannels(request: Request, env: Env): Promi
   try {
     // Verify ownership
     const ownership = await safeQuery<{ id: number }>(() => sql`
-      SELECT id FROM production_pipeline WHERE id = ${projectId} AND production_company_id = ${Number(userId)}
+      SELECT id FROM production_pipeline WHERE id = ${projectId} AND production_company_id = ${userId}
     `, { fallback: [], context: 'production-deals.distribution.ownership' });
 
     if (!ownership.ok) {
@@ -289,7 +289,7 @@ export async function exportProjectData(request: Request, env: Env): Promise<Res
              p.title AS pitch_title, p.genre, p.logline, p.format, p.estimated_budget
       FROM production_pipeline pp
       LEFT JOIN pitches p ON pp.pitch_id = p.id
-      WHERE pp.id = ${projectId} AND pp.production_company_id = ${Number(userId)}
+      WHERE pp.id = ${projectId} AND pp.production_company_id = ${userId}
     `, { fallback: [], context: 'production-deals.export.project' });
 
     if (!projectResult.ok) return errorResponse('Failed to export project data', origin, 500);
@@ -347,7 +347,7 @@ export async function updateProjectMilestone(request: Request, env: Env): Promis
   try {
     // Verify project ownership
     const ownership = await safeQuery<{ id: number }>(() => sql`
-      SELECT id FROM production_pipeline WHERE id = ${projectId} AND production_company_id = ${Number(userId)}
+      SELECT id FROM production_pipeline WHERE id = ${projectId} AND production_company_id = ${userId}
     `, { fallback: [], context: 'production-deals.milestone-update.ownership' });
 
     if (!ownership.ok) return errorResponse('Failed to update milestone', origin, 500);

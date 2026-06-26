@@ -14,7 +14,7 @@ import { verifyJWT, extractJWT, type JWTPayload } from './worker-jwt';
 import { neon } from '@neondatabase/serverless';
 
 export interface AuthenticatedUser {
-  id: string;
+  id: number;
   email: string;
   name: string;
   userType: string;
@@ -53,15 +53,18 @@ export async function getAuthenticatedUser(
   if (token) {
     const payload = await verifyJWT(token, jwtSecret);
     if (payload) {
-      return {
-        authenticated: true,
-        user: {
-          id: payload.sub,
-          email: payload.email,
-          name: payload.name,
-          userType: payload.userType
-        }
-      };
+      const id = Number(payload.sub);
+      if (!Number.isNaN(id)) {
+        return {
+          authenticated: true,
+          user: {
+            id,
+            email: payload.email,
+            name: payload.name,
+            userType: payload.userType
+          }
+        };
+      }
     }
   }
 
@@ -80,12 +83,13 @@ export async function getAuthenticatedUser(
           if (sessionData) {
             const session = JSON.parse(sessionData);
             // Check if session is expired
-            if (new Date(session.expiresAt) > new Date()) {
+            const kvUserId = Number(session.userId);
+            if (new Date(session.expiresAt) > new Date() && !Number.isNaN(kvUserId)) {
               console.log(`[Auth] Session from KV: userId=${session.userId}, userType=${session.userType}`);
               return {
                 authenticated: true,
                 user: {
-                  id: String(session.userId),
+                  id: kvUserId,
                   email: session.userEmail || '',
                   name: session.userName || session.userEmail?.split('@')[0] || '',
                   userType: session.userType || 'creator'
@@ -107,7 +111,7 @@ export async function getAuthenticatedUser(
                    u.id as uid, u.email, u.username, u.user_type,
                    u.first_name, u.last_name, u.name as display_name
             FROM sessions s
-            JOIN users u ON s.user_id::text = u.id::text
+            JOIN users u ON s.user_id = u.id
             WHERE s.id = ${sessionId}
               AND s.expires_at > NOW()
             LIMIT 1
@@ -140,10 +144,19 @@ export async function getAuthenticatedUser(
               }
             }
 
+            const dbUserId = Number(session.user_id);
+            if (Number.isNaN(dbUserId)) {
+              return {
+                authenticated: false,
+                user: null,
+                error: 'Invalid user id in session'
+              };
+            }
+
             return {
               authenticated: true,
               user: {
-                id: String(session.user_id),
+                id: dbUserId,
                 email: session.email || '',
                 name: userName,
                 userType: session.user_type || 'creator'
@@ -170,7 +183,7 @@ export async function getAuthenticatedUser(
 export async function getUserId(
   request: Request,
   env: AuthEnv
-): Promise<string | null> {
+): Promise<number | null> {
   // First try to get from auth
   const authResult = await getAuthenticatedUser(request, env);
   if (authResult.authenticated && authResult.user) {
@@ -182,7 +195,10 @@ export async function getUserId(
   const userIdParam = url.searchParams.get('userId');
   if (userIdParam) {
     console.warn('Using userId from query param - this is deprecated');
-    return userIdParam;
+    const id = Number(userIdParam);
+    if (!Number.isNaN(id)) {
+      return id;
+    }
   }
 
   return null;

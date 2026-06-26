@@ -157,7 +157,7 @@ export async function productionTalentContactHandler(request: Request, env: Env)
           'talent_contact',
           'Production Company Contact',
           ${message},
-          ${Number(userId)},
+          ${userId},
           NOW()
         )
       `, { fallback: [], context: 'production-dashboard.talent.contact.notify' });
@@ -195,7 +195,7 @@ export async function productionProjectDetailsHandler(request: Request, env: Env
       FROM production_pipeline pp
       LEFT JOIN pitches p ON pp.pitch_id = p.id
       LEFT JOIN users u ON p.user_id = u.id
-      WHERE pp.id = ${projectId} AND pp.production_company_id = ${Number(userId)}
+      WHERE pp.id = ${projectId} AND pp.production_company_id = ${userId}
     `, { fallback: [], context: 'production-dashboard.project.details' });
 
     if (!result.ok) return errorResponse('Failed to fetch project details', origin, 500);
@@ -258,7 +258,7 @@ export async function productionProjectStatusHandler(request: Request, env: Env)
         stage = COALESCE(${stage ?? null}, stage),
         completion_percentage = COALESCE(${completionPercentage ?? null}, completion_percentage),
         updated_at = NOW()
-      WHERE id = ${projectId} AND production_company_id = ${Number(userId)}
+      WHERE id = ${projectId} AND production_company_id = ${userId}
       RETURNING *
     `, { fallback: [], context: 'production-dashboard.project.status.update' });
 
@@ -307,7 +307,7 @@ export async function productionBudgetUpdateHandler(request: Request, env: Env):
         contingency_percentage = COALESCE(${contingencyPercentage ?? null}, contingency_percentage),
         contingency_used = COALESCE(${contingencyUsed ?? null}, contingency_used),
         updated_at = NOW()
-      WHERE id = ${projectId} AND production_company_id = ${Number(userId)}
+      WHERE id = ${projectId} AND production_company_id = ${userId}
       RETURNING id, budget_allocated, budget_spent, budget_remaining, contingency_percentage, contingency_used
     `, { fallback: [], context: 'production-dashboard.project.budget.update' });
 
@@ -345,7 +345,7 @@ export async function productionBudgetVarianceHandler(request: Request, env: Env
                ELSE 0
              END AS variance_percentage
       FROM production_pipeline
-      WHERE id = ${projectId} AND production_company_id = ${Number(userId)}
+      WHERE id = ${projectId} AND production_company_id = ${userId}
     `, { fallback: [], context: 'production-dashboard.project.budget.variance' });
 
     if (!result.ok) {
@@ -604,7 +604,7 @@ export async function productionLocationBookHandler(request: Request, env: Env):
 
     const booking = await sql`
       INSERT INTO location_bookings (location_id, project_id, booked_by, start_date, end_date, total_cost, status)
-      VALUES (${locationId}, ${projectId}, ${Number(userId)}, ${startDate}, ${endDate}, ${totalCost}, 'pending')
+      VALUES (${locationId}, ${projectId}, ${userId}, ${startDate}, ${endDate}, ${totalCost}, 'pending')
       RETURNING *
     `;
 
@@ -743,7 +743,7 @@ export async function productionCrewHireHandler(request: Request, env: Env): Pro
 
     // Get project title for the current_project field — non-critical; fall back to placeholder name
     const projectLookup = await safeQuery<{ title: string | null }>(() => sql`
-      SELECT title FROM production_pipeline WHERE id = ${projectId} AND production_company_id = ${Number(userId)}
+      SELECT title FROM production_pipeline WHERE id = ${projectId} AND production_company_id = ${userId}
     `, { fallback: [], context: 'production-dashboard.crew.hire.project-lookup' });
 
     const projectTitle = projectLookup.rows.length > 0

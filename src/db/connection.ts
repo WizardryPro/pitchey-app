@@ -51,7 +51,10 @@ async function withDbRetry<T>(op: () => Promise<T>, max = 3, delayMs = 1000): Pr
 function wrapWithRetry(raw: any) {
   return new Proxy(raw, {
     apply(target, thisArg, args) {
-      return withDbRetry(() => Reflect.apply(target, thisArg, args));
+      // Promise.resolve normalizes the apply result (typed unknown through the
+      // Proxy trap) to the Promise<unknown> withDbRetry expects — no-op for the
+      // neon query thenable, behavior unchanged.
+      return withDbRetry(() => Promise.resolve(Reflect.apply(target, thisArg, args)));
     },
     get(target, prop, receiver) {
       if (prop === 'query') {

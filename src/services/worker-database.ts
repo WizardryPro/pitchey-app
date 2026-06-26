@@ -134,7 +134,10 @@ export class WorkerDatabase implements DatabaseService {
     this._wrappedSql = new Proxy(raw, {
       apply(target, thisArg, args) {
         // sql`...` tagged-template invocation — retry transient infra failures.
-        return withRetry(() => Reflect.apply(target, thisArg, args));
+        // Promise.resolve normalizes the apply result (typed unknown through the
+        // Proxy trap) to the Promise<unknown> withRetry expects — no-op for the
+        // neon query thenable, behavior unchanged.
+        return withRetry(() => Promise.resolve(Reflect.apply(target, thisArg, args)));
       },
       get(target, prop, receiver) {
         if (prop === 'query') {

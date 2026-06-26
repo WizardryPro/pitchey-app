@@ -219,7 +219,7 @@ export async function submitPitchFeedback(request: Request, env: Env): Promise<R
       const viewResult = await safeQuery<{ total_duration: number }>(
         () => sql`
           SELECT COALESCE(MAX(view_duration), 0)::int as total_duration
-          FROM views WHERE pitch_id = ${pitchId} AND viewer_id = ${Number(userId)}
+          FROM views WHERE pitch_id = ${pitchId} AND viewer_id = ${userId}
         `,
         { fallback: [{ total_duration: 0 }], context: 'pitch-feedback.consumption-gate', tags: { pitchId, userId: String(userId) } },
       );
@@ -259,7 +259,7 @@ export async function submitPitchFeedback(request: Request, env: Env): Promise<R
     // the structured submit doesn't carry one.
     const result = await sql`
       INSERT INTO pitch_feedback (pitch_id, reviewer_id, reviewer_type, rating, strengths, weaknesses, suggestions, overall_feedback, is_interested, is_anonymous, reviewer_weight)
-      VALUES (${pitchId}, ${Number(userId)}, ${reviewerType}, ${rating}, ${strengths}, ${weaknesses}, ${suggestions}, ${overallFeedback}, ${isInterested}, ${isAnonymous}, ${reviewerWeight})
+      VALUES (${pitchId}, ${userId}, ${reviewerType}, ${rating}, ${strengths}, ${weaknesses}, ${suggestions}, ${overallFeedback}, ${isInterested}, ${isAnonymous}, ${reviewerWeight})
       ON CONFLICT (pitch_id, reviewer_id) DO UPDATE SET
         reviewer_type = EXCLUDED.reviewer_type,
         rating = COALESCE(EXCLUDED.rating, pitch_feedback.rating),
@@ -279,7 +279,7 @@ export async function submitPitchFeedback(request: Request, env: Env): Promise<R
     // the anonymous flag — null the actor so related_user_id can't unmask the reviewer.
     await notifyPitchOwner(sql, {
       ownerId: Number(pitch.user_id),
-      actorId: isAnonymous ? null : Number(userId),
+      actorId: isAnonymous ? null : userId,
       pitchId,
       type: 'pitch_feedback',
       title: 'New feedback on your pitch',
@@ -330,7 +330,7 @@ export async function updatePitchFeedback(request: Request, env: Env): Promise<R
         overall_feedback = ${overallFeedback},
         is_interested = ${isInterested},
         is_anonymous = ${isAnonymous}
-      WHERE pitch_id = ${pitchId} AND reviewer_id = ${Number(userId)}
+      WHERE pitch_id = ${pitchId} AND reviewer_id = ${userId}
       RETURNING id, created_at
     `;
 
@@ -365,7 +365,7 @@ export async function deletePitchFeedback(request: Request, env: Env): Promise<R
   try {
     const result = await sql`
       DELETE FROM pitch_feedback
-      WHERE pitch_id = ${pitchId} AND reviewer_id = ${Number(userId)}
+      WHERE pitch_id = ${pitchId} AND reviewer_id = ${userId}
       RETURNING id
     `;
 
@@ -536,7 +536,7 @@ export async function getMyFeedback(request: Request, env: Env): Promise<Respons
       SELECT id, rating, strengths, weaknesses, suggestions, overall_feedback,
              is_interested, is_anonymous, reviewer_type, created_at
       FROM pitch_feedback
-      WHERE pitch_id = ${pitchId} AND reviewer_id = ${Number(userId)}
+      WHERE pitch_id = ${pitchId} AND reviewer_id = ${userId}
     `;
 
     return jsonResponse({ success: true, data: feedback || null }, origin);
@@ -580,7 +580,7 @@ export async function getConsumptionStatus(request: Request, env: Env): Promise<
     const viewResult = await safeQuery<{ total_duration: number }>(
       () => sql`
         SELECT COALESCE(MAX(view_duration), 0)::int as total_duration
-        FROM views WHERE pitch_id = ${pitchId} AND viewer_id = ${Number(userId)}
+        FROM views WHERE pitch_id = ${pitchId} AND viewer_id = ${userId}
       `,
       { fallback: [{ total_duration: 0 }], context: 'pitch-feedback.consumption-status', tags: { pitchId, userId: String(userId) } },
     );
@@ -633,7 +633,7 @@ export async function submitAnonymousRating(request: Request, env: Env): Promise
       const reviewerWeight = getRoleWeight(reviewerType);
       await sql`
         INSERT INTO pitch_feedback (pitch_id, reviewer_id, reviewer_type, rating, strengths, weaknesses, suggestions, overall_feedback, is_interested, is_anonymous, reviewer_weight)
-        VALUES (${pitchId}, ${Number(userId)}, ${reviewerType}, ${rating}, ${[]}, ${[]}, ${[]}, ${null}, ${false}, ${false}, ${reviewerWeight})
+        VALUES (${pitchId}, ${userId}, ${reviewerType}, ${rating}, ${[]}, ${[]}, ${[]}, ${null}, ${false}, ${false}, ${reviewerWeight})
         ON CONFLICT (pitch_id, reviewer_id) DO UPDATE SET rating = EXCLUDED.rating
       `;
       await updateRatingStats(sql, pitchId);
@@ -678,7 +678,7 @@ export async function getRatingStatus(request: Request, env: Env): Promise<Respo
   try {
     if (userId) {
       const [row] = await sql`
-        SELECT rating FROM pitch_feedback WHERE pitch_id = ${pitchId} AND reviewer_id = ${Number(userId)}
+        SELECT rating FROM pitch_feedback WHERE pitch_id = ${pitchId} AND reviewer_id = ${userId}
       `;
       return jsonResponse({ success: true, data: { rating: row?.rating ?? null } }, origin);
     }
@@ -727,7 +727,7 @@ export async function submitPitchComment(request: Request, env: Env): Promise<Re
     let userType: string | null = null;
 
     if (userId) {
-      const [user] = await sql`SELECT user_type FROM users WHERE id = ${Number(userId)}`;
+      const [user] = await sql`SELECT user_type FROM users WHERE id = ${userId}`;
       userType = user?.user_type || null;
     }
 
@@ -739,7 +739,7 @@ export async function submitPitchComment(request: Request, env: Env): Promise<Re
 
     const result = await sql`
       INSERT INTO pitch_comments (pitch_id, user_id, user_type, content, ip_hash, is_anonymous)
-      VALUES (${pitchId}, ${userId ? Number(userId) : null}, ${userType}, ${content}, ${ipHash}, ${isAnonymous})
+      VALUES (${pitchId}, ${userId ?? null}, ${userType}, ${content}, ${ipHash}, ${isAnonymous})
       RETURNING id, created_at
     `;
 
@@ -748,7 +748,7 @@ export async function submitPitchComment(request: Request, env: Env): Promise<Re
     // → actorId null so we don't expose a non-existent/identifiable user.
     await notifyPitchOwner(sql, {
       ownerId: Number(pitch.user_id),
-      actorId: userId ? Number(userId) : null,
+      actorId: userId ?? null,
       pitchId,
       type: 'pitch_comment',
       title: 'New comment on your pitch',
