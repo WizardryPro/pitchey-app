@@ -3,6 +3,7 @@ import { Handshake, Check, X, Reply, Flag, CheckCircle2, MessageSquare } from 'l
 import apiClient from '../../lib/api-client';
 import { formatNumber } from '@shared/utils/formatters';
 import DealThread from '../deals/DealThread';
+import DealSignPanel from '../deals/DealSignPanel';
 
 // Creator Deal Inbox (moat #6) — production deals proposed to the creator, with
 // accept / counter / reject. Self-contained; renders null when there are no deals
@@ -318,6 +319,7 @@ export default function CreatorDealInbox() {
                   <MessageSquare className="w-4 h-4" /> {threadFor === d.id ? 'Hide discussion' : 'Discuss'}
                 </button>
                 {threadFor === d.id && <DealThread dealId={d.id} />}
+                {threadFor === d.id && <DealSignPanel dealId={d.id} />}
               </div>
             </li>
           );

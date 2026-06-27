@@ -4,6 +4,7 @@ import apiClient from '@/lib/api-client';
 import { ProductionService } from '../services/production.service';
 import { formatNumber } from '@shared/utils/formatters';
 import DealThread from '@/components/deals/DealThread';
+import DealSignPanel from '@/components/deals/DealSignPanel';
 
 // Production Deals page (disintermediation defense P1 — deal system-of-record).
 // The producer's view of deals they've proposed, with the both-sided "mark outcome"
@@ -253,6 +254,7 @@ export default function ProductionDeals() {
                     <MessageSquare className="w-4 h-4" /> {threadFor === d.id ? 'Hide discussion' : 'Discuss'}
                   </button>
                   {threadFor === d.id && <DealThread dealId={d.id} />}
+                  {threadFor === d.id && <DealSignPanel dealId={d.id} />}
                 </div>
               </li>
             );
