@@ -182,6 +182,7 @@ const AdminDashboard = lazyRetry(() => import('@portals/admin/pages/AdminDashboa
 const UserManagement = lazyRetry(() => import('@portals/admin/pages/UserManagement'));
 const ContentModeration = lazyRetry(() => import('@portals/admin/pages/ContentModeration'));
 const AdminAnalytics = lazyRetry(() => import('@portals/admin/pages/AdminAnalytics'));
+const AdminLiquidity = lazyRetry(() => import('@portals/admin/pages/AdminLiquidity'));
 const AdminSystemHealth = lazyRetry(() => import('@portals/admin/pages/AdminSystemHealth'));
 const AdminAuditLog = lazyRetry(() => import('@portals/admin/pages/AdminAuditLog'));
 const AdminGDPR = lazyRetry(() => import('@portals/admin/pages/AdminGDPR'));
@@ -655,6 +656,11 @@ function App() {
             <Route path="analytics" element={
               <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/login">
                 <AdminAnalytics />
+              </PermissionRoute>
+            } />
+            <Route path="liquidity" element={
+              <PermissionRoute requires={Permission.ADMIN_ACCESS} redirectTo="/login">
+                <AdminLiquidity />
               </PermissionRoute>
             } />
             <Route path="system-health" element={

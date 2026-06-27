@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, BarChart3, Activity, Users, FileText, Shield,
   DollarSign, FileBarChart, ClipboardList, Lock, Settings,
-  BadgeCheck, Ticket
+  BadgeCheck, Ticket, Gauge
 } from 'lucide-react';
 import { ADMIN_ROUTES } from '@/config/navigation.routes';
 
@@ -25,6 +25,7 @@ export const adminNavigationSections: NavigationSection[] = [
     items: [
       { label: 'Overview', path: ADMIN_ROUTES.dashboard, icon: Home },
       { label: 'Analytics', path: ADMIN_ROUTES.analytics, icon: BarChart3 },
+      { label: 'Liquidity Gate', path: ADMIN_ROUTES.liquidity, icon: Gauge },
       { label: 'System Health', path: ADMIN_ROUTES.systemHealth, icon: Activity },
     ],
   },
