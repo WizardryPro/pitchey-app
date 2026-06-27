@@ -67,9 +67,14 @@ jobs:
           echo "✅ Dependencies installed"
           npx eslint --version || echo "⚠️ ESLint not found after install"
 
-      - name: 🧹 Run ESLint
-        run: npm run lint
-        continue-on-error: true
+      - name: 🧹 ESLint ratchet gate
+        # Lint never used to gate (`npm run lint` ran with continue-on-error and
+        # quality-gates.yml's code-quality gate is informational-only), so lint
+        # errors accumulated invisibly (8908 as of 2026-06-27, trending up). This
+        # is the frontend twin of the worker type-check ratchet: it FAILS if the
+        # error count rises above the committed baseline. Lower the baseline in
+        # the script as errors are fixed (it only ratchets down).
+        run: node ../scripts/frontend-lint-gate.mjs --list
 
       - name: 🔧 Type checking
         run: npm run type-check
