@@ -3714,6 +3714,15 @@ class RouteRegistry {
       const { postDealMessage } = await import('./handlers/deal-messages');
       return postDealMessage(req, this.env);
     });
+    // Binding deal-sheet e-signature (deal-servicing P5.0) — both-sided, hash-sealed.
+    this.register('POST', '/api/deals/:id/sign', async (req) => {
+      const { signDeal } = await import('./handlers/deal-signing');
+      return signDeal(req, this.env);
+    });
+    this.register('GET', '/api/deals/:id/signatures', async (req) => {
+      const { getDealSignatures } = await import('./handlers/deal-signing');
+      return getDealSignatures(req, this.env);
+    });
     this.register('GET', '/api/creator/pitches/analytics', async (req) => {
       const { creatorPitchesAnalyticsHandler } = await import('./handlers/creator-sidebar');
       return creatorPitchesAnalyticsHandler(req, this.env);
