@@ -254,7 +254,11 @@ export class AdminEndpointsHandler {
       if (method === 'GET' && relevantPath[0] === 'analytics') {
         return await this.handleAdminAnalytics(request, corsHeaders, userAuth);
       }
-      
+
+      if (method === 'GET' && relevantPath[0] === 'liquidity') {
+        return await this.handleLiquidityGate(request, corsHeaders, userAuth);
+      }
+
       if (method === 'GET' && relevantPath[0] === 'transactions') {
         return await this.handleGetTransactions(request, corsHeaders, userAuth);
       }
@@ -1555,6 +1559,107 @@ export class AdminEndpointsHandler {
           activeUsers: Number(a.active_users || 0),
           activityGrowthRate: growth(Number(a.active_users || 0), Number(a.prev_active_users || 0))
         }
+      }, corsHeaders);
+
+    } catch (error) {
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
+      return this.bareJson(empty, corsHeaders);
+    }
+  }
+
+  // Liquidity Gate — the pre-build trigger for the deal-servicing roadmap (R2.3).
+  // Reads four signals off LIVE tables (ndas, users, production_deals mig-114
+  // outcome columns) — zero new schema. The thresholds are DRAFT (advisory, to be
+  // tuned with Karl); the `gate.open` verdict is a recommendation, NOT a decision.
+  // See docs/deal-servicing-roadmap-2026-06-27.md §5. The sharpest signal is the
+  // off-platform-close rate: high = on-platform servicing would capture real leakage.
+  private async handleLiquidityGate(_request: Request, corsHeaders: Record<string, string>, _userAuth: AuthPayload): Promise<Response> {
+    // DRAFT thresholds — surfaced in the payload so the UI can label them as such.
+    const THRESHOLDS = {
+      buyersPerWeek: 5,        // ≥ N verified buyers signing NDAs / week
+      dealsPerMonth: 3,        // ≥ M deals reaching a terminal outcome / month
+      offPlatformRate: 0.25,   // ≥ X off-platform-close share = meaningful leakage to capture
+      mutualConfirmRate: 0.5,  // ≥ X both-sides-confirm = parties actually report back (P2 working)
+    };
+
+    const empty = {
+      buyersSigningNdas: { currentWeek: 0, weeks: [] as { week: string; count: number }[], trendNonDecreasing: false, threshold: THRESHOLDS.buyersPerWeek, pass: false },
+      dealsReachingOutcome: { currentMonth: 0, months: [] as { month: string; count: number }[], threshold: THRESHOLDS.dealsPerMonth, pass: false },
+      offPlatformCloseRate: { rate: 0, offPlatform: 0, totalCloses: 0, meaningfulLeakage: false, threshold: THRESHOLDS.offPlatformRate },
+      mutualConfirmRate: { rate: 0, confirmed: 0, withOutcome: 0, threshold: THRESHOLDS.mutualConfirmRate, pass: false },
+      gate: { open: false, thresholdsAreDraft: true },
+    };
+
+    try {
+      const sql = this.getSqlClient();
+      if (!sql) return this.bareJson(empty, corsHeaders);
+
+      // Signal 1 — distinct buyer-type (investor/production) NDA signers per ISO week, last 8 weeks.
+      const weekRows = await sql`
+        SELECT to_char(date_trunc('week', n.signed_at), 'YYYY-MM-DD') AS week,
+               COUNT(DISTINCT n.signer_id)::int AS count
+        FROM ndas n
+        JOIN users u ON u.id = n.signer_id
+        WHERE n.signed_at IS NOT NULL
+          AND n.signed_at >= date_trunc('week', NOW()) - INTERVAL '7 weeks'
+          AND u.user_type IN ('investor', 'production')
+        GROUP BY 1
+        ORDER BY 1 ASC
+      `;
+
+      // Signal 2 — deals reaching a terminal outcome per month, last 6 months.
+      const monthRows = await sql`
+        SELECT to_char(date_trunc('month', COALESCE(outcome_reported_at, closed_at)), 'YYYY-MM') AS month,
+               COUNT(*)::int AS count
+        FROM production_deals
+        WHERE outcome IS NOT NULL
+          AND COALESCE(outcome_reported_at, closed_at) >= date_trunc('month', NOW()) - INTERVAL '5 months'
+        GROUP BY 1
+        ORDER BY 1 ASC
+      `;
+
+      // Signals 3 & 4 — close mix + mutual-confirm, all-time over deals with an outcome.
+      const [agg] = await sql`
+        SELECT
+          COUNT(*) FILTER (WHERE outcome = 'closed_off_platform')::int AS off_platform,
+          COUNT(*) FILTER (WHERE outcome IN ('closed_on_platform', 'closed_off_platform'))::int AS total_closes,
+          COUNT(*) FILTER (WHERE outcome IS NOT NULL)::int AS with_outcome,
+          COUNT(*) FILTER (WHERE outcome IS NOT NULL AND outcome_confirmed_by_creator AND outcome_confirmed_by_production)::int AS mutually_confirmed
+        FROM production_deals
+      `;
+
+      const weeks = (weekRows || []).map((r: any) => ({ week: String(r.week), count: Number(r.count || 0) }));
+      const months = (monthRows || []).map((r: any) => ({ month: String(r.month), count: Number(r.count || 0) }));
+
+      // Current-week / current-month figures (0 if no row for the bucket).
+      const currentWeekKey = weeks.length ? weeks[weeks.length - 1].week : '';
+      const currentWeek = weeks.find(w => w.week === currentWeekKey)?.count ?? 0;
+      const currentMonth = months.length ? months[months.length - 1].count : 0;
+
+      // Trend: non-decreasing across the observed weekly buckets (need ≥2 to judge).
+      const trendNonDecreasing = weeks.length >= 2 && weeks.every((w, i) => i === 0 || w.count >= weeks[i - 1].count);
+
+      const a: any = agg || {};
+      const offPlatform = Number(a.off_platform || 0);
+      const totalCloses = Number(a.total_closes || 0);
+      const withOutcome = Number(a.with_outcome || 0);
+      const mutuallyConfirmed = Number(a.mutually_confirmed || 0);
+      const offRate = totalCloses > 0 ? offPlatform / totalCloses : 0;
+      const confirmRate = withOutcome > 0 ? mutuallyConfirmed / withOutcome : 0;
+
+      const s1Pass = currentWeek >= THRESHOLDS.buyersPerWeek && trendNonDecreasing;
+      const s2Pass = currentMonth >= THRESHOLDS.dealsPerMonth;
+      const s3Leak = offRate >= THRESHOLDS.offPlatformRate;
+      const s4Pass = confirmRate >= THRESHOLDS.mutualConfirmRate;
+
+      return this.bareJson({
+        buyersSigningNdas: { currentWeek, weeks, trendNonDecreasing, threshold: THRESHOLDS.buyersPerWeek, pass: s1Pass },
+        dealsReachingOutcome: { currentMonth, months, threshold: THRESHOLDS.dealsPerMonth, pass: s2Pass },
+        offPlatformCloseRate: { rate: offRate, offPlatform, totalCloses, meaningfulLeakage: s3Leak, threshold: THRESHOLDS.offPlatformRate },
+        mutualConfirmRate: { rate: confirmRate, confirmed: mutuallyConfirmed, withOutcome, threshold: THRESHOLDS.mutualConfirmRate, pass: s4Pass },
+        // Advisory verdict: liquidity is real AND deals close AND the leak is worth
+        // capturing AND both sides report back. All four together = start P5.0.
+        gate: { open: s1Pass && s2Pass && s3Leak && s4Pass, thresholdsAreDraft: true },
       }, corsHeaders);
 
     } catch (error) {

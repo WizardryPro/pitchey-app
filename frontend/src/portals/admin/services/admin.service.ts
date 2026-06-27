@@ -334,6 +334,16 @@ class AdminService {
     return handleResponse<any>(response);
   }
 
+  // Liquidity gate — the pre-build trigger for the deal-servicing roadmap (R2.3).
+  async getLiquidity(): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/api/admin/liquidity`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include'
+    });
+    return handleResponse<any>(response);
+  }
+
   // System Health
   async getSystemHealth(): Promise<any> {
     const response = await fetch(`${API_BASE_URL}/api/admin/system/health`, {

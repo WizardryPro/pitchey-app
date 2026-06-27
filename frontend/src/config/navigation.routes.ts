@@ -206,6 +206,7 @@ export const WATCHER_ROUTES = {
 export const ADMIN_ROUTES = {
   dashboard: '/admin/dashboard',
   analytics: '/admin/analytics',
+  liquidity: '/admin/liquidity',
   systemHealth: '/admin/system-health',
   users: '/admin/users',
   content: '/admin/content',
