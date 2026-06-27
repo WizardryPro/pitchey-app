@@ -8,6 +8,7 @@ import { GlobalErrorBoundary } from '@shared/components/feedback/ConsoleErrorBou
 import { Toaster } from 'react-hot-toast';
 import ToastProvider from '@shared/components/feedback/ToastProvider';
 import { NotificationToastProvider } from '@shared/components/feedback/NotificationToastContainer';
+import { ServiceDegradedBanner } from '@shared/components/feedback/ServiceDegradedBanner';
 import LogoSplash from '@/components/LogoSplash';
 // Import safe context provider (without legacy AuthProvider)
 import { AppContextProviderSafe } from '@shared/contexts/AppContextProviderSafe';
@@ -408,6 +409,9 @@ function App() {
                 billing, slates, opportunities all "saved" with zero visible feedback). */}
             <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
             <Router>
+              {/* App-wide degraded banner (R0.1) — shows on any 5xx, so a Neon outage
+                  reads as "temporarily unavailable" instead of a silently-empty marketplace. */}
+              <ServiceDegradedBanner />
               <Suspense fallback={<LogoSplash message="Optimizing your experience…" />}>
                 <Routes>
           {/* Homepage - Only render on exact path match */}

@@ -9560,15 +9560,9 @@ pitchey_analytics_datapoints_per_minute 1250
 
     } catch (error) {
       console.error('Error in browsePitches:', error);
-      return builder.success({
-        success: true,
-        items: [],
-        tab: tab,
-        total: 0,
-        page: page,
-        limit: limit,
-        hasMore: false
-      });
+      // Surface failures as 503 instead of a fake-empty 200 (R0.1 — silent-empty
+      // marketplace). A Neon 402 here must read as "degraded", not "no pitches".
+      return builder.error(ErrorCode.SERVICE_UNAVAILABLE, 'Pitches are temporarily unavailable');
     }
   }
 
@@ -12413,8 +12407,10 @@ pitchey_analytics_datapoints_per_minute 1250
     } catch (error) {
       console.error('[DEBUG] Error in getPublicPitches:', error);
       console.error('[DEBUG] Error stack:', error instanceof Error ? error.stack : 'unknown');
-      // Return empty array on error to prevent frontend crash
-      return builder.success([]);
+      // Surface DB/upstream failures as 503 — NOT an empty 200. A swallowed error here
+      // (e.g. a Neon compute-quota 402) rendered the marketplace as silently empty,
+      // indistinguishable from "no pitches" (R0.1). Let the client show a degraded state.
+      return builder.error(ErrorCode.SERVICE_UNAVAILABLE, 'Pitches are temporarily unavailable');
     }
   }
 
