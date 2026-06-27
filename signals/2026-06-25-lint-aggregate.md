@@ -23,3 +23,5 @@ Top rules by frequency:
 
 ## Timeline
 - 2026-06-25 — first seen (manual harness bootstrap run): 9088 problems
+- 2026-06-26 — still present (automated nightly run): 9086 problems (8902 errors, 184 warnings) — down 2 from baseline; top rules unchanged (no-unsafe-member-access 3266, no-unsafe-assignment 1604, no-explicit-any 1148).
+- 2026-06-27 — still present (automated nightly run): 9090 problems (8906 errors, 184 warnings) — up +4 from yesterday; consistent with new code added in moat-feature PRs (#372/#373/#374/#375). Top rules: no-unsafe-member-access 3266, no-unsafe-assignment 1605, no-explicit-any 1150, no-unused-vars 948, no-misused-promises 582.

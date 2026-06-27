@@ -18,3 +18,4 @@ src/handlers/slates.ts(56,33) +7: error TS2345: Argument of type 'string | null'
 
 ## Timeline
 - 2026-06-25 — first seen (manual harness bootstrap run)
+- 2026-06-26 — resolved: no longer present in worker tsc output; fixed via PR #365 (chore/userid-number-canonical).
