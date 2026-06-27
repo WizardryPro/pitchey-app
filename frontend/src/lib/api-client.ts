@@ -6,6 +6,7 @@
 
 import { sessionCache } from '../store/sessionCache';
 import { sessionManager } from './session-manager';
+import { useServiceStatusStore } from '../store/serviceStatusStore';
 import type { 
   ApiResponse, 
   Pitch, 
@@ -173,7 +174,14 @@ class ApiClient {
 
       
       const response = await fetch(url, fetchOptions);
-      
+
+      // Global degraded signal (R0.1): a 5xx (e.g. the public pitch endpoints now
+      // return 503 on a Neon compute-quota 402 instead of a fake-empty 200) flips the
+      // app-wide banner; any non-5xx response clears it. Self-healing, guarded in-store.
+      if (response) {
+        useServiceStatusStore.getState().setDegraded(response.status >= 500);
+      }
+
       // Add null checking for response
       if (!response) {
         console.error('Fetch returned null response');
