@@ -28,7 +28,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 // ── The baseline. Lower it (never raise it) as frontend lint errors are fixed. ──
-const BASELINE = 8837;
+const BASELINE = 8736;
 // 2026-06-27: created at the measured floor (8908 errors / 184 warnings). Top
 // rules: no-unsafe-member-access, no-unsafe-assignment, no-explicit-any,
 // no-unused-vars, no-misused-promises. The gate blocks any NEW error.
@@ -36,6 +36,11 @@ const BASELINE = 8837;
 // service API boundaries (removed unnecessary `(response.data as any)` casts;
 // fixed a latent double-wrapped `get<ApiResponse<...>>` generic that hid a
 // real stats-access bug). slice 1 of the `any`-complex teardown (src/services).
+// 2026-06-28: lowered 8837 -> 8736 (-101). A2a: typed transformPitchData's input
+// (RawPitch boundary shape) in src/lib/api.ts — cleared the unsafe member-access
+// inside the transform with zero consumer cascade (return kept `any`; tightening
+// it to Pitch is deferred — the file's Pitch differs from the page-level Pitch
+// type tree). Remaining api.ts errors are axios response-envelope typing (A2b).
 
 const LIST = process.argv.includes('--list');
 

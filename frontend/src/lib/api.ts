@@ -29,17 +29,59 @@ api.interceptors.response.use(
   }
 );
 
-function safeParseJsonArray(value: unknown): any[] {
+function safeParseJsonArray(value: unknown): unknown[] {
   if (Array.isArray(value)) return value;
   if (typeof value === 'string') {
-    try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; }
+    try { const parsed: unknown = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; }
     catch { return []; }
   }
   return [];
 }
 
+/**
+ * Raw pitch payload as it arrives from the API — snake_case and camelCase keys
+ * coexist across historical endpoints, so both spellings are declared. The index
+ * signature keeps passthrough fields typed as `unknown` (not `any`) so member
+ * access inside transformPitchData is type-safe. A boundary shape claim, the same
+ * kind the apiClient `<T>` generics make. (Return stays `any` for now — tightening
+ * it to `Pitch` is deferred: this file's `Pitch` differs from the page-level
+ * `Pitch` type tree, so a strict return cascades — that's a B-workstream slice.)
+ */
+interface RawPitch {
+  user_id?: number; userId?: number;
+  creator?: { id?: number; name?: string } | null;
+  view_count?: number; viewCount?: number; views?: number;
+  like_count?: number; likeCount?: number; likes?: number;
+  rating_average?: number | string; ratingAverage?: number | string;
+  pitchey_score_avg?: number | string; pitcheyScoreAvg?: number | string;
+  viewer_score_avg?: number | string; viewerScoreAvg?: number | string;
+  rating_count?: number | string; ratingCount?: number | string;
+  nda_count?: number; ndaCount?: number;
+  created_at?: string; createdAt?: string;
+  updated_at?: string; updatedAt?: string;
+  creator_id?: number; creatorId?: number;
+  creator_name?: string; creatorName?: string;
+  company_name?: string; creatorCompany?: string;
+  short_synopsis?: string; shortSynopsis?: string;
+  long_synopsis?: string; longSynopsis?: string;
+  budget_range?: string; estimated_budget?: number | string; budget?: unknown; estimatedBudget?: number | string;
+  production_timeline?: string; productionTimeline?: string;
+  target_audience?: string; targetAudience?: string;
+  comparable_films?: string; comparableFilms?: string;
+  budget_breakdown?: unknown; budgetBreakdown?: unknown;
+  attached_talent?: string; attachedTalent?: string;
+  financial_projections?: unknown; financialProjections?: unknown;
+  title_image?: string; titleImage?: string;
+  thumbnail_url?: string; thumbnail?: string;
+  pitch_deck_url?: string; pitchDeck?: string;
+  script_url?: string; script?: string;
+  trailer_url?: string; trailer?: string;
+  documents?: unknown; characters?: unknown; themes?: unknown; locations?: unknown;
+  [key: string]: unknown;
+}
+
 // Helper to transform pitch data from snake_case (API) to camelCase (frontend)
-function transformPitchData(pitch: any): any {
+function transformPitchData(pitch: RawPitch | null | undefined): any {
   if (!pitch) return pitch;
   return {
     ...pitch,
@@ -74,7 +116,7 @@ function transformPitchData(pitch: any): any {
     pitchDeck: pitch.pitch_deck_url ?? pitch.pitchDeck,
     script: pitch.script_url ?? pitch.script,
     trailer: pitch.trailer_url ?? pitch.trailer,
-    documents: Array.isArray(pitch.documents) ? pitch.documents : [],
+    documents: Array.isArray(pitch.documents) ? (pitch.documents as unknown[]) : [],
     characters: safeParseJsonArray(pitch.characters),
     themes: safeParseJsonArray(pitch.themes),
     locations: safeParseJsonArray(pitch.locations),
