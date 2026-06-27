@@ -74,13 +74,6 @@ export interface TeamRole {
   createdAt: string;
 }
 
-// API Response types
-interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: { message: string } | string;
-}
-
 export class TeamService {
   /**
    * Get all teams for the current user
@@ -88,11 +81,11 @@ export class TeamService {
   static async getTeams(): Promise<Team[]> {
     const response = await apiClient.get<{ teams: Team[] }>('/api/teams');
 
-    if (!response.success || !(response.data as any)?.teams) {
+    if (!response.success || !response.data?.teams) {
       throw new Error(typeof response.error === 'string' ? response.error : response.error?.message || 'Failed to fetch teams');
     }
 
-    return (response.data as any).teams;
+    return response.data.teams;
   }
 
   /**
@@ -101,11 +94,11 @@ export class TeamService {
   static async getTeamById(teamId: string): Promise<Team> {
     const response = await apiClient.get<{ team: Team }>(`/api/teams/${teamId}`);
 
-    if (!response.success || !(response.data as any)?.team) {
+    if (!response.success || !response.data?.team) {
       throw new Error(typeof response.error === 'string' ? response.error : response.error?.message || 'Failed to fetch team');
     }
 
-    return (response.data as any).team;
+    return response.data.team;
   }
 
   /**
@@ -114,13 +107,13 @@ export class TeamService {
   static async getTeamMembers(teamId: string): Promise<TeamMember[]> {
     const response = await apiClient.get<{ members: TeamMember[] }>(`/api/teams/${teamId}/members`);
 
-    if (!response.success || !(response.data as any)?.members) {
+    if (!response.success || !response.data?.members) {
       // If no members endpoint, try getting from team details
       const team = await this.getTeamById(teamId);
       return team.members || [];
     }
 
-    return (response.data as any).members;
+    return response.data.members;
   }
 
   /**
@@ -129,11 +122,11 @@ export class TeamService {
   static async createTeam(data: { name: string; description?: string }): Promise<Team> {
     const response = await apiClient.post<{ team: Team }>('/api/teams', data);
 
-    if (!response.success || !(response.data as any)?.team) {
+    if (!response.success || !response.data?.team) {
       throw new Error(typeof response.error === 'string' ? response.error : response.error?.message || 'Failed to create team');
     }
 
-    return (response.data as any).team;
+    return response.data.team;
   }
 
   /**
@@ -142,11 +135,11 @@ export class TeamService {
   static async updateTeam(teamId: string, data: { name?: string; description?: string }): Promise<Team> {
     const response = await apiClient.put<{ team: Team }>(`/api/teams/${teamId}`, data);
 
-    if (!response.success || !(response.data as any)?.team) {
+    if (!response.success || !response.data?.team) {
       throw new Error(typeof response.error === 'string' ? response.error : response.error?.message || 'Failed to update team');
     }
 
-    return (response.data as any).team;
+    return response.data.team;
   }
 
   /**
@@ -166,11 +159,11 @@ export class TeamService {
   static async inviteToTeam(teamId: string, data: { email: string; role?: string; message?: string }): Promise<TeamInvitation> {
     const response = await apiClient.post<{ invitation: TeamInvitation }>(`/api/teams/${teamId}/invite`, data);
 
-    if (!response.success || !(response.data as any)?.invitation) {
+    if (!response.success || !response.data?.invitation) {
       throw new Error(typeof response.error === 'string' ? response.error : response.error?.message || 'Failed to send invitation');
     }
 
-    return (response.data as any).invitation;
+    return response.data.invitation;
   }
 
   /**
@@ -179,11 +172,11 @@ export class TeamService {
   static async getInvitations(): Promise<TeamInvitation[]> {
     const response = await apiClient.get<{ invites: TeamInvitation[] }>('/api/teams/invites');
 
-    if (!response.success || !(response.data as any)?.invites) {
+    if (!response.success || !response.data?.invites) {
       return [];
     }
 
-    return (response.data as any).invites;
+    return response.data.invites;
   }
 
   /**
@@ -236,11 +229,11 @@ export class TeamService {
   static async getTeamRoles(teamId: string): Promise<TeamRole[]> {
     const response = await apiClient.get<{ roles: TeamRole[] }>(`/api/teams/${teamId}/roles`);
 
-    if (!response.success || !(response.data as any)?.roles) {
+    if (!response.success || !response.data?.roles) {
       return [];
     }
 
-    return (response.data as any).roles;
+    return response.data.roles;
   }
 
   /**
@@ -249,11 +242,11 @@ export class TeamService {
   static async resendInvitation(inviteId: string): Promise<TeamInvitation> {
     const response = await apiClient.post<{ invitation: TeamInvitation }>(`/api/teams/invites/${inviteId}/resend`, {});
 
-    if (!response.success || !(response.data as any)?.invitation) {
+    if (!response.success || !response.data?.invitation) {
       throw new Error(typeof response.error === 'string' ? response.error : response.error?.message || 'Failed to resend invitation');
     }
 
-    return (response.data as any).invitation;
+    return response.data.invitation;
   }
 
   /**
@@ -276,11 +269,11 @@ export class TeamService {
 
     const response = await apiClient[method]<{ role: TeamRole }>(url, role);
 
-    if (!response.success || !(response.data as any)?.role) {
+    if (!response.success || !response.data?.role) {
       throw new Error(typeof response.error === 'string' ? response.error : response.error?.message || 'Failed to save role');
     }
 
-    return (response.data as any).role;
+    return response.data.role;
   }
 
   /**
