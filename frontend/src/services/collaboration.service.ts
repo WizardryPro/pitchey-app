@@ -51,13 +51,6 @@ export interface Collaboration {
   };
 }
 
-// API Response types
-interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: { message: string } | string;
-}
-
 export class CollaborationService {
   /**
    * Get all collaborations for the current user
@@ -78,8 +71,8 @@ export class CollaborationService {
 
       const response = await apiClient.get<{ collaborations: Collaboration[] }>(url);
 
-      if (response.success && (response.data as any)?.collaborations) {
-        return (response.data as any).collaborations;
+      if (response.success && response.data?.collaborations) {
+        return response.data.collaborations;
       }
 
       // If no dedicated endpoint exists, return empty array
@@ -100,8 +93,8 @@ export class CollaborationService {
         `/api/collaborations/${collaborationId}`
       );
 
-      if (response.success && (response.data as any)?.collaboration) {
-        return (response.data as any).collaboration;
+      if (response.success && response.data?.collaboration) {
+        return response.data.collaboration;
       }
 
       return null;
@@ -128,7 +121,7 @@ export class CollaborationService {
       data
     );
 
-    if (!response.success || !(response.data as any)?.collaboration) {
+    if (!response.success || !response.data?.collaboration) {
       throw new Error(
         typeof response.error === 'string'
           ? response.error
@@ -136,7 +129,7 @@ export class CollaborationService {
       );
     }
 
-    return (response.data as any).collaboration;
+    return response.data.collaboration;
   }
 
   /**
@@ -146,7 +139,7 @@ export class CollaborationService {
     collaborationId: string,
     status: Collaboration['status']
   ): Promise<void> {
-    const response = await apiClient.put<ApiResponse<{ message: string }>>(
+    const response = await apiClient.put<{ message: string }>(
       `/api/collaborations/${collaborationId}/status`,
       { status }
     );
@@ -195,7 +188,7 @@ export class CollaborationService {
     collaborationId: string,
     message: string
   ): Promise<void> {
-    const response = await apiClient.post<ApiResponse<{ message: string }>>(
+    const response = await apiClient.post<{ message: string }>(
       `/api/collaborations/${collaborationId}/messages`,
       { content: message }
     );
@@ -220,7 +213,7 @@ export class CollaborationService {
     totalValue: number;
   }> {
     try {
-      const response = await apiClient.get<ApiResponse<{
+      const response = await apiClient.get<{
         stats: {
           total: number;
           active: number;
@@ -228,10 +221,10 @@ export class CollaborationService {
           completed: number;
           totalValue: number;
         };
-      }>>('/api/collaborations/stats');
+      }>('/api/collaborations/stats');
 
-      if (response.success && (response.data as any)?.stats) {
-        return (response.data as any).stats;
+      if (response.success && response.data?.stats) {
+        return response.data.stats;
       }
 
       return {

@@ -28,10 +28,14 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 // ── The baseline. Lower it (never raise it) as frontend lint errors are fixed. ──
-const BASELINE = 8908;
+const BASELINE = 8837;
 // 2026-06-27: created at the measured floor (8908 errors / 184 warnings). Top
 // rules: no-unsafe-member-access, no-unsafe-assignment, no-explicit-any,
 // no-unused-vars, no-misused-promises. The gate blocks any NEW error.
+// 2026-06-27: lowered 8908 -> 8837 (-71) after typing the team + collaboration
+// service API boundaries (removed unnecessary `(response.data as any)` casts;
+// fixed a latent double-wrapped `get<ApiResponse<...>>` generic that hid a
+// real stats-access bug). slice 1 of the `any`-complex teardown (src/services).
 
 const LIST = process.argv.includes('--list');
 
