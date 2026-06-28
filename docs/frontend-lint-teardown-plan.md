@@ -60,15 +60,60 @@ Each slice clears the file **and** cascade-clears downstream consumers.
 | Slice | Target | Direct errors | Risk | Status |
 |---|---|---|---|---|
 | A1 | team + collaboration services | 71 | — | ✅ done (PR #382) |
-| A2 | `src/lib/api.ts` — type `transformPitchData(pitch: any): any`, `safeParseJsonArray`, Pitch `any`-fields | 199 + cascade | Med (shared transform) | next |
-| A3 | feature services: `nda.service` (177), `investment.service` (95), `pitch.service` (93) | 365 + cascade | Med | |
+| A2a | `src/lib/api.ts` — type `transformPitchData` **input** (`RawPitch`) + `safeParseJsonArray` | 101 | Low | ✅ done (PR #385) |
+| A2b | `src/lib/api.ts` — axios response-envelope typing (`api.get<{...}>` per endpoint) | ~98 | Low–Med | |
+| A3 | feature services: `nda.service` (177), `investment.service` (95), `pitch.service` (93) — **type inputs, keep returns loose** (see B0 caveat) | 365 | Med | |
 | A4 | remaining services: `apiServices.ts` (88), `ui-actions` (57), `slate` (28), `user` (14), `content` (16) | ~203 | Low–Med | |
 
 ### B — shared types + contexts (high blast radius — fix consumers in the same PR)
 | Target | Errors | Note |
 |---|---|---|
+| **B0 — `Pitch`/core type-tree unification** (scoped below) | gates the page cascade | **prerequisite** for tightening any service/transform *return* type |
 | `src/shared/types/index.ts` (60) + `src/shared/types/api.ts` (18) | 78 | `any`-typed definitions; tightening forces consumer fixes |
 | `WebSocketContext.tsx` (150) + `PollingContext.tsx` (64) | 214 | type the WS/poll message payloads |
+
+#### B0 — `Pitch` / core type-tree unification (scoped 2026-06-28)
+
+Discovered while doing A2: tightening a service/transform **return** type to `Pitch`
+cascades because **there is no single `Pitch` type** — there are many, and they *conflict*.
+
+**Inventory (measured):** **21 `Pitch` definitions** — 3 exported "library" types
+(`shared/types/index.ts`, `shared/types/api.ts`, `lib/api.ts`) + **18 local ad-hoc
+`interface Pitch`** in pages/components. Siblings duplicated too: **NDA ×8, Investment ×7,
+User ×6, Creator ×5, Deal ×3**.
+
+**They conflict (not clean subsets):**
+| Field | Variants seen |
+|---|---|
+| `id` / `userId` | `number` (most) vs **`string`** (`CreatorPitchView.tsx`) |
+| `status` | `'draft'\|'published'\|'under_review'\|'archived'` vs `'draft'\|'published'\|'in_review'\|'optioned'\|'produced'` vs `'published'\|'draft'` vs `string` |
+| `genre` | `string` vs union-literal vs `PitchGenre` |
+| `budget` | `any` vs `string` |
+| `likes` | `any[]` vs `Like[]` vs `number` (count) |
+
+**Canonical pick:** `shared/types/index.ts` — it self-declares *"Single source of truth …
+consolidates all interface definitions to prevent duplication"* and uses named sub-types
+(`PitchGenre`, `PitchStatus`, `Like[]`). Irony: it's the **least imported** (3 files);
+de-facto usage leaders are `features/pitches/services/pitch.service.ts` (**35 importers**)
+and `lib/api.ts` (**20**).
+
+**Plan:**
+- **B0.1 reconcile** a canonical superset `Pitch` in `shared/types/index.ts`: widen
+  `status` to cover every observed variant (or `PitchStatus` enum + a `productionStage`
+  field for `optioned`/`produced`), keep `id`/`userId` as **`number`** (the `string`
+  variants are drift — consistent with the backend number-id decision), pick real types
+  for `budget`/`likes`. No consumer changes yet.
+- **B0.2 collapse the 3 library types** → re-export the canonical from `lib/api.ts` and
+  `shared/types/api.ts` (or repoint their importers), one at a time.
+- **B0.3..n migrate consumers** cluster by cluster (portfolio components → browse → pitch
+  services → the 3 pitch-view pages → admin), replacing each local `interface Pitch` with
+  `import type { Pitch }` and fixing the conflicts each surfaces. One cluster per PR.
+- Apply the same to **NDA / Investment / User / Creator** after `Pitch`.
+
+**Effort: LARGE — ~8–12 PRs, HIGH risk** (35+ importer files; real type conflicts, not
+just dedup). This is the **gate** for the page-level `any`-complex cascade (workstream D and
+most `no-unsafe-*` in pages). Do it **after** the low-risk, non-dependent wins (A3 input
+typing, C1 promises, C2/C3 mechanical, A2b).
 
 ### C — cross-cutting mechanical (independent of A/B; parallelizable)
 | Slice | Rule(s) | Errors | Risk |
@@ -84,11 +129,16 @@ evaporate as the boundary gets typed. Do per-page cleanup only on what remains a
 This is the long, low-value cosmetic tail.
 
 ## Recommended order & rationale
-**A2 → A3 → C1 → C3 → C2 → B → re-measure → D-tail.**
+**A3 → C1 → C3 → C2 → A2b → B0 (canonical reconcile) → B0.x (migrate) → B(contexts) → re-measure → D-tail.**
 
-Value is front-loaded: the API layer (A2/A3) plus the promise slice (C1) deliver the most
-*risk reduction* per PR. The page-residue tail (D) is mostly cosmetic and should be done last,
-after re-measuring how much A+B already cleared.
+(Revised 2026-06-28 after the A2 discovery.) Do the **non-dependent, low-risk** wins first —
+A3 (input typing, same safe pattern as A1/A2a), C1 (promises = hardening), C3/C2 (mechanical),
+A2b (axios envelopes). These need **no** type-tree unification. Then tackle **B0** (the
+`Pitch`/core unification) which is the gate that lets *return* types tighten and collapses the
+page-level cascade. Do **D** last, after re-measuring how much B0 already cleared.
+
+**Amended A-rule:** on boundary code, type the **input/param** (zero cascade) and keep the
+**return loose** until B0 lands. A1/A2a followed this; A3/A4 should too.
 
 **Effort:** realistically 15–25 PRs / several sessions to reach ~0. But the gate already
 stops regressions today, so this can proceed opportunistically — every slice is an
