@@ -73,8 +73,13 @@ export default [
       '*.config.js',
       '*.config.ts',
       'vite.config.ts',
+      'vite.config.*.ts',
       'vitest.config.ts',
-      'playwright.config.ts'
+      'playwright.config.ts',
+      // Not part of tsconfig.app.json — separate build surfaces / generated output.
+      // (They produced only "parserOptions.project" parse errors, never real lint.)
+      'functions/**',
+      'worker/**'
     ]
   },
 
@@ -139,6 +144,13 @@ export default [
     plugins: COMMON_PLUGINS,
     rules: {
       ...COMMON_RULES,
+
+      // no-undef is redundant in TypeScript (the compiler already errors on
+      // undefined identifiers) and false-positives on ambient globals like
+      // `React`, `NodeJS`, `process`. Disabling it is the typescript-eslint
+      // recommendation. TS (the worker type-check gate + tsconfig.app.json) is
+      // the real net for undefined references.
+      'no-undef': 'off',
 
       // TypeScript strict rules for production code
       '@typescript-eslint/no-explicit-any': 'error',
