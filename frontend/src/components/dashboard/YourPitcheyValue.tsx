@@ -74,7 +74,7 @@ export default function YourPitcheyValue() {
         }
       } catch (err) {
         // Quiet degrade — this is an enhancement card, not a critical path.
-        // eslint-disable-next-line no-console
+         
         console.warn('YourPitcheyValue: failed to load', err);
       } finally {
         if (active) setLoading(false);

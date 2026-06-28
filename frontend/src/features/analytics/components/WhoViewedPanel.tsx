@@ -67,7 +67,7 @@ export default function WhoViewedPanel({ pitchId }: { pitchId: number }) {
         const res = await apiClient.get<WhoViewedData>(`/api/views/pitch/${pitchId}`);
         if (active && res?.success && res.data) setData(res.data);
       } catch (err) {
-        // eslint-disable-next-line no-console
+         
         console.warn('WhoViewedPanel: failed to load', err);
       } finally {
         if (active) setLoading(false);

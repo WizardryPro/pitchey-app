@@ -5,7 +5,7 @@ import {
   Filter, RefreshCw, ArrowUpRight, ArrowDownRight,
   Globe, Activity, Zap, Award, Eye, Clock,
   AlertTriangle, CheckCircle, XCircle
-} from 'lucide-react';
+, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@shared/components/ui/chart';
 import { 
@@ -18,7 +18,6 @@ import {
 } from 'recharts';
 import { InvestorNavigation } from '@/components/InvestorNavigation';
 import { InvestorService } from '@features/deals/services/investor.service';
-import { AlertCircle } from 'lucide-react';
 
 interface AnalyticsMetric {
   id: string;

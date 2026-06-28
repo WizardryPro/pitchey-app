@@ -28,7 +28,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 // ── The baseline. Lower it (never raise it) as frontend lint errors are fixed. ──
-const BASELINE = 7306;
+const BASELINE = 7294;
 // 2026-06-27: created at the measured floor (8908 errors / 184 warnings). Top
 // rules: no-unsafe-member-access, no-unsafe-assignment, no-explicit-any,
 // no-unused-vars, no-misused-promises. The gate blocks any NEW error.
@@ -71,6 +71,11 @@ const BASELINE = 7306;
 // ignored functions/**, worker/**, vite.config.*.ts (outside tsconfig.app.json /
 // build artifacts — they only produced parserOptions.project parse errors, never
 // real lint). no-undef + parse errors now 0.
+// 2026-06-28: lowered 7306 -> 7294 (-12). C3b: eslint --fix merged duplicate imports
+// (import/no-duplicates → 0) + removed 4 useless regex escapes (behavior-preserving).
+// Remaining small rules need per-site judgment → C3c: require-await (36),
+// no-case-declarations (15), no-empty (7), import/no-restricted-paths (3),
+// no-async-promise-executor (1).
 
 const LIST = process.argv.includes('--list');
 

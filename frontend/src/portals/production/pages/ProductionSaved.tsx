@@ -4,14 +4,13 @@ import {
   MoreVertical, Eye, MessageSquare,
   Bookmark, BookmarkCheck, Film,
   AlertCircle, RefreshCw, X, ArrowLeft
-} from 'lucide-react';
+, Clapperboard } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
 import { SavedPitchesService, type SavedPitch as ApiSavedPitch } from '@features/pitches/services/saved-pitches.service';
-import { Clapperboard } from 'lucide-react';
 import { getGenresSync } from '@/config/pitchConstants';
 
 // Loading skeleton for pitch cards
