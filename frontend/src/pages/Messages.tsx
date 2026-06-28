@@ -264,7 +264,7 @@ export default function Messages() {
       // Clear params to prevent re-triggering
       setSearchParams({}, { replace: true });
     };
-    initConversation();
+    void initConversation();
   }, [searchParams, setSearchParams, joinConversation, hookMarkConversationAsRead, fetchConversationMessages]);
 
   // Sync with hook conversations and messages (only when hook has real data)
@@ -477,7 +477,7 @@ export default function Messages() {
       setSuggestedMessage('');
     } else if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
-      sendMessage();
+      void sendMessage();
     }
   }, [sendMessage, suggestedMessage, newMessage]);
 
@@ -1041,7 +1041,7 @@ export default function Messages() {
                                         className="w-full p-2 border rounded text-gray-900 text-sm"
                                         onKeyDown={(e) => {
                                           if (e.key === 'Enter' && e.ctrlKey) {
-                                            handleEditMessage(message.id, e.currentTarget.value);
+                                            void handleEditMessage(message.id, e.currentTarget.value);
                                           }
                                           if (e.key === 'Escape') {
                                             setEditingMessage(null);
@@ -1053,7 +1053,7 @@ export default function Messages() {
                                         <button
                                           onClick={() => {
                                             const textarea = document.querySelector('textarea') as HTMLTextAreaElement | null;
-                                            if (textarea) handleEditMessage(message.id, textarea.value);
+                                            if (textarea) void handleEditMessage(message.id, textarea.value);
                                           }}
                                           className="text-xs bg-purple-600 text-white px-2 py-1 rounded"
                                         >

@@ -156,7 +156,7 @@ export default function PitchEdit() {
 
   useEffect(() => {
     if (id) {
-      fetchPitch(parseInt(id));
+      void fetchPitch(parseInt(id));
     }
   }, [id]);
 

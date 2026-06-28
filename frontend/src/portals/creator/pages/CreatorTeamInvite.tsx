@@ -114,7 +114,7 @@ export default function CreatorTeamInvite() {
   ];
 
   useEffect(() => {
-    loadData();
+    void loadData();
   }, []);
 
   const loadData = async () => {
@@ -262,7 +262,7 @@ export default function CreatorTeamInvite() {
   };
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(linkForm.generatedLink);
+    void navigator.clipboard.writeText(linkForm.generatedLink);
     // Show copied confirmation
   };
 

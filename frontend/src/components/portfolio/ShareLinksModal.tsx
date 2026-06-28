@@ -26,7 +26,7 @@ export default function ShareLinksModal({ onClose }: ShareLinksModalProps) {
   const getShareUrl = (token: string) => `${window.location.origin}/portfolio/s/${token}`;
 
   useEffect(() => {
-    fetchLinks();
+    void fetchLinks();
   }, []);
 
   async function fetchLinks() {
@@ -80,7 +80,7 @@ export default function ShareLinksModal({ onClose }: ShareLinksModalProps) {
   }
 
   function handleCopy(link: ShareLink) {
-    navigator.clipboard.writeText(getShareUrl(link.token));
+    void navigator.clipboard.writeText(getShareUrl(link.token));
     setCopiedId(link.id);
     setTimeout(() => setCopiedId(null), 2000);
   }

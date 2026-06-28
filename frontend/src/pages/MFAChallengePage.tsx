@@ -76,7 +76,7 @@ export default function MFAChallengePage() {
     const digits = value.replace(/\D/g, '').slice(0, 6);
     setCode(digits);
     if (digits.length === 6) {
-      handleSubmit(digits);
+      void handleSubmit(digits);
     }
   };
 

@@ -59,7 +59,7 @@ export default function ProductionSubmissionsNew() {
       }
     };
 
-    fetchNewSubmissions();
+    void fetchNewSubmissions();
   }, []);
 
   const filteredSubmissions = submissions.filter(submission => {
@@ -112,15 +112,15 @@ export default function ProductionSubmissionsNew() {
   };
 
   const handleStartReview = (submissionId: string) => {
-    updateStatus(submissionId, 'reviewing');
+    void updateStatus(submissionId, 'reviewing');
   };
 
   const handleQuickApprove = (submissionId: string) => {
-    updateStatus(submissionId, 'accepted');
+    void updateStatus(submissionId, 'accepted');
   };
 
   const handleReject = (submissionId: string) => {
-    updateStatus(submissionId, 'rejected');
+    void updateStatus(submissionId, 'rejected');
   };
 
   const getPriorityColor = (priority: string | undefined) => {

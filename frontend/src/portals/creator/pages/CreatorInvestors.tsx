@@ -75,7 +75,7 @@ export default function CreatorInvestors() {
   }, []);
 
   useEffect(() => {
-    loadInvestors();
+    void loadInvestors();
   }, [loadInvestors]);
 
   const filteredInvestors = investors.filter(inv => {

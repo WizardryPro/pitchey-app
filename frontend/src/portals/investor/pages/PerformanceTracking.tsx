@@ -50,7 +50,7 @@ const PerformanceTracking = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadPerformanceData();
+    void loadPerformanceData();
   }, [timeRange]);
 
   const loadPerformanceData = async () => {

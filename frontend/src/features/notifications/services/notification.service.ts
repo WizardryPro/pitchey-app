@@ -24,7 +24,7 @@ export class NotificationService {
   private sounds: { [key: string]: HTMLAudioElement } = {};
 
   constructor() {
-    this.initializePermission();
+    void this.initializePermission();
     this.loadSounds();
   }
 

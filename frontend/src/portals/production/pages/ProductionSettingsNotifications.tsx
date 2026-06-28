@@ -118,7 +118,7 @@ export default function ProductionSettingsNotifications() {
         // Use defaults if preferences endpoint fails
       }
     };
-    loadPreferences();
+    void loadPreferences();
   }, []);
 
   const handleToggle = (category: keyof NotificationSettings, setting: string) => {

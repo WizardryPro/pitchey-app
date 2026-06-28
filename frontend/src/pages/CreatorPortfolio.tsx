@@ -83,7 +83,7 @@ export default function CreatorPortfolio() {
       }
     };
 
-    fetchPortfolio();
+    void fetchPortfolio();
   }, [effectiveCreatorId, creatorId]);
 
   if (!effectiveCreatorId) {

@@ -67,10 +67,10 @@ export default function TeamMembers() {
 
   useEffect(() => {
     if (teamId) {
-      fetchTeamMembers();
+      void fetchTeamMembers();
     } else {
       // No formal team — load collaborators from projects instead
-      fetchCollaborators();
+      void fetchCollaborators();
     }
   }, [teamId]);
 

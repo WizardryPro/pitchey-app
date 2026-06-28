@@ -125,7 +125,7 @@ export const PollingProvider: React.FC<PollingProviderProps> = ({
     };
 
     // Start immediately
-    poll();
+    void poll();
   }, [performPoll, pollingInterval, enablePolling]);
 
   /**

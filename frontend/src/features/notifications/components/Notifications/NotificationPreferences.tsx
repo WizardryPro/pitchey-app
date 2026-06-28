@@ -159,8 +159,8 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
 
   // Load preferences on mount
   useEffect(() => {
-    loadPreferences();
-    checkPushPermission();
+    void loadPreferences();
+    void checkPushPermission();
   }, []);
 
   const loadPreferences = async () => {
@@ -448,7 +448,7 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
                         checked={preferences.pushEnabled && pushSubscriptionStatus === 'granted'}
                         onChange={(e) => {
                           if (e.target.checked && pushSubscriptionStatus !== 'granted') {
-                            requestPushPermission();
+                            void requestPushPermission();
                           } else {
                             updateGlobalSetting('pushEnabled', e.target.checked);
                           }

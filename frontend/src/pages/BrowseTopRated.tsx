@@ -105,7 +105,7 @@ export default function BrowseTopRated() {
         console.error('Failed to load configuration:', error);
       }
     };
-    loadConfig();
+    void loadConfig();
   }, []);
 
   // Fetch rating statistics
@@ -252,11 +252,11 @@ export default function BrowseTopRated() {
 
   // Fetch data on mount and when dependencies change
   useEffect(() => {
-    fetchRatingStats();
+    void fetchRatingStats();
   }, [fetchRatingStats]);
 
   useEffect(() => {
-    fetchTopRatedPitches();
+    void fetchTopRatedPitches();
   }, [fetchTopRatedPitches]);
 
   // Reset page when filters change

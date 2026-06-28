@@ -189,7 +189,7 @@ class ChunkedUploadService {
     this.emit('queue:added', { sessionId, position: this.uploadQueue.length - 1 });
 
     // Process queue if we have capacity
-    this.processQueue();
+    void this.processQueue();
 
     return sessionId;
   }

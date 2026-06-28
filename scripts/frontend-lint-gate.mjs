@@ -28,7 +28,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 // ── The baseline. Lower it (never raise it) as frontend lint errors are fixed. ──
-const BASELINE = 7727;
+const BASELINE = 7466;
 // 2026-06-27: created at the measured floor (8908 errors / 184 warnings). Top
 // rules: no-unsafe-member-access, no-unsafe-assignment, no-explicit-any,
 // no-unused-vars, no-misused-promises. The gate blocks any NEW error.
@@ -54,6 +54,10 @@ const BASELINE = 7727;
 // checksVoidReturn.attributes:false (eslint.config.js) — async JSX event handlers
 // are idiomatic, safe React (React discards the return). Rule stays ON for timers,
 // callbacks, object handlers (26 genuine cases remain → C1c-residual follow-up).
+// 2026-06-28: lowered 7727 -> 7466 (-261). C1b-1: void-prefixed bare-statement
+// floating promises (load/fetch/other calls) across 150 files, behavior-preserving.
+// ~58 multi-line forms (.then chains, IIFEs, inline effect/handler calls) remain
+// for C1b-2 (.then chains get real .catch()).
 
 const LIST = process.argv.includes('--list');
 

@@ -33,7 +33,7 @@ export default function MyCollaborations() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadCollaborations();
+    void loadCollaborations();
   }, []);
 
   const loadCollaborations = async () => {

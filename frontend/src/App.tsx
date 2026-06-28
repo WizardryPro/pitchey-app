@@ -332,7 +332,7 @@ function App() {
         setConfigLoaded(true);
       }
     };
-    loadConfig();
+    void loadConfig();
   }, []);
 
   // Initialize app with proper session verification

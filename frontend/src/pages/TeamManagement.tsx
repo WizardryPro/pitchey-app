@@ -50,7 +50,7 @@ export default function TeamManagement() {
   }, []);
 
   useEffect(() => {
-    loadData();
+    void loadData();
   }, [loadData]);
 
   const handleRemove = async (collaborator: Collaborator) => {

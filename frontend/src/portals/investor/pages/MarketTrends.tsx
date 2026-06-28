@@ -16,7 +16,7 @@ const MarketTrends = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadMarketTrends();
+    void loadMarketTrends();
   }, []);
 
   const loadMarketTrends = async () => {

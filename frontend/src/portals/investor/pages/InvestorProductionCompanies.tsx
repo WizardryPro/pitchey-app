@@ -56,7 +56,7 @@ export default function InvestorProductionCompanies() {
   const [filteredCompanies, setFilteredCompanies] = useState<ProductionCompany[]>([]);
 
   useEffect(() => {
-    loadProductionCompanies();
+    void loadProductionCompanies();
   }, []);
 
   useEffect(() => {

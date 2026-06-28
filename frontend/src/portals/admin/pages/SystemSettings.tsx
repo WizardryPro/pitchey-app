@@ -58,7 +58,7 @@ const SystemSettings: React.FC = () => {
   const [activeTab, setActiveTab] = useState('general');
 
   useEffect(() => {
-    loadSettings();
+    void loadSettings();
   }, []);
 
   const loadSettings = async () => {

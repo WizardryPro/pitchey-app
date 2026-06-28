@@ -90,7 +90,7 @@ export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, use
   const handleSubmitted = () => {
     setShowForm(false);
     setRefreshKey((k) => k + 1);
-    loadData();
+    void loadData();
   };
 
   const handleQuickRate = async (rating: number) => {
@@ -105,7 +105,7 @@ export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, use
       success('Rating saved', `You rated this pitch ${rating} star${rating === 1 ? '' : 's'}.`);
       // Refresh myFeedback so the structured form seeds with this rating instead of
       // opening with empty stars and forcing the user to pick it again.
-      loadData();
+      void loadData();
     } else {
       error('Couldn\'t save your rating', 'Please try again.');
     }
@@ -118,7 +118,7 @@ export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, use
     setCommentSubmitting(false);
     if (ok) {
       setCommentText('');
-      loadComments();
+      void loadComments();
       success(
         isAnonymous ? 'Comment posted anonymously' : 'Comment posted',
         isAnonymous ? 'Your name is hidden from other viewers.' : undefined,

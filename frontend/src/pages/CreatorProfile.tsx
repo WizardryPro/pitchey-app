@@ -67,8 +67,8 @@ const CreatorProfile = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchCreatorData();
-    fetchCreatorPitches();
+    void fetchCreatorData();
+    void fetchCreatorPitches();
   }, [creatorId]);
 
   const fetchCreatorData = async () => {
@@ -203,7 +203,7 @@ const CreatorProfile = () => {
   };
 
   const handleShareProfile = () => {
-    navigator.clipboard.writeText(window.location.href);
+    void navigator.clipboard.writeText(window.location.href);
   };
 
   if (loading) {

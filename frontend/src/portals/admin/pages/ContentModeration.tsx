@@ -51,7 +51,7 @@ const ContentModeration: React.FC = () => {
   ];
 
   useEffect(() => {
-    loadPitches();
+    void loadPitches();
   }, [filters]);
 
   const loadPitches = async () => {

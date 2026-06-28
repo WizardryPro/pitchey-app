@@ -36,7 +36,7 @@ export default function ProductionStats() {
 
   // Load stats data from API
   useEffect(() => {
-    loadStatsData();
+    void loadStatsData();
   }, [timeRange]);
 
   const loadStatsData = async () => {

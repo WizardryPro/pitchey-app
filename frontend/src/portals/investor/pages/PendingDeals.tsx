@@ -65,7 +65,7 @@ const PendingDeals = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    loadPendingDeals();
+    void loadPendingDeals();
   }, []);
 
   useEffect(() => {

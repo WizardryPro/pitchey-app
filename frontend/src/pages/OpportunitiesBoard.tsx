@@ -642,7 +642,7 @@ export default function OpportunitiesBoard() {
     const nextStatus = call.status === 'open' ? 'closed' : 'open';
     try {
       await callsService.update(call.id, { status: nextStatus });
-      load();
+      void load();
       toast.success(nextStatus === 'open' ? 'Call reopened' : 'Call closed to new submissions');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Couldn\'t update the call. Please try again.');

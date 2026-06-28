@@ -20,7 +20,7 @@ const BudgetAllocation = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    loadBudgetAllocations();
+    void loadBudgetAllocations();
   }, []);
 
   const loadBudgetAllocations = async () => {

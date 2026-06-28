@@ -64,7 +64,7 @@ export default function InvestorActivity() {
 
   // Load activity feed from API
   useEffect(() => {
-    loadActivityFeed();
+    void loadActivityFeed();
   }, []);
 
   // Apply filters when activities or filters change

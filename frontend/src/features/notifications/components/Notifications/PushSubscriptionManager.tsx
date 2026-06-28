@@ -56,8 +56,8 @@ export const PushSubscriptionManager: React.FC<PushSubscriptionManagerProps> = (
   useEffect(() => {
     if (isPushSupported) {
       checkPermissionStatus();
-      loadSubscriptions();
-      checkCurrentSubscription();
+      void loadSubscriptions();
+      void checkCurrentSubscription();
     }
   }, []);
 
@@ -228,7 +228,7 @@ export const PushSubscriptionManager: React.FC<PushSubscriptionManagerProps> = (
       }
 
       // Reload subscriptions
-      loadSubscriptions();
+      void loadSubscriptions();
       toast.success('Push notifications disabled');
 
     } catch (error) {

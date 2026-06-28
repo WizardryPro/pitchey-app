@@ -85,7 +85,7 @@ export default function PrivacySettings() {
         setInitialLoading(false);
       }
     };
-    loadSettings();
+    void loadSettings();
   }, []);
 
   const updateProfileVisibility = (field: keyof ProfileVisibility, value: boolean) => {
@@ -148,7 +148,7 @@ export default function PrivacySettings() {
     try {
       await UserService.deleteAccount(deleteConfirmText);
       toast.success('Account deletion request submitted');
-      logout();
+      void logout();
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
       toast.error(e.message || 'Failed to delete account');

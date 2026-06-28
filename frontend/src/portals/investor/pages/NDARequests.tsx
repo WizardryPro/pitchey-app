@@ -74,7 +74,7 @@ export default function NDARequests() {
         setSessionChecked(true);
       }
     };
-    validateSession();
+    void validateSession();
   }, [checkSession]);
 
   // Redirect to login if not authenticated
@@ -122,7 +122,7 @@ export default function NDARequests() {
   // Fetch data when session is confirmed
   useEffect(() => {
     if (sessionChecked && isAuthenticated) {
-      fetchNDARequests();
+      void fetchNDARequests();
     }
   }, [sessionChecked, isAuthenticated, fetchNDARequests]);
 

@@ -344,7 +344,7 @@ export const CharacterManagement: React.FC<CharacterManagementProps> = ({
     e.preventDefault();
     
     if (draggedItem !== null && draggedItem !== dropIndex) {
-      handleMoveCharacter(draggedItem, dropIndex);
+      void handleMoveCharacter(draggedItem, dropIndex);
     }
     
     setDraggedItem(null);

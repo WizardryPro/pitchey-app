@@ -143,8 +143,8 @@ const LegalLibrary: React.FC = () => {
 
   // Load documents
   useEffect(() => {
-    loadDocuments();
-    loadFilterOptions();
+    void loadDocuments();
+    void loadFilterOptions();
   }, [filters, settings.sortBy, settings.sortOrder, currentPage, settings.itemsPerPage]);
 
   // Filter documents locally

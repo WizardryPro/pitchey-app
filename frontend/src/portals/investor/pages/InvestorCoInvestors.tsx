@@ -45,7 +45,7 @@ export default function InvestorCoInvestors() {
   const [filteredInvestors, setFilteredInvestors] = useState<CoInvestor[]>([]);
 
   useEffect(() => {
-    loadCoInvestors();
+    void loadCoInvestors();
   }, []);
 
   useEffect(() => {

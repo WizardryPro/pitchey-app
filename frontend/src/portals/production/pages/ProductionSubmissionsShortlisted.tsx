@@ -63,7 +63,7 @@ export default function ProductionSubmissionsShortlisted() {
       }
     };
 
-    fetchShortlistedSubmissions();
+    void fetchShortlistedSubmissions();
   }, []);
 
   const filteredSubmissions = submissions.filter(submission => {
@@ -117,15 +117,15 @@ export default function ProductionSubmissionsShortlisted() {
   };
 
   const handleApprove = (submissionId: string) => {
-    updateStatus(submissionId, 'accepted');
+    void updateStatus(submissionId, 'accepted');
   };
 
   const handleReject = (submissionId: string) => {
-    updateStatus(submissionId, 'rejected');
+    void updateStatus(submissionId, 'rejected');
   };
 
   const handleStartProduction = (submissionId: string) => {
-    updateStatus(submissionId, 'accepted');
+    void updateStatus(submissionId, 'accepted');
   };
 
   const getMarketPotentialColor = (potential: string) => {

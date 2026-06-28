@@ -95,7 +95,7 @@ const About: React.FC = () => {
       }
     };
     
-    loadContent();
+    void loadContent();
   }, []);
   
   // Show loading state

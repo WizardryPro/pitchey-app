@@ -133,7 +133,7 @@ export default function PaymentHistory({ payments: initialPayments, onRefresh }:
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    applyFilters();
+    void applyFilters();
   };
 
   const exportPayments = async () => {

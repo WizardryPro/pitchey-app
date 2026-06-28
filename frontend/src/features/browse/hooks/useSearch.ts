@@ -72,7 +72,7 @@ export const useSearch = (options: UseSearchOptions = {}) => {
     }
 
     debounceRef.current = setTimeout(() => {
-      search(query);
+      void search(query);
     }, debounceMs);
   }, [search, debounceMs]);
 

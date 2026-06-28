@@ -76,7 +76,7 @@ export default function ProductionCollaborations() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   useEffect(() => {
-    fetchCollaborations();
+    void fetchCollaborations();
   }, []);
 
   const fetchCollaborations = async () => {
@@ -539,7 +539,7 @@ export default function ProductionCollaborations() {
                   });
                   toast.success('Collaboration created');
                   setShowCreateModal(false);
-                  fetchCollaborations();
+                  void fetchCollaborations();
                 } catch (err) {
                   const error = err instanceof Error ? err : new Error(String(err));
                   toast.error(error.message);

@@ -38,8 +38,8 @@ const TransactionHistory = () => {
   const [dateRange, setDateRange] = useState<{ start?: string; end?: string }>({});
 
   useEffect(() => {
-    fetchTransactions();
-    fetchStats();
+    void fetchTransactions();
+    void fetchStats();
   }, [page, filterType, searchQuery, dateRange]);
 
   const fetchTransactions = async () => {

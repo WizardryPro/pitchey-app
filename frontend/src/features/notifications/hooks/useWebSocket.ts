@@ -215,7 +215,7 @@ export function useMessaging() {
 
           // Show read receipt notification (silent)
           if (message.readByName) {
-            notificationService.notifyMessageRead(message.messageId, message.readByName);
+            void notificationService.notifyMessageRead(message.messageId, message.readByName);
           }
           break;
 
@@ -243,7 +243,7 @@ export function useMessaging() {
           
           // Show user online notification (silent)
           if (message.username) {
-            notificationService.notifyUserOnline(message.username);
+            void notificationService.notifyUserOnline(message.username);
           }
           break;
 

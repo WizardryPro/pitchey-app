@@ -85,8 +85,8 @@ export default function NDARequestPanel({
   const { success, error } = useToast();
 
   useEffect(() => {
-    checkNDAStatus();
-    loadTemplates();
+    void checkNDAStatus();
+    void loadTemplates();
   }, [pitchId, userId]);
 
   const checkNDAStatus = async () => {

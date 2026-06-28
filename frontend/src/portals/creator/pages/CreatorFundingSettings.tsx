@@ -74,7 +74,7 @@ export default function CreatorFundingSettings() {
   }, []);
 
   useEffect(() => {
-    loadFundingData();
+    void loadFundingData();
   }, [loadFundingData]);
 
   const handleSave = async () => {

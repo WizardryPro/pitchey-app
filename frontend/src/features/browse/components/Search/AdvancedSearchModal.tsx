@@ -153,7 +153,7 @@ export const AdvancedSearchModal: React.FC<AdvancedSearchProps> = ({
   useEffect(() => {
     if (filters.query) {
       const timeoutId = setTimeout(() => {
-        fetchSuggestions(filters.query);
+        void fetchSuggestions(filters.query);
       }, 300);
       return () => clearTimeout(timeoutId);
     }

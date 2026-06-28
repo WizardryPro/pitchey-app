@@ -433,7 +433,7 @@ export default function MultipleFileUpload({
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
     if (selectedFiles && selectedFiles.length > 0) {
-      processFiles(selectedFiles);
+      void processFiles(selectedFiles);
     }
     // Reset input
     e.target.value = '';
@@ -448,7 +448,7 @@ export default function MultipleFileUpload({
 
     const droppedFiles = e.dataTransfer.files;
     if (droppedFiles && droppedFiles.length > 0) {
-      processFiles(droppedFiles);
+      void processFiles(droppedFiles);
     }
   }, [disabled, processFiles]);
 

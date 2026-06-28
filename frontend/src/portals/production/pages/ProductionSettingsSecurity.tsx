@@ -166,7 +166,7 @@ export default function ProductionSettingsSecurity() {
   }, []);
 
   useEffect(() => {
-    fetchMFAStatus();
+    void fetchMFAStatus();
   }, [fetchMFAStatus]);
 
   const revokeSession = (_sessionId: string) => {

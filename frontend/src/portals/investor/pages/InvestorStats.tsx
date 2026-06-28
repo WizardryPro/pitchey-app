@@ -181,7 +181,7 @@ export default function InvestorStats() {
   }, [timeRange]);
 
   useEffect(() => {
-    loadStats();
+    void loadStats();
   }, [loadStats]);
 
   // Chart data — populated from API, empty by default

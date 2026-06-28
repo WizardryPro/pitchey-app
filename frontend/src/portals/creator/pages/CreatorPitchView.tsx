@@ -130,7 +130,7 @@ const CreatorPitchView: React.FC = () => {
 
   useEffect(() => {
     if (id) {
-      fetchPitchData();
+      void fetchPitchData();
       checkOwnership();
     }
   }, [id]);

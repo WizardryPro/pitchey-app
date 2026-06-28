@@ -167,9 +167,9 @@ const InvestorPitchView: React.FC = () => {
 
   useEffect(() => {
     if (id) {
-      fetchPitchData();
-      fetchInvestmentDetail();
-      loadLocalData();
+      void fetchPitchData();
+      void fetchInvestmentDetail();
+      void loadLocalData();
     }
   }, [id, fetchPitchData, fetchInvestmentDetail]);
 
@@ -263,7 +263,7 @@ const InvestorPitchView: React.FC = () => {
       setShowInterestModal(false);
       setInterestForm({ amount: '', level: 'medium', message: '' });
       // Refresh detail to update hasExpressedInterest
-      fetchInvestmentDetail();
+      void fetchInvestmentDetail();
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
       setActionError(e.message);

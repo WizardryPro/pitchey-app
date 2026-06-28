@@ -109,7 +109,7 @@ export default function TransactionHistory({
   }, [currentPage, filterType, filterStatus, sortBy, sortOrder, searchTerm, pageSize]);
 
   useEffect(() => {
-    fetchTransactions();
+    void fetchTransactions();
   }, [fetchTransactions]);
 
   const formatCurrency = useCallback((amount: number) => {

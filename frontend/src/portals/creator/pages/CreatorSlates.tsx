@@ -21,7 +21,7 @@ export default function CreatorSlates() {
   const [menuOpen, setMenuOpen] = useState<number | null>(null);
 
   useEffect(() => {
-    loadSlates();
+    void loadSlates();
   }, []);
 
   const loadSlates = async () => {

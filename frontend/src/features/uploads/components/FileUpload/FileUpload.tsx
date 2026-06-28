@@ -362,7 +362,7 @@ export default function FileUpload({
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
     if (selectedFiles && selectedFiles.length > 0) {
-      processFiles(selectedFiles);
+      void processFiles(selectedFiles);
     }
     // Reset input value
     if (fileInputRef.current) {
@@ -394,7 +394,7 @@ export default function FileUpload({
 
     const droppedFiles = e.dataTransfer.files;
     if (droppedFiles && droppedFiles.length > 0) {
-      processFiles(droppedFiles);
+      void processFiles(droppedFiles);
     }
   }, [disabled, enableDragDrop, processFiles]);
 
@@ -526,7 +526,7 @@ export default function FileUpload({
       
       if (file && file.uploadStatus === 'idle') {
         setUploadQueue(prev => prev.slice(1));
-        uploadFile(file);
+        void uploadFile(file);
       }
     }
   }, [uploadQueue, activeUploads.size, maxConcurrentUploads, files, uploadFile, enableConcurrentUploads]);
@@ -677,12 +677,12 @@ export default function FileUpload({
                       .forEach((file, index) => {
                         if (enableConcurrentUploads) {
                           if (activeUploads.size + index < maxConcurrentUploads) {
-                            uploadFile(file);
+                            void uploadFile(file);
                           } else {
                             setUploadQueue(prev => [...prev, file.id]);
                           }
                         } else {
-                          uploadFile(file);
+                          void uploadFile(file);
                         }
                       });
                   }}

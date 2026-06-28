@@ -40,7 +40,7 @@ export default function CollaborationTimeline({ collaborationId }: Collaboration
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchTimeline();
+    void fetchTimeline();
   }, [collaborationId]);
 
   async function fetchTimeline() {

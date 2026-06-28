@@ -71,7 +71,7 @@ export default function TeamInvite() {
   const [bulkEmails, setBulkEmails] = useState('');
 
   useEffect(() => {
-    fetchInvitations();
+    void fetchInvitations();
   }, []);
 
   const fetchInvitations = async () => {

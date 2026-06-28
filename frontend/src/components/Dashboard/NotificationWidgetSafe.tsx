@@ -57,7 +57,7 @@ function NotificationWidgetSafe({
       }
     };
 
-    loadNotifications();
+    void loadNotifications();
   }, [maxNotifications]);
 
   const markAsRead = async (notificationId: string) => {
@@ -206,7 +206,7 @@ function NotificationWidgetSafe({
                           onClick={() => {
                             try {
                               action.action();
-                              markAsRead(notification.id);
+                              void markAsRead(notification.id);
                             } catch (err) {
                               console.warn('Notification action error:', err);
                             }

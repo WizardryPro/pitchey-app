@@ -42,7 +42,7 @@ const LegalDocumentDashboard: React.FC = () => {
   const ITEMS_PER_PAGE = 10;
 
   useEffect(() => {
-    loadDocuments();
+    void loadDocuments();
   }, [currentPage, statusFilter, typeFilter, complianceFilter, jurisdictionFilter]);
 
   const loadDocuments = useCallback(async () => {

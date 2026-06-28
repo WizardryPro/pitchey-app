@@ -195,7 +195,7 @@ export default function InvestorAnalytics() {
   }, [timeRange, filterType]);
 
   useEffect(() => {
-    loadAnalyticsData();
+    void loadAnalyticsData();
   }, [loadAnalyticsData]);
 
   // Chart data for Recharts

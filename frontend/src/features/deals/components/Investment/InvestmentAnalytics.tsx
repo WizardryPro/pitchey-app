@@ -58,7 +58,7 @@ export default function InvestmentAnalytics({ userType, className = '' }: Invest
   }, [userType]);
 
   useEffect(() => {
-    fetchAnalytics();
+    void fetchAnalytics();
   }, [fetchAnalytics]);
 
   const formatCurrency = useCallback((amount: number) => {

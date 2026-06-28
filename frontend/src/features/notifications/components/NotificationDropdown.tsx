@@ -175,14 +175,14 @@ export function NotificationDropdown({ className = '' }: NotificationDropdownPro
   // Load notifications on mount and when user becomes authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      loadNotifications();
+      void loadNotifications();
     }
   }, [isAuthenticated]);
 
   // Reload notifications when dropdown opens
   useEffect(() => {
     if (isOpen && isAuthenticated) {
-      loadNotifications();
+      void loadNotifications();
     }
   }, [isOpen, isAuthenticated]);
 

@@ -237,7 +237,7 @@ export default function PublicPitchView() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
         <button
           onClick={() => {
-            if (window.history.length > 1) navigate(-1);
+            if (window.history.length > 1) void navigate(-1);
             else void navigate('/marketplace');
           }}
           className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 transition hover:text-purple-600"

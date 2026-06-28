@@ -64,7 +64,7 @@ export default function ProductionSubmissionsRejected() {
       }
     };
 
-    fetchRejectedSubmissions();
+    void fetchRejectedSubmissions();
   }, []);
 
   const filteredSubmissions = submissions.filter(submission => {
@@ -124,15 +124,15 @@ export default function ProductionSubmissionsRejected() {
   };
 
   const handleReconsider = (submissionId: string) => {
-    updateStatus(submissionId, 'reviewing');
+    void updateStatus(submissionId, 'reviewing');
   };
 
   const handleArchive = (submissionId: string) => {
-    updateStatus(submissionId, 'archived');
+    void updateStatus(submissionId, 'archived');
   };
 
   const handleDelete = (submissionId: string) => {
-    updateStatus(submissionId, 'archived');
+    void updateStatus(submissionId, 'archived');
   };
 
   const handleSendFeedback = (submission: Submission) => {

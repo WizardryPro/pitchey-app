@@ -39,7 +39,7 @@ export default function InvestorPerformance() {
   const [allocations, setAllocations] = useState<PortfolioAllocation[]>([]);
 
   useEffect(() => {
-    loadPerformanceData();
+    void loadPerformanceData();
   }, [timeRange]);
 
   const loadPerformanceData = async () => {

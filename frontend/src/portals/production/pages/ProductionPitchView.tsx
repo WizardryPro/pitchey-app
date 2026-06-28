@@ -229,8 +229,8 @@ const ProductionPitchView: React.FC = () => {
 
   useEffect(() => {
     if (id) {
-      fetchPitchData();
-      loadProductionData();
+      void fetchPitchData();
+      void loadProductionData();
     }
   }, [id]);
 
@@ -1444,7 +1444,7 @@ const ProductionPitchView: React.FC = () => {
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file) handleAutoFill(file);
+                  if (file) void handleAutoFill(file);
                 }}
               />
               <button

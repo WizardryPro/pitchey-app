@@ -169,7 +169,7 @@ function ProductionDashboard() {
         setSessionChecked(true);
       }
     };
-    validateSession();
+    void validateSession();
   }, [checkSession]);
 
   // Redirect to login if not authenticated after session check
@@ -709,7 +709,7 @@ function ProductionDashboard() {
 
   const handleRetrySection = useCallback((section: string) => {
     trackEvent('dashboard.retry', { section });
-    fetchData();
+    void fetchData();
   }, [fetchData, trackEvent]);
 
   // NDA Template Upload Handlers
@@ -743,7 +743,7 @@ function ProductionDashboard() {
     setNdaTemplates(prev => [...prev, template]);
     
     // Automatically start upload
-    uploadNDATemplate(template, file);
+    void uploadNDATemplate(template, file);
   };
 
   const uploadNDATemplate = async (template: NDATemplate, file: File) => {
@@ -1472,7 +1472,7 @@ function ProductionDashboard() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleSavePitch(pitch.id);
+                                void handleSavePitch(pitch.id);
                               }}
                               className={`flex items-center gap-1 px-3 py-1 rounded-lg transition-colors ${
                                 savedPitches?.includes(pitch.id) 
@@ -1509,7 +1509,7 @@ function ProductionDashboard() {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleRequestNDA(pitch.id, pitch.title);
+                                    void handleRequestNDA(pitch.id, pitch.title);
                                   }}
                                   className="flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200 transition-colors"
                                 >

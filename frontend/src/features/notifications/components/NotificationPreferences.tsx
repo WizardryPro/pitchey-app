@@ -373,7 +373,7 @@ export default function NotificationPreferences() {
 
   // Load preferences from API
   useEffect(() => {
-    loadPreferences();
+    void loadPreferences();
   }, []);
 
   const loadPreferences = async () => {

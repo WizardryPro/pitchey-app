@@ -15,7 +15,7 @@ const RiskAssessment = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadRiskAssessment();
+    void loadRiskAssessment();
   }, []);
 
   const loadRiskAssessment = async () => {

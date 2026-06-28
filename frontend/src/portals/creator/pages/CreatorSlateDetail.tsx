@@ -50,7 +50,7 @@ export default function CreatorSlateDetailPage() {
 
   useEffect(() => {
     if (!slateId) return;
-    loadSlate();
+    void loadSlate();
   }, [slateId]);
 
   const loadSlate = async () => {

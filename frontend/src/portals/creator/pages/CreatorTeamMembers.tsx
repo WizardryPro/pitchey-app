@@ -53,7 +53,7 @@ export default function CreatorTeamMembers() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadTeamMembers();
+    void loadTeamMembers();
   }, []);
 
   useEffect(() => {

@@ -99,7 +99,7 @@ export default function EmailOTPLogin() {
     const digits = value.replace(/\D/g, '').slice(0, 6);
     setCode(digits);
     if (digits.length === 6) {
-      handleVerifyCode(digits);
+      void handleVerifyCode(digits);
     }
   };
 

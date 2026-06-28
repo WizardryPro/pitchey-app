@@ -65,7 +65,7 @@ export default function TeamOverview() {
 
   useEffect(() => {
     if (teamId) {
-      fetchTeamData();
+      void fetchTeamData();
     } else {
       setLoading(false);
     }

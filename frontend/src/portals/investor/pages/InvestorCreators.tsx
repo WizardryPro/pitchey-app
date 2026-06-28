@@ -58,7 +58,7 @@ export default function InvestorCreators() {
   const [filteredCreators, setFilteredCreators] = useState<Creator[]>([]);
 
   useEffect(() => {
-    loadCreators();
+    void loadCreators();
   }, []);
 
   useEffect(() => {

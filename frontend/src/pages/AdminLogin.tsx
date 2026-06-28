@@ -34,7 +34,7 @@ export default function AdminLogin() {
       // Verify the user is actually an admin
       const user = useBetterAuthStore.getState().user;
       if (user?.userType !== 'admin') {
-        useBetterAuthStore.getState().logout();
+        void useBetterAuthStore.getState().logout();
         setAuthError('Access denied. This portal is restricted to administrators.');
         resetTurnstile();
         return;
