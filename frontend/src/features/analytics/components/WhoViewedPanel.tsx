@@ -62,7 +62,7 @@ export default function WhoViewedPanel({ pitchId }: { pitchId: number }) {
 
   useEffect(() => {
     let active = true;
-    (async () => {
+    void (async () => {
       try {
         const res = await apiClient.get<WhoViewedData>(`/api/views/pitch/${pitchId}`);
         if (active && res?.success && res.data) setData(res.data);

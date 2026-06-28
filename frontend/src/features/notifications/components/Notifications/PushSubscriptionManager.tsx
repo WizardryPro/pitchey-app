@@ -173,7 +173,7 @@ export const PushSubscriptionManager: React.FC<PushSubscriptionManagerProps> = (
 
       // Update state
       setIsSubscribed(true);
-      loadSubscriptions(); // Reload to get updated list
+      void loadSubscriptions(); // Reload to get updated list
       onSubscriptionChange?.(true);
 
       setTestNotificationSent(false);

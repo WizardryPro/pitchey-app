@@ -82,7 +82,7 @@ export default function Turnstile({ onVerify, onExpire, onError, theme = 'auto',
 
     let mounted = true;
 
-    loadScript().then(() => {
+    void loadScript().then(() => {
       if (!mounted || !containerRef.current || !window.turnstile) return;
 
       // Clear any previous widget

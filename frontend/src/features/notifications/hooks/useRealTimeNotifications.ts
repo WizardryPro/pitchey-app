@@ -162,7 +162,7 @@ export function useRealTimeNotifications() {
 
     // Also show browser notification if supported
     if ('Notification' in window && Notification.permission === 'granted') {
-      notificationService.showNotification({
+      void notificationService.showNotification({
         title: notificationData.title,
         body: notificationData.message,
         icon: BRAND.logo,

@@ -71,7 +71,7 @@ export default function AudienceDemandRail() {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    void (async () => {
       try {
         const res: unknown = await apiClient.get('/api/pitches/audience-demand?limit=8');
         // apiClient may return the raw body or a wrapped { data } — handle both.

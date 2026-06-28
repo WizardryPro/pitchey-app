@@ -30,7 +30,7 @@ describe('ConfigService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     // Reset cache so tests start fresh
-    resetServiceState(configService)
+    void resetServiceState(configService)
   })
 
   // ─── getConfiguration ─────────────────────────────────────────────
@@ -190,7 +190,7 @@ describe('ConfigService', () => {
     })
 
     it('returns fallback when no config loaded', () => {
-      resetServiceState(configService)
+      void resetServiceState(configService)
       const config = configService.getSyncConfig()
       expect(config.genres.length).toBeGreaterThan(0)
       expect(config.formats).toContain('Feature Film')

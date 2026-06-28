@@ -73,8 +73,8 @@ export default function FeedbackSection({ pitchId, isOwner, isAuthenticated, use
     setComments(data);
   }, [pitchId]);
 
-  useEffect(() => { loadData(); }, [loadData]);
-  useEffect(() => { loadComments(); }, [loadComments]);
+  useEffect(() => { void loadData(); }, [loadData]);
+  useEffect(() => { void loadComments(); }, [loadComments]);
 
   // Poll consumption status every 10s until the gate opens — keeps the progress bar live
   // as the backend heartbeat accumulates view_duration.

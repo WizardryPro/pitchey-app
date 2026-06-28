@@ -99,9 +99,9 @@ export default function Debug() {
       })
       .catch(() => setCheck('Session', 'fail'));
 
-    probeScript('https://js.stripe.com/v3/').then((ok) => setCheck('Stripe JS', ok ? 'ok' : 'fail'));
-    probeScript('https://challenges.cloudflare.com/turnstile/v0/api.js').then((ok) => setCheck('Turnstile JS', ok ? 'ok' : 'fail'));
-    probeWebSocket().then((ok) => setCheck('WebSocket', ok ? 'ok' : 'fail'));
+    void probeScript('https://js.stripe.com/v3/').then((ok) => setCheck('Stripe JS', ok ? 'ok' : 'fail'));
+    void probeScript('https://challenges.cloudflare.com/turnstile/v0/api.js').then((ok) => setCheck('Turnstile JS', ok ? 'ok' : 'fail'));
+    void probeWebSocket().then((ok) => setCheck('WebSocket', ok ? 'ok' : 'fail'));
 
     return () => { alive = false; };
   }, []);

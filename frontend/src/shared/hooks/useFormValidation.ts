@@ -190,7 +190,7 @@ export function useFormValidation<T extends Record<string, any>>(
   // Validate on mount if requested
   useEffect(() => {
     if (validateOnMount) {
-      validateForm(data).then((result) => {
+      void validateForm(data).then((result) => {
         setValidationState((prev) => ({
           ...prev,
           isValid: result.isValid,

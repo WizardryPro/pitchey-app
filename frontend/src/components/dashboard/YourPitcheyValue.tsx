@@ -50,7 +50,7 @@ export default function YourPitcheyValue() {
 
   useEffect(() => {
     let active = true;
-    (async () => {
+    void (async () => {
       try {
         const res = await apiClient.get<ValueData>('/api/creator/value');
         const d = res?.data as Partial<ValueData> | undefined;

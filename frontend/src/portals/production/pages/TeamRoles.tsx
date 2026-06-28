@@ -274,7 +274,7 @@ export default function TeamRoles() {
         setError('Role name is required');
         return;
       }
-      handleSaveRole({
+      void handleSaveRole({
         ...role,
         ...formData,
         id: role?.id || `new_${Date.now()}`

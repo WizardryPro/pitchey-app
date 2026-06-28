@@ -25,7 +25,7 @@ export default function ProvenanceVerify() {
 
   useEffect(() => {
     let live = true;
-    (async () => {
+    void (async () => {
       setLoading(true);
       try {
         const res = await fetch(`${API_URL}/api/verify/p/${encodeURIComponent(hash)}`);

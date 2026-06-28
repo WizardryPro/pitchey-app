@@ -675,7 +675,7 @@ function ProductionDashboard() {
   };
 
   const handleSignOut = () => {
-    logout(); // This will automatically clear all storage and navigate to appropriate login page
+    void logout(); // This will automatically clear all storage and navigate to appropriate login page
   };
 
   // Filtered and sorted following pitches
@@ -1840,7 +1840,7 @@ function ProductionDashboard() {
                         </div>
                         <button
                           className="absolute top-2 right-2 bg-white/90 hover:bg-white p-1.5 rounded-md"
-                          onClick={(e) => { e.stopPropagation(); handleSavePitch(pitchId); }}
+                          onClick={(e) => { e.stopPropagation(); void handleSavePitch(pitchId); }}
                           title="Remove from saved"
                         >
                           <Bookmark className="w-3.5 h-3.5 text-purple-600 fill-current" />

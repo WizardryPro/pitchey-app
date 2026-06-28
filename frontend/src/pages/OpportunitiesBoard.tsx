@@ -623,18 +623,18 @@ export default function OpportunitiesBoard() {
     } catch { /* non-blocking */ }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [typeFilter]);
-  useEffect(() => { loadMine(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [isAuthenticated]);
+  useEffect(() => { void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [typeFilter]);
+  useEffect(() => { void loadMine(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [isAuthenticated]);
 
   const openCount = calls.filter((c) => c.status === 'open').length;
 
   const handlePostClick = () => {
-    if (!isAuthenticated) { navigate('/login'); return; }
+    if (!isAuthenticated) { void navigate('/login'); return; }
     setEditing(null); setShowPost(true);
   };
 
   const handleSubmitClick = (call: OpenCall) => {
-    if (!isAuthenticated) { navigate('/login'); return; }
+    if (!isAuthenticated) { void navigate('/login'); return; }
     setViewing(null); setSubmitting(call);
   };
 
@@ -748,7 +748,7 @@ export default function OpportunitiesBoard() {
           editing={editing}
           prefill={editing ? null : prefill}
           onClose={() => { setShowPost(false); setEditing(null); setPrefill(null); }}
-          onSaved={() => { setShowPost(false); setEditing(null); setPrefill(null); load(); }}
+          onSaved={() => { setShowPost(false); setEditing(null); setPrefill(null); void load(); }}
         />
       )}
       {viewing && (
@@ -764,7 +764,7 @@ export default function OpportunitiesBoard() {
         <SubmitPitchModal
           call={submitting}
           onClose={() => setSubmitting(null)}
-          onSubmitted={() => { setSubmitting(null); loadMine(); load(); }}
+          onSubmitted={() => { setSubmitting(null); void loadMine(); void load(); }}
         />
       )}
       {submissionsFor && <SubmissionsModal call={submissionsFor} onClose={() => setSubmissionsFor(null)} />}

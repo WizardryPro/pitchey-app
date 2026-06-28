@@ -50,7 +50,7 @@ export function CreatorCollaborations() {
 
   useEffect(() => {
     let live = true;
-    (async () => { await load(); if (!live) setLoaded(false); })();
+    void (async () => { await load(); if (!live) setLoaded(false); })();
     return () => { live = false; };
   }, []);
 

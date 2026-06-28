@@ -164,7 +164,7 @@ export default function FeedbackDisplay({
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [pitchId]);
+  useEffect(() => { void load(); }, [pitchId]);
 
   if (loading) {
     return (
