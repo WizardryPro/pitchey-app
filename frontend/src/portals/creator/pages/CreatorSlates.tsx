@@ -259,14 +259,14 @@ export default function CreatorSlates() {
                   {menuOpen === slate.id && (
                     <div className="absolute top-8 left-0 bg-white border border-gray-200 rounded-lg shadow-xl py-1 min-w-[160px] z-10">
                       <button
-                        onClick={e => { e.stopPropagation(); handleTogglePublish(slate); }}
+                        onClick={e => { e.stopPropagation(); void handleTogglePublish(slate); }}
                         className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
                       >
                         {slate.status === 'published' ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         {slate.status === 'published' ? 'Unpublish' : 'Publish'}
                       </button>
                       <button
-                        onClick={e => { e.stopPropagation(); handleDelete(slate.id); }}
+                        onClick={e => { e.stopPropagation(); void handleDelete(slate.id); }}
                         className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
                       >
                         <Trash2 className="h-4 w-4" />

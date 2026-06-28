@@ -323,7 +323,7 @@ function App() {
       try {
         // Use startTransition for non-urgent update
         startTransition(() => {
-          configService.getConfiguration().then(() => {
+          void configService.getConfiguration().then(() => {
             setConfigLoaded(true);
           });
         });

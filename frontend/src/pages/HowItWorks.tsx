@@ -145,7 +145,7 @@ const HowItWorks: React.FC = () => {
 
   // Merge optional CMS content over the local defaults; pull real platform stats.
   useEffect(() => {
-    (async () => {
+    void (async () => {
       try {
         const [hiw, statsRes] = await Promise.all([
           contentService.getHowItWorks(),

@@ -174,7 +174,7 @@ export const PollingProvider: React.FC<PollingProviderProps> = ({
     // Handle visibility change
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && isAuthenticated) {
-        forcePoll(); // Immediate poll when returning to tab
+        void forcePoll(); // Immediate poll when returning to tab
         startPolling();
       } else {
         stopPolling();
@@ -290,7 +290,7 @@ export const useMessagePolling = (conversationId?: string) => {
 
     // Start polling
     setIsPolling(true);
-    pollMessages(); // Initial poll
+    void pollMessages(); // Initial poll
 
     // Set up interval (5 seconds for active conversation)
     intervalRef.current = setInterval(pollMessages, 5000);

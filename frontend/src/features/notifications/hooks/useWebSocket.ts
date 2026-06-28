@@ -197,7 +197,7 @@ export function useMessaging() {
             }));
 
             // Show notification for new message
-            notificationService.notifyNewMessage(
+            void notificationService.notifyNewMessage(
               message.senderName || 'Unknown User',
               message.content,
               message.conversationId

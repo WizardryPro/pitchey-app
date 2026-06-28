@@ -86,7 +86,7 @@ export default function PublicSlate() {
 
   useEffect(() => {
     if (!id) return;
-    (async () => {
+    void (async () => {
       try {
         // A purely-numeric param is a legacy slate id; anything else is a tracked
         // share token (moat #5) — the token endpoint also records the view.

@@ -358,7 +358,7 @@ export default function AdvancedSearch() {
                     Dashboard
                   </button>
                   <button
-                    onClick={async () => { await logout(); navigate('/'); }}
+                    onClick={async () => { await logout(); void navigate('/'); }}
                     className="p-2 text-gray-400 hover:text-red-600 transition"
                     title="Sign Out"
                   >

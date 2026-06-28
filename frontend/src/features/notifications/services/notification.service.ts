@@ -236,8 +236,8 @@ export class NotificationService {
   // Clear all notifications with a specific tag
   clearNotifications(tag: string) {
     if ('serviceWorker' in navigator && 'getNotifications' in ServiceWorkerRegistration.prototype) {
-      navigator.serviceWorker.ready.then(registration => {
-        registration.getNotifications({ tag }).then(notifications => {
+      void navigator.serviceWorker.ready.then(registration => {
+        void registration.getNotifications({ tag }).then(notifications => {
           notifications.forEach(notification => notification.close());
         });
       });

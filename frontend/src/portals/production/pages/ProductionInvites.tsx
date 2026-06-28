@@ -65,7 +65,7 @@ export default function ProductionInvites() {
 
   const copyToClipboard = (code: string) => {
     const url = `${window.location.origin}/invite/${code}`;
-    navigator.clipboard.writeText(url).then(() => {
+    void navigator.clipboard.writeText(url).then(() => {
       setCopiedCode(code);
       setTimeout(() => setCopiedCode(null), 2000);
     });

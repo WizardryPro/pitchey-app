@@ -89,7 +89,7 @@ export default function NDAStatus({
   
   const handleWizardClose = () => {
     setShowNDAWizard(false);
-    fetchNDAStatus(); // Refresh status when wizard closes
+    void fetchNDAStatus(); // Refresh status when wizard closes
   };
 
   const downloadNDA = async () => {

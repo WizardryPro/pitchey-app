@@ -199,7 +199,7 @@ export default function Billing() {
                     <Link to="/register" className={`${theme.textAccent} ${theme.textAccentHover} font-medium`}>create one here</Link>.
                   </p>
                   <p className="text-sm text-gray-500 mt-4">
-                    You can still buy credits under the <button onClick={() => { const params = new URLSearchParams(searchParams); params.set('tab', 'credits'); navigate(`?${params.toString()}`, { replace: true }); }} className={`${theme.textAccent} ${theme.textAccentHover} underline`}>Credits tab</button>.
+                    You can still buy credits under the <button onClick={() => { const params = new URLSearchParams(searchParams); params.set('tab', 'credits'); void navigate(`?${params.toString()}`, { replace: true }); }} className={`${theme.textAccent} ${theme.textAccentHover} underline`}>Credits tab</button>.
                   </p>
                 </div>
               ) : (

@@ -111,7 +111,7 @@ export function CompanyJoinCodeCard() {
   };
 
   useEffect(() => {
-    (async () => {
+    void (async () => {
       const { ok, body } = await api('/api/teams');
       if (!ok) return;
       const teams = body?.data?.teams || body?.teams || [];

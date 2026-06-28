@@ -263,7 +263,7 @@ export default function CreatePitch() {
     if (file) {
       // Validate the file immediately — pass the raw File so ImageFileSchema
       // (instanceof File check) evaluates correctly.
-      validateField(fileType, file).then(errors => {
+      void validateField(fileType, file).then(errors => {
         if (errors.length > 0) {
           // Announce file error
           a11y.validation.announceFieldError(fileType, errors[0]);

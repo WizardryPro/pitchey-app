@@ -191,14 +191,14 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
               {/* Quick Navigation - Mobile */}
               <div className="sm:hidden border-b border-gray-200 py-2">
                 <button
-                  onClick={() => { navigate(homePath); setIsProfileOpen(false); }}
+                  onClick={() => { void navigate(homePath); setIsProfileOpen(false); }}
                   className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                 >
                   <LayoutDashboard className="w-4 h-4" />
                   Dashboard
                 </button>
                 <button
-                  onClick={() => { navigate(browsePath); setIsProfileOpen(false); }}
+                  onClick={() => { void navigate(browsePath); setIsProfileOpen(false); }}
                   className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                 >
                   <Store className="w-4 h-4" />
@@ -207,13 +207,13 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
               </div>
 
               <button
-                onClick={() => { navigate(`/${getPortalPath(userType)}/profile`); setIsProfileOpen(false); }}
+                onClick={() => { void navigate(`/${getPortalPath(userType)}/profile`); setIsProfileOpen(false); }}
                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
               >
                 View Profile
               </button>
               <button
-                onClick={() => { navigate(`/${getPortalPath(userType)}/settings`); setIsProfileOpen(false); }}
+                onClick={() => { void navigate(`/${getPortalPath(userType)}/settings`); setIsProfileOpen(false); }}
                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
               >
                 Settings

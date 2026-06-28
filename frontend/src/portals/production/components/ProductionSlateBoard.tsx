@@ -96,7 +96,7 @@ export default function ProductionSlateBoard() {
 
   useEffect(() => {
     let live = true;
-    (async () => {
+    void (async () => {
       try {
         const res: any = await apiClient.get('/api/production/slate');
         if (!live) return;

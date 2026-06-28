@@ -110,7 +110,7 @@ export default function MFAChallengePage() {
               type="text"
               value={code}
               onChange={(e) => handleCodeChange(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') void handleSubmit(); }}
               placeholder="000000"
               className={`w-full text-center text-2xl tracking-[0.5em] px-4 py-4 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-mono ${
                 error ? 'border-red-300 bg-red-50' : 'border-gray-300'

@@ -26,7 +26,7 @@ export default function CollaborationWorkspace({ pitchId, partnerName }: { pitch
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    void (async () => {
       setLoading(true);
       try {
         const [n, t] = await Promise.all([

@@ -423,7 +423,7 @@ export default function CreatorSlateDetailPage() {
 
               {/* Remove */}
               <button
-                onClick={e => { e.stopPropagation(); handleRemovePitch(pitch.id); }}
+                onClick={e => { e.stopPropagation(); void handleRemovePitch(pitch.id); }}
                 className="p-2 text-gray-400 hover:text-red-600 transition-colors shrink-0"
               >
                 <Trash2 className="h-4 w-4" />

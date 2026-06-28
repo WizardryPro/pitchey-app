@@ -71,7 +71,7 @@ export default function PublicTopNav({ variant = 'overlay', heroRef, showIdentit
   }, [learnOpen]);
 
   const onDark = !scrolled; // dark hero behind the bar → use light text
-  const go = (to: string) => { setMobileOpen(false); setLearnOpen(false); navigate(to); };
+  const go = (to: string) => { setMobileOpen(false); setLearnOpen(false); void navigate(to); };
 
   const linkCls = (active: boolean) =>
     `text-nav-link transition ${
@@ -186,7 +186,7 @@ export default function PublicTopNav({ variant = 'overlay', heroRef, showIdentit
                   Dashboard
                 </button>
                 <button
-                  onClick={async () => { await logout(); navigate('/'); }}
+                  onClick={async () => { await logout(); void navigate('/'); }}
                   className={`text-button px-3 py-2 transition ${onDark ? 'text-white/70 hover:text-white' : 'text-gray-500 hover:text-red-600'}`}
                   title="Sign Out"
                 >
@@ -260,7 +260,7 @@ export default function PublicTopNav({ variant = 'overlay', heroRef, showIdentit
                   Dashboard
                 </button>
                 <button
-                  onClick={async () => { setMobileOpen(false); await logout(); navigate('/'); }}
+                  onClick={async () => { setMobileOpen(false); await logout(); void navigate('/'); }}
                   className={`text-left px-3 py-2.5 rounded-lg text-sm font-medium transition ${scrolled ? 'text-gray-600 hover:bg-gray-100' : 'text-white/80 hover:bg-white/10'}`}
                 >
                   Sign Out

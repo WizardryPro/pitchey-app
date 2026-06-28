@@ -78,7 +78,7 @@ export default function InviteLanding() {
         try {
           await apiClient.post(`/api/invites/${code}/redeem`, {});
           const target = pitchTargetFor(user?.userType);
-          navigate(target, {
+          void navigate(target, {
             replace: true,
             state: target.endsWith('/pitch/new') ? { invitedBy: invite.inviterName } : undefined,
           });

@@ -447,7 +447,7 @@ const ProductionPitchView: React.FC = () => {
   // Optimistic toggle; POST to add, DELETE to remove.
   const handleLike = async () => {
     if (!pitch) return;
-    if (!isAuthenticated) { navigate('/login/production'); return; }
+    if (!isAuthenticated) { void navigate('/login/production'); return; }
     const next = !isLiked;
     setIsLiked(next);
     setPitch(p => p ? ({ ...p, likes: (p.likes || 0) + (next ? 1 : -1) }) : p);
@@ -1515,7 +1515,7 @@ const ProductionPitchView: React.FC = () => {
           company={pitch?.creator?.name || 'the company'}
           defaultName={(authUser as any)?.name || (authUser as any)?.username || ''}
           onClose={() => setSignCompanyNda(false)}
-          onSigned={() => { setSignCompanyNda(false); fetchPitchData(); }}
+          onSigned={() => { setSignCompanyNda(false); void fetchPitchData(); }}
         />
       )}
     </div>
