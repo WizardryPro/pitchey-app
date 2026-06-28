@@ -6,9 +6,9 @@ export interface Investment {
   pitchId: number;
   amount: number;
   status: 'pending' | 'active' | 'completed' | 'cancelled';
-  terms?: any;
+  terms?: unknown;
   currentValue: number;
-  documents?: any[];
+  documents?: unknown[];
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -16,7 +16,8 @@ export interface Investment {
   pitchTitle?: string;
   pitchGenre?: string;
   creatorName?: string;
-  investmentDate?: Date;
+  // String at runtime (ISO date from API); consumers wrap in `new Date(...)`.
+  investmentDate?: string;
   returnAmount?: number;
   returnPercentage?: number;
   daysInvested?: number;
@@ -77,20 +78,67 @@ export interface InvestmentOpportunity {
   publishedAt: Date;
 }
 
+// Raw API payload shapes (snake_case + camelCase coexist). Boundary claims that
+// keep response member-access typed instead of `any`. See the lint teardown plan.
+interface RawPortfolioSummary {
+  total_invested?: number; totalInvested?: number;
+  portfolio_value?: number; currentValue?: number;
+  total_returns?: number; totalReturn?: number;
+  average_roi?: number; returnPercentage?: number; roi?: number;
+  active_investments?: number; activeInvestments?: number;
+  completed_investments?: number; completedInvestments?: number;
+  monthly_growth?: number; monthlyGrowth?: number;
+  quarterly_growth?: number; quarterlyGrowth?: number;
+  ytd_growth?: number; ytdGrowth?: number;
+  [key: string]: unknown;
+}
+
+interface RawInvestmentRow {
+  id?: number;
+  investor_id?: number; investorId?: number;
+  pitch_id?: number; pitchId?: number;
+  amount?: number | string;
+  status?: Investment['status'];
+  terms?: unknown;
+  current_value?: number | string; currentValue?: number | string;
+  documents?: unknown[];
+  notes?: string;
+  created_at?: string; createdAt?: string;
+  updated_at?: string; updatedAt?: string;
+  pitch_title?: string; pitchTitle?: string;
+  genre?: string; pitchGenre?: string;
+  creator_name?: string; creatorName?: string;
+  invested_at?: string; investmentDate?: string;
+  roi_percentage?: number | string; returnPercentage?: number | string;
+  [key: string]: unknown;
+}
+
+interface InvestmentHistoryResponse {
+  investments?: RawInvestmentRow[];
+  total?: number;
+  totalPages?: number; total_pages?: number;
+  currentPage?: number; current_page?: number;
+  summary?: {
+    totalInvested: number;
+    totalCurrentValue: number;
+    activeCount: number;
+    completedCount: number;
+  };
+}
+
 export class InvestmentService {
   // Get investor's portfolio summary
-  static async getInvestorPortfolio(investorId?: number): Promise<{
+  static async getInvestorPortfolio(_investorId?: number): Promise<{
     success: boolean;
     data?: PortfolioMetrics;
     error?: string;
   }> {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const response = await apiClient.get<any>('/api/investor/portfolio/summary');
+      const response = await apiClient.get<{ summary?: RawPortfolioSummary } & RawPortfolioSummary>('/api/investor/portfolio/summary');
       if (!response.success || !response.data) {
         return {
           success: response.success,
-          data: response.data ?? undefined,
+          data: undefined,
           error: response.error?.message
         };
       }
@@ -151,23 +199,21 @@ export class InvestmentService {
       if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
       if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const response = await apiClient.get<any>(`/api/investor/investments?${queryParams.toString()}`);
+      const response = await apiClient.get<InvestmentHistoryResponse>(`/api/investor/investments?${queryParams.toString()}`);
       if (!response.success || !response.data) {
         return {
           success: response.success,
-          data: response.data ?? undefined,
+          data: undefined,
           error: response.error?.message
         };
       }
 
       // Transform snake_case investment rows to camelCase
-      const rawInvestments: unknown[] = response.data.investments ?? [];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const investments: Investment[] = rawInvestments.map((row: any) => ({
-        id: row.id,
-        investorId: row.investor_id ?? row.investorId,
-        pitchId: row.pitch_id ?? row.pitchId,
+      const rawInvestments: RawInvestmentRow[] = response.data.investments ?? [];
+      const investments: Investment[] = rawInvestments.map((row): Investment => ({
+        id: row.id ?? 0,
+        investorId: row.investor_id ?? row.investorId ?? 0,
+        pitchId: row.pitch_id ?? row.pitchId ?? 0,
         amount: Number(row.amount) || 0,
         status: row.status ?? 'pending',
         terms: row.terms,
@@ -236,7 +282,7 @@ export class InvestmentService {
   }
 
   // Get creator's funding overview
-  static async getCreatorFunding(creatorId?: number): Promise<{
+  static async getCreatorFunding(_creatorId?: number): Promise<{
     success: boolean;
     data?: FundingMetrics;
     error?: string;
@@ -258,7 +304,7 @@ export class InvestmentService {
   }
 
   // Get creator's investor relationships
-  static async getCreatorInvestors(creatorId?: number): Promise<{
+  static async getCreatorInvestors(_creatorId?: number): Promise<{
     success: boolean;
     data?: {
       investors: Array<{
@@ -349,7 +395,7 @@ export class InvestmentService {
   static async createInvestment(data: {
     pitchId: number;
     amount: number;
-    terms?: any;
+    terms?: unknown;
   }): Promise<{
     success: boolean;
     data?: Investment;
@@ -458,7 +504,7 @@ export class InvestmentService {
   }
 
   // Calculate portfolio analytics
-  static async getPortfolioAnalytics(investorId?: number): Promise<{
+  static async getPortfolioAnalytics(_investorId?: number): Promise<{
     success: boolean;
     data?: {
       totalROI: number;

@@ -247,7 +247,13 @@ interface RawPitchData {
   videoPassword?: string;
   video_platform?: string;
   videoPlatform?: string;
-  
+
+  // Format taxonomy + NDA + media (snake_case from API)
+  format_category?: string; formatCategory?: string;
+  format_subtype?: string; formatSubtype?: string;
+  require_nda?: boolean; requireNDA?: boolean;
+  title_image?: string; titleImage?: string;
+
   [key: string]: unknown;
 }
 
@@ -386,8 +392,8 @@ function transformPitchData(pitch: RawPitchData | null | undefined): Partial<Pit
     name: attachment.name,
     role: attachment.role,
     bio: attachment.bio,
-    imdbLink: (attachment as any).imdb_link ?? attachment.imdbLink,
-    websiteLink: (attachment as any).website_link ?? attachment.websiteLink,
+    imdbLink: (attachment as { imdb_link?: string }).imdb_link ?? attachment.imdbLink,
+    websiteLink: (attachment as { website_link?: string }).website_link ?? attachment.websiteLink,
   }));
   
   return {
@@ -404,11 +410,11 @@ function transformPitchData(pitch: RawPitchData | null | undefined): Partial<Pit
     // Map the structured format taxonomy snake_case → camelCase so the Edit form
     // can repopulate the Format Category / Subtype selects (the spread above keeps
     // only the snake_case keys). Without this, Save Changes stayed disabled.
-    formatCategory: (pitch as any).format_category ?? (pitch as any).formatCategory,
-    formatSubtype: (pitch as any).format_subtype ?? (pitch as any).formatSubtype,
+    formatCategory: pitch.format_category ?? pitch.formatCategory,
+    formatSubtype: pitch.format_subtype ?? pitch.formatSubtype,
     // Map require_nda snake→camel so PitchEdit restores the NDA selection
     // (otherwise it reads undefined → "No NDA Required" → forgets the standard NDA).
-    requireNDA: (pitch as any).require_nda ?? (pitch as any).requireNDA ?? false,
+    requireNDA: pitch.require_nda ?? pitch.requireNDA ?? false,
 
     // Transform enhanced fields from snake_case
     toneAndStyle: pitch.tone_and_style ?? pitch.toneAndStyle,
@@ -416,13 +422,13 @@ function transformPitchData(pitch: RawPitchData | null | undefined): Partial<Pit
     storyBreakdown: pitch.story_breakdown ?? pitch.storyBreakdown,
     whyNow: pitch.why_now ?? pitch.whyNow,
     productionLocation: pitch.production_location ?? pitch.productionLocation,
-    developmentStage: (pitch.development_stage ?? pitch.developmentStage) as any,
+    developmentStage: (pitch.development_stage ?? pitch.developmentStage) as Pitch['developmentStage'],
     developmentStageOther: pitch.development_stage_other ?? pitch.developmentStageOther,
     creativeAttachments: transformedAttachments,
     videoUrl: pitch.video_url ?? pitch.videoUrl,
     videoPassword: pitch.video_password ?? pitch.videoPassword,
     videoPlatform: pitch.video_platform ?? pitch.videoPlatform,
-    titleImage: (pitch as any).title_image ?? (pitch as any).titleImage,
+    titleImage: pitch.title_image ?? pitch.titleImage,
   };
 }
 
@@ -1000,7 +1006,7 @@ export class PitchService {
   // These endpoints work without authentication and are rate-limited
 
   // Transform snake_case public pitch response to camelCase Pitch
-  private static transformPublicPitch(p: any): Pitch {
+  private static transformPublicPitch(p: RawPitchData): Pitch {
     return {
       ...p,
       userId: p.user_id ?? p.userId,
@@ -1024,7 +1030,7 @@ export class PitchService {
       creatorUsername: p.creator_username ?? p.creatorUsername,
       creatorAvatar: p.creator_avatar ?? p.creatorAvatar,
       creatorCompany: p.creator_company ?? p.creatorCompany,
-    };
+    } as unknown as Pitch;
   }
 
   // Get public trending pitches (no auth required)
@@ -1043,7 +1049,7 @@ export class PitchService {
 
       interface PublicPitchesJson {
         success?: boolean;
-        data?: { pitches?: Pitch[] };
+        data?: { pitches?: RawPitchData[] };
       }
       const data = await response.json() as PublicPitchesJson;
       const pitches = data.success === true ? (data.data?.pitches ?? []) : [];
@@ -1070,7 +1076,7 @@ export class PitchService {
 
       interface PublicPitchesJson {
         success?: boolean;
-        data?: { pitches?: Pitch[] };
+        data?: { pitches?: RawPitchData[] };
       }
       const data = await response.json() as PublicPitchesJson;
       const pitches = data.success === true ? (data.data?.pitches ?? []) : [];
@@ -1097,7 +1103,7 @@ export class PitchService {
 
       interface PublicPitchesJson {
         success?: boolean;
-        data?: { pitches?: Pitch[] };
+        data?: { pitches?: RawPitchData[] };
       }
       const data = await response.json() as PublicPitchesJson;
       const pitches = data.success === true ? (data.data?.pitches ?? []) : [];
@@ -1120,7 +1126,7 @@ export class PitchService {
 
       interface HotPitchesJson {
         success?: boolean;
-        data?: { pitches?: Pitch[] };
+        data?: { pitches?: RawPitchData[] };
       }
       const data = await response.json() as HotPitchesJson;
       const pitches = data.success === true ? (data.data?.pitches ?? []) : [];

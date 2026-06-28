@@ -28,7 +28,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 // ── The baseline. Lower it (never raise it) as frontend lint errors are fixed. ──
-const BASELINE = 8736;
+const BASELINE = 8371;
 // 2026-06-27: created at the measured floor (8908 errors / 184 warnings). Top
 // rules: no-unsafe-member-access, no-unsafe-assignment, no-explicit-any,
 // no-unused-vars, no-misused-promises. The gate blocks any NEW error.
@@ -41,6 +41,11 @@ const BASELINE = 8736;
 // inside the transform with zero consumer cascade (return kept `any`; tightening
 // it to Pitch is deferred — the file's Pitch differs from the page-level Pitch
 // type tree). Remaining api.ts errors are axios response-envelope typing (A2b).
+// 2026-06-28: lowered 8736 -> 8371 (-365). A3: typed the input boundaries of the
+// three feature services — nda.service (transform raw params + raw response types),
+// investment.service (Raw* shapes + response generics; fixed investmentDate Date→
+// string drift), pitch.service (added missing RawPitchData fields + raw response
+// arrays). Same input-typing/loose-return pattern; zero cascade, full suite green.
 
 const LIST = process.argv.includes('--list');
 
