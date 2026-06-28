@@ -28,7 +28,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 // ── The baseline. Lower it (never raise it) as frontend lint errors are fixed. ──
-const BASELINE = 8283;
+const BASELINE = 7727;
 // 2026-06-27: created at the measured floor (8908 errors / 184 warnings). Top
 // rules: no-unsafe-member-access, no-unsafe-assignment, no-explicit-any,
 // no-unused-vars, no-misused-promises. The gate blocks any NEW error.
@@ -50,6 +50,10 @@ const BASELINE = 8283;
 // promises (React Router v6 navigate returns a Promise) across 53 files. `void` is
 // behavior-preserving — the promise was already floating; you never await navigation
 // in a handler. Start of the promise-handling (C1) hardening workstream.
+// 2026-06-28: lowered 8283 -> 7727 (-556). C1c: narrowed no-misused-promises with
+// checksVoidReturn.attributes:false (eslint.config.js) — async JSX event handlers
+// are idiomatic, safe React (React discards the return). Rule stays ON for timers,
+// callbacks, object handlers (26 genuine cases remain → C1c-residual follow-up).
 
 const LIST = process.argv.includes('--list');
 
