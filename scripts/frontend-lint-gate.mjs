@@ -28,7 +28,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 // ── The baseline. Lower it (never raise it) as frontend lint errors are fixed. ──
-const BASELINE = 7393;
+const BASELINE = 7306;
 // 2026-06-27: created at the measured floor (8908 errors / 184 warnings). Top
 // rules: no-unsafe-member-access, no-unsafe-assignment, no-explicit-any,
 // no-unused-vars, no-misused-promises. The gate blocks any NEW error.
@@ -66,6 +66,11 @@ const BASELINE = 7393;
 // inline setInterval(async()=>) ×4, new Promise(async executor), WS context-value ×2,
 // test mocks ×4. (Pre-existing flaky CharacterManagement scrollIntoView timer test is
 // unrelated — not in this diff, passes in isolation.)
+// 2026-06-28: lowered 7393 -> 7306 (-87). C3a (config hygiene): disabled `no-undef`
+// for TS (redundant w/ TS, false-positives React/NodeJS/process — tseslint rec) and
+// ignored functions/**, worker/**, vite.config.*.ts (outside tsconfig.app.json /
+// build artifacts — they only produced parserOptions.project parse errors, never
+// real lint). no-undef + parse errors now 0.
 
 const LIST = process.argv.includes('--list');
 
