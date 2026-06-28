@@ -624,7 +624,7 @@ export default function OpportunitiesBoard() {
   };
 
   useEffect(() => { void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [typeFilter]);
-  useEffect(() => { void loadMine(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [isAuthenticated]);
+  useEffect(() => { void loadMine();   }, [isAuthenticated]);
 
   const openCount = calls.filter((c) => c.status === 'open').length;
 

@@ -335,7 +335,7 @@ export default function MarketplaceEnhanced() {
         hasInvestment: urlFilters.hasInvestment,
       };
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [searchParams]);
 
   // Update URL params when filters change

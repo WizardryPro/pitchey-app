@@ -75,8 +75,8 @@ export const validationRules = {
 
   // Phone number validation (flexible format)
   phone: (): ValidationRule<string> => (value: string) => {
-    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
-    const cleanedValue = value.replace(/[\s\-\(\)]/g, '');
+    const phoneRegex = /^[+]?[1-9][\d]{0,15}$/;
+    const cleanedValue = value.replace(/[\s()-]/g, '');
     const isValid = phoneRegex.test(cleanedValue) && cleanedValue.length >= 10;
     return {
       isValid,

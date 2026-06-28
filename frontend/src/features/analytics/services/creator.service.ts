@@ -1,7 +1,6 @@
 // Creator Service - Dashboard and creator-specific operations
 import { apiClient } from '@/lib/api-client';
-import type { Pitch } from '@shared/types/api';
-import type { User } from '@shared/types/api';
+import type { Pitch , User } from '@shared/types/api';
 
 const isDev = import.meta.env.MODE === 'development';
 const API_BASE_URL = import.meta.env.VITE_API_URL || (isDev ? 'http://localhost:8001' : '');
