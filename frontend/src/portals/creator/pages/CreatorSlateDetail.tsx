@@ -181,7 +181,7 @@ export default function CreatorSlateDetailPage() {
   }, [slate]);
 
   useEffect(() => {
-    const timer = setTimeout(() => searchPitches(pitchSearch), 300);
+    const timer = setTimeout(() => { void searchPitches(pitchSearch); }, 300);
     return () => clearTimeout(timer);
   }, [pitchSearch, searchPitches]);
 

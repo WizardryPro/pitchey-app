@@ -1121,7 +1121,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     setIsWebSocketDisabled(false);
     localStorage.removeItem('pitchey_websocket_disabled');
     if (isAuthenticated && config.WEBSOCKET_ENABLED) {
-      setTimeout(connect, 1000); // Small delay before reconnecting
+      setTimeout(() => void connect(), 1000); // Small delay before reconnecting
     }
   }, [connect, isAuthenticated]);
 

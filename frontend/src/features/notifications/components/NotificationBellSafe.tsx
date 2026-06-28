@@ -36,7 +36,7 @@ function NotificationBellSafe({
     void loadUnreadCount();
 
     // Poll every 60 seconds for new notifications
-    const interval = setInterval(loadUnreadCount, 60000);
+    const interval = setInterval(() => void loadUnreadCount(), 60000);
     return () => clearInterval(interval);
   }, []);
 
