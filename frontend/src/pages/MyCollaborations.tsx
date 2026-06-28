@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, FolderOpen, CheckCircle, Clock, ArrowRight } from 'lucide-react';
+import { Users, FolderOpen, CheckCircle, ArrowRight } from 'lucide-react';
 import { CollaboratorService, type Collaboration } from '@/services/collaborator.service';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { getPortalPath } from '@/utils/navigation';

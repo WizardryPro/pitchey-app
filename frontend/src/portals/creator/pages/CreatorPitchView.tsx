@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams} from 'react-router-dom';
 import LogoLoader from '@/components/LogoLoader';
 import { 
   ArrowLeft, Eye, Heart, Share2, Edit, Trash2, BarChart3, 
@@ -28,7 +28,6 @@ import FormatDisplay from '@/components/FormatDisplay';
 import FeedbackDisplay from '@/components/feedback/FeedbackDisplay';
 import WhoViewedPanel from '@features/analytics/components/WhoViewedPanel';
 import MatchingInvestorsPanel from '@/components/MatchingInvestorsPanel';
-import FollowButton from '@features/browse/components/FollowButton';
 import InterestedCard from '@features/pitches/components/InterestedCard';
 import CollaborationWorkspace from '@features/pitches/components/CollaborationWorkspace';
 import { toast } from 'react-hot-toast';

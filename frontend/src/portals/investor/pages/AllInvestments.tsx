@@ -6,7 +6,7 @@ import {
   Building, Film, Users, Award, Clock, AlertCircle,
   CheckCircle, XCircle, PauseCircle, PlayCircle, RefreshCw
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
+import { Card, CardContent} from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
 import { investorApi } from '@features/deals/services/investor.service';
 

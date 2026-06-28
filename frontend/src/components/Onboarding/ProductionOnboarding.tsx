@@ -6,7 +6,6 @@ import { GuidedTour } from './GuidedTour';
 import { OnboardingWelcome } from './OnboardingWelcome';
 import { Card } from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
-import { Badge } from '@shared/components/ui/badge';
 import { Progress } from '@shared/components/ui/progress';
 import { PRODUCTION_ROUTES } from '../../config/navigation.routes';
 import type { TutorialStep } from '../../store/onboardingStore';

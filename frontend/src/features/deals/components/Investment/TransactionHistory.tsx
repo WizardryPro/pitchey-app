@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Calendar, DollarSign, TrendingUp, TrendingDown, Download, Search, Filter, Eye, ExternalLink } from 'lucide-react';
+import { Calendar, DollarSign, TrendingUp, TrendingDown, Download, Search, Eye} from 'lucide-react';
 import { investorApi } from '../../services/investor.service';
 
 interface Transaction {

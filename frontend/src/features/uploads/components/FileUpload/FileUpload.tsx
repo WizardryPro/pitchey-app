@@ -22,7 +22,7 @@ import {
   Maximize
 } from 'lucide-react';
 import { useToast } from '@shared/components/feedback/ToastProvider';
-import { uploadService, UploadResult, UploadProgress } from '../../services/upload.service';
+import { uploadService} from '../../services/upload.service';
 
 export interface MediaFile {
   id: string;

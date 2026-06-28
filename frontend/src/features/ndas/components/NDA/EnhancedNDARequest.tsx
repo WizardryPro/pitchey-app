@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Shield, Upload, FileText, AlertCircle, CheckCircle, User, Building2, DollarSign, Eye } from 'lucide-react';
+import { X, Upload, FileText, AlertCircle, CheckCircle, User, Building2, DollarSign, Eye } from 'lucide-react';
 import { ndaService } from '../../services/nda.service';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 

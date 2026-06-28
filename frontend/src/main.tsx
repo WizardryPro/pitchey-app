@@ -17,7 +17,6 @@ declare global {
 
 // ENSURE React is available globally before any other imports
 import * as React from 'react';
-import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 

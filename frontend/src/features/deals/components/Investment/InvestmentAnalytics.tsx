@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { TrendingUp, TrendingDown, PieChart, BarChart3, Calendar, Download, Filter } from 'lucide-react';
+import { TrendingUp, TrendingDown, PieChart, BarChart3, Download} from 'lucide-react';
 import { InvestmentService } from '../../services/investment.service';
 
 interface AnalyticsData {

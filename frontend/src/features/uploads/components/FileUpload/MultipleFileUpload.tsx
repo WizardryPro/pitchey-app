@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useMemo} from 'react';
 import { 
   Upload, 
   X, 
@@ -24,7 +24,7 @@ import {
   FolderPlus
 } from 'lucide-react';
 import { useToast } from '@shared/components/feedback/ToastProvider';
-import { uploadService, UploadResult, UploadProgress } from '../../services/upload.service';
+import { uploadService, UploadProgress } from '../../services/upload.service';
 
 export interface EnhancedMediaFile {
   id: string;

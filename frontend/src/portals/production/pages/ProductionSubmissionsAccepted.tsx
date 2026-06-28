@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
 import {
   FileText, Clock, Star, CheckCircle, XCircle, Archive,
   Filter, Search, Calendar, User, DollarSign, TrendingUp,
@@ -8,7 +7,7 @@ import {
   Award, Briefcase, Users, BarChart3
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@shared/components/ui/dialog';
-import { config, API_URL } from '@/config';
+import { API_URL } from '@/config';
 
 interface Submission {
   id: string;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { config, API_URL } from '../config';
+import { API_URL } from '../config';
 import ProfileHeader from '../components/portfolio/ProfileHeader';
 import AchievementsSection from '../components/portfolio/AchievementsSection';
 import WorksGrid from '../components/portfolio/WorksGrid';

@@ -5,7 +5,7 @@ import {
   TrendingUp, Download, Search,
   BarChart3, FileText, ChevronRight
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
+import { Card, CardContent} from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
 import { investorApi } from '@features/deals/services/investor.service';
 

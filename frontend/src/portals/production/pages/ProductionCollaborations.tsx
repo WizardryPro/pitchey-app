@@ -8,7 +8,6 @@ import {
   Handshake, Building, Award, TrendingUp, DollarSign
 } from 'lucide-react';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
-import { config } from '@/config';
 import { CollaborationService } from '@/services/collaboration.service';
 import CollaborationTimeline from '@/components/CollaborationTimeline';
 

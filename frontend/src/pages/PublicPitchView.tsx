@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { Eye, Heart, Share2, Tag, Film, Calendar, User, Shield, Lock, DollarSign, Briefcase, LogIn, Building2, Wallet, Bookmark, UserPlus, ArrowLeft } from 'lucide-react';
+import { Eye, Heart, Share2, Tag, Film, Calendar, User, Shield, Lock, DollarSign, Briefcase, LogIn, Building2, Wallet, ArrowLeft } from 'lucide-react';
 import { pitchAPI } from '../lib/api';
 import type { Pitch } from '../lib/api';
 import { useBetterAuthStore } from '../store/betterAuthStore';

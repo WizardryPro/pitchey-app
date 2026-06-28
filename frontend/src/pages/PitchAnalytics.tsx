@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Eye, Heart, MessageSquare, Share2, TrendingUp, Calendar, Users, Download } from 'lucide-react';
+import { Eye, Heart, MessageSquare, Share2, TrendingUp, Download } from 'lucide-react';
 import { analyticsService, type PitchAnalytics } from '@features/analytics/services/analytics.service';
 import { pitchService } from '@features/pitches/services/pitch.service';
 import { usePortalTheme } from '@shared/hooks/usePortalTheme';

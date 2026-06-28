@@ -6,7 +6,7 @@ import {
   Search, Download, Eye, Send, MessageSquare,
   Briefcase, Users, Building, TrendingUp, Timer
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
+import { Card, CardContent} from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { investorApi } from '@features/deals/services/investor.service';

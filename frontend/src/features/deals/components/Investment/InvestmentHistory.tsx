@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Clock, DollarSign, TrendingUp, TrendingDown, Eye, Calendar, ChevronRight, Filter } from 'lucide-react';
+import React, { useState} from 'react';
+import { Clock, DollarSign, TrendingUp, TrendingDown, Calendar, ChevronRight} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface Investment {

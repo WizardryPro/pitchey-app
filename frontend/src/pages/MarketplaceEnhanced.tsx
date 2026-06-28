@@ -14,7 +14,7 @@ import { configService } from '../services/config.service';
 
 import FormatDisplay from '../components/FormatDisplay';
 import { ScoreMeter } from '../components/feedback/ScoreMeter';
-import HeatBadge, { getHeatScore, getHeatLevel } from '../components/HeatBadge';
+import HeatBadge, { getHeatScore} from '../components/HeatBadge';
 import VerificationBadge from '../components/VerificationBadge';
 import HumanMadeBadge from '../components/HumanMadeBadge';
 import GenrePlaceholder from '@shared/components/GenrePlaceholder';

@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { config } from '../config';
 
 // In production, use '' (empty string) for same-origin requests via Pages Functions proxy
 const isDev = import.meta.env.MODE === 'development';

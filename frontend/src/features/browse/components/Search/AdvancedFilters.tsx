@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Filter, X, ChevronDown, ChevronUp, Calendar, DollarSign, Users, Shield } from 'lucide-react';
+import { Filter, ChevronDown, ChevronUp, Calendar, DollarSign, Users, Shield } from 'lucide-react';
 
 interface SearchFilters {
   query?: string;

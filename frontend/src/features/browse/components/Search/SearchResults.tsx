@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, Heart, Shield, Star, MapPin, Calendar, DollarSign, Play, FileText, Image, Users } from 'lucide-react';
+import { Eye, Heart, Shield, Star, MapPin, Calendar, Play, FileText, Image} from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 
 interface SearchResult {

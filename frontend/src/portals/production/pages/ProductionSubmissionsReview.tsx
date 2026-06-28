@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@shared/components/ui/dialog';
 import toast from 'react-hot-toast';
-import { config, API_URL } from '@/config';
+import { API_URL } from '@/config';
 
 interface Submission {
   id: string;

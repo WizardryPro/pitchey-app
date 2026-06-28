@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { Card } from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
