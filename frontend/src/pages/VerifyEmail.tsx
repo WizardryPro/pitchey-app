@@ -35,7 +35,7 @@ export default function VerifyEmail() {
       setVerified(true);
       // Redirect to login after 3 seconds
       setTimeout(() => {
-        navigate('/login');
+        void navigate('/login');
       }, 3000);
     } catch (error: any) {
       setError(error.response?.data?.error || 'Failed to verify email. The link may be expired.');
@@ -53,7 +53,7 @@ export default function VerifyEmail() {
       const email = localStorage.getItem('pendingVerificationEmail');
       if (!email) {
         setError('Please log in to resend verification email');
-        navigate('/login');
+        void navigate('/login');
         return;
       }
       

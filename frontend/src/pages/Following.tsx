@@ -776,7 +776,7 @@ const Following: React.FC = () => {
             <div className="flex items-center gap-4">
               <button 
                 onClick={() => {
-                  navigate(userType ? `/${getPortalPath(userType)}/dashboard` : '/');
+                  void navigate(userType ? `/${getPortalPath(userType)}/dashboard` : '/');
                 }}
                 className="p-2 hover:bg-gray-100 rounded-lg transition"
               >

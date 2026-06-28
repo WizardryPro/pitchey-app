@@ -101,7 +101,7 @@ export default function WatcherLibrary() {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      navigate('/login/watcher');
+      void navigate('/login/watcher');
       return;
     }
     void fetchLibrary();

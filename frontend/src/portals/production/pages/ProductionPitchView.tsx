@@ -414,7 +414,7 @@ const ProductionPitchView: React.FC = () => {
   };
 
   const handleContactCreator = () => {
-    navigate(`/production/messages?recipient=${pitch?.userId}&pitch=${id}`);
+    void navigate(`/production/messages?recipient=${pitch?.userId}&pitch=${id}`);
   };
 
   // Propose a pitch-scoped collaboration to the creator. On accept (their side)

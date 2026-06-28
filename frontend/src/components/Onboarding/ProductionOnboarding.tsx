@@ -340,7 +340,7 @@ const CompanySetupStep: React.FC<{
         <Button 
           className="flex-1" 
           onClick={() => {
-            navigate('/production/settings/profile');
+            void navigate('/production/settings/profile');
             onComplete();
           }}
         >
@@ -409,7 +409,7 @@ const SubmissionProcessStep: React.FC<{
         <Button 
           className="flex-1" 
           onClick={() => {
-            navigate(PRODUCTION_ROUTES.activity);
+            void navigate(PRODUCTION_ROUTES.activity);
             onComplete();
           }}
         >
@@ -564,7 +564,7 @@ const PipelineManagementStep: React.FC<{
         <Button 
           variant="outline" 
           onClick={() => {
-            navigate('/production/dashboard');
+            void navigate('/production/dashboard');
             onComplete();
           }}
         >

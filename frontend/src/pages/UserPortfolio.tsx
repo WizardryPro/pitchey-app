@@ -148,7 +148,7 @@ const UserPortfolio: React.FC = () => {
   };
 
   const handleGoBack = () => {
-    navigate(-1);
+    void navigate(-1);
   };
 
   const handleBackToDashboard = () => {
@@ -156,13 +156,13 @@ const UserPortfolio: React.FC = () => {
     // Navigate to appropriate dashboard based on user type
     switch (userType) {
       case 'production':
-        navigate('/production/dashboard');
+        void navigate('/production/dashboard');
         break;
       case 'investor':
-        navigate('/investor/dashboard');
+        void navigate('/investor/dashboard');
         break;
       default:
-        navigate('/creator/dashboard');
+        void navigate('/creator/dashboard');
     }
   };
 

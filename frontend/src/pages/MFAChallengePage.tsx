@@ -27,7 +27,7 @@ export default function MFAChallengePage() {
 
   useEffect(() => {
     if (!challengeId) {
-      navigate('/login/' + getPortalPath(userType), { replace: true });
+      void navigate('/login/' + getPortalPath(userType), { replace: true });
     }
     inputRef.current?.focus();
   }, [challengeId, navigate, userType]);
@@ -63,7 +63,7 @@ export default function MFAChallengePage() {
 
       toast.success('Verified successfully');
       const dest = resolvePostLoginRedirect(fromParam, `/${getPortalPath(user.userType)}/dashboard`);
-      navigate(dest, { replace: true });
+      void navigate(dest, { replace: true });
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
       setError(e.message || 'Verification failed');

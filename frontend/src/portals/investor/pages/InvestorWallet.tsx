@@ -283,7 +283,7 @@ const InvestorWallet = () => {
       wsRef.current.close();
     }
     logout();
-    navigate('/');
+    void navigate('/');
   };
 
   const handleDeposit = () => {

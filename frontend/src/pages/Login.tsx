@@ -187,7 +187,7 @@ export default function Login() {
                     key={portal.id}
                     onClick={() => {
                       if (portal.route) {
-                        navigate(portal.route, isSafeReturnPath(rawFrom) ? { state: { from: rawFrom } } : undefined);
+                        void navigate(portal.route, isSafeReturnPath(rawFrom) ? { state: { from: rawFrom } } : undefined);
                       } else {
                         setSelectedPortal(portal.id as 'creator' | 'investor' | 'production');
                       }

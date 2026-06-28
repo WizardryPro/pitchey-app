@@ -43,7 +43,7 @@ function NotificationBellSafe({
   const handleBellClick = () => {
     try {
       setIsAnimating(true);
-      navigate('/notifications');
+      void navigate('/notifications');
       setTimeout(() => setIsAnimating(false), 300);
     } catch (error) {
       console.warn('NotificationBell: Navigation error:', error);

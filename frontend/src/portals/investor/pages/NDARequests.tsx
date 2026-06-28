@@ -80,7 +80,7 @@ export default function NDARequests() {
   // Redirect to login if not authenticated
   useEffect(() => {
     if (sessionChecked && !isAuthenticated) {
-      navigate('/login/investor');
+      void navigate('/login/investor');
     }
   }, [sessionChecked, isAuthenticated, navigate]);
 
@@ -155,7 +155,7 @@ export default function NDARequests() {
   // View NDA — navigate to pitch detail
   const handleViewNDA = (request: NDARequest) => {
     const targetId = request.pitchId || request.id;
-    navigate(`/investor/pitch/${targetId}`);
+    void navigate(`/investor/pitch/${targetId}`);
   };
 
   // Download NDA document
@@ -212,7 +212,7 @@ export default function NDARequests() {
   // Access protected content — navigate to pitch
   const handleAccessContent = (request: NDARequest) => {
     const targetId = request.pitchId || request.id;
-    navigate(`/investor/pitch/${targetId}`);
+    void navigate(`/investor/pitch/${targetId}`);
   };
 
   const filteredRequests = ndaRequests

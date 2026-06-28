@@ -199,7 +199,7 @@ const CreatorProfile = () => {
   };
 
   const handleContactCreator = () => {
-    navigate(`/messages?recipient=${creator?.id}`);
+    void navigate(`/messages?recipient=${creator?.id}`);
   };
 
   const handleShareProfile = () => {

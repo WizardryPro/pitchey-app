@@ -28,7 +28,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 // ── The baseline. Lower it (never raise it) as frontend lint errors are fixed. ──
-const BASELINE = 8371;
+const BASELINE = 8283;
 // 2026-06-27: created at the measured floor (8908 errors / 184 warnings). Top
 // rules: no-unsafe-member-access, no-unsafe-assignment, no-explicit-any,
 // no-unused-vars, no-misused-promises. The gate blocks any NEW error.
@@ -46,6 +46,10 @@ const BASELINE = 8371;
 // investment.service (Raw* shapes + response generics; fixed investmentDate Date→
 // string drift), pitch.service (added missing RawPitchData fields + raw response
 // arrays). Same input-typing/loose-return pattern; zero cascade, full suite green.
+// 2026-06-28: lowered 8371 -> 8283 (-88). C1a: voided bare `navigate(...)` floating
+// promises (React Router v6 navigate returns a Promise) across 53 files. `void` is
+// behavior-preserving — the promise was already floating; you never await navigation
+// in a handler. Start of the promise-handling (C1) hardening workstream.
 
 const LIST = process.argv.includes('--list');
 

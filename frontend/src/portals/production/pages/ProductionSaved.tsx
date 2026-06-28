@@ -365,7 +365,7 @@ export default function ProductionSaved() {
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/production/messages?pitch=${pitch.id}`);
+                          void navigate(`/production/messages?pitch=${pitch.id}`);
                         }}
                       >
                         <MessageSquare className="w-4 h-4" />
@@ -375,7 +375,7 @@ export default function ProductionSaved() {
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/production/pitch/${pitch.id}`);
+                          void navigate(`/production/pitch/${pitch.id}`);
                         }}
                       >
                         <MoreVertical className="w-4 h-4" />

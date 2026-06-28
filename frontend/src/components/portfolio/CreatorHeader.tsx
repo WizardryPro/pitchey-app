@@ -50,7 +50,7 @@ const CreatorHeader: React.FC<CreatorHeaderProps> = ({ creator, isOwnProfile = f
   };
 
   const handleEditProfile = () => {
-    navigate('/profile');
+    void navigate('/profile');
   };
   return (
     <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">

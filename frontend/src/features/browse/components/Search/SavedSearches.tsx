@@ -62,7 +62,7 @@ export const SavedSearches: React.FC<SavedSearchesProps> = ({
     if (search.search_query) params.set('mandate', search.search_query);
     if (genres.length) params.set('genres', genres.join(','));
     if (fmt.length) params.set('formats', fmt.join(','));
-    navigate(`/opportunities?${params.toString()}`);
+    void navigate(`/opportunities?${params.toString()}`);
   };
 
   useEffect(() => {

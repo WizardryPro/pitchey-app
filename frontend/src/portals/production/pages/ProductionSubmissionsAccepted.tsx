@@ -109,11 +109,11 @@ export default function ProductionSubmissionsAccepted() {
   const genres = ['all', ...new Set(submissions.map(s => s.genre))];
 
   const handleViewProject = (submissionId: string) => {
-    navigate(`/production/projects/${submissionId}`);
+    void navigate(`/production/projects/${submissionId}`);
   };
 
   const handleManageProduction = (submissionId: string) => {
-    navigate(`/production/projects/${submissionId}`);
+    void navigate(`/production/projects/${submissionId}`);
   };
 
   const handleViewContract = (submissionId: string) => {

@@ -44,7 +44,7 @@ export default function CreatorSlates() {
       setNewDescription('');
       setShowCreate(false);
       toast.success(`Slate "${slate.title}" created`);
-      navigate(`/creator/slates/${slate.id}`);
+      void navigate(`/creator/slates/${slate.id}`);
     } else {
       toast.error('Couldn\'t create the slate. Please try again.');
     }

@@ -42,7 +42,7 @@ export default function Contact() {
       }
       setSubmitted(true);
       setTimeout(() => {
-        navigate('/');
+        void navigate('/');
       }, 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send message. Please try again.');

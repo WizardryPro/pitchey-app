@@ -332,7 +332,7 @@ const InvestorProfileStep: React.FC<{
         <Button 
           className="flex-1" 
           onClick={() => {
-            navigate(INVESTOR_ROUTES.settings);
+            void navigate(INVESTOR_ROUTES.settings);
             onComplete();
           }}
         >
@@ -392,7 +392,7 @@ const BrowsePitchesStep: React.FC<{
         <Button 
           className="flex-1" 
           onClick={() => {
-            navigate(INVESTOR_ROUTES.discover);
+            void navigate(INVESTOR_ROUTES.discover);
             onComplete();
           }}
         >
@@ -532,7 +532,7 @@ const PortfolioManagementStep: React.FC<{
         <Button 
           variant="outline" 
           onClick={() => {
-            navigate(INVESTOR_ROUTES.portfolio);
+            void navigate(INVESTOR_ROUTES.portfolio);
             onComplete();
           }}
         >

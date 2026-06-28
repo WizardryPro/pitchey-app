@@ -124,7 +124,7 @@ const ROIAnalysis = () => {
   const handleLogout = async () => {
     try {
       await logout();
-      navigate('/login/investor');
+      void navigate('/login/investor');
     } catch (error) {
       console.error('Logout failed:', error);
     }

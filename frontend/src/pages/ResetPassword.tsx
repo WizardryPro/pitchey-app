@@ -77,7 +77,7 @@ export default function ResetPassword() {
       setSuccess(true);
       // Redirect to login after 3 seconds
       setTimeout(() => {
-        navigate('/login');
+        void navigate('/login');
       }, 3000);
     } catch (error: any) {
       setError(error.response?.data?.error || 'Failed to reset password. The link may be expired.');

@@ -70,7 +70,7 @@ export function EnhancedNavigationShadcn({
   }, [userType]);
 
   const handleNavigation = (path: string) => {
-    navigate(path);
+    void navigate(path);
     setMobileMenuOpen(false); // Close mobile menu after navigation
   };
 

@@ -528,7 +528,7 @@ export default function CreatePitch() {
         }
 
         // PHASE 4: Navigate only after everything completes
-        navigate(isProduction ? '/production/pitches' : '/creator/pitches');
+        void navigate(isProduction ? '/production/pitches' : '/creator/pitches');
       } catch (err: any) {
         console.error('Error creating pitch:', err);
         const errorMessage = err.message || ERROR_MESSAGES?.UNEXPECTED_ERROR || 'An unexpected error occurred';

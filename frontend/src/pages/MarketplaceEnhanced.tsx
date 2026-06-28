@@ -209,7 +209,7 @@ export default function MarketplaceEnhanced() {
   const shouldRedirectIntoPortal = !isInsidePortal && isAuthenticated && inPortalBrowsePath !== '/marketplace';
   useEffect(() => {
     if (shouldRedirectIntoPortal) {
-      navigate(`${inPortalBrowsePath}${location.search}`, { replace: true });
+      void navigate(`${inPortalBrowsePath}${location.search}`, { replace: true });
     }
   }, [shouldRedirectIntoPortal, inPortalBrowsePath, location.search, navigate]);
 

@@ -71,7 +71,7 @@ const FollowButton: React.FC<FollowButtonProps> = ({
 
   const handleFollow = useCallback(async () => {
     if (!isAuthenticated) {
-      navigate('/login');
+      void navigate('/login');
       return;
     }
 
