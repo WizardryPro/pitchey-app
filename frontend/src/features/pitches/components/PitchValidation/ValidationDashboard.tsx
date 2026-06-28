@@ -73,7 +73,7 @@ export const ValidationDashboard: React.FC<ValidationDashboardProps> = ({
   const handleAnalyzeClick = () => {
     onAnalyzeClick?.();
     // Refresh data after analysis
-    setTimeout(fetchDashboardData, 2000);
+    setTimeout(() => void fetchDashboardData(), 2000);
   };
 
   if (loading) {

@@ -225,7 +225,7 @@ export default function NDADashboard({ userId, userRole }: NDADashboardProps) {
           title: 'Download Reports',
           description: 'Export NDA data and analytics',
           icon: Download,
-          action: () => handleDownloadReports(),
+          action: () => { void handleDownloadReports(); },
           color: 'bg-purple-600 hover:bg-purple-700'
         }
       );

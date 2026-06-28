@@ -28,7 +28,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 // ── The baseline. Lower it (never raise it) as frontend lint errors are fixed. ──
-const BASELINE = 7408;
+const BASELINE = 7393;
 // 2026-06-27: created at the measured floor (8908 errors / 184 warnings). Top
 // rules: no-unsafe-member-access, no-unsafe-assignment, no-explicit-any,
 // no-unused-vars, no-misused-promises. The gate blocks any NEW error.
@@ -60,6 +60,12 @@ const BASELINE = 7408;
 // floating promises — voided .then() chains + IIFEs (prepend), and inserted `void`
 // before inner calls in inline effects/handlers/if-blocks. no-floating-promises is
 // now ZERO across the codebase (all 407 of the rule's hits resolved over C1a/b).
+// 2026-06-28: lowered 7408 -> 7393 (-15). C1c-residual-1: wrapped 15 misused-promises
+// — timers with async fn-refs (setInterval(fn)→setInterval(()=>void fn())) + object/
+// arrow handlers (onClick:()=>nav()→()=>{void nav()}). 11 subtle ones deferred:
+// inline setInterval(async()=>) ×4, new Promise(async executor), WS context-value ×2,
+// test mocks ×4. (Pre-existing flaky CharacterManagement scrollIntoView timer test is
+// unrelated — not in this diff, passes in isolation.)
 
 const LIST = process.argv.includes('--list');
 

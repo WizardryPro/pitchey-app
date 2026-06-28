@@ -750,7 +750,7 @@ class ChunkedUploadService {
       .finally(() => {
         this.activeUploads.delete(sessionId);
         // Continue processing queue
-        setTimeout(() => this.processQueue(), 100);
+        setTimeout(() => { void this.processQueue(); }, 100);
       });
 
       this.activeUploads.set(sessionId, uploadPromise);

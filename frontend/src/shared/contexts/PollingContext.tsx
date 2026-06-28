@@ -120,7 +120,7 @@ export const PollingProvider: React.FC<PollingProviderProps> = ({
 
       // Schedule next poll
       if (isPollingRef.current) {
-        pollTimeoutRef.current = setTimeout(poll, pollingInterval);
+        pollTimeoutRef.current = setTimeout(() => void poll(), pollingInterval);
       }
     };
 
@@ -293,7 +293,7 @@ export const useMessagePolling = (conversationId?: string) => {
     void pollMessages(); // Initial poll
 
     // Set up interval (5 seconds for active conversation)
-    intervalRef.current = setInterval(pollMessages, 5000);
+    intervalRef.current = setInterval(() => void pollMessages(), 5000);
 
     return () => {
       setIsPolling(false);

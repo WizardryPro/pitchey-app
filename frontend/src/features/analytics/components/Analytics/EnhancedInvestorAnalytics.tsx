@@ -241,7 +241,7 @@ export const EnhancedInvestorAnalytics: React.FC<InvestorAnalyticsProps> = ({
     // Set up auto-refresh every 5 minutes if enabled
     let interval: NodeJS.Timeout;
     if (autoRefresh) {
-      interval = setInterval(fetchAnalyticsData, 5 * 60 * 1000);
+      interval = setInterval(() => void fetchAnalyticsData(), 5 * 60 * 1000);
     }
 
     return () => {

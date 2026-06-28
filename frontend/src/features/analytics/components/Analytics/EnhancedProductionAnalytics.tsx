@@ -76,7 +76,7 @@ export const EnhancedProductionAnalytics: React.FC<PitchEvaluationProps> = (prop
     void fetchChartData();
     let interval: NodeJS.Timeout;
     if (autoRefresh) {
-      interval = setInterval(fetchChartData, 5 * 60 * 1000);
+      interval = setInterval(() => void fetchChartData(), 5 * 60 * 1000);
     }
     return () => { if (interval) clearInterval(interval); };
   }, [timeRange, autoRefresh, fetchChartData]);

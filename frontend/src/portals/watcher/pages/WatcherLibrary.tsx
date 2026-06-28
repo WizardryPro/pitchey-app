@@ -194,7 +194,7 @@ export default function WatcherLibrary() {
             description="Browse the marketplace and save pitches you want to revisit."
             action={{
               label: 'Browse Marketplace',
-              onClick: () => navigate('/watcher/browse'),
+              onClick: () => { void navigate('/watcher/browse'); },
             }}
           />
         ) : (
@@ -210,7 +210,7 @@ export default function WatcherLibrary() {
             description="Open a pitch and tap Like to add it here."
             action={{
               label: 'Browse Marketplace',
-              onClick: () => navigate('/watcher/browse'),
+              onClick: () => { void navigate('/watcher/browse'); },
             }}
           />
         ) : (
@@ -226,7 +226,7 @@ export default function WatcherLibrary() {
             description="Pitches you view will show up here for easy access."
             action={{
               label: 'Discover Pitches',
-              onClick: () => navigate('/watcher/browse'),
+              onClick: () => { void navigate('/watcher/browse'); },
             }}
           />
         ) : (
@@ -242,7 +242,7 @@ export default function WatcherLibrary() {
             description="Follow creators, investors, and production companies to see their latest activity."
             action={{
               label: 'Discover Creators',
-              onClick: () => navigate('/watcher/browse'),
+              onClick: () => { void navigate('/watcher/browse'); },
             }}
           />
         ) : (
