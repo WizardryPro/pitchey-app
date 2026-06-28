@@ -35,7 +35,7 @@ const ROIAnalysis = () => {
   const [categoryMetrics, setCategoryMetrics] = useState<ROIMetric[]>([]);
 
   useEffect(() => {
-    loadROIData();
+    void loadROIData();
   }, [timeRange]);
 
   const [error, setError] = useState<string | null>(null);

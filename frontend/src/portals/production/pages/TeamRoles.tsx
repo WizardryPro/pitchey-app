@@ -90,7 +90,7 @@ export default function TeamRoles() {
 
   useEffect(() => {
     if (teamId) {
-      fetchRolesAndMembers();
+      void fetchRolesAndMembers();
     } else {
       // No team yet — stop loading and show empty state
       setLoading(false);
@@ -208,7 +208,7 @@ export default function TeamRoles() {
       console.error('Failed to save role:', e);
       setError('Failed to save role: ' + e.message);
       // Rollback
-      fetchRolesAndMembers();
+      void fetchRolesAndMembers();
     }
   };
 

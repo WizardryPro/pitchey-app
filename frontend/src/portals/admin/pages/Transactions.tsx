@@ -54,7 +54,7 @@ const Transactions: React.FC = () => {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
-    loadTransactions();
+    void loadTransactions();
   }, [filters]);
 
   const loadTransactions = async () => {

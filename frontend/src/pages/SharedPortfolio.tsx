@@ -55,7 +55,7 @@ export default function SharedPortfolio() {
 
   useEffect(() => {
     if (!token) return;
-    fetchPortfolio(token);
+    void fetchPortfolio(token);
   }, [token]);
 
   async function fetchPortfolio(t: string) {

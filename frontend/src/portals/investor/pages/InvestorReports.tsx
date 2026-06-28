@@ -40,7 +40,7 @@ const InvestorReports = () => {
         setLoading(false);
       }
     };
-    fetchReports();
+    void fetchReports();
   }, []);
 
   const filteredReports = reports.filter(report => {

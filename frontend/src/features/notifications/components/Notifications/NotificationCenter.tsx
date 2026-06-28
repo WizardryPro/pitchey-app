@@ -135,7 +135,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
 
   // Load notifications on mount and filter change
   useEffect(() => {
-    loadNotifications(true);
+    void loadNotifications(true);
   }, [filter]);
 
   // Real-time notifications via WebSocket

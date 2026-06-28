@@ -49,7 +49,7 @@ export default function Billing() {
   const userType = (user?.userType || 'creator') as 'creator' | 'investor' | 'production' | 'watcher' | 'viewer';
 
   useEffect(() => {
-    fetchBillingData();
+    void fetchBillingData();
   }, []);
 
   useEffect(() => {

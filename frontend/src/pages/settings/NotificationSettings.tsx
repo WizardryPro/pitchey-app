@@ -93,7 +93,7 @@ export default function NotificationSettings() {
         setInitialLoading(false);
       }
     };
-    loadPreferences();
+    void loadPreferences();
   }, []);
 
   const updatePreference = (categoryId: string, channel: keyof Omit<NotificationPreference, 'id' | 'title' | 'description'>, value: boolean) => {

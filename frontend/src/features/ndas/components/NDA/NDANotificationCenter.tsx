@@ -222,7 +222,7 @@ export default function NDANotificationCenter({
   }, [userId, error]);
 
   useEffect(() => {
-    loadNotifications();
+    void loadNotifications();
 
     // Refresh every 30 seconds
     const interval = setInterval(loadNotifications, 30000);
@@ -296,7 +296,7 @@ export default function NDANotificationCenter({
   const handleNotificationClick = (notification: NDANotification) => {
     // Mark as read if not already read
     if (!notification.isRead) {
-      handleMarkAsRead([notification.id]);
+      void handleMarkAsRead([notification.id]);
     }
 
     // Handle notification-specific actions
@@ -311,9 +311,9 @@ export default function NDANotificationCenter({
     const selectedNotifications = Array.from(selectedIds);
 
     if (action === 'read') {
-      handleMarkAsRead(selectedNotifications);
+      void handleMarkAsRead(selectedNotifications);
     } else {
-      handleDelete(selectedNotifications);
+      void handleDelete(selectedNotifications);
     }
 
     setSelectedIds(new Set());
@@ -549,7 +549,7 @@ export default function NDANotificationCenter({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDelete([notification.id]);
+                              void handleDelete([notification.id]);
                             }}
                             className="p-1 text-gray-400 hover:text-red-600"
                             title="Delete"

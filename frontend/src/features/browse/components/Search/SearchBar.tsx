@@ -61,7 +61,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     };
 
     if (showHistory) {
-      loadSearchHistory();
+      void loadSearchHistory();
     }
   }, [showHistory]);
 
@@ -98,7 +98,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
       }
 
       debounceRef.current = setTimeout(() => {
-        fetchSuggestions(newValue);
+        void fetchSuggestions(newValue);
       }, 300);
     }
   };
@@ -107,7 +107,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   const handleFocus = () => {
     setIsOpen(true);
     if (value.length >= 2 && showSuggestions) {
-      fetchSuggestions(value);
+      void fetchSuggestions(value);
     }
   };
 

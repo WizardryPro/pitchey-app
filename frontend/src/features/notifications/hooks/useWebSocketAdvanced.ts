@@ -339,7 +339,7 @@ export function useWebSocketAdvanced(options: UseWebSocketAdvancedOptions = {}) 
               console.warn('Heartbeat timeout - connection appears dead');
               disconnect();
               if (reconnectionConfig.enabled) {
-                connect();
+                void connect();
               }
             }
           }, heartbeatConfig.timeout);
@@ -1054,7 +1054,7 @@ export function useWebSocketAdvanced(options: UseWebSocketAdvancedOptions = {}) 
               },
             });
             opts.onReconnect(attempt);
-            connect();
+            void connect();
           }, delay);
         } else if (isAuthFailure) {
           // Authentication failed - don't retry, provide clear feedback
@@ -1184,7 +1184,7 @@ export function useWebSocketAdvanced(options: UseWebSocketAdvancedOptions = {}) 
       
       // Try to reconnect if not already connecting
       if (!connectionStatus.connecting && !connectionStatus.reconnecting) {
-        connect();
+        void connect();
       }
       
       return false;
@@ -1213,7 +1213,7 @@ export function useWebSocketAdvanced(options: UseWebSocketAdvancedOptions = {}) 
       const delay = isDev ? 100 : 0;
       
       const timer = setTimeout(() => {
-        connect();
+        void connect();
       }, delay);
       
       return () => {
@@ -1266,7 +1266,7 @@ export function useWebSocketAdvanced(options: UseWebSocketAdvancedOptions = {}) 
     const interval = setInterval(() => {
       const circuitState = checkCircuitBreakerState();
       if (circuitState === 'half-open' && !connectionStatus.connected && !connectionStatus.connecting) {
-        connect();
+        void connect();
       }
     }, 30000); // Check every 30 seconds
     
@@ -1313,7 +1313,7 @@ export function useWebSocketAdvanced(options: UseWebSocketAdvancedOptions = {}) 
         disconnect();
       }
       reconnectAttemptRef.current = 0; // Reset attempt counter
-      connect();
+      void connect();
     }, [connect, disconnect]),
     
     // Configuration access

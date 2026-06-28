@@ -85,7 +85,7 @@ export default function InvestorBrowse() {
         console.error('Error loading config:', error);
       }
     };
-    loadConfig();
+    void loadConfig();
   }, []);
 
   const fetchPitches = useCallback(async (tab: InvestorTabType) => {
@@ -177,7 +177,7 @@ export default function InvestorBrowse() {
 
   // Fetch when tab or filters change
   useEffect(() => {
-    fetchPitches(activeTab);
+    void fetchPitches(activeTab);
   }, [activeTab, filters, fetchPitches]);
 
   // Derive filtered + sorted pitches from current tab's data using debounced search

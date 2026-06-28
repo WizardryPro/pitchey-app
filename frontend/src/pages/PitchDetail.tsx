@@ -104,7 +104,7 @@ export default function PitchDetail() {
   
   useEffect(() => {
     if (id) {
-      fetchPitch(parseInt(id));
+      void fetchPitch(parseInt(id));
     }
   }, [id, isAuthenticated]);
 
@@ -243,7 +243,7 @@ export default function PitchDetail() {
   const handleLike = async () => {
     if (!pitch) return;
     if (!isAuthenticated) {
-      goToLogin();
+      void goToLogin();
       return;
     }
     const next = !isLiked;
@@ -298,7 +298,7 @@ export default function PitchDetail() {
     if (id) {
       // Add a small delay to ensure the backend has processed the NDA
       setTimeout(() => {
-        fetchPitch(parseInt(id));
+        void fetchPitch(parseInt(id));
       }, 500);
     }
   };
@@ -388,7 +388,7 @@ export default function PitchDetail() {
                 if (id) {
                   setError(null);
                   setLoading(true);
-                  fetchPitch(parseInt(id));
+                  void fetchPitch(parseInt(id));
                 }
               }}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"

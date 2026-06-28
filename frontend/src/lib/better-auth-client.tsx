@@ -274,7 +274,7 @@ export function withBetterAuth<T extends object>(
         }
       };
 
-      checkAuth();
+      void checkAuth();
     }, []);
 
     if (isLoading) {

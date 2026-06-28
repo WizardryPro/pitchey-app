@@ -47,7 +47,7 @@ const NDAManagement: React.FC<NDAManagementProps> = ({ userType, userId }) => {
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'expired'>('all');
 
   useEffect(() => {
-    fetchNDARequests();
+    void fetchNDARequests();
   }, [activeTab, filter]);
 
   const fetchNDARequests = async () => {
@@ -100,7 +100,7 @@ const NDAManagement: React.FC<NDAManagementProps> = ({ userType, userId }) => {
         alert(message);
         
         // Refresh requests
-        fetchNDARequests();
+        void fetchNDARequests();
         
         // Close modal
         setApprovalModal(false);

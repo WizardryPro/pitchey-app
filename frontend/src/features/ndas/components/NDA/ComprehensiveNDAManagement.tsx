@@ -98,7 +98,7 @@ export default function ComprehensiveNDAManagement({
   useEffect(() => {
     // Only fetch NDA data if we have a valid userId AND user is authenticated
     if (isAuthenticated && userId && userId > 0) {
-      fetchAllNDAData();
+      void fetchAllNDAData();
     } else {
       // Clear data if not authenticated
       setIncomingNDAs([]);

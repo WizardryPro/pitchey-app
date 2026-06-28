@@ -39,7 +39,7 @@ const CompletedProjects = () => {
   const [sortBy, setSortBy] = useState<'recent' | 'roi' | 'returns'>('recent');
 
   useEffect(() => {
-    loadCompletedProjects();
+    void loadCompletedProjects();
   }, []);
 
   const loadCompletedProjects = async () => {

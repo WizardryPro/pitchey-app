@@ -22,7 +22,7 @@ export default function Layout({ children }: LayoutProps) {
   useRealTimeNotifications();
 
   const handleLogout = () => {
-    logout();
+    void logout();
     void navigate('/login');
   };
 

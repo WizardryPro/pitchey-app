@@ -88,7 +88,7 @@ function NDAAnalyticsPanel() {
         setAnalyticsLoading(false);
       }
     };
-    loadAnalytics();
+    void loadAnalytics();
   }, [timeframe]);
 
   if (analyticsLoading) {
@@ -170,7 +170,7 @@ export default function NDADashboard({ userId, userRole }: NDADashboardProps) {
   const { success, error } = useToast();
 
   useEffect(() => {
-    loadDashboardData();
+    void loadDashboardData();
   }, [userId, timeframe, refreshKey]);
 
   const loadDashboardData = async () => {

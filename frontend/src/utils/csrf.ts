@@ -182,23 +182,23 @@ export class CSRFTokenManager {
   
   start(): void {
     // Initial check
-    this.checkAndRefreshToken();
+    void this.checkAndRefreshToken();
     
     // Set up periodic refresh
     this.refreshInterval = window.setInterval(() => {
-      this.checkAndRefreshToken();
+      void this.checkAndRefreshToken();
     }, this.REFRESH_INTERVAL);
     
     // Refresh on visibility change
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) {
-        this.checkAndRefreshToken();
+        void this.checkAndRefreshToken();
       }
     });
     
     // Refresh on online event
     window.addEventListener('online', () => {
-      this.checkAndRefreshToken();
+      void this.checkAndRefreshToken();
     });
   }
   

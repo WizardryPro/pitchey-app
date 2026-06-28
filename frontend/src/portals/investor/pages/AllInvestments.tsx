@@ -59,7 +59,7 @@ const AllInvestments = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
 
   useEffect(() => {
-    loadInvestments();
+    void loadInvestments();
   }, []);
 
   useEffect(() => {

@@ -56,7 +56,7 @@ export default function Homepage() {
   useEffect(() => {
     // Add delay to prevent rate limiting on initial page load
     const timer = setTimeout(() => {
-      fetchPitches();
+      void fetchPitches();
     }, 1500); // Stagger after auth and notification delays
 
     return () => clearTimeout(timer);

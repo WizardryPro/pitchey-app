@@ -71,7 +71,7 @@ export default function ProductionSubmissionsAccepted() {
       }
     };
 
-    fetchAcceptedSubmissions();
+    void fetchAcceptedSubmissions();
   }, []);
 
   const filteredSubmissions = submissions.filter(submission => {

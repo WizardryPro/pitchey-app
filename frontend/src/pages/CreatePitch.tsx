@@ -221,16 +221,16 @@ export default function CreatePitch() {
         // Already using sync fallback values
       }
     };
-    loadConfig();
+    void loadConfig();
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    handleFieldChange(name as keyof PitchFormData)(value);
+    void handleFieldChange(name as keyof PitchFormData)(value);
   };
   
   const handleBlur = (fieldName: string) => {
-    handleFieldBlur(fieldName as keyof PitchFormData)();
+    void handleFieldBlur(fieldName as keyof PitchFormData)();
   };
 
   const handleFormatCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -243,7 +243,7 @@ export default function CreatePitch() {
     });
     
     // Validate the category field
-    handleFieldChange('formatCategory')(category);
+    void handleFieldChange('formatCategory')(category);
   };
 
   const handleFormatSubtypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -254,7 +254,7 @@ export default function CreatePitch() {
     });
     
     // Validate the subtype field
-    handleFieldChange('formatSubtype')(subtype);
+    void handleFieldChange('formatSubtype')(subtype);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, fileType: 'image' | 'video') => {

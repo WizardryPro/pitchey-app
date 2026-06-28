@@ -66,7 +66,7 @@ const FollowButton: React.FC<FollowButtonProps> = ({
   }, [creatorId, pitchId, isAuthenticated]);
 
   useEffect(() => {
-    checkFollowStatus();
+    void checkFollowStatus();
   }, [checkFollowStatus]);
 
   const handleFollow = useCallback(async () => {

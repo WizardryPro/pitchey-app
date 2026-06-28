@@ -41,7 +41,7 @@ export default function InvestorNetwork() {
   const [filteredMembers, setFilteredMembers] = useState<NetworkMember[]>([]);
 
   useEffect(() => {
-    loadNetworkData();
+    void loadNetworkData();
   }, []);
 
   useEffect(() => {

@@ -30,7 +30,7 @@ export default function AcceptInvitePage() {
       return;
     }
 
-    acceptInvitation();
+    void acceptInvitation();
   }, [token, isAuthenticated]);
 
   const acceptInvitation = async () => {

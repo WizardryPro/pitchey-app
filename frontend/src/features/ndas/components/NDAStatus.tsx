@@ -43,7 +43,7 @@ export default function NDAStatus({
 
   useEffect(() => {
     if (user && user.id !== creatorId) {
-      fetchNDAStatus();
+      void fetchNDAStatus();
     } else {
       setLoading(false);
     }

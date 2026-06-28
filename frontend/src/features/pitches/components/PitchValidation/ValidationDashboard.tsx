@@ -45,7 +45,7 @@ export const ValidationDashboard: React.FC<ValidationDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'trends' | 'recommendations' | 'comparisons'>('overview');
 
   useEffect(() => {
-    fetchDashboardData();
+    void fetchDashboardData();
   }, [pitchId]);
 
   const fetchDashboardData = async () => {

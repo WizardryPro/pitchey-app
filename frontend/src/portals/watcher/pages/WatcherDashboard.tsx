@@ -100,7 +100,7 @@ export default function WatcherDashboard() {
       void navigate('/login/watcher');
       return;
     }
-    fetchDashboardData();
+    void fetchDashboardData();
   }, [isAuthenticated]);
 
   const fetchDashboardData = async () => {

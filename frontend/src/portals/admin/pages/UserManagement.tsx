@@ -38,7 +38,7 @@ const UserManagement: React.FC = () => {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
-    loadUsers();
+    void loadUsers();
   }, [filters]);
 
   const loadUsers = async () => {

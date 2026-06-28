@@ -115,7 +115,7 @@ export default function AdvancedSearch() {
   // Debounced search — runs on any filter change, including initial load
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      performSearch();
+      void performSearch();
     }, 300);
 
     return () => clearTimeout(timeoutId);

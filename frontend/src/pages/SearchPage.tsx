@@ -57,7 +57,7 @@ export default function SearchPage() {
 
   useEffect(() => {
     if (searchQuery) {
-      performSearch();
+      void performSearch();
     }
   }, [searchQuery, selectedType, selectedGenre, selectedBudget, selectedTimeframe, sortBy]);
 
@@ -135,7 +135,7 @@ export default function SearchPage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setSearchParams({ q: searchQuery });
-    performSearch();
+    void performSearch();
   };
 
   const getTypeIcon = (type: string) => {

@@ -111,7 +111,7 @@ export default function ProductionPitchCreate() {
         // Already using sync fallback values
       }
     };
-    loadConfig();
+    void loadConfig();
   }, []);
 
   // Load draft if editing

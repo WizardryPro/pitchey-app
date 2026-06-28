@@ -56,7 +56,7 @@ export default function CreatorTeamRoles() {
   });
 
   useEffect(() => {
-    loadData();
+    void loadData();
   }, []);
 
   // Helper to get role icon based on role name

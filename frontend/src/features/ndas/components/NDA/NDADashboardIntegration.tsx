@@ -51,7 +51,7 @@ export default function NDADashboardIntegration({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchNDADashboardData();
+    void fetchNDADashboardData();
   }, [userType]);
 
   const fetchNDADashboardData = async () => {
@@ -514,7 +514,7 @@ export function NDAStatsWidget({ userType }: { userType: 'creator' | 'investor' 
       }
     };
 
-    fetchStats();
+    void fetchStats();
   }, []);
 
   return (

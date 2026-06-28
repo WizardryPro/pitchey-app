@@ -218,7 +218,7 @@ const ChunkedFileUpload: React.FC<ChunkedFileUploadProps> = ({
 
       // Start uploads
       pendingStates.forEach(fileState => {
-        startFileUpload(fileState);
+        void startFileUpload(fileState);
       });
     }
   }, [files, maxFiles, disabled, validateFile, onFilesSelected]);
@@ -343,7 +343,7 @@ const ChunkedFileUpload: React.FC<ChunkedFileUploadProps> = ({
     fileState.result = null;
     
     setFiles(prev => prev.map(f => f.sessionId === fileState.sessionId ? { ...fileState } : f));
-    startFileUpload(fileState);
+    void startFileUpload(fileState);
   }, [startFileUpload]);
 
   // Remove file from list

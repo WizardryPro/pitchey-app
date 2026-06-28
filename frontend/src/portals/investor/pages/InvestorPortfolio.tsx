@@ -55,7 +55,7 @@ export default function InvestorPortfolio() {
   });
 
   useEffect(() => {
-    loadPortfolioData();
+    void loadPortfolioData();
   }, []);
 
   const loadPortfolioData = async () => {

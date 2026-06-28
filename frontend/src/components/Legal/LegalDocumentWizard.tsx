@@ -123,8 +123,8 @@ const LegalDocumentWizard: React.FC = () => {
 
   // Load initial data
   useEffect(() => {
-    loadTemplates();
-    loadJurisdictions();
+    void loadTemplates();
+    void loadJurisdictions();
   }, []);
 
   const loadTemplates = useCallback(async () => {

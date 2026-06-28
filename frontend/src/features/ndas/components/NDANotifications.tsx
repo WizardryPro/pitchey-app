@@ -50,7 +50,7 @@ export default function NDANotifications({ className = '', compact = false }: ND
   const { isConnected } = useWebSocket({
     onMessage: useCallback((message: any) => {
       if (message.type === 'nda_request' || message.type === 'nda_update') {
-        fetchNDANotifications();
+        void fetchNDANotifications();
         info('New NDA notification received');
       }
     }, [])
@@ -58,7 +58,7 @@ export default function NDANotifications({ className = '', compact = false }: ND
 
   useEffect(() => {
     if (user?.userType === 'creator') {
-      fetchNDANotifications();
+      void fetchNDANotifications();
     }
   }, [user]);
 
@@ -383,7 +383,7 @@ export function NDANotificationPanel({ className = '' }: { className?: string })
 
   useEffect(() => {
     if (user?.userType === 'creator') {
-      fetchRequests();
+      void fetchRequests();
     }
   }, [user]);
 

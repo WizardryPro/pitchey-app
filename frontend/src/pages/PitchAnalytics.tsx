@@ -19,7 +19,7 @@ export default function PitchAnalytics() {
 
   useEffect(() => {
     if (id) {
-      fetchAnalytics(parseInt(id));
+      void fetchAnalytics(parseInt(id));
     }
   }, [id, timeRange]);
 

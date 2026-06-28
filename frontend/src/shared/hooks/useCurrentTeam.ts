@@ -37,7 +37,7 @@ export function useCurrentTeam() {
   }, []);
 
   useEffect(() => {
-    fetchTeam();
+    void fetchTeam();
   }, [fetchTeam]);
 
   const createDefaultTeam = useCallback(async (name = 'My Team') => {

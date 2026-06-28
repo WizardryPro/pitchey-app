@@ -59,7 +59,7 @@ export default function ProductionAnalytics() {
 
   // Load analytics data from API
   useEffect(() => {
-    loadAnalyticsData();
+    void loadAnalyticsData();
   }, [timeRange]);
 
   const loadAnalyticsData = async () => {

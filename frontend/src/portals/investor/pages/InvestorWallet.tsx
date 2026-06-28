@@ -53,9 +53,9 @@ const InvestorWallet = () => {
 
   // Initialize real-time updates and fetch data
   useEffect(() => {
-    loadWalletData();
+    void loadWalletData();
     setupWebSocketConnection();
-    loadNotificationPreferences();
+    void loadNotificationPreferences();
     
     return () => {
       if (wsRef.current) {
@@ -282,7 +282,7 @@ const InvestorWallet = () => {
     if (wsRef.current) {
       wsRef.current.close();
     }
-    logout();
+    void logout();
     void navigate('/');
   };
 

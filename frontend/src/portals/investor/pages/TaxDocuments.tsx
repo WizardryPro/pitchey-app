@@ -19,7 +19,7 @@ const TaxDocuments = () => {
   const [documents, setDocuments] = useState<any[]>([]);
 
   useEffect(() => {
-    loadTaxDocuments();
+    void loadTaxDocuments();
   }, [year]);
 
   const loadTaxDocuments = async () => {

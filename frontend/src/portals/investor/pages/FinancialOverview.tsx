@@ -33,7 +33,7 @@ const FinancialOverview = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchFinancialData();
+    void fetchFinancialData();
   }, []);
 
   const fetchFinancialData = async () => {

@@ -106,7 +106,7 @@ const DocumentComparisonTool: React.FC = () => {
 
   // Load available documents
   useEffect(() => {
-    loadDocuments();
+    void loadDocuments();
   }, []);
 
   const loadDocuments = useCallback(async () => {

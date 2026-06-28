@@ -108,7 +108,7 @@ export default function CreatorPitchesDrafts() {
   const [selectedDrafts, setSelectedDrafts] = useState<string[]>([]);
 
   useEffect(() => {
-    loadDrafts();
+    void loadDrafts();
   }, []);
 
   const filteredDrafts = useMemo(() => {

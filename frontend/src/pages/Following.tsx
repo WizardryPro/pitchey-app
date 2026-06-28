@@ -156,7 +156,7 @@ const Following: React.FC = () => {
   const userType = user?.userType;
 
   useEffect(() => {
-    fetchFollowingData();
+    void fetchFollowingData();
   }, [activeTab, timeframe]);
 
   const fetchFollowingData = async () => {

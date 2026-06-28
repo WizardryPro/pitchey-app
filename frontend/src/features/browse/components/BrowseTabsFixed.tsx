@@ -236,7 +236,7 @@ const BrowseTabsFixed: React.FC = () => {
       const delay = currentTabState.fetchedWithSearch !== searchTerm ? 500 : 0;
 
       const timeoutId = setTimeout(() => {
-        fetchTabPitches(activeTab, true, searchTerm, selectedGenre);
+        void fetchTabPitches(activeTab, true, searchTerm, selectedGenre);
       }, delay);
 
       return () => clearTimeout(timeoutId);
@@ -253,7 +253,7 @@ const BrowseTabsFixed: React.FC = () => {
 
   // Load more pitches for current tab
   const loadMore = () => {
-    fetchTabPitches(activeTab, false, searchTerm, selectedGenre);
+    void fetchTabPitches(activeTab, false, searchTerm, selectedGenre);
   };
 
   const currentTabState = tabStates[activeTab];

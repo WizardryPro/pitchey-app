@@ -71,7 +71,7 @@ export default function ProductionSaved() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchSavedPitches();
+    void fetchSavedPitches();
   }, [filterGenre, sortBy]);
 
   const fetchSavedPitches = async () => {
@@ -295,7 +295,7 @@ export default function ProductionSaved() {
                       className="bg-white/90 hover:bg-white"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleRemoveSaved(pitch.id);
+                        void handleRemoveSaved(pitch.id);
                       }}
                     >
                       <BookmarkCheck className="w-4 h-4 text-purple-600" />

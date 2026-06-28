@@ -88,6 +88,6 @@ export async function handleFileDownload(url: string, fileName?: string): Promis
 export function createDownloadClickHandler(url: string, fileName?: string) {
   return (event: React.MouseEvent) => {
     event.preventDefault();
-    handleFileDownload(url, fileName);
+    void handleFileDownload(url, fileName);
   };
 }

@@ -78,7 +78,7 @@ export default function BrowseGenres() {
         console.error('Failed to load configuration:', error);
       }
     };
-    loadConfig();
+    void loadConfig();
   }, []);
 
   // Fetch genre statistics
@@ -206,12 +206,12 @@ export default function BrowseGenres() {
 
   // Fetch data on mount and when dependencies change
   useEffect(() => {
-    fetchGenreStats();
+    void fetchGenreStats();
   }, [fetchGenreStats]);
 
   useEffect(() => {
     if (selectedGenre) {
-      fetchGenrePitches();
+      void fetchGenrePitches();
     } else {
       setLoading(false);
       setPitches([]);

@@ -114,7 +114,7 @@ describe('useSearch', () => {
       const { result } = renderHook(() => useSearch());
 
       act(() => {
-        result.current.search('space');
+        void result.current.search('space');
       });
 
       expect(result.current.loading).toBe(true);

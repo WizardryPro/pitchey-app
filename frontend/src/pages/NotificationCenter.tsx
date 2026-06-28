@@ -33,8 +33,8 @@ export default function NotificationCenter() {
 
   // Load notifications and preferences
   useEffect(() => {
-    loadNotifications();
-    loadPreferences();
+    void loadNotifications();
+    void loadPreferences();
   }, []);
 
   const loadNotifications = async () => {
@@ -299,7 +299,7 @@ export default function NotificationCenter() {
                         checked={value}
                         onChange={(e) => {
                           const newPrefs = { ...preferences, [key]: e.target.checked };
-                          handlePreferencesUpdate(newPrefs);
+                          void handlePreferencesUpdate(newPrefs);
                         }}
                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
@@ -412,7 +412,7 @@ export default function NotificationCenter() {
                                   key={index}
                                   onClick={() => {
                                     action.action();
-                                    handleMarkAsRead(notification.id);
+                                    void handleMarkAsRead(notification.id);
                                   }}
                                   className={`px-3 py-1 text-xs rounded transition-colors ${
                                     (action.type as string) === 'primary'
@@ -437,7 +437,7 @@ export default function NotificationCenter() {
                               <button
                                 onClick={() => {
                                   void navigate('/creator/ndas');
-                                  handleMarkAsRead(notification.id);
+                                  void handleMarkAsRead(notification.id);
                                 }}
                                 className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
                               >
@@ -446,7 +446,7 @@ export default function NotificationCenter() {
                               <button
                                 onClick={() => {
                                   void navigate('/creator/ndas');
-                                  handleMarkAsRead(notification.id);
+                                  void handleMarkAsRead(notification.id);
                                 }}
                                 className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
                               >
@@ -455,7 +455,7 @@ export default function NotificationCenter() {
                               <button
                                 onClick={() => {
                                   void navigate('/creator/ndas');
-                                  handleMarkAsRead(notification.id);
+                                  void handleMarkAsRead(notification.id);
                                 }}
                                 className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
                               >
@@ -470,7 +470,7 @@ export default function NotificationCenter() {
                               <button
                                 onClick={() => {
                                   void navigate('/investor/all-investments');
-                                  handleMarkAsRead(notification.id);
+                                  void handleMarkAsRead(notification.id);
                                 }}
                                 className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
                               >

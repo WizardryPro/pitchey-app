@@ -135,7 +135,7 @@ export default function Settings() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
-    fetchSettings();
+    void fetchSettings();
   }, []);
 
   const fetchSettings = async () => {
@@ -209,7 +209,7 @@ export default function Settings() {
 
       if (response.ok) {
         toast.success('Your account has been deleted.');
-        logout();
+        void logout();
         void navigate('/');
       } else {
         const data = await response.json().catch(() => ({} as { error?: string }));
@@ -704,7 +704,7 @@ export default function Settings() {
               </button>
               <button
                 onClick={() => {
-                  handleDeleteAccount();
+                  void handleDeleteAccount();
                   setShowDeleteModal(false);
                 }}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"

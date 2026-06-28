@@ -71,7 +71,7 @@ export default function CreatorCollaborations() {
   });
 
   useEffect(() => {
-    loadCollaborations();
+    void loadCollaborations();
   }, []);
 
   useEffect(() => {

@@ -150,7 +150,7 @@ const TemplateEditor: React.FC = () => {
 
   // Load initial data
   useEffect(() => {
-    loadJurisdictions();
+    void loadJurisdictions();
   }, []);
 
   const loadJurisdictions = useCallback(async () => {

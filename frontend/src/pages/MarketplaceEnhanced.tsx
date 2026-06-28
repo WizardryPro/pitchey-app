@@ -452,7 +452,7 @@ export default function MarketplaceEnhanced() {
 
   useEffect(() => {
     if (isSearchMode) {
-      performServerSearch();
+      void performServerSearch();
     } else {
       setSearchResults([]);
     }

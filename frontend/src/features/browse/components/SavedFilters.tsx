@@ -55,7 +55,7 @@ export default function SavedFilters({
 
   useEffect(() => {
     if (user) {
-      loadSavedFilters();
+      void loadSavedFilters();
     }
   }, [user]);
 

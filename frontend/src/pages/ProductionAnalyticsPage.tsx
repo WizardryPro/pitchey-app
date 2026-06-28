@@ -34,7 +34,7 @@ export default function ProductionAnalyticsPage() {
         // Keep defaults
       }
     };
-    load();
+    void load();
   }, []);
 
   const tabs = [

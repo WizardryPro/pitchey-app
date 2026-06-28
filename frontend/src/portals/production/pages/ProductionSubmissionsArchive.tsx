@@ -66,7 +66,7 @@ export default function ProductionSubmissionsArchive() {
       }
     };
 
-    fetchArchivedSubmissions();
+    void fetchArchivedSubmissions();
   }, []);
 
   const filteredSubmissions = submissions.filter(submission => {
@@ -126,11 +126,11 @@ export default function ProductionSubmissionsArchive() {
   };
 
   const handleRestore = (submissionId: string) => {
-    updateStatus(submissionId, 'reviewing');
+    void updateStatus(submissionId, 'reviewing');
   };
 
   const handlePermanentDelete = (submissionId: string) => {
-    updateStatus(submissionId, 'archived');
+    void updateStatus(submissionId, 'archived');
   };
 
   const handleExport = (submission: ArchivedSubmission) => {

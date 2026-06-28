@@ -67,7 +67,7 @@ export default function ProductionSubmissionsReview() {
       }
     };
 
-    fetchReviewSubmissions();
+    void fetchReviewSubmissions();
   }, []);
 
   const filteredSubmissions = submissions.filter(submission => {
@@ -125,15 +125,15 @@ export default function ProductionSubmissionsReview() {
   };
 
   const handleApprove = (submissionId: string) => {
-    updateStatus(submissionId, 'accepted');
+    void updateStatus(submissionId, 'accepted');
   };
 
   const handleReject = (submissionId: string) => {
-    updateStatus(submissionId, 'rejected');
+    void updateStatus(submissionId, 'rejected');
   };
 
   const handleShortlist = (submissionId: string) => {
-    updateStatus(submissionId, 'shortlisted');
+    void updateStatus(submissionId, 'shortlisted');
   };
 
   const handleAddNote = (submissionId: string) => {
@@ -144,7 +144,7 @@ export default function ProductionSubmissionsReview() {
 
   const handleSaveNote = () => {
     if (noteModalSubmissionId && noteText.trim()) {
-      updateStatus(noteModalSubmissionId, 'reviewing', noteText.trim());
+      void updateStatus(noteModalSubmissionId, 'reviewing', noteText.trim());
     }
     setNoteModalOpen(false);
     setNoteModalSubmissionId(null);

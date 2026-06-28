@@ -17,7 +17,7 @@ export default function VerifyEmail() {
 
   useEffect(() => {
     if (token) {
-      verifyEmail();
+      void verifyEmail();
     } else {
       setVerifying(false);
       setError('Invalid verification link');

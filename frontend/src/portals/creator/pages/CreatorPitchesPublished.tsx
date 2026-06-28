@@ -76,7 +76,7 @@ export default function CreatorPitchesPublished() {
   const [sortBy, setSortBy] = useState<string>('recent');
 
   useEffect(() => {
-    loadPublishedPitches();
+    void loadPublishedPitches();
   }, []);
 
   const loadPublishedPitches = async () => {
@@ -373,7 +373,7 @@ export default function CreatorPitchesPublished() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigator.clipboard.writeText(`${window.location.origin}/pitch/${pitch.id}`);
+                        void navigator.clipboard.writeText(`${window.location.origin}/pitch/${pitch.id}`);
                       }}
                       className="p-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition"
                     >

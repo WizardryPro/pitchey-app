@@ -122,14 +122,14 @@ export default function CreatorActivity() {
 
   // Load activities from API on mount
   useEffect(() => {
-    loadActivities();
-    loadStats();
+    void loadActivities();
+    void loadStats();
   }, [loadActivities]);
 
   // Auto-poll every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      loadActivities(true);
+      void loadActivities(true);
     }, 30000);
     return () => clearInterval(interval);
   }, [loadActivities]);

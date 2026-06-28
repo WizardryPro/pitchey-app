@@ -114,7 +114,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   useEffect(() => {
     // Single initial fetch with delay to avoid rate limiting on page load
     const timer = setTimeout(() => {
-      fetchNotifications();
+      void fetchNotifications();
     }, 3000);
 
     return () => clearTimeout(timer);

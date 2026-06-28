@@ -129,7 +129,7 @@ export default function NDAUploadSection({
         isCustom: false,
         ndaType: 'template'
       });
-      loadTemplates();
+      void loadTemplates();
     } else {
       // Custom NDA - prepare for file upload
       onChange({
@@ -208,7 +208,7 @@ export default function NDAUploadSection({
   const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      handleFileSelect(file);
+      void handleFileSelect(file);
     }
     // Reset input
     e.target.value = '';
@@ -222,7 +222,7 @@ export default function NDAUploadSection({
 
     const file = e.dataTransfer.files[0];
     if (file) {
-      handleFileSelect(file);
+      void handleFileSelect(file);
     }
   }, [disabled, handleFileSelect]);
 

@@ -144,7 +144,7 @@ const UserPortfolio: React.FC = () => {
   };
 
   const handleRetry = () => {
-    fetchPortfolio();
+    void fetchPortfolio();
   };
 
   const handleGoBack = () => {
@@ -168,7 +168,7 @@ const UserPortfolio: React.FC = () => {
 
   useEffect(() => {
     if (effectiveUserId) {
-      fetchPortfolio();
+      void fetchPortfolio();
     }
   }, [effectiveUserId]);
 

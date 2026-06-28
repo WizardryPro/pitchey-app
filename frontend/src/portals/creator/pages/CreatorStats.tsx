@@ -147,7 +147,7 @@ export default function CreatorStats() {
   }, []);
 
   useEffect(() => {
-    loadStats();
+    void loadStats();
   }, [loadStats]);
 
   // Chart configurations

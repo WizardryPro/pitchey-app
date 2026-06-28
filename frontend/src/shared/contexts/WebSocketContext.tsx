@@ -288,7 +288,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
           // Small delay to let browser networking stabilize
           setTimeout(() => {
             if (!document.hidden) {
-              connect();
+              void connect();
             }
           }, 500);
         }
@@ -732,7 +732,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 
     // Update presence to online when connected
     if (user) {
-      updatePresence('online');
+      void updatePresence('online');
     }
     
     // Subscribe to user-specific channels
@@ -1060,7 +1060,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       // Allow time for cleanup before reconnecting
       setTimeout(() => {
         if (authStabilized && isAuthenticated && !isWebSocketDisabled && config.WEBSOCKET_ENABLED) {
-          connect();
+          void connect();
         }
       }, 1000);
     }
@@ -1068,7 +1068,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     previousUserType.current = currentUserType;
     
     if (authStabilized && isAuthenticated && !isConnected && !isWebSocketDisabled && config.WEBSOCKET_ENABLED) {
-      connect();
+      void connect();
     } else if (!isAuthenticated && isConnected) {
       disconnect();
       // Clear all real-time data when user logs out
