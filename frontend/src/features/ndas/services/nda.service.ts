@@ -93,11 +93,10 @@ export interface NDAStats {
 }
 
 // Transform flat snake_case NDA API response to camelCase NDA type
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function transformNDAFromApi(raw: any): NDA {
+function transformNDAFromApi(raw: Record<string, unknown>): NDA {
   // If already transformed (has camelCase fields), pass through
   if (raw.pitchId !== undefined && raw.createdAt !== undefined && raw.pitch_id === undefined) {
-    return raw as NDA;
+    return raw as unknown as NDA;
   }
 
   return {
@@ -133,11 +132,10 @@ function transformNDAFromApi(raw: any): NDA {
 }
 
 // Transform flat snake_case NDA request API response to camelCase NDARequest type
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function transformNDARequestFromApi(raw: any): NDARequest {
+function transformNDARequestFromApi(raw: Record<string, unknown>): NDARequest {
   // If already transformed, pass through
   if (raw.pitchId !== undefined && raw.requestedAt !== undefined && raw.pitch_id === undefined) {
-    return raw as NDARequest;
+    return raw as unknown as NDARequest;
   }
 
   return {
@@ -326,7 +324,7 @@ export class NDAService {
     if (filters?.offset !== undefined) params.append('offset', filters.offset.toString());
 
     interface GetNDAsResponse {
-      ndas: NDA[];
+      ndas: Record<string, unknown>[];
       total: number;
     }
     const response = await apiClient.get<GetNDAsResponse>(`/api/ndas?${params}`);
@@ -745,7 +743,7 @@ export class NDAService {
     total: number;
   }> {
     interface ActiveNDAsResponse {
-      ndaRequests: NDARequest[];
+      ndaRequests: Record<string, unknown>[];
       total?: number;
     }
     const response = await apiClient.get<ActiveNDAsResponse>('/api/ndas/active');
@@ -769,7 +767,7 @@ export class NDAService {
     total: number;
   }> {
     interface SignedNDAsResponse {
-      ndaRequests: NDARequest[];
+      ndaRequests: Record<string, unknown>[];
       total?: number;
     }
     const response = await apiClient.get<SignedNDAsResponse>('/api/ndas/signed');
@@ -793,7 +791,7 @@ export class NDAService {
     total: number;
   }> {
     interface IncomingRequestsResponse {
-      ndaRequests: NDARequest[];
+      ndaRequests: Record<string, unknown>[];
       total?: number;
     }
     const response = await apiClient.get<IncomingRequestsResponse>('/api/ndas/incoming-requests');
@@ -817,7 +815,7 @@ export class NDAService {
     total: number;
   }> {
     interface OutgoingRequestsResponse {
-      ndaRequests: NDARequest[];
+      ndaRequests: Record<string, unknown>[];
       total?: number;
     }
     const response = await apiClient.get<OutgoingRequestsResponse>('/api/ndas/outgoing-requests');
