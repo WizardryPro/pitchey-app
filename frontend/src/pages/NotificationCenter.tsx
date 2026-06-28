@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Filter, Check, CheckCheck, Trash2, Settings, Bell, BellOff } from 'lucide-react';
+import { ArrowLeft, Check, CheckCheck, Settings, Bell} from 'lucide-react';
 import { useNotifications } from '@shared/contexts/WebSocketContext';
 import { NotificationsService, type Notification as BackendNotification } from '@features/notifications/services/notifications.service';
 import { useNotificationToast } from '@shared/components/feedback/NotificationToastContainer';

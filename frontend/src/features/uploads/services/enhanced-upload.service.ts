@@ -1,4 +1,4 @@
-import { uploadService, UploadProgress, UploadResult, UploadOptions } from './upload.service';
+import { uploadService, UploadResult, UploadOptions } from './upload.service';
 
 const isDev = import.meta.env.MODE === 'development';
 const API_BASE_URL = import.meta.env.VITE_API_URL || (isDev ? 'http://localhost:8001' : '');

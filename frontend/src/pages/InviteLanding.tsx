@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { UserPlus, AlertCircle, CheckCircle, Lock, Mail, User, Shield, BarChart3, Eye, Globe } from 'lucide-react';
+import { UserPlus, AlertCircle, CheckCircle, Lock, Mail, User, Shield, BarChart3, Globe } from 'lucide-react';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { apiClient } from '@/lib/api-client';
 import { setPendingReturnTo } from '@/utils/postLoginRedirect';

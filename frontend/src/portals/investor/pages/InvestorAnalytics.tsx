@@ -6,8 +6,6 @@ import {
   Globe, Activity, Zap, Award, Eye, Clock,
   AlertTriangle, CheckCircle, XCircle
 , AlertCircle } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@shared/components/ui/chart';
 import { 
   LineChart, Line, 
   BarChart, Bar, 
@@ -16,7 +14,6 @@ import {
   XAxis, YAxis, CartesianGrid, ResponsiveContainer,
   Tooltip, Legend
 } from 'recharts';
-import { InvestorNavigation } from '@/components/InvestorNavigation';
 import { InvestorService } from '@features/deals/services/investor.service';
 
 interface AnalyticsMetric {

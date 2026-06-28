@@ -5,7 +5,6 @@ import {
   BarChart3, PieChart, Download, Filter, Info
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
-import { Button } from '@shared/components/ui/button';
 import { investorApi } from '@features/deals/services/investor.service';
 
 const MarketTrends = () => {

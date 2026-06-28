@@ -28,7 +28,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 // ── The baseline. Lower it (never raise it) as frontend lint errors are fixed. ──
-const BASELINE = 7294;
+const BASELINE = 7151;
 // 2026-06-27: created at the measured floor (8908 errors / 184 warnings). Top
 // rules: no-unsafe-member-access, no-unsafe-assignment, no-explicit-any,
 // no-unused-vars, no-misused-promises. The gate blocks any NEW error.
@@ -76,6 +76,13 @@ const BASELINE = 7294;
 // Remaining small rules need per-site judgment → C3c: require-await (36),
 // no-case-declarations (15), no-empty (7), import/no-restricted-paths (3),
 // no-async-promise-executor (1).
+// 2026-06-28: lowered 7294 -> 7151 (-143). C2a: removed unused single-line imports
+// via codemod (eslint findings → strip the name; drop the line if it empties).
+// GUARD: skips any import line containing `as` — aliased-import removal mangles
+// (an early run rewrote `pitchAPI as newPitchAPI` into `pitchAPI as savedPitchesAPI`,
+// breaking it). tsc is the safety net (clean = every removed name was truly unused).
+// Remaining no-unused-vars (800): assigned-vars (~467), args (80), multiline/aliased
+// imports → C2b/C2c.
 
 const LIST = process.argv.includes('--list');
 

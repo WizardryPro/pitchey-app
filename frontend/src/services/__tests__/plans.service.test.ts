@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 
 // ─── Mock config to prevent import.meta env issues ───────────────────────────
 vi.mock('../../config', () => ({

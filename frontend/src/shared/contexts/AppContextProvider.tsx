@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { ReactNode } from 'react';
 
 // Import all individual context providers
 // AuthContext removed - using Better Auth hooks instead

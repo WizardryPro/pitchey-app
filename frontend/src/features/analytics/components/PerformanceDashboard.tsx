@@ -1,10 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect} from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card'
-import { Alert, AlertDescription } from '@shared/components/ui/alert'
 import { Progress } from '@shared/components/ui/progress'
 import { Badge } from '@shared/components/ui/badge'
-import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { Activity, AlertTriangle, CheckCircle, Clock, Database, Globe, HardDrive, Zap } from 'lucide-react'
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { Activity, AlertTriangle, CheckCircle, Database, Globe, HardDrive, Zap } from 'lucide-react'
 
 interface WebVitals {
   lcp: number // Largest Contentful Paint

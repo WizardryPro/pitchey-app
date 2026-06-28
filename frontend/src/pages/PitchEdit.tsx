@@ -6,7 +6,7 @@ import { Save, X, Upload, FileText, Video, Image as ImageIcon, Shield, WifiOff }
 import { pitchService } from '@features/pitches/services/pitch.service';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { uploadService } from '@features/uploads/services/upload.service';
-import type { Pitch, UpdatePitchInput } from '@shared/types/api';
+import type { UpdatePitchInput } from '@shared/types/api';
 import { getGenresSync } from '@config/pitchConstants';
 import { usePortalTheme } from '@shared/hooks/usePortalTheme';
 import { CharacterManagement } from '@features/pitches/components/CharacterManagement';

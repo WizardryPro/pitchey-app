@@ -6,7 +6,6 @@ import {
   ArrowRight, Star, Award, Building, Clock,
   ThumbsUp, ThumbsDown, Share2, Bookmark
 } from 'lucide-react';
-import { config } from '@/config';
 import { apiClient } from '@/lib/api-client';
 
 interface ActivityItem {

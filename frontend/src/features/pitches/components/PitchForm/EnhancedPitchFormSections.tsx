@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@shared/components/ui/input';
 import { Card, CardContent } from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
-import { Info, Globe, Palette, BookOpen, Clock, MapPin, Layers, Users, Lock, Plus, Trash2 } from 'lucide-react';
+import { Globe, Palette, BookOpen, Clock, MapPin, Layers, Users, Lock, Plus, Trash2 } from 'lucide-react';
 
 // Development Stage Options
 export const DEVELOPMENT_STAGES = [

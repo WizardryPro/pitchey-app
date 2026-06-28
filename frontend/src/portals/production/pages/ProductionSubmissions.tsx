@@ -5,7 +5,6 @@ import {
   Search, Calendar, User, DollarSign,
   Eye, MessageSquare, Film
 } from 'lucide-react';
-import { apiClient } from '@/lib/api-client';
 import { toast } from 'react-hot-toast';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 

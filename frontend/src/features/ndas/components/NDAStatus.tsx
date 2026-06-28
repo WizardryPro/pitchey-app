@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Shield, Lock, CheckCircle, Clock, AlertCircle, Download, FileText, AlertTriangle } from 'lucide-react';
+import { Shield, Lock, CheckCircle, Clock, Download, FileText, AlertTriangle } from 'lucide-react';
 import { useBetterAuthStore } from '@/store/betterAuthStore';
 import { ndaService } from '../services/nda.service';
 import NDAWizard from './NDAWizard';

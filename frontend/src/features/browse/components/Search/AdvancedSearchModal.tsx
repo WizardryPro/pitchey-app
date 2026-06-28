@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, Search, Filter, Sliders, TrendingUp, Target, DollarSign, Calendar, Users, MapPin, Award, Zap, Lightbulb, BarChart3 } from 'lucide-react';
+import { X, Search, Filter, Sliders, TrendingUp, Target, DollarSign, Award, Lightbulb, BarChart3 } from 'lucide-react';
 
 interface AdvancedSearchProps {
   isOpen: boolean;

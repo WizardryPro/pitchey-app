@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, TrendingUp, Users, Film, Calendar, MapPin, Eye, Heart, AlertCircle, Search, Bookmark, FileText } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Users, Film, Calendar, MapPin, AlertCircle, Search, Bookmark, FileText } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { API_URL } from '../config';
 import { useBetterAuthStore } from '../store/betterAuthStore';

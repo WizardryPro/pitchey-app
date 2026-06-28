@@ -4,7 +4,7 @@
  * and retrieving completed legal documents with search and filtering
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback} from 'react';
 import { 
   Search, 
   Filter, 

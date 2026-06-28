@@ -1,6 +1,5 @@
 import apiClient, { ndaAPI as newNdaAPI, authAPI, pitchAPI as newPitchAPI, savedPitchesAPI } from './api-client';
 import { useBetterAuthStore } from '../store/betterAuthStore';
-import { config } from '../config';
 
 // Use same-origin in production (Pages Functions proxy), localhost in dev
 const isDev = import.meta.env.MODE === 'development';

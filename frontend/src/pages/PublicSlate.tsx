@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Layers, Film, Eye, Heart, BadgeCheck, Sparkles, UserPlus } from 'lucide-react';
+import { Layers, Film, Eye, Heart, Sparkles, UserPlus } from 'lucide-react';
 import { API_URL } from '../config';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 

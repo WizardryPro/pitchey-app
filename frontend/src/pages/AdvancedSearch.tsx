@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { SavedSearches } from '../features/browse/components/Search';
 import { useBetterAuthStore } from '../store/betterAuthStore';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card';
 import { Badge } from '@shared/components/ui/badge';
 import { toast } from 'react-hot-toast';
 import { API_URL } from '../config';

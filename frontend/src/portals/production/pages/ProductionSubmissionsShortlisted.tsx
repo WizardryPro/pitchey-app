@@ -6,7 +6,7 @@ import {
   Eye, Download, MessageSquare, ThumbsUp, ThumbsDown,
   Bookmark, Award, Target, Zap
 } from 'lucide-react';
-import { config, API_URL } from '@/config';
+import { API_URL } from '@/config';
 
 interface Submission {
   id: string;

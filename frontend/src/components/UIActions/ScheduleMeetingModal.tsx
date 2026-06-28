@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Calendar, Clock, Video, Phone, MapPin } from 'lucide-react';
+import { X, Calendar, Video, Phone, MapPin } from 'lucide-react';
 import { useScheduleMeeting } from '../../hooks/useUIActions';
 
 interface ScheduleMeetingModalProps {

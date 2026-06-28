@@ -5,7 +5,6 @@ import {
   TrendingUp, TrendingDown, Activity, BarChart3
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
-import { Button } from '@shared/components/ui/button';
 import { investorApi } from '@features/deals/services/investor.service';
 
 const RiskAssessment = () => {

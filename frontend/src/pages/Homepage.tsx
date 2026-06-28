@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Film, TrendingUp, Search, Play, Star, Eye, Heart, Calendar, ArrowRight, Sparkles, User, Building2, Wallet, Flame } from 'lucide-react';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import { pitchService } from '@features/pitches/services/pitch.service';
-import { pitchAPI } from '../lib/api';
 import type { Pitch } from '@features/pitches/services/pitch.service';
 import { getGenresSync, getFormatsSync } from '@config/pitchConstants';
 import FormatDisplay from '../components/FormatDisplay';
