@@ -86,7 +86,7 @@ export default function EmailOTPLogin() {
       sessionManager.updateCache(user);
       setUser(user);
       toast.success('Signed in successfully');
-      navigate(resolvePostLoginRedirect(rawFrom, `/${getPortalPath(user.userType)}/dashboard`), { replace: true });
+      void navigate(resolvePostLoginRedirect(rawFrom, `/${getPortalPath(user.userType)}/dashboard`), { replace: true });
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
       setError(e.message);

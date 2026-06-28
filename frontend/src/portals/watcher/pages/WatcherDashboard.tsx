@@ -97,7 +97,7 @@ export default function WatcherDashboard() {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      navigate('/login/watcher');
+      void navigate('/login/watcher');
       return;
     }
     fetchDashboardData();

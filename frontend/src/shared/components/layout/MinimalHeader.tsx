@@ -74,7 +74,7 @@ export function MinimalHeader({ onMenuToggle, isSidebarOpen = true, userType }: 
 
   const handleLogout = async () => {
     await logout();
-    navigate('/');
+    void navigate('/');
   };
 
   // Portal theme — single source of truth for color accents. See usePortalTheme.

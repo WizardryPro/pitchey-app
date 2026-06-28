@@ -157,7 +157,7 @@ export default function Billing() {
                     onClick={() => {
                       const params = new URLSearchParams(searchParams);
                       params.set('tab', tab.id);
-                      navigate(`?${params.toString()}`, { replace: true });
+                      void navigate(`?${params.toString()}`, { replace: true });
                     }}
                     className={`flex items-center gap-2 py-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap shrink-0 ${
                       activeTab === tab.id

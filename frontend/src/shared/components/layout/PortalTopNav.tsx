@@ -96,7 +96,7 @@ export default function PortalTopNav() {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/');
+    void navigate('/');
   };
 
   return (

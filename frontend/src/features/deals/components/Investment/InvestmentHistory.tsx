@@ -101,7 +101,7 @@ export default function InvestmentHistory({
     if (onInvestmentClick) {
       onInvestmentClick(investment);
     } else {
-      navigate(`/investment/${investment.id}`);
+      void navigate(`/investment/${investment.id}`);
     }
   };
 

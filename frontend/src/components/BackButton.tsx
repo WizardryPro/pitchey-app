@@ -21,7 +21,7 @@ export default function BackButton({
 
   const handleBack = () => {
     if (to) {
-      navigate(to);
+      void navigate(to);
       return;
     }
 
@@ -30,45 +30,45 @@ export default function BackButton({
     
     // If on a login page, go back to portals
     if (path.startsWith('/login/')) {
-      navigate('/login');
+      void navigate('/login');
       return;
     }
     
     // If on portals page, go back to marketplace
     if (path === '/login') {
-      navigate('/');
+      void navigate('/');
       return;
     }
     
     // If on a pitch detail page, try to go back to marketplace
     if (path.startsWith('/pitch/') && !path.includes('/edit') && !path.includes('/analytics')) {
-      navigate('/');
+      void navigate('/');
       return;
     }
     
     // For creator pages, go back to creator dashboard
     if (path.startsWith('/creator/') && path !== '/creator/dashboard') {
-      navigate('/creator/dashboard');
+      void navigate('/creator/dashboard');
       return;
     }
     
     // For investor pages, go back to investor dashboard
     if (path.startsWith('/investor/') && path !== '/investor/dashboard') {
-      navigate('/investor/dashboard');
+      void navigate('/investor/dashboard');
       return;
     }
     
     // For production pages, go back to production dashboard
     if (path.startsWith('/production/') && path !== '/production/dashboard') {
-      navigate('/production/dashboard');
+      void navigate('/production/dashboard');
       return;
     }
     
     // Default fallback - try browser back or go to marketplace
     if (window.history.length > 1) {
-      navigate(-1);
+      void navigate(-1);
     } else {
-      navigate('/');
+      void navigate('/');
     }
   };
 

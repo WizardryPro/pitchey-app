@@ -221,7 +221,7 @@ const InvestorPitchView: React.FC = () => {
 
   const handleContactCreator = () => {
     if (!pitch?.userId) return;
-    navigate(`/investor/messages?recipient=${pitch.userId}&pitch=${id}`);
+    void navigate(`/investor/messages?recipient=${pitch.userId}&pitch=${id}`);
   };
 
   const [ndaRequesting, setNdaRequesting] = useState(false);

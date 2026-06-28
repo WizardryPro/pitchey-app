@@ -55,7 +55,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profile, isOwnProfile = f
   };
 
   const handleEditProfile = () => {
-    navigate('/profile');
+    void navigate('/profile');
   };
 
   // Get display text based on user type

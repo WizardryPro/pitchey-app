@@ -206,7 +206,7 @@ const CreatorPitchView: React.FC = () => {
   };
 
   const handleEdit = () => {
-    navigate(`/creator/pitches/${id}/edit`);
+    void navigate(`/creator/pitches/${id}/edit`);
   };
 
   // Respond to a producer's pitch-scoped collaboration proposal. On accept, the
@@ -236,7 +236,7 @@ const CreatorPitchView: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this pitch? This action cannot be undone.')) {
       try {
         await pitchAPI.delete(parseInt(id!));
-        navigate('/creator/pitches');
+        void navigate('/creator/pitches');
       } catch (error) {
         console.error('Failed to delete pitch:', error);
       }

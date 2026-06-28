@@ -493,7 +493,7 @@ export default function PitchEdit() {
       } else {
         toast.success('Changes saved');
       }
-      navigate(pitchesListPath);
+      void navigate(pitchesListPath);
     } catch (error) {
       console.error('Error updating pitch:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to update pitch');

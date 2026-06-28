@@ -144,7 +144,7 @@ function ProductionDashboard() {
   // Handle logout
   const handleLogout = async () => {
     await logout();
-    navigate('/');
+    void navigate('/');
   };
 
   // NDA Template Upload State
@@ -175,7 +175,7 @@ function ProductionDashboard() {
   // Redirect to login if not authenticated after session check
   useEffect(() => {
     if (sessionChecked && !isAuthenticated) {
-      navigate('/login/production');
+      void navigate('/login/production');
     }
   }, [sessionChecked, isAuthenticated, navigate]);
 

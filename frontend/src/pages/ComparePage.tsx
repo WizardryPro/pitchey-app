@@ -355,7 +355,7 @@ export default function ComparePage() {
   const inPortalPath = (isAuthenticated && ['creator', 'investor', 'production'].includes(portalSeg)) ? `/${portalSeg}/compare` : null;
   useEffect(() => {
     if (!isInsidePortal && inPortalPath) {
-      navigate(`${inPortalPath}${location.search}`, { replace: true });
+      void navigate(`${inPortalPath}${location.search}`, { replace: true });
     }
   }, [isInsidePortal, inPortalPath, location.search, navigate]);
 

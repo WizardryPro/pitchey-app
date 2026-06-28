@@ -234,11 +234,11 @@ export default function AdvancedSearch() {
 
   const handleResultClick = (result: SearchResult) => {
     if (result.type === 'pitch') {
-      navigate(`/pitch/${result.id}`);
+      void navigate(`/pitch/${result.id}`);
     } else if (result.type === 'creator') {
-      navigate(`/creator/${result.id}`);
+      void navigate(`/creator/${result.id}`);
     } else if (result.type === 'production') {
-      navigate(`/production/company/${result.id}`);
+      void navigate(`/production/company/${result.id}`);
     }
   };
 

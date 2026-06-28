@@ -136,7 +136,7 @@ export default function ProductionSubmissionsRejected() {
   };
 
   const handleSendFeedback = (submission: Submission) => {
-    navigate(`/production/messages?to=${encodeURIComponent(submission.creatorEmail)}&subject=${encodeURIComponent('Feedback: ' + submission.title)}&body=${encodeURIComponent('Thank you for your submission. We wanted to provide feedback on your pitch.')}`);
+    void navigate(`/production/messages?to=${encodeURIComponent(submission.creatorEmail)}&subject=${encodeURIComponent('Feedback: ' + submission.title)}&body=${encodeURIComponent('Thank you for your submission. We wanted to provide feedback on your pitch.')}`);
   };
 
   const getRejectionCategoryColor = (category: string) => {

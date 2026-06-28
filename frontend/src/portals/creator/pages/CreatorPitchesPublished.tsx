@@ -353,7 +353,7 @@ export default function CreatorPitchesPublished() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigate(`/creator/pitch/${pitch.id}/edit`);
+                        void navigate(`/creator/pitch/${pitch.id}/edit`);
                       }}
                       className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition"
                     >
@@ -363,7 +363,7 @@ export default function CreatorPitchesPublished() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigate(`/creator/pitch/${pitch.id}/analytics`);
+                        void navigate(`/creator/pitch/${pitch.id}/analytics`);
                       }}
                       className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition"
                     >

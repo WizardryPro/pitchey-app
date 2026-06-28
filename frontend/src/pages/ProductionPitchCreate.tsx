@@ -455,7 +455,7 @@ export default function ProductionPitchCreate() {
       setCurrentDraft(null);
       
       // Navigate to dashboard
-      navigate('/production/dashboard');
+      void navigate('/production/dashboard');
     } catch (error) {
       console.error('Error creating pitch:', error);
       alert('Failed to create pitch. Please try again.');

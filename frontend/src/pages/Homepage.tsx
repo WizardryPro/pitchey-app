@@ -38,18 +38,18 @@ export default function Homepage() {
   // signed-out visitors go to portal select to sign in/up.
   const handleCreatePitch = () => {
     if (!isAuthenticated) {
-      navigate('/login');
+      void navigate('/login');
       return;
     }
     switch (userType) {
       case 'creator':
-        navigate('/creator/pitch/new');
+        void navigate('/creator/pitch/new');
         break;
       case 'production':
-        navigate('/production/pitch/new');
+        void navigate('/production/pitch/new');
         break;
       default:
-        navigate(getDashboardRoute(userType));
+        void navigate(getDashboardRoute(userType));
     }
   };
 
@@ -172,7 +172,7 @@ export default function Homepage() {
             onSubmit={(e) => {
               e.preventDefault();
               if (searchQuery.trim()) {
-                navigate(`/marketplace?search=${encodeURIComponent(searchQuery.trim())}`);
+                void navigate(`/marketplace?search=${encodeURIComponent(searchQuery.trim())}`);
               }
             }}
             className="max-w-xl mx-auto mb-8 flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] backdrop-blur p-1.5 transition focus-within:border-white/35 focus-within:bg-white/[0.09]"

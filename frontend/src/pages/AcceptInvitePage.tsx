@@ -26,7 +26,7 @@ export default function AcceptInvitePage() {
 
     if (!isAuthenticated) {
       const redirect = `/collaborate/accept?token=${encodeURIComponent(token)}`;
-      navigate(`/register?redirect=${encodeURIComponent(redirect)}`, { replace: true });
+      void navigate(`/register?redirect=${encodeURIComponent(redirect)}`, { replace: true });
       return;
     }
 

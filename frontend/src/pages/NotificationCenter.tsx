@@ -436,7 +436,7 @@ export default function NotificationCenter() {
                             <div className="flex space-x-2 mt-3">
                               <button
                                 onClick={() => {
-                                  navigate('/creator/ndas');
+                                  void navigate('/creator/ndas');
                                   handleMarkAsRead(notification.id);
                                 }}
                                 className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
@@ -445,7 +445,7 @@ export default function NotificationCenter() {
                               </button>
                               <button
                                 onClick={() => {
-                                  navigate('/creator/ndas');
+                                  void navigate('/creator/ndas');
                                   handleMarkAsRead(notification.id);
                                 }}
                                 className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
@@ -454,7 +454,7 @@ export default function NotificationCenter() {
                               </button>
                               <button
                                 onClick={() => {
-                                  navigate('/creator/ndas');
+                                  void navigate('/creator/ndas');
                                   handleMarkAsRead(notification.id);
                                 }}
                                 className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
@@ -469,7 +469,7 @@ export default function NotificationCenter() {
                             <div className="flex space-x-2 mt-3">
                               <button
                                 onClick={() => {
-                                  navigate('/investor/all-investments');
+                                  void navigate('/investor/all-investments');
                                   handleMarkAsRead(notification.id);
                                 }}
                                 className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"

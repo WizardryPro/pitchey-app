@@ -561,7 +561,7 @@ export default function OpportunitiesBoard() {
   const inPortalPath = ['creator', 'investor', 'production'].includes(portalSeg) ? `/${portalSeg}/opportunities` : null;
   useEffect(() => {
     if (!isInsidePortal && inPortalPath) {
-      navigate(`${inPortalPath}${location.search}`, { replace: true });
+      void navigate(`${inPortalPath}${location.search}`, { replace: true });
     }
   }, [isInsidePortal, inPortalPath, location.search, navigate]);
 
@@ -590,7 +590,7 @@ export default function OpportunitiesBoard() {
       setShowPost(true);
     }
     // strip the consumed params either way (canPost or not)
-    navigate(location.pathname, { replace: true });
+    void navigate(location.pathname, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isInsidePortal, inPortalPath, location.search, canPost]);
   const [loading, setLoading] = useState(true);

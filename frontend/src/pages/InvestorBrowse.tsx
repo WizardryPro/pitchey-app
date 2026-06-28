@@ -274,11 +274,11 @@ export default function InvestorBrowse() {
   const handleScheduleMeeting = (pitch: Pitch) => {
     const recipientId = pitch.creator?.id || (pitch as any).user_id || '';
     if (!recipientId) return;
-    navigate(`/investor/messages?recipient=${recipientId}&subject=${encodeURIComponent(pitch.title)}`);
+    void navigate(`/investor/messages?recipient=${recipientId}&subject=${encodeURIComponent(pitch.title)}`);
   };
 
   const handleMakeOffer = (pitch: Pitch) => {
-    navigate(`/investor/invest/${pitch.id}`);
+    void navigate(`/investor/invest/${pitch.id}`);
   };
 
   if (currentTabState.loading && currentTabState.pitches.length === 0) {

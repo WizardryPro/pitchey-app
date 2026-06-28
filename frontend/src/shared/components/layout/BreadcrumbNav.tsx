@@ -59,7 +59,7 @@ export function BreadcrumbNav({ items, showBackButton = true }: BreadcrumbNavPro
 
   const handleBack = () => {
     const portal = location.pathname.split('/')[1];
-    navigate(`/${portal}/dashboard`);
+    void navigate(`/${portal}/dashboard`);
   };
 
   return (
