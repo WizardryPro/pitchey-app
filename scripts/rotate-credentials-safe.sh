@@ -33,8 +33,8 @@ JWT_SECRET="${NEW_JWT_SECRET}"
 DATABASE_PASSWORD="${NEW_DB_PASSWORD}"
 
 # Cloudflare Commands to Update:
-echo "${NEW_JWT_SECRET}" | wrangler secret put JWT_SECRET --name pitchey-production
-echo "postgresql://neondb_owner:${NEW_DB_PASSWORD}@ep-old-snow-abpr94lc-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require" | wrangler secret put DATABASE_URL --name pitchey-production
+echo "${NEW_JWT_SECRET}" | wrangler secret put JWT_SECRET --name pitchey-api-prod
+echo "postgresql://neondb_owner:${NEW_DB_PASSWORD}@ep-old-snow-abpr94lc-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require" | wrangler secret put DATABASE_URL --name pitchey-api-prod
 
 # Neon Database Update Command:
 # Go to Neon Dashboard and reset password to: ${NEW_DB_PASSWORD}
