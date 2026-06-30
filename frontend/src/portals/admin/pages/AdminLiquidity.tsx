@@ -11,12 +11,27 @@ interface BuyersSignal { currentWeek: number; weeks: { week: string; count: numb
 interface DealsSignal { currentMonth: number; months: { month: string; count: number }[]; threshold: number; pass: boolean }
 interface OffPlatformSignal { rate: number; offPlatform: number; totalCloses: number; meaningfulLeakage: boolean; threshold: number }
 interface ConfirmSignal { rate: number; confirmed: number; withOutcome: number; threshold: number; pass: boolean }
+// R12 — cross-role NDA-intent graph density (the moat asset).
+interface GraphDensity {
+  degraded: boolean;
+  ndaDensity?: {
+    totalSigned: number;
+    pitchesWithNda: number;
+    meanPerEngagedPitch: number;
+    distribution: { one: number; twoToThree: number; fourPlus: number };
+  };
+  crossRole?: { bothSides: number; investorOnly: number; productionOnly: number };
+  intentToDeal?: { ndaEngagedPitches: number; convertedPitches: number; conversionRate: number; linkage: string };
+  supplySignals?: { investorsWithThesis: number; publicTheses: number; collaborationsTotal: number; collaborationsLast30d: number };
+}
+
 interface LiquidityData {
   buyersSigningNdas: BuyersSignal;
   dealsReachingOutcome: DealsSignal;
   offPlatformCloseRate: OffPlatformSignal;
   mutualConfirmRate: ConfirmSignal;
   gate: { open: boolean; thresholdsAreDraft: boolean };
+  graphDensity?: GraphDensity;
 }
 
 const pct = (n: number) => `${Math.round(n * 100)}%`;
@@ -59,6 +74,23 @@ function SignalCard({
         </div>
       )}
       <div className="text-xs text-gray-400 border-t border-gray-100 pt-2">Draft threshold: {threshold}</div>
+    </div>
+  );
+}
+
+// Observational metric card (no gate pill / threshold) — for the graph-density
+// section, which measures the moat rather than gating a decision.
+function MetricCard({ icon: Icon, title, value, sub }: {
+  icon: React.ElementType; title: string; value: string; sub: string;
+}) {
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-6 flex flex-col gap-3">
+      <div className="flex items-center gap-2 text-gray-500">
+        <Icon className="w-5 h-5" />
+        <span className="text-sm font-medium">{title}</span>
+      </div>
+      <div className="text-3xl font-bold text-gray-900">{value}</div>
+      <div className="text-sm text-gray-500">{sub}</div>
     </div>
   );
 }
@@ -188,6 +220,58 @@ export default function AdminLiquidity() {
         Pitchey introduced somewhere else — exactly the leakage on-platform deal-servicing is designed to capture.
         Source: live <code>ndas</code> + <code>production_deals</code> outcome columns (migration 114). No new schema.
       </p>
+
+      {data.graphDensity && (
+        <div className="space-y-4 pt-4 border-t border-gray-200">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Cross-role NDA-intent graph density</h2>
+            <p className="text-sm text-gray-500">The moat is this graph over time + liquidity. Read-only over live tables.</p>
+          </div>
+
+          {data.graphDensity.degraded ? (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm">
+              Graph metrics unavailable — the database is degraded. (This is a failed read, not zero data.)
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <MetricCard
+                  icon={Users}
+                  title="Cross-role pitches (both sides)"
+                  value={String(data.graphDensity.crossRole?.bothSides ?? 0)}
+                  sub={`Investor + production both signed · ${data.graphDensity.crossRole?.investorOnly ?? 0} investor-only · ${data.graphDensity.crossRole?.productionOnly ?? 0} production-only`}
+                />
+                <MetricCard
+                  icon={FileSignature}
+                  title="Honored NDAs / engaged pitch"
+                  value={(data.graphDensity.ndaDensity?.meanPerEngagedPitch ?? 0).toFixed(2)}
+                  sub={`${data.graphDensity.ndaDensity?.totalSigned ?? 0} signed across ${data.graphDensity.ndaDensity?.pitchesWithNda ?? 0} pitches`}
+                />
+                <MetricCard
+                  icon={ArrowUpRight}
+                  title="Intent → deal conversion"
+                  value={pct(data.graphDensity.intentToDeal?.conversionRate ?? 0)}
+                  sub={`${data.graphDensity.intentToDeal?.convertedPitches ?? 0} of ${data.graphDensity.intentToDeal?.ndaEngagedPitches ?? 0} NDA-engaged pitches have a deal`}
+                />
+                <MetricCard
+                  icon={CheckCircle2}
+                  title="Structured supply"
+                  value={String(data.graphDensity.supplySignals?.investorsWithThesis ?? 0)}
+                  sub={`${data.graphDensity.supplySignals?.publicTheses ?? 0} public theses · ${data.graphDensity.supplySignals?.collaborationsTotal ?? 0} collabs (${data.graphDensity.supplySignals?.collaborationsLast30d ?? 0} in 30d)`}
+                />
+              </div>
+              <p className="text-xs text-gray-400">
+                NDAs-per-engaged-pitch distribution: {data.graphDensity.ndaDensity?.distribution.one ?? 0} with 1 ·{' '}
+                {data.graphDensity.ndaDensity?.distribution.twoToThree ?? 0} with 2–3 ·{' '}
+                {data.graphDensity.ndaDensity?.distribution.fourPlus ?? 0} with 4+. The{' '}
+                <strong>both-sides</strong> count is the defensible asset — a pitch where an investor AND a
+                production company both signed an NDA. Source: live <code>ndas</code>, <code>users</code>,{' '}
+                <code>production_deals</code>, <code>investor_thesis</code>, <code>collaborations</code>. No new schema.
+              </p>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
