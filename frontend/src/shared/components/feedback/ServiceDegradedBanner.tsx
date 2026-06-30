@@ -7,6 +7,7 @@ import { useServiceStatusStore } from '../../../store/serviceStatusStore';
 // silently-empty marketplace. Auto-hides on the next successful (non-5xx) response.
 export function ServiceDegradedBanner() {
   const degraded = useServiceStatusStore((s) => s.degraded);
+  const stale = useServiceStatusStore((s) => s.stale);
   if (!degraded) return null;
 
   return (
@@ -17,10 +18,17 @@ export function ServiceDegradedBanner() {
     >
       <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-center gap-2 text-center text-sm font-medium">
         <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden />
-        <span>
-          We&rsquo;re having trouble reaching our servers. Some content may be temporarily
-          unavailable &mdash; please try again shortly.
-        </span>
+        {stale ? (
+          <span>
+            Showing recent cached results &mdash; live data is temporarily unavailable.
+            We&rsquo;ll refresh automatically once it&rsquo;s back.
+          </span>
+        ) : (
+          <span>
+            We&rsquo;re having trouble reaching our servers. Some content may be temporarily
+            unavailable &mdash; please try again shortly.
+          </span>
+        )}
       </div>
     </div>
   );

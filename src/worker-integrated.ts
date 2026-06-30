@@ -5870,6 +5870,10 @@ pitchey_analytics_datapoints_per_minute 1250
   }
 
   private async getPitches(request: Request): Promise<Response> {
+    return this.serveWithReadFallback('pitches', request, () => this.getPitchesImpl(request));
+  }
+
+  private async getPitchesImpl(request: Request): Promise<Response> {
     const builder = new ApiResponseBuilder(request);
 
     try {
@@ -9480,6 +9484,10 @@ pitchey_analytics_datapoints_per_minute 1250
   }
 
   private async browsePitches(request: Request): Promise<Response> {
+    return this.serveWithReadFallback('browse', request, () => this.browsePitchesImpl(request));
+  }
+
+  private async browsePitchesImpl(request: Request): Promise<Response> {
     const builder = new ApiResponseBuilder(request);
     const url = new URL(request.url);
     const tab = url.searchParams.get('tab') || 'trending';
@@ -9669,7 +9677,67 @@ pitchey_analytics_datapoints_per_minute 1250
     }
   }
 
+  // R8: serve last-good cached payload (clearly marked stale) when a discovery
+  // read fails (Neon 402/5xx/timeout) instead of an empty marketplace. READ-ONLY:
+  // only 2xx GET payloads are cached, short TTL, never poisons recovery.
+  private async serveWithReadFallback(
+    endpoint: string,
+    request: Request,
+    producer: () => Promise<Response>,
+  ): Promise<Response> {
+    const { cacheKeyFor, writeLastGood, readLastGood } = await import('./lib/read-fallback-cache');
+    const key = cacheKeyFor(endpoint, new URL(request.url));
+    const serveStale = async (): Promise<Response | null> => {
+      const cached = await readLastGood(this.env, key);
+      if (!cached) return null;
+      let bodyObj: any = null;
+      try { bodyObj = JSON.parse(cached); } catch { bodyObj = null; }
+      const body = bodyObj && typeof bodyObj === 'object'
+        ? JSON.stringify({ ...bodyObj, stale: true })
+        : cached;
+      return new Response(body, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Pitchey-Stale': 'true',
+          ...getCorsHeaders(request.headers.get('Origin')),
+        },
+      });
+    };
+    try {
+      const resp = await producer();
+      if (resp.status >= 200 && resp.status < 300) {
+        const text = await resp.clone().text();
+        // fire-and-forget (writeLastGood self-logs on failure; never throws)
+        void writeLastGood(this.env, key, text, 300);
+        return resp;
+      }
+      // 5xx (incl. a DB error caught internally and returned as a Response) ->
+      // try stale. 4xx is a client error, not degradation -> pass through.
+      if (resp.status >= 500) {
+        const stale = await serveStale();
+        if (stale) {
+          console.warn(JSON.stringify({ level: 'warn', category: 'read_fallback', endpoint, action: 'served_stale', reason: 'producer_5xx', status: resp.status }));
+          return stale;
+        }
+      }
+      return resp;
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      const stale = await serveStale();
+      if (stale) {
+        console.warn(JSON.stringify({ level: 'warn', category: 'read_fallback', endpoint, action: 'served_stale', reason: 'producer_threw', error: e.message }));
+        return stale;
+      }
+      throw e;
+    }
+  }
+
   private async getTrending(request: Request): Promise<Response> {
+    return this.serveWithReadFallback('trending', request, () => this.getTrendingImpl(request));
+  }
+
+  private async getTrendingImpl(request: Request): Promise<Response> {
     const builder = new ApiResponseBuilder(request);
     const url = new URL(request.url);
     const limit = parseInt(url.searchParams.get('limit') || '10');
