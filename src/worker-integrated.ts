@@ -11403,6 +11403,16 @@ pitchey_analytics_datapoints_per_minute 1250
       try {
         Sentry.captureMessage('Stripe test key deployed to production', { level: 'error' });
       } catch { /* Sentry hub not initialized */ }
+      // Teeth: a CI prefix-check can't see this value (the key is a Worker secret,
+      // and deploy-worker.yml deliberately doesn't manage secrets), so page Slack
+      // at runtime instead — this fires however the bad key got deployed. Awaited
+      // because this is a rare misconfig path (every live webhook is being dropped
+      // until it's fixed); postSlackAlert self-logs and never throws.
+      await postSlackAlert(
+        (this.env as any).SLACK_WEBHOOK_URL,
+        '🚨 Stripe test key in production',
+        'STRIPE_SECRET_KEY is not a live key (sk_live_*) — all live webhook deliveries are being dropped. Run `wrangler secret put STRIPE_SECRET_KEY` with the live key for pitchey-api-prod.',
+      );
     }
 
     const signature = request.headers.get('stripe-signature');
@@ -22417,6 +22427,29 @@ async function keepDatabaseWarm(env: any, _ctx: ExecutionContext): Promise<void>
   }
 }
 
+// Best-effort Slack alert on the EXISTING SLACK_WEBHOOK_URL channel (same one
+// scheduled-handler.ts uses). Callers await it on rare/critical money-path events.
+// It logs (never silently swallows) on failure so a Slack outage can't hide the
+// underlying event — the primary record always stays in Sentry + console. Matches
+// the Slack incoming-webhook payload shape used elsewhere ({ text, blocks }).
+async function postSlackAlert(webhookUrl: string | undefined, text: string, detail: string): Promise<void> {
+  if (!webhookUrl) return;
+  try {
+    const res = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text,
+        blocks: [{ type: 'section', text: { type: 'mrkdwn', text: `${text}\n${detail}` } }],
+      }),
+    });
+    if (!res.ok) console.error(`Slack alert failed: ${res.status} ${res.statusText}`);
+  } catch (err) {
+    const e = err instanceof Error ? err : new Error(String(err));
+    console.error('Slack alert error:', e.message);
+  }
+}
+
 // Daily Stripe<->DB subscription reconciliation. The webhook path always returns
 // 200 — even on a swallowed processing error — and Stripe can drop a delivery, so
 // a paying customer can end up with no active local subscription row and nobody
@@ -22503,6 +22536,21 @@ async function reconcileStripeSubscriptions(env: any, _ctx: ExecutionContext): P
     }
 
     const driftCount = paidNoAccess.length + accessNoActiveSub.length;
+
+    // Teeth: route the existential drift ("paid in Stripe, locked out locally") to
+    // Slack, not just Sentry — this is a customer actively unable to use what they
+    // paid for, and the cron runs only daily. Awaited (cron context); self-logs on
+    // failure so a Slack outage can't mask the drift (Sentry + the summary log below
+    // still record it). access_no_active_sub stays Sentry-only (revenue-leak, not a
+    // locked-out customer).
+    if (paidNoAccess.length > 0) {
+      await postSlackAlert(
+        env.SLACK_WEBHOOK_URL,
+        `🚨 Stripe reconcile: ${paidNoAccess.length} paid customer(s) locked out`,
+        `*paid_no_access_drift* — active in Stripe with no active local subscription row.\nSubscription ids: ${paidNoAccess.slice(0, 20).join(', ')}${paidNoAccess.length > 20 ? ` …(+${paidNoAccess.length - 20} more)` : ''}\nAction: re-grant access / investigate dropped webhook.`,
+      );
+    }
+
     console.log(JSON.stringify({
       level: driftCount > 0 ? 'warn' : 'info',
       category: 'stripe_reconcile',
