@@ -1588,6 +1588,9 @@ export class AdminEndpointsHandler {
       offPlatformCloseRate: { rate: 0, offPlatform: 0, totalCloses: 0, meaningfulLeakage: false, threshold: THRESHOLDS.offPlatformRate },
       mutualConfirmRate: { rate: 0, confirmed: 0, withOutcome: 0, threshold: THRESHOLDS.mutualConfirmRate, pass: false },
       gate: { open: false, thresholdsAreDraft: true },
+      // R12: never show misleading zeros for the graph section on a total failure —
+      // degraded:true is distinguishable from a genuinely empty graph.
+      graphDensity: { degraded: true },
     };
 
     try {
@@ -1652,6 +1655,10 @@ export class AdminEndpointsHandler {
       const s3Leak = offRate >= THRESHOLDS.offPlatformRate;
       const s4Pass = confirmRate >= THRESHOLDS.mutualConfirmRate;
 
+      // R12: cross-role NDA-intent graph density (the moat asset). Self-contained
+      // error handling — surfaces degraded:true rather than dragging down the gate.
+      const graphDensity = await this.computeGraphDensity(sql);
+
       return this.bareJson({
         buyersSigningNdas: { currentWeek, weeks, trendNonDecreasing, threshold: THRESHOLDS.buyersPerWeek, pass: s1Pass },
         dealsReachingOutcome: { currentMonth, months, threshold: THRESHOLDS.dealsPerMonth, pass: s2Pass },
@@ -1660,11 +1667,106 @@ export class AdminEndpointsHandler {
         // Advisory verdict: liquidity is real AND deals close AND the leak is worth
         // capturing AND both sides report back. All four together = start P5.0.
         gate: { open: s1Pass && s2Pass && s3Leak && s4Pass, thresholdsAreDraft: true },
+        graphDensity,
       }, corsHeaders);
 
     } catch (error) {
       await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
       return this.bareJson(empty, corsHeaders);
+    }
+  }
+
+  // R12: cross-role NDA-intent graph density — the moat thesis is this graph over
+  // time + liquidity, but nothing measured it. Read-only over EXISTING tables
+  // (ndas/users/production_deals/investor_thesis/collaborations); zero new schema.
+  // 'signed' = the honored edge (matches the gold-reputation Path-A definition).
+  // Self-contained try/catch: a DB failure (e.g. Neon 402) surfaces degraded:true,
+  // never all-zeros that would read as "no graph".
+  private async computeGraphDensity(
+    sql: (strings: TemplateStringsArray, ...values: any[]) => Promise<any[]>,
+  ): Promise<any> {
+    try {
+      // Per-pitch roll-up: NDA count + which buyer roles signed → density + the
+      // headline cross-role (both investor AND production signer) count.
+      const [d] = await sql`
+        WITH pitch_roles AS (
+          SELECT n.pitch_id,
+            COUNT(*) AS nda_count,
+            BOOL_OR(u.user_type = 'investor') AS has_investor,
+            BOOL_OR(u.user_type = 'production') AS has_production
+          FROM ndas n
+          JOIN users u ON u.id = n.signer_id
+          WHERE n.status = 'signed'
+          GROUP BY n.pitch_id
+        )
+        SELECT
+          COALESCE(SUM(nda_count), 0)::int AS total_signed,
+          COUNT(*)::int AS pitches_with_nda,
+          COUNT(*) FILTER (WHERE has_investor AND has_production)::int AS both_sides,
+          COUNT(*) FILTER (WHERE has_investor AND NOT has_production)::int AS investor_only,
+          COUNT(*) FILTER (WHERE has_production AND NOT has_investor)::int AS production_only,
+          COUNT(*) FILTER (WHERE nda_count = 1)::int AS bucket_1,
+          COUNT(*) FILTER (WHERE nda_count BETWEEN 2 AND 3)::int AS bucket_2_3,
+          COUNT(*) FILTER (WHERE nda_count >= 4)::int AS bucket_4plus
+        FROM pitch_roles
+      `;
+
+      // Intent → deal conversion via the real pitch_id linkage on production_deals.
+      const [c] = await sql`
+        SELECT
+          (SELECT COUNT(DISTINCT pitch_id) FROM ndas WHERE status = 'signed')::int AS nda_engaged_pitches,
+          (SELECT COUNT(DISTINCT pd.pitch_id) FROM production_deals pd
+             WHERE pd.pitch_id IN (SELECT pitch_id FROM ndas WHERE status = 'signed'))::int AS converted_pitches
+      `;
+
+      // Supply / intent leading indicators.
+      const [s] = await sql`
+        SELECT
+          (SELECT COUNT(*) FROM investor_thesis)::int AS investors_with_thesis,
+          (SELECT COUNT(*) FROM investor_thesis WHERE is_public)::int AS public_theses,
+          (SELECT COUNT(*) FROM collaborations)::int AS collaborations_total,
+          (SELECT COUNT(*) FROM collaborations WHERE created_at >= NOW() - INTERVAL '30 days')::int AS collaborations_30d
+      `;
+
+      const dd: any = d || {}, cc: any = c || {}, ss: any = s || {};
+      const totalSigned = Number(dd.total_signed || 0);
+      const pitchesWithNda = Number(dd.pitches_with_nda || 0);
+      const ndaEngaged = Number(cc.nda_engaged_pitches || 0);
+      const converted = Number(cc.converted_pitches || 0);
+
+      return {
+        degraded: false,
+        ndaDensity: {
+          totalSigned,
+          pitchesWithNda,
+          meanPerEngagedPitch: pitchesWithNda > 0 ? totalSigned / pitchesWithNda : 0,
+          distribution: {
+            one: Number(dd.bucket_1 || 0),
+            twoToThree: Number(dd.bucket_2_3 || 0),
+            fourPlus: Number(dd.bucket_4plus || 0),
+          },
+        },
+        crossRole: {
+          bothSides: Number(dd.both_sides || 0), // headline — the defensible asset
+          investorOnly: Number(dd.investor_only || 0),
+          productionOnly: Number(dd.production_only || 0),
+        },
+        intentToDeal: {
+          ndaEngagedPitches: ndaEngaged,
+          convertedPitches: converted,
+          conversionRate: ndaEngaged > 0 ? converted / ndaEngaged : 0,
+          linkage: 'pitch_id',
+        },
+        supplySignals: {
+          investorsWithThesis: Number(ss.investors_with_thesis || 0),
+          publicTheses: Number(ss.public_theses || 0),
+          collaborationsTotal: Number(ss.collaborations_total || 0),
+          collaborationsLast30d: Number(ss.collaborations_30d || 0),
+        },
+      };
+    } catch (error) {
+      await this.logger.captureError(error instanceof Error ? error : new Error(String(error)));
+      return { degraded: true };
     }
   }
 
