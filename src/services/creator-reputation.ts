@@ -35,9 +35,9 @@ const MIN_HONORED_NDAS = 3;
 // One mutually-confirmed closed deal is enough — both parties had to confirm it.
 const MIN_HONORED_DEALS = 1;
 
-export async function recomputeCreatorReputationTiers(env: any, _ctx?: any): Promise<{ promoted: number }> {
+export async function recomputeCreatorReputationTiers(env: any, _ctx?: any): Promise<{ promoted: number; promotedIds: number[] }> {
   const url = env?.DATABASE_URL;
-  if (!url) return { promoted: 0 };
+  if (!url) return { promoted: 0, promotedIds: [] };
   const sql = neon(url);
   try {
     const rows = await sql`
@@ -72,16 +72,18 @@ export async function recomputeCreatorReputationTiers(env: any, _ctx?: any): Pro
         )
       RETURNING u.id
     `;
-    const promoted = rows.length;
+    const promotedIds = rows.map((r: any) => Number(r.id));
+    const promoted = promotedIds.length;
     console.log(JSON.stringify({
       level: 'info',
       category: 'reputation',
       action: 'creator_gold_recompute',
       promoted,
+      promotedIds,
     }));
-    return { promoted };
+    return { promoted, promotedIds };
   } catch (err) {
     console.error('recomputeCreatorReputationTiers error:', err instanceof Error ? err.message : String(err));
-    return { promoted: 0 };
+    return { promoted: 0, promotedIds: [] };
   }
 }

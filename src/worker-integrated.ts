@@ -3886,6 +3886,14 @@ class RouteRegistry {
       return recalculateHeatScoresHandler(req, this.env);
     });
 
+    // Manual gold-reputation recompute — operator escape hatch if the daily cron
+    // freezes. Admin-gated inside the handler; excluded from the adminHandler
+    // intercept below (like heat-scores).
+    this.register('POST', '/api/admin/reputation/recompute', async (req) => {
+      const { recomputeReputationHandler } = await import('./handlers/creator-reputation-admin');
+      return recomputeReputationHandler(req, this.env);
+    });
+
     // Founding-user grant status (migration 082) — admin-only observability
     this.register('GET', '/api/admin/subscription-grants/status', async (req) => {
       const { subscriptionGrantsStatusHandler } = await import('./handlers/subscription-grants');
@@ -4425,6 +4433,7 @@ class RouteRegistry {
         !path.startsWith('/api/admin/verifications') &&
         !path.startsWith('/api/admin/heat-scores') &&
         !path.startsWith('/api/admin/credits') &&
+        !path.startsWith('/api/admin/reputation') &&
         !path.startsWith('/api/admin/subscription-grants')) {
       const corsHeaders = getCorsHeaders(request.headers.get('Origin'));
       const authResult = await this.validateAuth(request);
