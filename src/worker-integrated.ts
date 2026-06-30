@@ -3892,6 +3892,17 @@ class RouteRegistry {
       return subscriptionGrantsStatusHandler(req, this.env);
     });
 
+    // Manual credit grant/revoke with audit trail — admin-only. Used for refunds
+    // the charge.refunded webhook can't auto-link, plus goodwill adjustments.
+    this.register('POST', '/api/admin/credits/grant', async (req) => {
+      const { adminGrantCreditsHandler } = await import('./handlers/admin-credits');
+      return adminGrantCreditsHandler(req, this.env);
+    });
+    this.register('POST', '/api/admin/credits/revoke', async (req) => {
+      const { adminRevokeCreditsHandler } = await import('./handlers/admin-credits');
+      return adminRevokeCreditsHandler(req, this.env);
+    });
+
     // Launch promo-code report (FreeThePitch100 / LifesAPitch50) — admin-only.
     // Reads live from Stripe: redemption counts + who signed up with each code.
     this.register('GET', '/api/admin/promo-codes', async (req) => {
@@ -4407,11 +4418,13 @@ class RouteRegistry {
     //   - verifications     : company verification review
     //   - heat-scores       : heat recalculation trigger
     //   - subscription-grants: founding-grant observability
+    //   - credits           : manual credit grant/revoke with audit
     if (this.adminHandler && path.startsWith('/api/admin/') &&
         !path.startsWith('/api/admin/metrics') && !path.startsWith('/api/admin/health') &&
         !path.startsWith('/api/admin/promo-codes') &&
         !path.startsWith('/api/admin/verifications') &&
         !path.startsWith('/api/admin/heat-scores') &&
+        !path.startsWith('/api/admin/credits') &&
         !path.startsWith('/api/admin/subscription-grants')) {
       const corsHeaders = getCorsHeaders(request.headers.get('Origin'));
       const authResult = await this.validateAuth(request);
@@ -11504,11 +11517,21 @@ pitchey_analytics_datapoints_per_minute 1250
                   last_updated = NOW()
               `;
 
+              // Store Stripe refs in metadata (jsonb) — NOT a stripe_session_id
+              // column, which does not exist on credit_transactions in prod (the
+              // old code referenced it and threw, so credit-pack purchases never
+              // recorded). payment_intent is the key charge.refunded matches on to
+              // auto-reverse this grant; one-shot mode=payment sessions carry it.
+              const purchaseMeta = JSON.stringify({
+                stripe_session_id: session.id,
+                payment_intent: session.payment_intent || null,
+                package: session.metadata.package || 'custom',
+              });
               await sql`
-                INSERT INTO credit_transactions (user_id, type, amount, description, balance_before, balance_after, stripe_session_id, created_at)
+                INSERT INTO credit_transactions (user_id, type, amount, description, balance_before, balance_after, metadata, created_at)
                 VALUES (${userId}, 'purchase', ${credits},
                   ${'Purchased ' + credits + ' credits (' + (session.metadata.package || 'custom') + ')'},
-                  ${currentBalance}, ${currentBalance + credits}, ${session.id}, NOW())
+                  ${currentBalance}, ${currentBalance + credits}, ${purchaseMeta}::jsonb, NOW())
               `;
 
               console.log(JSON.stringify({
@@ -11916,25 +11939,100 @@ pitchey_analytics_datapoints_per_minute 1250
         }
 
         case 'charge.refunded': {
-          // Refunds carry charge.payment_intent, not the checkout session id we
-          // persist on credit_transactions.stripe_session_id, so we cannot
-          // cleanly resolve user_id without an extra Stripe API call plus a
-          // partial-refund proration policy. Log loudly so ops reverses credits
-          // manually via the admin grant tool. Full revocation = follow-up work.
+          // Auto-reverse ONLY credit-pack purchases we can link via the
+          // payment_intent stored in credit_transactions.metadata (see the
+          // checkout.session.completed grant above). Subscription/other refunds
+          // and unlinkable grants fall through to an actionable Slack alert — ops
+          // reverses those with the admin credit tool. amount_refunded is
+          // cumulative, so partial-then-full refunds reconcile correctly and
+          // re-delivery never double-reverses.
           const charge = event.data.object;
-          console.error(JSON.stringify({
-            level: 'error',
-            category: 'stripe_webhook',
-            event_id: event.id,
-            event_type: event.type,
-            action: 'refund_received_manual_action_required',
-            charge_id: charge.id,
-            payment_intent: charge.payment_intent || null,
-            amount_refunded: (charge.amount_refunded || 0) / 100,
-            amount_total: (charge.amount || 0) / 100,
-            currency: charge.currency,
-            customer: charge.customer || null,
-          }));
+          const pi: string | null = charge.payment_intent || null;
+          try {
+            let handled = false;
+            if (pi && sql) {
+              const grantRows = await sql`
+                SELECT id, user_id, amount
+                FROM credit_transactions
+                WHERE type = 'purchase' AND metadata->>'payment_intent' = ${pi}
+                ORDER BY created_at DESC LIMIT 1
+              ` as { id: number; user_id: number; amount: number }[];
+              if (grantRows.length > 0) {
+                const grant = grantRows[0];
+                const granted = grant.amount; // positive credits granted
+                const amountTotal = charge.amount || 0;
+                const amountRefunded = charge.amount_refunded || 0;
+                const targetReverse = amountTotal > 0
+                  ? Math.round(granted * amountRefunded / amountTotal)
+                  : granted;
+                const reversedRows = await sql`
+                  SELECT COALESCE(SUM(-amount), 0)::int AS reversed
+                  FROM credit_transactions
+                  WHERE type = 'refund' AND metadata->>'payment_intent' = ${pi}
+                ` as { reversed: number }[];
+                const alreadyReversed = reversedRows[0]?.reversed || 0;
+                const delta = Math.min(targetReverse, granted) - alreadyReversed;
+                if (delta > 0) {
+                  const balRows = await sql`SELECT balance FROM user_credits WHERE user_id = ${grant.user_id}`;
+                  const balanceBefore = balRows.length > 0 ? (balRows[0].balance || 0) : 0;
+                  const applied = Math.min(delta, balanceBefore); // never below 0
+                  const balanceAfter = balanceBefore - applied;
+                  if (applied > 0) {
+                    await sql`UPDATE user_credits SET balance = ${balanceAfter}, last_updated = NOW() WHERE user_id = ${grant.user_id}`;
+                  }
+                  const refundMeta = JSON.stringify({ payment_intent: pi, charge_id: charge.id, source: 'charge.refunded' });
+                  await sql`
+                    INSERT INTO credit_transactions (user_id, type, amount, description, balance_before, balance_after, metadata, created_at)
+                    VALUES (${grant.user_id}, 'refund', ${-applied},
+                      ${'Refund reversal for charge ' + charge.id},
+                      ${balanceBefore}, ${balanceAfter}, ${refundMeta}::jsonb, NOW())
+                  `;
+                  console.log(JSON.stringify({
+                    level: 'info', category: 'stripe_webhook', event_id: event.id, event_type: event.type,
+                    action: 'refund_reversed', charge_id: charge.id, payment_intent: pi,
+                    user_id: grant.user_id, credits_reversed: applied, balance_after: balanceAfter,
+                  }));
+                } else {
+                  console.log(JSON.stringify({
+                    level: 'info', category: 'stripe_webhook', event_id: event.id, event_type: event.type,
+                    action: 'refund_already_reversed', charge_id: charge.id, payment_intent: pi,
+                  }));
+                }
+                handled = true;
+              }
+            }
+            if (!handled) {
+              // No linkable credit-pack grant (subscription refund, no PI, or a
+              // pre-metadata grant). Page ops to reverse via the admin tool.
+              console.error(JSON.stringify({
+                level: 'error', category: 'stripe_webhook', event_id: event.id, event_type: event.type,
+                action: 'refund_received_manual_action_required', charge_id: charge.id,
+                payment_intent: pi,
+                amount_refunded: (charge.amount_refunded || 0) / 100,
+                amount_total: (charge.amount || 0) / 100,
+                currency: charge.currency, customer: charge.customer || null,
+              }));
+              await postSlackAlert(
+                (this.env as any).SLACK_WEBHOOK_URL,
+                '🚨 Stripe refund needs manual review',
+                `Refund of ${((charge.amount_refunded || 0) / 100).toFixed(2)} ${(charge.currency || '').toUpperCase()} on charge ${charge.id} (customer ${charge.customer || 'unknown'}) could not be auto-linked to a credit-pack grant. Reverse via POST /api/admin/credits/revoke if credits were granted.`,
+              );
+            }
+          } catch (err) {
+            const e = err instanceof Error ? err : new Error(String(err));
+            console.error(JSON.stringify({
+              level: 'error', category: 'stripe_webhook', event_id: event.id, event_type: event.type,
+              action: 'refund_reversal_failed', charge_id: charge.id, payment_intent: pi, error: e.message,
+            }));
+            try { Sentry.captureException(e, { tags: { stripe: 'refund_reversal' } }); } catch { /* Sentry hub not initialized */ }
+            // The outer catch returns 200 (Stripe won't retry), so paging Slack is
+            // the only way ops learns a reversal failed — do not let this be silent.
+            await postSlackAlert(
+              (this.env as any).SLACK_WEBHOOK_URL,
+              '🚨 Stripe refund reversal FAILED',
+              `charge ${charge.id} (PI ${pi}) — automatic credit reversal errored: ${e.message}. Manual action required via the admin credit tool.`,
+            );
+          }
           break;
         }
 
