@@ -8,9 +8,11 @@
 // Uses a direct DB connection only to reset the NDA dedup state so the suite is
 // idempotent (ndas has a unique signer_id+pitch_id guard).
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { neon } from '@neondatabase/serverless';
 import { TestClient, json } from './client';
+import { buildTestEnv } from './env';
+import { recomputeCreatorReputationTiers } from '../../src/services/creator-reputation';
 
 const sql = neon(process.env.TEST_DATABASE_URL as string);
 
@@ -98,5 +100,106 @@ describe('cross-role: company verification submit', () => {
     const status = await producer.get('/api/production/verification-status');
     expect(status.status).not.toBe(500);
     expect(status.status).toBe(200);
+  });
+});
+
+// Side-effect (DB mutation) assertions for the promote-only reputation cron
+// (recomputeCreatorReputationTiers in src/services/creator-reputation.ts). It runs
+// one UPDATE that sets verification_tier='gold' for creators meeting Path A
+// (>= 2 sealed pitches AND >= 3 honored NDAs) or Path B (a mutually-confirmed
+// closed deal), and never downgrades.
+//
+// No grey creator qualifies organically on the prod-copy branch (verified at
+// authoring time: alex.creator is already gold; the rest have 0–1 of each signal).
+// To get real TEETH on the UPDATE we seed ONE deterministic, self-cleaning Path-A
+// creator via direct SQL (same fixture pattern this file already uses for NDA
+// dedup) — this seeds the PREREQUISITE signals, not the tier itself; the live
+// function is what flips the tier.
+describe('cross-role: creator reputation gold promotion (DB mutation)', () => {
+  const EMAIL = 'r7-gold-seed@example.test';
+  let creatorId: number | null = null;
+  let pitchId: number | null = null;
+  const signerIds: number[] = [];
+
+  async function cleanup() {
+    const [u] = await sql`SELECT id FROM users WHERE email = ${EMAIL}`;
+    if (!u) return;
+    const id = u.id;
+    const pitches = await sql`SELECT id FROM pitches WHERE user_id = ${id}`;
+    for (const p of pitches) {
+      await sql`DELETE FROM ndas WHERE pitch_id = ${p.id}`;
+      await sql`DELETE FROM pitch_provenance WHERE pitch_id = ${p.id}`;
+    }
+    await sql`DELETE FROM pitch_provenance WHERE creator_id = ${id}`;
+    await sql`DELETE FROM pitches WHERE user_id = ${id}`;
+    await sql`DELETE FROM users WHERE id = ${id}`;
+  }
+
+  beforeAll(async () => {
+    await cleanup(); // idempotent re-runs
+
+    const [u] = await sql`
+      INSERT INTO users (email, username, password, user_type, verification_tier)
+      VALUES (${EMAIL}, ${'r7goldseed'}, ${'x'}, 'creator', 'grey')
+      RETURNING id
+    `;
+    creatorId = Number(u.id);
+
+    const [p] = await sql`
+      INSERT INTO pitches (user_id, creator_id, title, logline, status)
+      VALUES (${creatorId}, ${creatorId}, ${'R7 gold seed pitch'},
+              ${'Seed pitch for the reputation gold-promotion side-effect test.'}, 'draft')
+      RETURNING id
+    `;
+    pitchId = Number(p.id);
+
+    // Path A signal 1: >= 2 sealed pitches (provenance rows for this creator).
+    for (let i = 0; i < 2; i++) {
+      const hash = `${'r7'.padEnd(2, '0')}${String(creatorId).padStart(10, '0')}${String(Date.now() + i).padStart(20, '0')}`.padEnd(64, '0').slice(0, 64);
+      await sql`
+        INSERT INTO pitch_provenance (pitch_id, creator_id, content_hash, algorithm, content_version, sealed_at)
+        VALUES (${pitchId}, ${creatorId}, ${hash}, 'sha256', ${i + 1}, NOW())
+      `;
+    }
+
+    // Path A signal 2: >= 3 honored NDAs (status='signed', signer <> creator, not revoked).
+    const signers = await sql`
+      SELECT id FROM users WHERE user_type IN ('investor', 'production') AND id <> ${creatorId} LIMIT 3
+    `;
+    for (const s of signers) {
+      signerIds.push(Number(s.id));
+      await sql`
+        INSERT INTO ndas (pitch_id, signer_id, status, nda_type, access_granted, signed_at, created_at, updated_at)
+        VALUES (${pitchId}, ${s.id}, 'signed', 'basic', true, NOW(), NOW(), NOW())
+        ON CONFLICT (pitch_id, signer_id) DO NOTHING
+      `;
+    }
+  });
+
+  afterAll(async () => { await cleanup(); });
+
+  it('promotes a qualifying grey creator to gold, monotonically', async () => {
+    expect(creatorId, 'precondition: seeded creator').not.toBeNull();
+    expect(signerIds.length, 'precondition: >= 3 honored-NDA signers seeded').toBeGreaterThanOrEqual(3);
+
+    const [before] = await sql`SELECT COALESCE(verification_tier, 'grey') AS tier FROM users WHERE id = ${creatorId}`;
+    expect(String(before.tier)).toBe('grey');
+
+    // Snapshot existing gold creators to assert monotonicity (no downgrades).
+    const goldBefore = (await sql`SELECT id FROM users WHERE verification_tier = 'gold'`).map((r) => Number(r.id));
+
+    const result = await recomputeCreatorReputationTiers(buildTestEnv());
+    expect(typeof result.promoted).toBe('number');
+    expect(result.promoted).toBeGreaterThanOrEqual(1);
+
+    // The live UPDATE flipped our seeded creator grey -> gold.
+    const [after] = await sql`SELECT verification_tier AS tier FROM users WHERE id = ${creatorId}`;
+    expect(String(after.tier)).toBe('gold');
+
+    // Monotonicity: every previously-gold creator is still gold.
+    const goldAfter = new Set((await sql`SELECT id FROM users WHERE verification_tier = 'gold'`).map((r) => Number(r.id)));
+    for (const id of goldBefore) {
+      expect(goldAfter.has(id), `creator ${id} must not be downgraded from gold`).toBe(true);
+    }
   });
 });
