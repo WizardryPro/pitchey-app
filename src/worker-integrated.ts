@@ -5155,6 +5155,15 @@ class RouteRegistry {
       let dbStatus = 'error';
       let dbTime: string | null = null;
       let dbError: string | null = null;
+      // Neon compute-quota dimension (R6). Single-purpose signal: 'ok' unless the
+      // DB probe fails with a compute-quota-402 signature, in which case
+      // 'exhausted'. This is the INFRA 402 (Neon returns 402 on every query when
+      // the plan's compute-time quota is spent), NOT the app-level 402
+      // INSUFFICIENT_FUNDS — those are Response objects built in the credit/payment
+      // handlers and never surface in this DB catch, so the two can't be conflated.
+      // Proactive (headroom-before-exhaustion) detection lives CI-side: the worker
+      // has no NEON_API_KEY secret and cannot read Neon's usage API.
+      let neonQuotaStatus = 'ok';
 
       if (this.db) {
         try {
@@ -5165,6 +5174,10 @@ class RouteRegistry {
           }
         } catch (err: any) {
           dbError = err.message;
+          const msg = String(err?.message || '').toLowerCase();
+          if (msg.includes('402') || msg.includes('quota') || msg.includes('compute time') || msg.includes('exceeded')) {
+            neonQuotaStatus = 'exhausted';
+          }
           console.error('Database health check failed:', err);
         }
       }
@@ -5211,7 +5224,8 @@ class RouteRegistry {
       }
 
       const allConnected = dbStatus === 'connected' && redisStatus !== 'error'
-        && stripeStatus !== 'unreachable' && stripeStatus !== 'test_key_in_prod';
+        && stripeStatus !== 'unreachable' && stripeStatus !== 'test_key_in_prod'
+        && neonQuotaStatus === 'ok';
 
       return builder.success({
         status: allConnected ? 'ok' : 'degraded',
@@ -5222,6 +5236,9 @@ class RouteRegistry {
             status: dbStatus,
             time: dbTime,
             error: dbError
+          },
+          neon_quota: {
+            status: neonQuotaStatus
           },
           redis: {
             status: redisStatus

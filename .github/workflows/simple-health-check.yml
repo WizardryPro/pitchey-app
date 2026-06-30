@@ -3,11 +3,13 @@ name: Simple Health Check
 on:
   workflow_dispatch:
   # 2026-05-02: re-enabled at 1hr cadence after the 2026-04-30 Neon-quota
-  # outage (#65). At every-hour, with smoke at every-2hr, the two cron
-  # cycles align at :00 every 2hrs (smoke + health both fire) and miss-
-  # align at :00 odd hours (only health fires) — sustainable on Free tier.
+  # outage (#65). 2026-06-30 (R6): tightened to every 15 min to cut Neon
+  # compute-quota detection latency (the outage class that hit twice). Burn is
+  # negligible — the per-service probe is one `SELECT NOW()` and the new
+  # quota-headroom step is a Neon control-plane API call (no DB compute). See
+  # docs/neon-quota-keepwarm-decision-2026-06-30.md.
   schedule:
-    - cron: '0 * * * *'  # Every hour
+    - cron: '*/15 * * * *'  # Every 15 min
 
 permissions:
   contents: read
@@ -43,6 +45,49 @@ jobs:
             echo "❌ API is down"
             exit 1
           fi
+
+      # Proactive Neon compute-quota headroom (R6). The worker can't read Neon's
+      # usage API (no NEON_API_KEY worker secret), so the BEFORE-exhaustion signal
+      # lives here: a control-plane call (zero DB compute) that reads cpu_used_sec
+      # vs the quota window. Fails (-> Slack + issue) at >= 85% IF a quota ceiling
+      # is configured via the NEON_COMPUTE_QUOTA_SEC repo variable; otherwise it
+      # logs cpu_used_sec for visibility without failing (no false page on an
+      # unknown ceiling). The worker's reactive `neon_quota` service catches the
+      # already-exhausted state via the per-service check below.
+      - name: Check Neon compute-quota headroom
+        id: neon_quota
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+          NEON_COMPUTE_QUOTA_SEC: ${{ vars.NEON_COMPUTE_QUOTA_SEC }}
+        run: |
+          if [ -z "$NEON_API_KEY" ] || [ -z "$NEON_PROJECT_ID" ]; then
+            echo "⚠️ NEON_API_KEY / NEON_PROJECT_ID not set — skipping quota headroom check"
+            exit 0
+          fi
+          BODY="$(curl -fsS --retry 3 --retry-delay 2 --retry-all-errors --max-time 20 \
+            -H "Authorization: Bearer $NEON_API_KEY" \
+            "https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID")"
+          RESULT="$(echo "$BODY" | python3 -c '
+          import sys, json, os
+          p = (json.load(sys.stdin).get("project") or {})
+          used = p.get("cpu_used_sec")
+          reset = p.get("quota_reset_at")
+          ceiling = os.environ.get("NEON_COMPUTE_QUOTA_SEC")
+          if used is None:
+              print("SKIP cpu_used_sec absent from Neon API response"); sys.exit(0)
+          if ceiling and ceiling.isdigit() and int(ceiling) > 0:
+              pct = used / int(ceiling) * 100
+              tag = "BAD" if pct >= 85 else "OK"
+              print(f"{tag} cpu_used={used}s / {ceiling}s = {pct:.1f}% (resets {reset})")
+          else:
+              print(f"INFO cpu_used={used}s (no NEON_COMPUTE_QUOTA_SEC ceiling set; resets {reset})")
+          ')"
+          echo "$RESULT"
+          case "$RESULT" in
+            BAD*) echo "UNHEALTHY_SERVICES=neon_quota_headroom ($RESULT)" >> "$GITHUB_ENV"; exit 1 ;;
+            *)    exit 0 ;;
+          esac
 
       # Per-service check. `curl -f` above only proves /api/health returns 200 —
       # but it returns 200 even when a dependency is broken (the overall `status`
