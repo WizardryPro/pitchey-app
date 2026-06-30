@@ -97,6 +97,10 @@ export async function getMatchingInvestorsHandler(request: Request, env: Env): P
   if (!sql) return jsonResponse({ success: true, investors: [] }, origin);
 
   try {
+    // Financial bounds (check_size_*) are intentionally NOT selected — a single
+    // is_public flag publishes intent, not how much money an investor writes, and
+    // this payload reaches creators (R11 privacy decision). The full safe-subset
+    // thesis is fetched on demand via GET /api/public/thesis/:id.
     const investors = await sql`
       SELECT it.investor_id,
              u.username,
@@ -104,8 +108,6 @@ export async function getMatchingInvestorsHandler(request: Request, env: Env): P
              it.genres,
              it.formats,
              it.positioning,
-             it.check_size_min_usd,
-             it.check_size_max_usd,
              it.updated_at
       FROM investor_thesis it
       JOIN users u ON u.id = it.investor_id

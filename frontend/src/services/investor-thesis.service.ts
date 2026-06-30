@@ -35,8 +35,22 @@ export interface MatchingInvestor {
   genres: string[];
   formats: string[];
   positioning: string;
-  checkSizeMinUsd: number | null;
-  checkSizeMaxUsd: number | null;
+  // Financials intentionally excluded — the matching surface shows public intent,
+  // not check size (R11 privacy decision).
+}
+
+// The public (creator/anon-readable) thesis — SAFE SUBSET only. The endpoint
+// deliberately omits financial bounds, so this type has none.
+export interface PublicThesis {
+  companyName: string | null;
+  username: string | null;
+  positioning: string;
+  genres: string[];
+  formats: string[];
+  stages: string[];
+  dealTypes: string[];
+  territories: string[];
+  themes: string[];
 }
 
 // The raw snake_case shape the backend returns for matching investors.
@@ -47,8 +61,7 @@ interface RawMatchingInvestor {
   genres?: string[];
   formats?: string[];
   positioning?: string | null;
-  check_size_min_usd?: number | null;
-  check_size_max_usd?: number | null;
+  // (no check_size_* — the matching endpoint no longer returns financials)
 }
 
 // A published pitch that matches the investor's thesis (camelCase, for the dashboard view).
@@ -148,11 +161,37 @@ export class InvestorThesisService {
         genres: Array.isArray(r.genres) ? r.genres : [],
         formats: Array.isArray(r.formats) ? r.formats : [],
         positioning: r.positioning ?? '',
-        checkSizeMinUsd: r.check_size_min_usd ?? null,
-        checkSizeMaxUsd: r.check_size_max_usd ?? null,
       }));
     } catch {
       return [];
+    }
+  }
+
+  // An investor's PUBLIC thesis (safe subset — no financials), for the
+  // creator-facing "view full thesis" disclosure. Returns null when the thesis
+  // is private/missing (the endpoint 404s) or on any error, so the UI degrades
+  // to a neutral empty state rather than throwing.
+  static async getPublicThesis(investorId: number): Promise<PublicThesis | null> {
+    try {
+      const response = await apiClient.get<{ success: boolean; thesis: PublicThesis }>(
+        `/api/public/thesis/${investorId}`,
+      );
+      if (!response.success || !response.data?.thesis) return null;
+      const t = response.data.thesis;
+      const arr = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
+      return {
+        companyName: t.companyName ?? null,
+        username: t.username ?? null,
+        positioning: typeof t.positioning === 'string' ? t.positioning : '',
+        genres: arr(t.genres),
+        formats: arr(t.formats),
+        stages: arr(t.stages),
+        dealTypes: arr(t.dealTypes),
+        territories: arr(t.territories),
+        themes: arr(t.themes),
+      };
+    } catch {
+      return null;
     }
   }
 
