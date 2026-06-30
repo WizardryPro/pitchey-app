@@ -175,11 +175,18 @@ class ApiClient {
       
       const response = await fetch(url, fetchOptions);
 
-      // Global degraded signal (R0.1): a 5xx (e.g. the public pitch endpoints now
-      // return 503 on a Neon compute-quota 402 instead of a fake-empty 200) flips the
-      // app-wide banner; any non-5xx response clears it. Self-healing, guarded in-store.
+      // Global degraded signal (R0.1 + R8): a 5xx flips the app-wide banner; a 200
+      // carrying `X-Pitchey-Stale: true` (worker served last-good cached discovery
+      // data because the live DB read failed) flips it with stale-specific copy.
+      // Any healthy non-5xx, non-stale response clears both. Self-healing, guarded.
       if (response) {
-        useServiceStatusStore.getState().setDegraded(response.status >= 500);
+        const isStale = response.headers?.get('X-Pitchey-Stale') === 'true';
+        const is5xx = response.status >= 500;
+        useServiceStatusStore.getState().setStatus(
+          is5xx || isStale,
+          isStale,
+          isStale ? 'stale' : (is5xx ? 'error' : undefined),
+        );
       }
 
       // Add null checking for response
