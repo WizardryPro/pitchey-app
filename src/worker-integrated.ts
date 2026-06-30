@@ -3637,6 +3637,13 @@ class RouteRegistry {
       const { getInvestorThesisHandler } = await import('./handlers/investor-thesis');
       return getInvestorThesisHandler(req, this.env);
     });
+    // Public thesis read (creators/anon) — is_public-gated, safe subset (no
+    // financials). Param-at-end so the publicEndpoints static-prefix matcher works
+    // ('/api/public/thesis' can't over-expose other /api/users/* routes). R11.
+    this.register('GET', '/api/public/thesis/:id', async (req) => {
+      const { getPublicThesisHandler } = await import('./handlers/investor-thesis');
+      return getPublicThesisHandler(req, this.env);
+    });
     this.register('PUT', '/api/investor/thesis', async (req) => {
       const { updateInvestorThesisHandler } = await import('./handlers/investor-thesis');
       return updateInvestorThesisHandler(req, this.env);
@@ -4519,6 +4526,7 @@ class RouteRegistry {
       '/api/analytics/track-view', // View tracking (anonymous views)
       '/api/portfolio/s',  // Public shared portfolio (token-based)
       '/api/slates/s',     // Public tracked slate share (token-based, moat #5)
+      '/api/public/thesis', // Public investor thesis (is_public-gated inside handler). NO trailing slash — matcher does startsWith(endpoint + '/').
       '/api/webhooks/stripe'  // Stripe webhooks (HMAC-SHA256 signature auth inside the handler, not session-based)
     ];
 

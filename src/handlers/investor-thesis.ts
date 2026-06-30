@@ -158,6 +158,65 @@ export async function getInvestorThesisHandler(request: Request, env: Env): Prom
 }
 
 // ---------------------------------------------------------------------------
+// GET /api/public/thesis/:id  (public read — creators/anon)
+// ---------------------------------------------------------------------------
+// Serves an investor's thesis to creators ONLY when is_public = true. SAFE
+// SUBSET by design: identity + positioning + the pitch-taxonomy arrays. It
+// deliberately EXCLUDES the financial bounds (budget_*/check_size_*) — there is
+// only a single is_public flag (no per-field control), and publishing intent
+// should not publish how much money an investor writes. 404 (plain not-found)
+// for a private or missing thesis — never leak existence or a 403 that confirms it.
+export async function getPublicThesisHandler(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin');
+  const id = Number(new URL(request.url).pathname.split('/').pop());
+  if (!Number.isInteger(id) || id <= 0) {
+    return jsonResponse({ success: false, error: 'Not found' }, origin, 404);
+  }
+
+  const sql = getDb(env);
+  if (!sql) return jsonResponse({ success: false, error: 'Not found' }, origin, 404);
+
+  try {
+    // No financial columns selected — they are never exposed publicly.
+    const rows = await sql.query(
+      `SELECT t.genres, t.formats, t.stages, t.deal_types, t.territories, t.themes,
+              t.positioning, u.company_name, u.username
+       FROM investor_thesis t
+       JOIN users u ON u.id = t.investor_id
+       WHERE t.investor_id = $1 AND t.is_public = true
+       LIMIT 1`,
+      [id],
+    );
+    const row = rows[0];
+    if (!row) return jsonResponse({ success: false, error: 'Not found' }, origin, 404);
+
+    const arr = (v: unknown): string[] => (Array.isArray(v) ? (v as unknown[]).map(String) : []);
+    return jsonResponse({
+      success: true,
+      thesis: {
+        companyName: typeof row.company_name === 'string' ? row.company_name : null,
+        username: typeof row.username === 'string' ? row.username : null,
+        positioning: typeof row.positioning === 'string' ? row.positioning : '',
+        genres: arr(row.genres),
+        formats: arr(row.formats),
+        stages: arr(row.stages),
+        dealTypes: arr(row.deal_types),
+        territories: arr(row.territories),
+        themes: arr(row.themes),
+      },
+    }, origin);
+  } catch (error) {
+    // Missing table (migration not applied) reads as not-found, not a 500.
+    if (isMissingTable(error)) {
+      return jsonResponse({ success: false, error: 'Not found' }, origin, 404);
+    }
+    const e = error instanceof Error ? error : new Error(String(error));
+    console.error('[getPublicThesisHandler] Query error:', e.message);
+    return jsonResponse({ success: false, error: 'Failed to load thesis' }, origin, 500);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // PUT /api/investor/thesis
 // ---------------------------------------------------------------------------
 export async function updateInvestorThesisHandler(request: Request, env: Env): Promise<Response> {
