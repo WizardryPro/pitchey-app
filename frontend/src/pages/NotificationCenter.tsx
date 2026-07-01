@@ -401,14 +401,17 @@ export default function NotificationCenter() {
                               )}
                             </div>
                           </div>
-                          {(notification as any).actorName && (
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              by{' '}
-                              <span className="font-medium text-gray-700">
-                                @{(notification as any).actorUsername || (notification as any).actorName}
-                              </span>
-                            </p>
-                          )}
+                          {(() => {
+                            const actor = notification as { actorName?: string; actorUsername?: string };
+                            return actor.actorName ? (
+                              <p className="text-xs text-gray-500 mt-0.5">
+                                by{' '}
+                                <span className="font-medium text-gray-700">
+                                  @{actor.actorUsername || actor.actorName}
+                                </span>
+                              </p>
+                            ) : null;
+                          })()}
                           <p className="text-sm text-gray-600 mt-1">
                             {notification.message}
                           </p>

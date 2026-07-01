@@ -42,21 +42,33 @@ export interface NotificationsResponse {
 // stragglers still resolve.
 const PitcheyNotificationShape = {
   normalize(raw: any): Notification {
+    // Typed view of the id/actor/target fields (snake_case from the backend +
+    // camelCase aliases) so the mapping below reads them type-safely instead of
+    // off an `any`. Keeps the existing user/read/created lines as-is.
+    const f = raw as {
+      relatedId?: number; related_id?: number; related_pitch_id?: number;
+      actorId?: number; actor_id?: number; related_user_id?: number;
+      actorName?: string; actor_name?: string; from_user_name?: string;
+      actorUsername?: string; actor_username?: string;
+      actorAvatar?: string; actor_avatar?: string; from_user_avatar?: string;
+      actionUrl?: string; action_url?: string;
+      targetPitchTitle?: string; target_pitch_title?: string;
+    };
     return {
       ...raw,
       userId: raw.userId ?? raw.user_id,
       isRead: raw.isRead ?? raw.is_read ?? raw.read ?? false,
       createdAt: raw.createdAt ?? raw.created_at,
-      relatedId: raw.relatedId ?? raw.related_id ?? raw.related_pitch_id,
+      relatedId: f.relatedId ?? f.related_id ?? f.related_pitch_id,
       relatedType: raw.relatedType ?? raw.related_type,
       // Actor identity (backend now joins related_user_id → users). Fall back to
       // the legacy from_user_* aliases so older payloads still resolve.
-      actorId: raw.actorId ?? raw.actor_id ?? raw.related_user_id,
-      actorName: raw.actorName ?? raw.actor_name ?? raw.from_user_name,
-      actorUsername: raw.actorUsername ?? raw.actor_username,
-      actorAvatar: raw.actorAvatar ?? raw.actor_avatar ?? raw.from_user_avatar,
-      actionUrl: raw.actionUrl ?? raw.action_url,
-      targetPitchTitle: raw.targetPitchTitle ?? raw.target_pitch_title,
+      actorId: f.actorId ?? f.actor_id ?? f.related_user_id,
+      actorName: f.actorName ?? f.actor_name ?? f.from_user_name,
+      actorUsername: f.actorUsername ?? f.actor_username,
+      actorAvatar: f.actorAvatar ?? f.actor_avatar ?? f.from_user_avatar,
+      actionUrl: f.actionUrl ?? f.action_url,
+      targetPitchTitle: f.targetPitchTitle ?? f.target_pitch_title,
     };
   },
 };

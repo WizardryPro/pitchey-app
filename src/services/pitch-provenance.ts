@@ -218,7 +218,7 @@ export interface CertificateData {
 export async function getCertificateData(sql: Sql, pitchId: number | string): Promise<CertificateData | null> {
   try {
     const rows = await sql`
-      SELECT p.id, p.user_id, p.title, p.logline, p.short_synopsis, p.long_synopsis,
+      SELECT p.id, p.user_id, p.creator_id, p.title, p.logline, p.short_synopsis, p.long_synopsis,
              p.synopsis, p.genre, p.format, p.themes, p.budget,
              u.username, u.name AS creator_name, u.email AS creator_email
       FROM pitches p JOIN users u ON u.id = p.user_id
@@ -238,8 +238,11 @@ export async function getCertificateData(sql: Sql, pitchId: number | string): Pr
     const latest = seals[seals.length - 1];
     const otsStatus: 'none' | 'pending' | 'complete' =
       latest.ots_upgraded_at ? 'complete' : (latest.ots_proof ? 'pending' : 'none');
-    // canonical() reads p.id/p.user_id/title/... — all present on the joined row.
-    const currentHash = await sha256Hex(canonical(p));
+    // Resolve the owner the SAME way sealPitchProvenance does (COALESCE(creator_id,
+    // user_id)) so this "does current content still match the seal?" hash stays
+    // comparable to the sealed hash. Hash-neutral where the columns agree.
+    const ownerId = Number(p.creator_id ?? p.user_id);
+    const currentHash = await sha256Hex(canonical(p, ownerId));
 
     return {
       pitch: {
