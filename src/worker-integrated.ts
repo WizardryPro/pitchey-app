@@ -6501,13 +6501,25 @@ pitchey_analytics_datapoints_per_minute 1250
     const builder = new ApiResponseBuilder(request);
     const params = (request as any).params;
     const sql = this.db.getSql() as any;
-    const pitchId = params.id;
+    let pitchId = params.id;
 
-    // Guard non-numeric ids (e.g. /api/pitches/NaN from a bad link): a string id
-    // hits an int column → Postgres "invalid input syntax for integer" → 500.
-    // Return 404 instead of crashing.
+    // The public URL now carries a human slug (/pitch/the-last-frontier). A
+    // non-numeric param is treated as a slug and resolved to the numeric id;
+    // numeric ids still work unchanged so old /pitch/213 links never break. A
+    // string id would otherwise hit an int column → Postgres "invalid input
+    // syntax for integer" → 500, so an unresolvable value returns 404 instead.
     if (!/^\d+$/.test(String(pitchId ?? ''))) {
-      return builder.error(ErrorCode.NOT_FOUND, 'Pitch not found');
+      try {
+        const slugRows = await sql`SELECT id FROM pitches WHERE slug = ${String(pitchId ?? '')} LIMIT 1`;
+        if (slugRows && slugRows.length > 0) {
+          pitchId = String(slugRows[0].id);
+        } else {
+          return builder.error(ErrorCode.NOT_FOUND, 'Pitch not found');
+        }
+      } catch {
+        // slug column missing (pre-migration) or lookup failed → 404, never 500.
+        return builder.error(ErrorCode.NOT_FOUND, 'Pitch not found');
+      }
     }
 
     try {

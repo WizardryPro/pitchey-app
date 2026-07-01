@@ -9,6 +9,7 @@ import Pagination from '../components/Pagination';
 import { configService } from '../services/config.service';
 import FormatDisplay from '../components/FormatDisplay';
 import HeatBadge, { getHeatScore } from '../components/HeatBadge';
+import { pitchUrl } from '@/utils/pitchUrl';
 import { getApiUrl } from '../config';
 import PortalTopNav from '@shared/components/layout/PortalTopNav';
 import SortPillRow, { type SortPillOption } from '@shared/components/ui/SortPillRow';
@@ -522,7 +523,7 @@ export default function BrowseTopRated() {
                 <div
                   key={pitch.id}
                   className="bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer group relative"
-                  onClick={() => navigate(`/pitch/${pitch.id}`)}
+                  onClick={() => navigate(pitchUrl(pitch))}
                   data-testid={`top-rated-pitch-card-${pitch.id}`}
                 >
                   {/* Ranking Badge */}

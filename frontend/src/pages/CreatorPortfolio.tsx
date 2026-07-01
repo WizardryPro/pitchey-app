@@ -5,6 +5,7 @@ import { apiClient } from '../lib/api-client';
 import { useBetterAuthStore } from '../store/betterAuthStore';
 import ShareLinksModal from '../components/portfolio/ShareLinksModal';
 import LogoLoader from '@/components/LogoLoader';
+import { pitchUrl } from '@/utils/pitchUrl';
 
 interface Pitch {
   id: string;
@@ -245,7 +246,7 @@ export default function CreatorPortfolio() {
               {pitches.map((pitch) => (
                 <Link
                   key={pitch.id}
-                  to={`/pitch/${pitch.id}`}
+                  to={pitchUrl(pitch)}
                   className="group block bg-white border rounded-xl overflow-hidden hover:shadow-lg transition-all"
                 >
                   {/* Thumbnail */}

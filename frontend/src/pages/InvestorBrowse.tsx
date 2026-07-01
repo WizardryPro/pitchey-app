@@ -7,6 +7,7 @@ import { configService } from '../services/config.service';
 import FormatDisplay from '../components/FormatDisplay';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { usePortalTheme } from '@shared/hooks/usePortalTheme';
+import { pitchUrl } from '@/utils/pitchUrl';
 
 interface Pitch {
   id: number;
@@ -634,7 +635,7 @@ export default function InvestorBrowse() {
 
                   <div className="flex space-x-2">
                     <button
-                      onClick={() => navigate(`/pitch/${pitch.id}`)}
+                      onClick={() => navigate(pitchUrl(pitch))}
                       className="flex-1 text-center py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition text-sm"
                     >
                       View Details

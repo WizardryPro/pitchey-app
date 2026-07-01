@@ -6,6 +6,7 @@ import {
   Download, Share2, BarChart3, Users, AlertCircle
 } from 'lucide-react';
 import { PitchService, type Pitch } from '@features/pitches/services/pitch.service';
+import { pitchUrl } from '@/utils/pitchUrl';
 
 interface PublishedPitch {
   id: string;
@@ -292,7 +293,7 @@ export default function CreatorPitchesPublished() {
               <div
                 key={pitch.id}
                 className="bg-white rounded-lg shadow-sm border hover:shadow-md transition cursor-pointer"
-                onClick={() => navigate(`/pitch/${pitch.id}`)}
+                onClick={() => navigate(pitchUrl(pitch))}
               >
                 {/* Thumbnail */}
                 <div className="h-48 rounded-t-lg relative overflow-hidden">
@@ -373,7 +374,7 @@ export default function CreatorPitchesPublished() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        void navigator.clipboard.writeText(`${window.location.origin}/pitch/${pitch.id}`);
+                        void navigator.clipboard.writeText(`${window.location.origin}${pitchUrl(pitch)}`);
                       }}
                       className="p-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition"
                     >

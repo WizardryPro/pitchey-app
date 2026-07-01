@@ -6,6 +6,7 @@ import { PitchService } from '@features/pitches/services/pitch.service';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import PortalTopNav from '@shared/components/layout/PortalTopNav';
+import { pitchUrl } from '@/utils/pitchUrl';
 
 interface Pitch {
   id: number;
@@ -447,7 +448,7 @@ const BrowseTabsFixed: React.FC = () => {
                     animate={{ opacity: 1, y: 0 }}
                     whileHover={{ y: -4 }}
                     className="bg-white rounded-lg shadow-sm hover:shadow-lg transition-all cursor-pointer overflow-hidden"
-                    onClick={() => navigate(`/pitch/${pitch.id}`)}
+                    onClick={() => navigate(pitchUrl(pitch))}
                   >
                     {/* Poster/Thumbnail */}
                     <div className="relative aspect-video bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center">

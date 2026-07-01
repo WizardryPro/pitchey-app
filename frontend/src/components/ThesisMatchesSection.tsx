@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
 import { InvestorThesisService, type ThesisMatch } from '../services/investor-thesis.service';
+import { pitchUrl } from '@/utils/pitchUrl';
 
 export default function ThesisMatchesSection() {
   const [matches, setMatches] = useState<ThesisMatch[]>([]);
@@ -44,7 +45,7 @@ export default function ThesisMatchesSection() {
           <button
             key={m.id}
             type="button"
-            onClick={() => { void navigate(`/pitch/${m.id}`); }}
+            onClick={() => { void navigate(pitchUrl(m)); }}
             className="text-left bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100 p-4"
           >
             <div className="flex items-start justify-between gap-2">

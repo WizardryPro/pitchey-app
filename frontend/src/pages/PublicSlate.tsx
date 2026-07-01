@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Layers, Film, Eye, Heart, Sparkles, UserPlus } from 'lucide-react';
 import { API_URL } from '../config';
 import { useBetterAuthStore } from '../store/betterAuthStore';
+import { pitchUrl } from '@/utils/pitchUrl';
 
 // Role-aware conversion CTA on the public slate landing (moat #5). The whole point
 // of a tracked share is to convert the recipient — so we tailor the call to action
@@ -195,7 +196,7 @@ export default function PublicSlate() {
             {slate.pitches.map(pitch => (
               <Link
                 key={pitch.id}
-                to={`/pitch/${pitch.id}`}
+                to={pitchUrl(pitch)}
                 className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden group"
               >
                 {pitch.cover_image ? (

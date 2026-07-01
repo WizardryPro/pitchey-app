@@ -10,6 +10,7 @@ import { configService } from '../services/config.service';
 import FormatDisplay from '../components/FormatDisplay';
 import { getApiUrl } from '../config';
 import PortalTopNav from '@shared/components/layout/PortalTopNav';
+import { pitchUrl } from '@/utils/pitchUrl';
 import {
   Eye,
   Heart,
@@ -440,7 +441,7 @@ export default function BrowseGenres() {
                     <div
                       key={pitch.id}
                       className="bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer group"
-                      onClick={() => navigate(`/pitch/${pitch.id}`)}
+                      onClick={() => navigate(pitchUrl(pitch))}
                       data-testid={`genre-pitch-card-${pitch.id}`}
                     >
                       {/* Pitch Thumbnail */}

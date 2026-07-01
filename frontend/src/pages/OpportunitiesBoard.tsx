@@ -15,6 +15,7 @@ import {
   callsService, type OpenCall, type CallInput,
   type CallSubmission, type SubmissionStatus,
 } from '../services/calls.service';
+import { pitchUrl } from '@/utils/pitchUrl';
 
 interface MyPitch { id: number; title: string; genre?: string }
 
@@ -509,7 +510,7 @@ function SubmissionsModal({ call, onClose }: { call: OpenCall; onClose: () => vo
                       aria-label="Select for comparison"
                     />
                     <div className="min-w-0 flex-1">
-                      <button onClick={() => navigate(`/pitch/${s.pitch_id}`)} className="text-sm font-bold text-gray-900 hover:text-purple-700 transition text-left">
+                      <button onClick={() => navigate(pitchUrl(s.pitch_id))} className="text-sm font-bold text-gray-900 hover:text-purple-700 transition text-left">
                         {s.pitch_title || `Pitch #${s.pitch_id}`}
                       </button>
                       <div className="text-xs text-gray-500">{s.creator_name || 'Unknown'}{s.pitch_genre ? ` · ${s.pitch_genre}` : ''}</div>
@@ -521,7 +522,7 @@ function SubmissionsModal({ call, onClose }: { call: OpenCall; onClose: () => vo
                     <button onClick={() => setStatus(s, 'shortlisted')} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition"><Star className="w-3.5 h-3.5" /> Shortlist</button>
                     <button onClick={() => setStatus(s, 'accepted')} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition"><Check className="w-3.5 h-3.5" /> Accept</button>
                     <button onClick={() => setStatus(s, 'declined')} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-gray-50 text-gray-500 hover:bg-gray-100 transition">Decline</button>
-                    <button onClick={() => navigate(`/pitch/${s.pitch_id}`)} className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-purple-700 hover:text-purple-900 transition">View pitch <ArrowRight className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => navigate(pitchUrl(s.pitch_id))} className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-purple-700 hover:text-purple-900 transition">View pitch <ArrowRight className="w-3.5 h-3.5" /></button>
                   </div>
                 </div>
               ))}

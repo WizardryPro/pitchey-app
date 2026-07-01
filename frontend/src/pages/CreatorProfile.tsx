@@ -11,6 +11,7 @@ import FollowButton from '@features/browse/components/FollowButton';
 import { config } from '../config';
 import FormatDisplay from '../components/FormatDisplay';
 import { followService } from '@features/browse/services/follow.service';
+import { pitchUrl } from '@/utils/pitchUrl';
 
 interface CreatorData {
   id: number;
@@ -397,7 +398,7 @@ const CreatorProfile = () => {
                         </span>
                       </div>
                       <Link
-                        to={`/pitch/${pitch.id}`}
+                        to={pitchUrl(pitch)}
                         className="text-purple-600 hover:text-purple-700"
                       >
                         View →

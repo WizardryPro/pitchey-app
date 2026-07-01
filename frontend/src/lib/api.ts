@@ -160,6 +160,7 @@ export interface User {
 export interface Pitch {
   id: number;
   userId?: number;
+  slug?: string | null;
   title: string;
   logline: string;
   genre: string;

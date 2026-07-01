@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ShieldCheck, ShieldX, Loader2 } from 'lucide-react';
 import { API_URL } from '../config';
+import { pitchUrl } from '@/utils/pitchUrl';
 
 interface VerifyResult {
   sealed: boolean;
@@ -67,7 +68,7 @@ export default function ProvenanceVerify() {
                 <dt className="text-gray-400">Pitch</dt>
                 <dd className="font-medium text-gray-900">
                   {result.pitch_id
-                    ? <Link to={`/pitch/${result.pitch_id}`} className="text-indigo-600 hover:underline">{result.pitch_title}</Link>
+                    ? <Link to={pitchUrl(result.pitch_id)} className="text-indigo-600 hover:underline">{result.pitch_title}</Link>
                     : result.pitch_title}
                 </dd>
               </div>
