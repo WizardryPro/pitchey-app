@@ -2,6 +2,22 @@ name: Neon Database Preview Environments
 on:
   pull_request:
     types: [opened, reopened, synchronize, closed]
+    # Skip the whole preview environment (Neon branch + migrations + e2e + preview
+    # Worker) for docs-only PRs that never touch the DB or app — e.g. the rolling
+    # `audit-signals` harness PR (#389: only signals/prompts/*.md), or CLAUDE.md
+    # doc PRs. Those spun up (and, while open, permanently held) a Neon preview
+    # branch for zero benefit. GitHub skips the workflow only when EVERY changed
+    # file matches an ignore pattern, so mixed code+docs PRs still get a preview.
+    # Safe because setup-preview is NOT a required status check on main (required:
+    # Worker Tests / Frontend Tests / Code Coverage Quality Gate come from other
+    # workflows), so a skipped run can't block merges. The daily neon-preview-sweep
+    # remains the backstop for any branch left behind when such a PR closes.
+    paths-ignore:
+      - '**/*.md'
+      - 'signals/**'
+      - 'prompts/**'
+      - 'docs/**'
+      - '.claude/**'
 
 jobs:
   # Create or update preview branch
