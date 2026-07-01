@@ -11501,6 +11501,18 @@ pitchey_analytics_datapoints_per_minute 1250
     const webhookSecret = (this.env as any).STRIPE_WEBHOOK_SECRET;
 
     if (!stripeKey || !webhookSecret) {
+      // Misconfiguration — log loudly + page so this isn't diagnosed weeks later
+      // via a "Stripe disabled our endpoint" email. Still 500 (a retry won't fix a
+      // missing secret, but a 200-ack would hide the outage entirely).
+      console.error(JSON.stringify({
+        level: 'error',
+        category: 'stripe_webhook',
+        action: 'not_configured',
+        has_secret_key: !!stripeKey,
+        has_webhook_secret: !!webhookSecret,
+        message: 'Stripe webhook not configured — STRIPE_SECRET_KEY and/or STRIPE_WEBHOOK_SECRET missing',
+      }));
+      try { Sentry.captureMessage('Stripe webhook not configured', { level: 'error' }); } catch { /* Sentry hub not initialized */ }
       return new ApiResponseBuilder(request).error(ErrorCode.INTERNAL_ERROR, 'Stripe webhook not configured');
     }
 
@@ -11532,19 +11544,92 @@ pitchey_analytics_datapoints_per_minute 1250
 
     const signature = request.headers.get('stripe-signature');
     if (!signature) {
+      // A request with no stripe-signature isn't from Stripe (or is a probe). 400
+      // is correct — but log it so a genuinely-broken proxy stripping the header is
+      // diagnosable instead of silent (this whole path previously logged nothing).
+      console.warn(JSON.stringify({
+        level: 'warn',
+        category: 'stripe_webhook',
+        action: 'missing_signature_header',
+        ip: request.headers.get('CF-Connecting-IP') || null,
+        user_agent: request.headers.get('User-Agent') || null,
+      }));
       return new ApiResponseBuilder(request).error(ErrorCode.BAD_REQUEST, 'Missing stripe-signature header');
     }
 
     const body = await request.text();
     const stripe = new StripeService(stripeKey);
-    const valid = await stripe.verifyWebhookSignature(body, signature, webhookSecret);
+
+    // Signature verification. verifyWebhookSignature returns false (never throws) on
+    // a bad/stale signature, but wrap defensively so a crypto.subtle exception can't
+    // escape to the pipeline's generic 500 handler. On failure we distinguish clock
+    // skew from a genuine mismatch — a mismatch on well-formed, in-window deliveries
+    // means the deployed STRIPE_WEBHOOK_SECRET does not match the endpoint's signing
+    // secret (the classic cause of a batch of "other error" delivery failures).
+    let valid = false;
+    try {
+      valid = await stripe.verifyWebhookSignature(body, signature, webhookSecret);
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      console.error(JSON.stringify({
+        level: 'error', category: 'stripe_webhook', action: 'signature_verify_threw', message: e.message,
+      }));
+      try { Sentry.captureException(e, { tags: { 'stripe.webhook': 'signature_verify_threw' } }); } catch { /* Sentry hub not initialized */ }
+    }
     if (!valid) {
+      // Cheap skew read from the signed header (no crypto) to classify the failure.
+      const sigTs = parseInt(signature.split(',').find(p => p.startsWith('t='))?.slice(2) || '');
+      const skewSeconds = Number.isFinite(sigTs) ? Math.floor(Date.now() / 1000) - sigTs : null;
+      const likelyCause = skewSeconds !== null && Math.abs(skewSeconds) > 300
+        ? 'stale_or_future_timestamp'
+        : 'signature_mismatch_check_STRIPE_WEBHOOK_SECRET_matches_dashboard';
+      console.error(JSON.stringify({
+        level: 'error',
+        category: 'stripe_webhook',
+        action: 'invalid_signature',
+        likely_cause: likelyCause,
+        skew_seconds: skewSeconds,
+        // Prefix only — never log the secret. Confirms which mode the key is in.
+        secret_key_prefix: String(stripeKey).slice(0, 8),
+        webhook_secret_prefix: String(webhookSecret).slice(0, 8),
+      }));
+      // Page once per isolate would be ideal; every delivery failing IS the signal,
+      // so capture to Sentry (deduped by fingerprint) rather than swallow.
+      try {
+        Sentry.captureMessage(`Stripe webhook signature verification failed (${likelyCause})`, { level: 'error' });
+      } catch { /* Sentry hub not initialized */ }
       return new ApiResponseBuilder(request).error(ErrorCode.BAD_REQUEST, 'Invalid webhook signature');
     }
 
-    const event = JSON.parse(body);
+    // Body is signature-verified here; JSON.parse should never fail, but if it did we
+    // ACK (200) rather than 500 — a malformed-but-signed body is not something Stripe
+    // retrying will fix, and a 500 would just keep the endpoint in the failed bucket.
+    let event: any;
+    try {
+      event = JSON.parse(body);
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      console.error(JSON.stringify({
+        level: 'error', category: 'stripe_webhook', action: 'body_parse_failed', message: e.message,
+      }));
+      try { Sentry.captureException(e, { tags: { 'stripe.webhook': 'body_parse_failed' } }); } catch { /* Sentry hub not initialized */ }
+      return new Response(JSON.stringify({ received: true, error: 'Unparseable body' }), {
+        status: 200, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const sql = this.db.getSql() as any;
     if (!sql) {
+      // No DB is transient (cold start / connection blip) — 500 so Stripe RETRIES and
+      // the event isn't lost. Log with the event id/type so the drop is diagnosable.
+      console.error(JSON.stringify({
+        level: 'error',
+        category: 'stripe_webhook',
+        action: 'db_unavailable',
+        event_id: event?.id,
+        event_type: event?.type,
+      }));
+      try { Sentry.captureMessage('Stripe webhook: DB unavailable', { level: 'error' }); } catch { /* Sentry hub not initialized */ }
       return new ApiResponseBuilder(request).error(ErrorCode.INTERNAL_ERROR, 'Database not available');
     }
 
@@ -14667,13 +14752,28 @@ pitchey_analytics_datapoints_per_minute 1250
     const offset = parseInt(url.searchParams.get('offset') || '0');
 
     try {
+      // The actor (who commented / liked / posted) is denormalized into
+      // n.related_user_id at write time (see notifyPitchOwner + the direct-insert
+      // sites). The legacy join used n.from_user_id, which NO writer populates
+      // (verified in prod: 0/24 rows have from_user_id, 14/24 have related_user_id)
+      // — so the feed showed no actor. Join related_user_id and resolve the display
+      // name by the platform rule (@username → real name → email, never company_name;
+      // see the display-name drift note). action_url (e.g. /pitch/213) already rides
+      // in n.* and is the deep-link target; expose the pitch title too for context.
       const notifications = await this.db.query(`
         SELECT
           n.*,
-          u.name as from_user_name,
-          u.avatar_url as from_user_avatar
+          n.related_user_id                                    AS actor_id,
+          u.username                                           AS actor_username,
+          u.avatar_url                                         AS actor_avatar,
+          COALESCE(NULLIF(u.username, ''), NULLIF(u.name, ''), u.email) AS actor_name,
+          p.title                                              AS target_pitch_title,
+          -- Backwards-compatible aliases (older clients read from_user_*)
+          COALESCE(NULLIF(u.username, ''), NULLIF(u.name, ''), u.email) AS from_user_name,
+          u.avatar_url                                         AS from_user_avatar
         FROM notifications n
-        LEFT JOIN users u ON n.from_user_id = u.id
+        LEFT JOIN users u ON n.related_user_id = u.id
+        LEFT JOIN pitches p ON n.related_pitch_id = p.id
         WHERE n.user_id = $1
         ORDER BY n.created_at DESC
         LIMIT $2 OFFSET $3
@@ -22642,6 +22742,10 @@ async function postSlackAlert(webhookUrl: string | undefined, text: string, deta
         text,
         blocks: [{ type: 'section', text: { type: 'mrkdwn', text: `${text}\n${detail}` } }],
       }),
+      // Bound the wait: this is awaited on some hot paths (e.g. the Stripe webhook
+      // go-live guard). A hanging Slack endpoint must never stall a request past the
+      // Worker wall-clock and turn a log-only alert into an isolate kill.
+      signal: AbortSignal.timeout(3000),
     });
     if (!res.ok) console.error(`Slack alert failed: ${res.status} ${res.statusText}`);
   } catch (err) {

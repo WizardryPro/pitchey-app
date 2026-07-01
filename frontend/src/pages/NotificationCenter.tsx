@@ -401,10 +401,18 @@ export default function NotificationCenter() {
                               )}
                             </div>
                           </div>
+                          {(notification as any).actorName && (
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              by{' '}
+                              <span className="font-medium text-gray-700">
+                                @{(notification as any).actorUsername || (notification as any).actorName}
+                              </span>
+                            </p>
+                          )}
                           <p className="text-sm text-gray-600 mt-1">
                             {notification.message}
                           </p>
-                          
+
                           {notification.actions && notification.actions.length > 0 && (
                             <div className="flex space-x-2 mt-3">
                               {notification.actions.map((action, index) => (

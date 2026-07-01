@@ -18,14 +18,14 @@ export async function sha256Hex(input: string): Promise<string> {
 // fields (view counts, timestamps, images) are excluded so the seal tracks the idea,
 // not cosmetic churn. pitch_id + creator_id are included so the hash is globally
 // unique (two different pitches can never collide).
-function canonical(p: Record<string, unknown>): string {
+function canonical(p: Record<string, unknown>, ownerId: number): string {
   const norm = (v: unknown) =>
     v === null || v === undefined ? ''
     : typeof v === 'object' ? JSON.stringify(v)
     : String(v);
   return JSON.stringify({
     pitch_id: Number(p.id),
-    creator_id: Number(p.user_id),
+    creator_id: Number(ownerId),
     title: norm(p.title),
     logline: norm(p.logline),
     short_synopsis: norm(p.short_synopsis),
@@ -56,19 +56,44 @@ export interface SealResult {
 export async function sealPitchProvenance(sql: Sql, pitchId: number | string): Promise<SealResult | null> {
   try {
     const rows = await sql`
-      SELECT id, user_id, title, logline, short_synopsis, long_synopsis, synopsis,
+      SELECT id, user_id, creator_id, title, logline, short_synopsis, long_synopsis, synopsis,
              genre, format, themes, budget, status
       FROM pitches WHERE id = ${pitchId}
     `;
     const p = rows[0];
     if (!p || p.status !== 'published') return null;
 
-    const hash = await sha256Hex(canonical(p));
+    // Resolve the pitch's owner. The pitches table carries BOTH `user_id` and
+    // `creator_id` due to historical schema drift; the rest of the codebase treats
+    // creator_id as canonical when present (COALESCE(creator_id, user_id), e.g.
+    // creator-dashboard.ts). Provenance must seal the ACTUAL owner, not whichever
+    // column a given create-path happened to populate — otherwise a divergence bakes
+    // the wrong creator into both the hash and the public "who sealed this" display.
+    // NOTE (hash safety): for every currently-sealed pitch user_id === creator_id, so
+    // this yields the identical creator_id and therefore the IDENTICAL content_hash —
+    // no existing seal's "unchanged since sealed" guarantee is affected. It only
+    // changes behaviour if the two columns ever diverge (the bug this prevents).
+    const ownerId = Number(p.creator_id ?? p.user_id);
+    if (p.creator_id != null && p.user_id != null && Number(p.creator_id) !== Number(p.user_id)) {
+      // Divergence is a data-integrity signal worth surfacing (never throw — sealing
+      // must not break publishing). Sealing proceeds with the canonical (creator_id).
+      console.warn(JSON.stringify({
+        level: 'warn',
+        category: 'pitch_provenance',
+        action: 'owner_column_divergence',
+        pitch_id: Number(p.id),
+        user_id: Number(p.user_id),
+        creator_id: Number(p.creator_id),
+        sealed_owner_id: ownerId,
+      }));
+    }
+
+    const hash = await sha256Hex(canonical(p, ownerId));
 
     // prev_hash chains to the creator's most recent seal → tamper-evident.
     const prevRows = await sql`
       SELECT content_hash FROM pitch_provenance
-      WHERE creator_id = ${p.user_id} ORDER BY sealed_at DESC LIMIT 1
+      WHERE creator_id = ${ownerId} ORDER BY sealed_at DESC LIMIT 1
     `;
     const prevHash = (prevRows[0]?.content_hash as string | undefined) ?? null;
 
@@ -80,7 +105,7 @@ export async function sealPitchProvenance(sql: Sql, pitchId: number | string): P
     const inserted = await sql`
       INSERT INTO pitch_provenance
         (pitch_id, creator_id, content_hash, algorithm, content_version, prev_hash, sealed_at)
-      VALUES (${pitchId}, ${p.user_id}, ${hash}, 'sha256', ${version}, ${prevHash}, NOW())
+      VALUES (${pitchId}, ${ownerId}, ${hash}, 'sha256', ${version}, ${prevHash}, NOW())
       ON CONFLICT (content_hash) DO NOTHING
       RETURNING sealed_at, content_version
     `;

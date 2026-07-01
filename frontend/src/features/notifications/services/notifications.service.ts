@@ -11,6 +11,15 @@ export interface Notification {
   relatedId?: number;
   relatedType?: string;
   data?: any;
+  // Actor (who performed the action) — denormalized server-side from
+  // related_user_id. Resolved display name follows @username → name → email.
+  actorId?: number;
+  actorName?: string;
+  actorUsername?: string;
+  actorAvatar?: string;
+  // Deep-link target the backend built at write time (e.g. "/pitch/213").
+  actionUrl?: string;
+  targetPitchTitle?: string;
 }
 
 export interface NotificationPreferences {
@@ -38,8 +47,16 @@ const PitcheyNotificationShape = {
       userId: raw.userId ?? raw.user_id,
       isRead: raw.isRead ?? raw.is_read ?? raw.read ?? false,
       createdAt: raw.createdAt ?? raw.created_at,
-      relatedId: raw.relatedId ?? raw.related_id,
+      relatedId: raw.relatedId ?? raw.related_id ?? raw.related_pitch_id,
       relatedType: raw.relatedType ?? raw.related_type,
+      // Actor identity (backend now joins related_user_id → users). Fall back to
+      // the legacy from_user_* aliases so older payloads still resolve.
+      actorId: raw.actorId ?? raw.actor_id ?? raw.related_user_id,
+      actorName: raw.actorName ?? raw.actor_name ?? raw.from_user_name,
+      actorUsername: raw.actorUsername ?? raw.actor_username,
+      actorAvatar: raw.actorAvatar ?? raw.actor_avatar ?? raw.from_user_avatar,
+      actionUrl: raw.actionUrl ?? raw.action_url,
+      targetPitchTitle: raw.targetPitchTitle ?? raw.target_pitch_title,
     };
   },
 };
@@ -176,8 +193,17 @@ export class NotificationsService {
         backendId: notification.id,
         relatedId: notification.relatedId,
         relatedType: notification.relatedType,
-        data: notification.data
-      }
+        data: notification.data,
+        actionUrl: notification.actionUrl,
+      },
+      // Actor identity + deep-link target, surfaced so the feed can show WHO acted
+      // and route to the target. actorName follows @username → name → email.
+      actorId: notification.actorId,
+      actorName: notification.actorName,
+      actorUsername: notification.actorUsername,
+      actorAvatar: notification.actorAvatar,
+      actionUrl: notification.actionUrl,
+      targetPitchTitle: notification.targetPitchTitle,
     };
   }
 
@@ -284,6 +310,18 @@ export class NotificationsService {
         });
         break;
       }
+    }
+
+    // Fallback deep-link: engagement notifications (comment / feedback / like /
+    // pitch_update) carry no type-specific action above, but the backend stored a
+    // resolvable target in action_url (e.g. "/pitch/213"). Without this the item had
+    // no route to its target — the reported bug. Only add it if nothing else did.
+    if (actions.length === 0 && notification.actionUrl) {
+      actions.push({
+        label: 'View',
+        action: () => { window.location.href = notification.actionUrl!; },
+        type: 'primary',
+      });
     }
 
     return actions;
