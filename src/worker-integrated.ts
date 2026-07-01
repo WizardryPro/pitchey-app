@@ -6212,7 +6212,27 @@ pitchey_analytics_datapoints_per_minute 1250
   private async getPublicPitch(request: Request): Promise<Response> {
     const builder = new ApiResponseBuilder(request);
     const params = (request as any).params;
-    const pitchId = parseInt(params.id);
+    const rawId = String(params.id ?? '');
+    let pitchId = parseInt(rawId);
+
+    // Human-slug URLs (/pitch/the-last-frontier) hit this public endpoint too. A
+    // non-numeric param is resolved to the numeric id; numeric ids still work
+    // unchanged so old /pitch/213 links never break. An unresolvable value 404s
+    // rather than passing NaN/a string into the int columns below (→ 500).
+    if (!/^\d+$/.test(rawId)) {
+      try {
+        const sql = this.db.getSql() as any;
+        const slugRows = await sql`SELECT id FROM pitches WHERE slug = ${rawId} LIMIT 1`;
+        if (slugRows && slugRows.length > 0) {
+          pitchId = Number(slugRows[0].id);
+        } else {
+          return builder.error(ErrorCode.NOT_FOUND, 'Pitch not found');
+        }
+      } catch {
+        // slug column missing (pre-migration) or lookup failed → 404, never 500.
+        return builder.error(ErrorCode.NOT_FOUND, 'Pitch not found');
+      }
+    }
 
     // Check if user is authenticated and has NDA access
     let hasNDAAccess = false;
