@@ -8,6 +8,7 @@ import EmptyState from '../components/EmptyState';
 import { useToast } from '@shared/components/feedback/ToastProvider';
 import Pagination from '../components/Pagination';
 import { useDebounce } from '@/shared/hooks/useDebounce';
+import { pitchUrl } from '@/utils/pitchUrl';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useResponsive } from '@/shared/hooks/useResponsive';
 import { configService } from '../services/config.service';
@@ -634,7 +635,7 @@ export default function MarketplaceEnhanced() {
 
   const handlePitchClick = (pitch: Pitch) => {
     if (!isAuthenticated) {
-      void navigate(`/pitch/${pitch.id}`);
+      void navigate(pitchUrl(pitch));
     } else if (user?.userType === 'investor') {
       void navigate(`/investor/pitch/${pitch.id}`);
     } else if (user?.userType === 'production') {
@@ -642,7 +643,7 @@ export default function MarketplaceEnhanced() {
     } else if (user?.userType === 'creator' && (pitch.creator?.id || pitch.userId) === user?.id) {
       void navigate(`/creator/pitch/${pitch.id}`);
     } else {
-      void navigate(`/pitch/${pitch.id}`);
+      void navigate(pitchUrl(pitch));
     }
   };
 

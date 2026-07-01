@@ -10,6 +10,7 @@ import GenrePlaceholder from '@shared/components/GenrePlaceholder';
 import { getHeatScore, getPitcheyScore } from '../components/HeatBadge';
 import PitcheyRating from '../components/PitcheyRating';
 import { getDashboardRoute } from '@/utils/navigation';
+import { pitchUrl } from '@/utils/pitchUrl';
 import PublicTopNav from '@shared/components/layout/PublicTopNav';
 
 
@@ -267,7 +268,7 @@ export default function Homepage() {
                 return (
                   <div
                     key={pitch.id}
-                    onClick={() => navigate(`/pitch/${pitch.id}`)}
+                    onClick={() => navigate(pitchUrl(pitch))}
                     className={`group relative bg-white rounded-2xl overflow-hidden cursor-pointer border transition-all duration-500 hover:-translate-y-1.5 ${
                       isTop
                         ? 'border-amber-200 ring-1 ring-amber-300/40 shadow-[0_16px_44px_-16px_rgba(217,119,6,0.35)] hover:shadow-[0_28px_60px_-18px_rgba(217,119,6,0.45)]'
@@ -384,7 +385,7 @@ export default function Homepage() {
                 return (
                   <div
                     key={pitch.id}
-                    onClick={() => navigate(`/pitch/${pitch.id}`)}
+                    onClick={() => navigate(pitchUrl(pitch))}
                     className="group bg-white rounded-2xl overflow-hidden border border-gray-200/70 shadow-sm transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:border-violet-200"
                   >
                     <div className="relative h-44 overflow-hidden bg-gray-900">
@@ -469,7 +470,7 @@ export default function Homepage() {
                 return (
                   <div
                     key={pitch.id}
-                    onClick={() => navigate(`/pitch/${pitch.id}`)}
+                    onClick={() => navigate(pitchUrl(pitch))}
                     className="group bg-white rounded-2xl overflow-hidden border border-gray-200/70 shadow-sm transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:border-violet-200"
                   >
                     <div className="relative h-44 overflow-hidden bg-gray-900">

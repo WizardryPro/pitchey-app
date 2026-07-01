@@ -14,6 +14,7 @@ import { Badge } from '@shared/components/ui/badge';
 import { toast } from 'react-hot-toast';
 import { API_URL } from '../config';
 import { getPortalPath } from '@/utils/navigation';
+import { pitchUrl } from '@/utils/pitchUrl';
 
 interface SearchFilters {
   query: string;
@@ -234,7 +235,7 @@ export default function AdvancedSearch() {
 
   const handleResultClick = (result: SearchResult) => {
     if (result.type === 'pitch') {
-      void navigate(`/pitch/${result.id}`);
+      void navigate(pitchUrl(result));
     } else if (result.type === 'creator') {
       void navigate(`/creator/${result.id}`);
     } else if (result.type === 'production') {

@@ -7,6 +7,7 @@ import { useBetterAuthStore } from '../store/betterAuthStore';
 import { SocialService } from '@features/browse/services/social.service';
 import { SavedPitchesService, type SavedPitch } from '@features/pitches/services/saved-pitches.service';
 import { getPortalPath } from '@/utils/navigation';
+import { pitchUrl } from '@/utils/pitchUrl';
 
 interface Creator {
   id: number;
@@ -386,7 +387,7 @@ const Following: React.FC = () => {
                     {update.pitch && (
                       <div 
                         className="cursor-pointer group"
-                        onClick={() => navigate(`/pitch/${update.pitch!.id}`)}
+                        onClick={() => navigate(pitchUrl(update.pitch!))}
                       >
                         <h4 className="font-semibold text-gray-900 group-hover:text-blue-600 mb-1">
                           {update.pitch.title}
@@ -705,7 +706,7 @@ const Following: React.FC = () => {
               <div
                 key={sp.id || pitchId}
                 className="bg-white p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => navigate(`/pitch/${pitchId}`)}
+                onClick={() => navigate(pitchUrl(pitchId))}
               >
                 <div className="flex items-start space-x-4">
                   <div className="flex-shrink-0">

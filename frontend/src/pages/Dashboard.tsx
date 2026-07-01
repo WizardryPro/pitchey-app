@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 import { pitchAPI } from '../lib/api';
 import type { Pitch } from '../lib/api';
 import { useBetterAuthStore } from '../store/betterAuthStore';
-import { 
-  Plus, TrendingUp, Eye, Heart, Shield, Search, 
-  Film, Tv, Video, FileText, Grid, List 
+import {
+  Plus, TrendingUp, Eye, Heart, Shield, Search,
+  Film, Tv, Video, FileText, Grid, List
 } from 'lucide-react';
+import { pitchUrl } from '@/utils/pitchUrl';
 
 export default function Dashboard() {
   const { user } = useBetterAuthStore();
@@ -166,7 +167,7 @@ export default function Dashboard() {
                 {trending.map((pitch, index) => (
                   <Link
                     key={pitch.id}
-                    to={`/pitch/${pitch.id}`}
+                    to={pitchUrl(pitch)}
                     className="block hover:bg-gray-50 -mx-2 px-2 py-1 rounded"
                   >
                     <div className="flex items-start">
@@ -244,7 +245,7 @@ export default function Dashboard() {
                 {pitches.map((pitch) => (
                   <Link
                     key={pitch.id}
-                    to={`/pitch/${pitch.id}`}
+                    to={pitchUrl(pitch)}
                     className={`bg-white rounded-lg shadow hover:shadow-lg transition-shadow ${
                       viewMode === 'list' ? 'p-4' : 'overflow-hidden'
                     }`}

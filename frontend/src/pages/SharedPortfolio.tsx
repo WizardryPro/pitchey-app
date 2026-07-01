@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { BadgeCheck, Film, Eye, Heart, Calendar } from 'lucide-react';
 import { API_URL } from '../config';
+import { pitchUrl } from '@/utils/pitchUrl';
 
 interface Creator {
   id: number;
@@ -169,7 +170,7 @@ export default function SharedPortfolio() {
             {pitches.map(pitch => (
               <Link
                 key={pitch.id}
-                to={`/pitch/${pitch.id}`}
+                to={pitchUrl(pitch)}
                 className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden group"
               >
                 {pitch.cover_image ? (

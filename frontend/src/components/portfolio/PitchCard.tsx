@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import GenrePlaceholder from '@shared/components/GenrePlaceholder';
+import { pitchUrl } from '@/utils/pitchUrl';
 
 interface Pitch {
   id: string;
@@ -85,8 +86,8 @@ const PitchCard: React.FC<PitchCardProps> = ({ pitch }) => {
           </span>
         </div>
         <div className="pt-4 border-t mt-auto">
-          <Link 
-            to={`/pitch/${pitch.id}`}
+          <Link
+            to={pitchUrl(pitch)}
             className="block w-full text-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
           >
             View Details

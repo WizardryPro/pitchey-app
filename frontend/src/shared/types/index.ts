@@ -58,6 +58,7 @@ export interface Pitch {
   id: number;
   userId: number;
   creatorId?: number;
+  slug?: string | null;
   title: string;
   logline: string;
   genre: PitchGenre;

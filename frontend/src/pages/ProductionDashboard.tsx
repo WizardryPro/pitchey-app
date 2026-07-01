@@ -28,6 +28,7 @@ import { CompanyJoinCodeCard } from '@features/teams/components/CompanyTeamCards
 import ProductionSlateBoard from '../portals/production/components/ProductionSlateBoard';
 import AudienceDemandRail from '../portals/production/components/AudienceDemandRail';
 import FormatDisplay from '../components/FormatDisplay';
+import { pitchUrl } from '@/utils/pitchUrl';
 import { EnhancedProductionAnalytics } from '@features/analytics/components/Analytics/EnhancedProductionAnalytics';
 import { withPortalErrorBoundary } from '../components/ErrorBoundary/PortalErrorBoundary';
 import { uploadService } from '@features/uploads/services/upload.service';
@@ -1515,7 +1516,7 @@ function ProductionDashboard() {
                               );
                             })()}
                             <Link
-                              to={`/pitch/${pitch.id}`}
+                              to={pitchUrl(pitch)}
                               onClick={(e) => e.stopPropagation()}
                               className="ml-auto flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                             >
