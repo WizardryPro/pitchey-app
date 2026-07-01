@@ -302,5 +302,73 @@ describe('NotificationsService', () => {
       const actions = NotificationsService.getNotificationActions(notification)
       expect(actions).toEqual([])
     })
+
+    // Regression: engagement notifications (comment/like/feedback) had NO type-
+    // specific action, so the feed offered no route to the target. The backend
+    // stores a deep-link in action_url — surface it as a generic 'View' action.
+    it('adds a generic View action from actionUrl when no type-specific action exists', () => {
+      const notification = makeNotification({ type: 'pitch_comment', actionUrl: '/pitch/213' })
+      const actions = NotificationsService.getNotificationActions(notification)
+      expect(actions.length).toBe(1)
+      expect(actions[0].label).toBe('View')
+    })
+
+    it('does not add the generic View action when a type-specific action already exists', () => {
+      const notification = makeNotification({ type: 'message', actionUrl: '/pitch/213' })
+      const actions = NotificationsService.getNotificationActions(notification)
+      expect(actions.length).toBe(1)
+      expect(actions[0].label).toBe('View Messages')
+    })
+  })
+
+  // ─── actor identity + deep-link mapping (the notification-routing bug) ──────
+  describe('actor + target mapping', () => {
+    it('normalizes backend snake_case actor + action_url onto the notification', async () => {
+      mockGet.mockResolvedValueOnce({
+        success: true,
+        data: {
+          notifications: [{
+            id: 71, user_id: 10, type: 'pitch_comment',
+            title: 'New comment on your pitch', message: 'A comment', is_read: false,
+            created_at: '2026-06-30T00:00:00Z',
+            related_user_id: 1049, actor_username: 'skyclothfilms',
+            actor_name: 'skyclothfilms', actor_avatar: 'https://x/a.png',
+            action_url: '/pitch/213', related_pitch_id: 213, target_pitch_title: 'Bob',
+          }],
+        },
+      })
+      const [n] = await NotificationsService.getNotifications(20)
+      expect(n.actorId).toBe(1049)
+      expect(n.actorUsername).toBe('skyclothfilms')
+      expect(n.actorName).toBe('skyclothfilms')
+      expect(n.actionUrl).toBe('/pitch/213')
+      expect(n.relatedId).toBe(213)
+      expect(n.targetPitchTitle).toBe('Bob')
+    })
+
+    it('falls back to legacy from_user_* actor aliases', async () => {
+      mockGet.mockResolvedValueOnce({
+        success: true,
+        data: {
+          notifications: [{
+            id: 5, user_id: 10, type: 'follow', title: 'New follower', message: '',
+            is_read: false, created_at: '2026-06-30T00:00:00Z',
+            from_user_name: 'legacyname', from_user_avatar: 'https://x/l.png',
+          }],
+        },
+      })
+      const [n] = await NotificationsService.getNotifications()
+      expect(n.actorName).toBe('legacyname')
+      expect(n.actorAvatar).toBe('https://x/l.png')
+    })
+
+    it('convertToFrontendFormat surfaces actor + actionUrl to the feed item', () => {
+      const item = NotificationsService.convertToFrontendFormat(makeNotification({
+        actorName: 'skyclothfilms', actorUsername: 'skyclothfilms', actionUrl: '/pitch/213',
+      }))
+      expect((item as any).actorName).toBe('skyclothfilms')
+      expect((item as any).actorUsername).toBe('skyclothfilms')
+      expect((item as any).actionUrl).toBe('/pitch/213')
+    })
   })
 })
