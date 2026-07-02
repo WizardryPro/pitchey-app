@@ -141,7 +141,7 @@ describe('PitchDetail', () => {
       renderPitchDetail()
 
       await waitFor(() => {
-        expect(mockPitchService.getById).toHaveBeenCalledWith(1)
+        expect(mockPitchService.getById).toHaveBeenCalledWith('1')
       })
       expect(mockPitchService.getByIdAuthenticated).not.toHaveBeenCalled()
     })
@@ -205,7 +205,7 @@ describe('PitchDetail', () => {
       renderPitchDetail()
 
       await waitFor(() => {
-        expect(mockPitchService.getByIdAuthenticated).toHaveBeenCalledWith(1)
+        expect(mockPitchService.getByIdAuthenticated).toHaveBeenCalledWith('1')
       })
       expect(mockPitchService.getById).not.toHaveBeenCalled()
     })
