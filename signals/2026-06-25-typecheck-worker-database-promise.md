@@ -18,3 +18,4 @@ src/services/worker-database.ts(137,32): error TS2322: Type 'unknown' is not ass
 
 ## Timeline
 - 2026-06-25 — first seen (manual harness bootstrap run)
+- 2026-06-26 — resolved: no longer present in worker tsc output; fixed via PR #357 (fix/db-retry-proxy-promise-type).

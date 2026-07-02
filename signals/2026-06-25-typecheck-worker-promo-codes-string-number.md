@@ -18,3 +18,4 @@ src/handlers/promo-codes.ts(335,9): error TS2322: Type 'string' is not assignabl
 
 ## Timeline
 - 2026-06-25 — first seen (manual harness bootstrap run)
+- 2026-06-26 — resolved: no longer present in worker tsc output; fixed via PR #359 (fix/trio-handler-type-errors).

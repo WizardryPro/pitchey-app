@@ -18,3 +18,4 @@ src/handlers/collaborator.ts(211,38) +6: error TS7006: Parameter 'c'/'a' implici
 
 ## Timeline
 - 2026-06-25 — first seen (manual harness bootstrap run)
+- 2026-06-26 — resolved: no longer present in worker tsc output; fixed via PR #359 (fix/trio-handler-type-errors).
