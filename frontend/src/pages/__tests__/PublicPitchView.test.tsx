@@ -148,7 +148,7 @@ describe('PublicPitchView', () => {
     )
 
     await waitFor(() => {
-      expect(mockGetPublicById).toHaveBeenCalledWith(5)
+      expect(mockGetPublicById).toHaveBeenCalledWith('5')
     })
   })
 

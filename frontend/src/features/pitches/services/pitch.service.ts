@@ -478,7 +478,7 @@ export class PitchService {
   }
 
   // Get pitch with authenticated access for protected content
-  static async getByIdAuthenticated(id: number): Promise<Pitch> {
+  static async getByIdAuthenticated(id: number | string): Promise<Pitch> {
     interface AuthPitchResponse {
       pitch?: RawPitchData;
     }
@@ -525,7 +525,7 @@ export class PitchService {
   }
 
   // Get a single pitch
-  static async getById(id: number): Promise<Pitch> {
+  static async getById(id: number | string): Promise<Pitch> {
     // Use the public endpoint which actually exists
     const response = await apiClient.get<RawPitchData>(
       `/api/pitches/public/${id}`

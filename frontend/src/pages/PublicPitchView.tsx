@@ -59,14 +59,14 @@ export default function PublicPitchView() {
 
   useEffect(() => {
     if (id) {
-      void fetchPitch(parseInt(id));
+      void fetchPitch(id);
     }
   }, [id]);
 
   // Separate effect for checking NDA status with business rules
   useEffect(() => {
     if (id && pitch && isAuthenticated && user) {
-      void checkOwnershipAndNDAStatus(parseInt(id));
+      void checkOwnershipAndNDAStatus(pitch.id);
     }
   }, [id, pitch, isAuthenticated, user]);
 
@@ -78,7 +78,7 @@ export default function PublicPitchView() {
     return () => { viewService.stopViewTracking(id); };
   }, [id, pitch, isOwner, isAuthenticated]);
 
-  const fetchPitch = async (pitchId: number) => {
+  const fetchPitch = async (pitchId: number | string) => {
     try {
       const pitchData = await pitchAPI.getPublicById(pitchId) as Pitch & { hasSignedNDA?: boolean } | null;
 
@@ -429,7 +429,7 @@ export default function PublicPitchView() {
                             <button 
                               onClick={() => {
                                 if (id && pitch) {
-                                  void checkOwnershipAndNDAStatus(parseInt(id));
+                                  void checkOwnershipAndNDAStatus(pitch.id);
                                 }
                               }}
                               className="mt-2 text-xs text-red-600 underline hover:text-red-800"

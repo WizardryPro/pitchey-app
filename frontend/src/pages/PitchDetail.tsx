@@ -103,7 +103,7 @@ export default function PitchDetail() {
   
   useEffect(() => {
     if (id) {
-      void fetchPitch(parseInt(id));
+      void fetchPitch(id);
     }
   }, [id, isAuthenticated]);
 
@@ -126,7 +126,7 @@ export default function PitchDetail() {
     let cancelled = false;
     void (async () => {
       try {
-        const { existingNDA } = await ndaService.canRequestNDA(parseInt(id));
+        const { existingNDA } = await ndaService.canRequestNDA(pitch.id);
         if (cancelled) return;
         const status = (existingNDA as { status?: string } | undefined)?.status;
         setNdaPending(status === 'pending' || status === 'approved' || status === 'requested');
@@ -143,7 +143,7 @@ export default function PitchDetail() {
     return !!validAuth;
   };
 
-  const fetchPitch = async (pitchId: number) => {
+  const fetchPitch = async (pitchId: number | string) => {
     try {
       const validAuth = hasValidSession();
 
@@ -189,7 +189,7 @@ export default function PitchDetail() {
       
       // Track view for analytics (only if not the owner)
       if (!pitch.isOwner) {
-        await pitchService.trackView(pitchId);
+        await pitchService.trackView(pitch.id);
       }
     } catch (error) {
       console.error('Failed to fetch pitch:', error);
@@ -297,7 +297,7 @@ export default function PitchDetail() {
     if (id) {
       // Add a small delay to ensure the backend has processed the NDA
       setTimeout(() => {
-        void fetchPitch(parseInt(id));
+        void fetchPitch(id);
       }, 500);
     }
   };
@@ -387,7 +387,7 @@ export default function PitchDetail() {
                 if (id) {
                   setError(null);
                   setLoading(true);
-                  void fetchPitch(parseInt(id));
+                  void fetchPitch(id);
                 }
               }}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"

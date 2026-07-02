@@ -31,16 +31,17 @@ export interface ErrorDetails {
 
 // CORS configuration — centralized.
 //
-// Canonical production hostname is `pitchey-5o8.pages.dev`. Cloudflare auto-
-// suffixes the global subdomain because `pitchey.pages.dev` is claimed by the
-// separate `pitchey-coming-soon` marketing project on a different account.
-// Per CLAUDE.md "URL Consolidation — corrected model" (2026-04-21): the old
-// `pitchey` Pages project on Cavelltheleaddev's account was deleted and
-// `pitchey.pages.dev` now NXDOMAINs — do not reintroduce it as an origin.
+// Canonical user-facing hostname is `www.pitchey.com` since the 2026-07-01
+// domain cutover (custom domains on the `pitchey` Pages project; apex 301s to
+// www; the old `pitchey-coming-soon` worker routes were removed). The
+// underlying Pages hostname `pitchey-5o8.pages.dev` stays a valid origin — it
+// serves the same deployment and CI/health checks target it directly.
+// `pitchey.pages.dev` still NXDOMAINs (old project deleted 2026-04-21) — do
+// not reintroduce it as an origin.
 const ALLOWED_ORIGINS = [
-  'https://pitchey-5o8.pages.dev',     // Primary production (Ndlovucavelle's `pitchey` Pages project)
-  'https://pitchey.com',               // Marketing stub (pitchey-coming-soon, separate account)
-  'https://www.pitchey.com',           // Marketing stub www CNAME (proxied → apex); latent until it makes authed calls
+  'https://www.pitchey.com',           // Canonical production (custom domain on the `pitchey` Pages project)
+  'https://pitchey.com',               // Apex — 301s to www, kept for any pre-redirect requests
+  'https://pitchey-5o8.pages.dev',     // Underlying Pages hostname (same deployment; CI/health-check target)
   'http://localhost:5173',             // Local development (Vite)
   'http://127.0.0.1:5173',             // Local development (Vite via IP)
   'http://localhost:3000',             // Local development (alternative)
