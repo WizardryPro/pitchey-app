@@ -18,3 +18,4 @@ src/handlers/creator-value.ts(133,16): error TS2352: Conversion of type 'null' t
 
 ## Timeline
 - 2026-06-25 — first seen (manual harness bootstrap run)
+- 2026-06-26 — resolved: no longer present in worker tsc output; fixed via PR #359 (fix/trio-handler-type-errors).

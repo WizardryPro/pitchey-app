@@ -69,3 +69,5 @@ read `worker-integrated.ts` per candidate, so the confirmed-15 set is high-confi
 
 ## Timeline
 - 2026-06-25 — first run: 97 scanned, 17 orphans (15 dead / 2 needs-human).
+- 2026-06-26 — nightly run: 96 scanned (−1 live file removed from codebase), same 17 orphans persist unchanged; separate Explore verifier re-confirmed all 17 still-orphan (last committed 2026-06-16, no modifications). No new candidates, no fixes.
+- 2026-06-27 — **RESOLVED**: all 17 orphans deleted. Commit 497b47f deleted 15 confirmed-dead (PR #376, 6759 LOC); commit 9554307 deleted 2 needs-human gdpr-handler + documentation (PR #377, 1039 LOC). Finder now reports 81 scanned, 0 candidates; Explore verifier confirmed 6-file sample all wired. Batch-deletion batch complete (#308).

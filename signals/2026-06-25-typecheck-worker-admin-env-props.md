@@ -18,3 +18,4 @@ src/worker-modules/admin-endpoints.ts(1769-1778): error TS2339: Property 'UPSTAS
 
 ## Timeline
 - 2026-06-25 — first seen (manual harness bootstrap run)
+- 2026-06-26 — resolved: no longer present in worker tsc output; fixed via PR #356 (fix/worker-env-type-members).
