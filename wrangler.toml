@@ -156,7 +156,9 @@ crons = [
 # ===== ENVIRONMENT VARIABLES =====
 [vars]
 # Platform Configuration
-FRONTEND_URL = "https://pitchey-5o8.pages.dev"
+# Canonical user-facing URL since the 2026-07-01 domain cutover (apex 301s to www;
+# pitchey-5o8.pages.dev remains the underlying Pages project + CI/health-check target).
+FRONTEND_URL = "https://www.pitchey.com"
 BACKEND_URL = "https://pitchey-api-prod.ndlovucavelle.workers.dev"
 ENVIRONMENT = "production"
 VERSION = "2.0-integrated"
